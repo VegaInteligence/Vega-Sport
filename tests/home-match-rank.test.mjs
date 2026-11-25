@@ -1,5 +1,5 @@
 // The rank under each team on the home's « Le choc de la semaine » is its place in the match's competition
-// (FAILURE_MODES.md § 67; hugo, 25 Nov 2026: « je veux le rang de la compétition où a lieu le match »).
+// (FAILURE_MODES.md § 68; hugo, 25 Nov 2026: « je veux le rang de la compétition où a lieu le match »).
 import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";

@@ -15,7 +15,9 @@
  *   heatmap players by side then actions (the source's ties are in no stated order);
  * - a substitute's pitch position is 0, as the source sends it;
  * - head-to-head meetings name the teams without their crests, as the source does;
- * - a family that was not collected, or that the source said was unavailable, is a 404.
+ * - a family that was not collected, or that the source said was unavailable, is a 404;
+ * - each line-up player carries `image_url`, his photo in the base or null, which the source
+ *   does not send (FAILURE_MODES § 67).
  *
  * GET /api/matches/{id}/lineups/probable — our probable eleven of each side of a match not started
  * (vega/probable.py, FAILURE_MODES §61), read from api.match_probable_lineups (176): a side not
@@ -32,6 +34,9 @@ const FAMILY = {
   "/advanced/network": "network", "/heatmaps": "heatmaps", "/h2h": "h2h",
 };
 const where = "WHERE season_id=$1 AND match_id=$2";
+// A family whose body changed shape without a new match revision: its ETag changes with it, so a client holding the
+// former body reads the new one (the line-ups' photos, FAILURE_MODES § 67).
+const SHAPE = { "/lineups": "photos" };
 const missing = () => reject(404, "Donnée indisponible.");
 
 // Reuse the publication's measured-zero policy without changing the raw family or the
@@ -95,7 +100,13 @@ async function body(read, f, suffix, params) {
     case "/lineups": {
       const [teams, players] = await Promise.all([
         read(`SELECT * FROM api.match_lineup_rows ${where} ORDER BY side DESC`, at),
-        read(`SELECT * FROM api.match_lineup_player_rows ${where}`, at),
+        // Each player's photo (FAILURE_MODES § 67): read with the line-up, statistics or not.
+        read(
+          `SELECT l.*, pp.image_url FROM api.match_lineup_player_rows l
+           LEFT JOIN api.player_profiles pp ON pp.player_id = api.internal_id('player', l.player_id)
+           WHERE l.season_id=$1 AND l.match_id=$2`,
+          at,
+        ),
       ]);
       return F.lineupsBody(f, teams, players);
     }
@@ -219,7 +230,8 @@ export function createMatchDetailRoute(read) {
       return send(req, { data }, 200, { etag, ttl, maxBytes: 2 * 1024 * 1024 });
     }
     const url = new URL(req.url);
-    const etag = `W/"match-v1-${createHash("sha256").update(`${url.pathname}|${params.get("frame") ?? ""}|${f.revision}`).digest("hex")}"`;
+    const shape = SHAPE[suffix] ? `|${SHAPE[suffix]}` : "";
+    const etag = `W/"match-v1-${createHash("sha256").update(`${url.pathname}|${params.get("frame") ?? ""}|${f.revision}${shape}`).digest("hex")}"`;
     const ttl = f.status === "finished" ? 60 : 15;
     if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl });
     return send(req, { data: await body(read, f, suffix, params) }, 200, { etag, ttl, maxBytes: 2 * 1024 * 1024 });

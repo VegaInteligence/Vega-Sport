@@ -14,6 +14,7 @@ import {
   matchReadSource,
   matchResourceKey,
 } from "../services/match-resources.js";
+import { teamStatsFlagged } from "../services/match-tabs.js";
 import PlayerMetrics, { periodLabel } from "./PlayerMetrics.jsx";
 import { MATCH_SECTIONS, number, isNumber } from "../services/format.js";
 import { momentumSpells } from "../services/momentum.js";
@@ -143,7 +144,7 @@ export function TeamStats({ match, payload }) {
   if (!period) return <Empty>Statistiques absentes.</Empty>;
   return (
     <>
-      {match.coverage?.teamStatsReliable === false && (
+      {teamStatsFlagged(match) && (
         <p className="notice notice-warning">
           Statistiques d’équipe incohérentes ; interpréter ces données avec
           prudence.
@@ -183,7 +184,7 @@ export function PlayerStats({
     chosen = periods.find((p) => p.period === period) || periods[0];
   return (
     <>
-      {match.coverage?.teamStatsReliable === false && (
+      {teamStatsFlagged(match) && (
         <p className="notice notice-warning">
           Incohérences possibles dans les statistiques.
         </p>

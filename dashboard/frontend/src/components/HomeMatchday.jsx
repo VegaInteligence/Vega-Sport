@@ -685,7 +685,7 @@ export function MatchOfTheWeek({
   const [active, setActive] = useState(null);
   // Each team in its crest's colour, as on the match page (FAILURE_MODES § 66).
   const teamColours = useCrestColours(h, a, { charts: false });
-  // Each team's place in the match's competition (FAILURE_MODES § 67): the served rank when it is that competition's,
+  // Each team's place in the match's competition (FAILURE_MODES § 68): the served rank when it is that competition's,
   // else the competition's table for the match's season; never another competition's rank.
   const leagueId = match.leagueId;
   const served = (t) => {
