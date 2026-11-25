@@ -117,6 +117,43 @@ GH220-n–r: `backend/api/test/smoke-favourites.test.mjs` (the probe against the
 answers made for each case); GH220-s: `backend/tests/test_account_deploy.py` (the real `deploy.sh`, offline: AWS and the
 packaging are stand-ins, the probe and its origin are real).
 
+### GH220.4 Reopened: the followed players' matches of the week (26 Nov 2026, written before the tests)
+
+Production after #230 (Deploy 144, 25 Nov 2026 20:25 UTC): 133 of the day's 168 reads still answered 503 after 8 s
+(57014); the alarm `vega-v2-api-5xx` went to ALARM at 20:50 UTC on them alone. The 200s were the check of § GH220.3
+(one club, one player, 0.5 to 3.5 s). `EXPLAIN (ANALYZE, BUFFERS)` of the route's statement on production, read only, the
+season's most used players (task b52666a0, `/mnt/project-files/favoris-accueil-503/` of the project): clubs alone about
+0.5 s whatever their number; each followed player about 7 s more (1: 6.3 s, 5: 29 s, 10: 58 s, 20: past 60 s), 94 to
+98 % of it in `your_matches`. There the followed player's 44 appearances of the season were estimated at one row, and
+for each of them the planner rebuilt `api.fixtures` for the whole season (a sequential scan of `matches` keeping 19 950
+rows of 560 128, one `provider_ids` lookup a fixture: 687 984 for one player), joined it on the match afterwards (a join
+filter dropping 687 940 pairs), and applied the displayed week last. Reviewed by Astra (gpt-6.2-astra, xhigh) the same
+night.
+
+- **Rule.** The followed players' appearances are cut to the displayed week before any fixture is read (`your_apps`,
+  materialized: the four filters of today plus the week's two bounds, inclusive); the fixtures are then read for those
+  matches only, the season pinned and the match ids given as an array (`f.match_id = ANY(ARRAY(SELECT DISTINCT match_id
+  FROM your_apps))`), as `appearanceJson` does. The fixture of a match two followed players played is read once; each
+  keeps his appearance.
+- **Kept.** The answer, byte for byte: the same entries, the same opponent and score rules (the team of the appearance
+  decides the side, an unknown team reads the home side), a followed player's match in a competition outside the
+  `leagues` asked (his national team) still listed: the fixtures are read from `api.fixtures`, not from the scope's
+  `fixture_source`.
+- **Not changed.** The view `api.fixtures`, the indexes, the other CTEs; the fixed cost of `fixture_source`/`period`
+  (about 0.4 s on production) stays.
+
+| # | Situation | Expected |
+|---|---|---|
+| GH220-t | The statement the route runs for three followed players, each with 40 appearances of the season outside the displayed week, on the API seed plus 1 500 finished matches of the season (other clubs, each with its provider id) | inside `your_matches`, the scans of `matches` look at 100 rows at most and those of `provider_ids` at 500 at most, never the season's (red on the base commit: the season's matches once an appearance) |
+| GH220-u | Two followed players in the same match of the week | each his entry with that match, the same opponent and score as the base commit's code |
+| GH220-v | A followed player's match of the week in a competition outside the `leagues` asked (his national team), and a club match of his | both listed, as the base commit's code |
+| GH220-w | Matches on the week's first day and on the day before it | the first day's listed, the day before's not |
+| GH220-x | The four players of GH220-t–w together, with their clubs | the same body as the base commit's code on the same base |
+
+GH220-t–x: `backend/api/test/home-favourites.test.mjs` (t red on the base commit, u–x green on both: they pin what the
+fix keeps). Production's own time: the check of § GH220.3 after the Deploy, and the route's 503s in the logs of the
+evening after.
+
 ## GH194. The isolated pilot: by hand from `main`, its own provider key, a bounded run (GH #194, VI-134)
 
 Seen before this change (audit D1, re-read on `main` 407c4c1 and 492a136): `.github/workflows/pilot.yml` started on every
