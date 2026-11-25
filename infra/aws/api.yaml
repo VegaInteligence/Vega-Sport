@@ -199,6 +199,12 @@ Resources:
         HttpVersion: http2and3
         IPV6Enabled: true
         PriceClass: PriceClass_100
+        # Countries refused with a 403 (hugo, 25 Nov 2026: North Korea only, for now).
+        # The site has the same rule in the Vercel firewall. Test: backend/tests/test_api_geo_block.py.
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: blacklist
+            Locations: [KP]
         # VI-35: the per-address limit (waf.yaml), when deploy.sh passes it.
         WebACLId: !If [HasWebAcl, !Ref WebAclArn, !Ref 'AWS::NoValue']
         Origins:

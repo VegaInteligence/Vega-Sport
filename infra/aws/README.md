@@ -123,6 +123,10 @@ filter request = "read" | stats count(*) as calls, sum(conditional) as revalidat
 ```
 
 <!-- BEGIN VI-35 web ACL -->
+### Countries refused
+
+hugo's decision of 25 November 2026: North Korea (`KP`) only, for now. The distribution refuses it with a 403 (`Restrictions.GeoRestriction` in `api.yaml`, free, no web ACL rule; test `backend/tests/test_api_geo_block.py`). The site on Vercel has the same rule in the project's firewall (custom rule « Pays refusés », `geo_country` equals `KP`, action deny), set in the Vercel dashboard, not in this repository. Adding a country = both places, on a new decision.
+
 ### Per-address limit of the distribution (web ACL, VI-35)
 
 Until VI-35 the distribution had no web ACL: one address asking reads the cache does not hold could take the 32 copies, and every other visitor got 429s. `waf.yaml` (stack `vega-v2-waf`, **us-east-1**: a web ACL of CloudFront scope exists only there) is attached by `deploy.sh` (step 7b, then `WebAclArn` of `vega-v2-api`). It sees every request before the cache, cache hits included, and counts per viewer address over the last 5 minutes:

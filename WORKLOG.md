@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Pays refusés — 25 novembre 2026
+
+- Décision de hugo (25 nov.) : bloquer la Corée du Nord seulement, pour l'instant. Petit changement isolé, sans ticket. Branche `claude/blocage-coree-du-nord` depuis main fb0de18.
+- API : `Restrictions.GeoRestriction` en liste noire `[KP]` sur la distribution (`infra/aws/api.yaml`), réponse 403 de CloudFront. Test écrit d'abord et vu rouge : `backend/tests/test_api_geo_block.py`. Vérifié : 25 tests des gabarits, cfn-lint us-east-2.
+- Site : règle du pare-feu Vercel (`geo_country` = `KP`, refus), posée dans le tableau de bord, pas dans le dépôt. Le projet n'avait aucune configuration de pare-feu le 25 nov.
+- Prochaine action : accord de hugo pour fusionner, lancer le Deploy et poser la règle Vercel.
+
 ## La page match en cinq onglets — FAILURE_MODES § 62 (25 November 2026, branch `claude/fusion-onglets-match` from main 492a136, issue #221)
 
 - hugo validated the mock-up (`/mnt/project-files/fusion-onglets-match/`, artifact « Onglets du match ») and asked to code and push. Eight tabs become five: Résumé, Compositions, Statistiques, Analyses, Avant-match.
