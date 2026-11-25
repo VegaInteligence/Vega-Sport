@@ -195,10 +195,35 @@ export function probableView(payload) {
 export function lineupSides(view, probable) {
   const pick = (key) => {
     const provided = view?.[key];
-    if (provided) return { ...provided, state: provided.confirmed === false ? "forecast" : "official" };
+    // Official only when the provider says so: an eleven whose confirmation is unknown is its forecast.
+    if (provided) return { ...provided, state: provided.confirmed === true ? "official" : "forecast" };
     return probable?.[key] || null;
   };
   return { home: pick("home"), away: pick("away") };
+}
+
+// The line-ups are read again every minute from 90 minutes before the kick-off to 30 minutes after it.
+export const LINEUPS_WATCH = { every: 60_000, before: 90 * 60_000, after: 30 * 60_000 };
+const kickoffOf = (match) => Date.parse(match?.timeUtc || "");
+
+/** Not kicked off yet at `now` (the status first; it may lag behind the clock, then the kick-off and the score). */
+export function lineupsBeforeKickoff(match, now) {
+  if (match?.status === "not_started") return true;
+  if (["finished", "postponed", "live", "inplay"].includes(match?.status)) return false;
+  const kickoff = kickoffOf(match);
+  return Number.isFinite(kickoff) && kickoff > now && match?.home?.score == null && match?.away?.score == null;
+}
+
+/** Whether the line-ups (GET …/lineups, `payload`) are read again at `now`: within the watch, until both are official. */
+export function lineupsWatched(match, payload, now) {
+  const kickoff = kickoffOf(match);
+  const official = payload?.home?.confirmed === true && payload?.away?.confirmed === true;
+  return Number.isFinite(kickoff) && !official && now >= kickoff - LINEUPS_WATCH.before && now <= kickoff + LINEUPS_WATCH.after;
+}
+
+/** Our probable eleven is read before the kick-off only, while a side lacks the provider's eleven. */
+export function probableWanted(before, payload) {
+  return Boolean(before) && (!payload?.home || !payload?.away);
 }
 
 /** The portraits our probable XI carries (starters and absent), by player id. */

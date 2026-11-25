@@ -14,7 +14,9 @@ import { AbsenceGlyph, AbsentRows } from "./Absences.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useMatchSection from "../hooks/useMatchSection.js";
 import { useMatchGrades } from "../services/match-grades.js";
-import { lineupSides, lineupView, playerRows, probableImages, probableView } from "../services/match-tabs.js";
+import {
+  LINEUPS_WATCH, lineupSides, lineupView, lineupsBeforeKickoff, lineupsWatched, playerRows, probableImages, probableView, probableWanted,
+} from "../services/match-tabs.js";
 import { absenceDate } from "../services/team-absences.js";
 import { number } from "../services/format.js";
 import { GRADE_HIGH } from "../services/grades.js";
@@ -30,21 +32,11 @@ const shortName = (name) => {
 };
 const gradeTone = (grade) => (grade == null ? "" : grade >= GRADE_HIGH ? s.gradeHigh : grade < 45 ? s.gradeLow : "");
 
-// The line-ups are read again every minute from 90 minutes before the kick-off to 30 minutes after it.
-const WATCH_EVERY = 60_000, WATCH_BEFORE = 90 * 60_000, WATCH_AFTER = 30 * 60_000;
-const kickoffOf = (match) => Date.parse(match?.timeUtc || "");
-/** Not kicked off yet (the status may lag behind the clock). */
-function beforeKickoff(match, now) {
-  if (match.status === "not_started") return true;
-  if (["finished", "postponed", "live", "inplay"].includes(match.status)) return false;
-  const kickoff = kickoffOf(match);
-  return Number.isFinite(kickoff) && kickoff > now && match.home?.score == null && match.away?.score == null;
-}
 /** The time, read again every minute: the watch starts while the page stays open. */
 function useMinute() {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), WATCH_EVERY);
+    const timer = setInterval(() => setNow(Date.now()), LINEUPS_WATCH.every);
     return () => clearInterval(timer);
   }, []);
   return now;
@@ -212,6 +204,7 @@ function Marker({ p, side, standing, bubble, row, basis, onOpen }) {
       type="button"
       className={`${s.marker} ${o.marker} ${p.probable ? s.probable : ""}`}
       style={style}
+      data-marker={p.probable ? "probable" : "lineup"}
       aria-label={`${p.name}${p.shirt ? `, n° ${p.shirt}` : ""}${p.replaces ? `, remplace ${p.replaces.name}` : ""}`}
       onClick={() => {
         bubble.hide();
@@ -222,7 +215,7 @@ function Marker({ p, side, standing, bubble, row, basis, onOpen }) {
       {body}
     </button>
   ) : (
-    <span className={`${s.marker} ${p.probable ? s.probable : ""}`} style={style}>
+    <span className={`${s.marker} ${p.probable ? s.probable : ""}`} style={style} data-marker={p.probable ? "probable" : "lineup"}>
       {body}
     </span>
   );
@@ -346,18 +339,17 @@ function SideBench({ side, team, data, before, asOf, onOpen }) {
 export default function MatchLineups({ match }) {
   const f = useFootball();
   const now = useMinute();
-  const before = beforeKickoff(match, now);
-  const kickoff = kickoffOf(match);
+  const before = lineupsBeforeKickoff(match, now);
   const lineupsSeen = useRef(null);
   // Watched until both sides are official, from 90 min before the kick-off to 30 min after it.
-  const confirmed = lineupsSeen.current?.home?.confirmed === true && lineupsSeen.current?.away?.confirmed === true;
-  const watch = Number.isFinite(kickoff) && !confirmed && now >= kickoff - WATCH_BEFORE && now <= kickoff + WATCH_AFTER;
-  const lineups = useMatchSection(match, "lineups", true, { every: watch ? WATCH_EVERY : 0 });
+  const watch = lineupsWatched(match, lineupsSeen.current, now);
+  const lineups = useMatchSection(match, "lineups", true, { every: watch ? LINEUPS_WATCH.every : 0 });
   if (lineups.data) lineupsSeen.current = lineups.data;
   const settled = useRef(false);
   if (lineups.data || lineups.error) settled.current = true;
-  const missingSide = !lineups.data?.home || !lineups.data?.away;
-  const probable = useMatchSection(match, "lineups/probable", before && settled.current && missingSide);
+  // Ours only while a side lacks the provider's eleven; a 404 or a failed read leaves the other states.
+  const wanted = probableWanted(before, lineups.data);
+  const probable = useMatchSection(match, "lineups/probable", settled.current && wanted);
   const events = useMatchSection(match, "events", !before);
   const players = useMatchSection(match, "players", !before);
   const grades = useMatchGrades(match.id);
@@ -371,7 +363,7 @@ export default function MatchLineups({ match }) {
     [lineups.data, events.data, rows, grades, images],
   );
   const sides = useMemo(() => lineupSides(view, probableView(probable.data)), [view, probable.data]);
-  if (!settled.current || (missingSide && before && probable.loading && !probable.data))
+  if (!settled.current || (wanted && probable.loading && !probable.data))
     return <Skeleton label="Chargement des compositions…" lines={4} />;
   if (!sides.home && !sides.away) return <Empty>Compositions non renseignées.</Empty>;
   const open = (id) => f.setPlayer(`${match.id}:${id}`);
