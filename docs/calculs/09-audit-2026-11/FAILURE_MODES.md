@@ -5540,6 +5540,39 @@ si on a pas on reprend bleu et violet ».
 - **R26** (`match-tabs.e2e.mjs`) the match page sets `--home` and `--away` from the crests (PSG's blue, Lorient's
   orange in the mocks), and keeps blue and violet when the crests do not load.
 
+## 65. The « Classement » tab of a European match on a match night (hugo, 25 Nov 2026, 21 h 12; written before the tests)
+
+hugo, on Arsenal – Dortmund (Champions League, league phase, 5th round): « quand je clique sur arsenal dortmund et que
+je vais dans classement j'ai Classement indisponible pour cette compétition pour le moment », then « d'ailleurs j'ai le
+même problème sur les autres matchs ».
+
+What production served that evening (read from hugo's Mac, 21 h 15): `/api/standings?competition=l_0bfbkO` and
+`/api/cup-snapshot?kind=standings&…` answer 200 with one table « Champions League » of 36 clubs, source `Vega`: the
+official table (SportScore) was behind the results of the round, so the base served the one it computes from them
+(`api.standings`, migration 159; only `regular` and `group` rounds count, `vega/calculator.py`). The site keeps a
+result-derived table to plain league formats only (`plainLeagueTable`: a league known to be plain, or a finished double
+round-robin): five matches each among 36 clubs is neither, so the table was dropped, the fixtures were not a complete
+home-and-away schedule either, and the tab said « indisponible ». The competition's own page did the same. The Premier
+League and the Bundesliga were served by SportScore that evening, so their matches were not affected; the Europa League
+and the Conference League, played the next evening, would have been.
+
+### 65.1 Rules
+
+- **A European league phase is a plain table.** Since 2024/2025 the Champions League, the Europa League and the
+  Conference League open with one league phase: every club in one table, eight matches each, against different
+  opponents. A table the base computed from the results is shown for them, as an official one is, when it is that
+  table: one table, at least three clubs, no club with more than eight matches. It carries the note that it was
+  computed from the results (« N matchs pris en compte »), as any result-derived table.
+- **Nothing else changes.** A season before 2024/2025 (groups) keeps UEFA's official tables (`hasUefaStandings`); a
+  derived table with several tables or more than eight matches for a club is still dropped; the other non-plain leagues
+  keep today's rule.
+
+### 65.2 Failure modes and expected outcomes
+
+- **R27** (`tests/match-standings-served.test.mjs`) the Champions League 2026/2027, a `Vega` table of 36 clubs with four
+  or five matches each: the table is shown, the match's teams marked, with « matchs pris en compte »; the same table for
+  2023/2024 (groups) or with a club at nine matches: not shown.
+
 ## 66. The teams' colours on the home page's « Choc de la semaine » (hugo, 25 Nov 2026, 21 h 29; written before the tests)
 
 hugo, after § 64 in production: « pour les couleurs je veux aussi sur le choc de la semaine sur la page d'accueil ».

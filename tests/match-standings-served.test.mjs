@@ -201,3 +201,30 @@ test("a match page asks for the served table and does not load the season's fixt
   assert.deepEqual(props.matches, []);
   assert.deepEqual(props.highlightTeams.map((t) => t.id), ["t_aaaaaa", "t_bbbbbb"]);
 });
+
+test("R27 a European league phase computed from the results is shown (§ 65)", async () => {
+  const ucl = { id: "l_0bfbkO", name: "Champions League", seasons: ["2026/2027", "2025/2026", "2023/2024"] };
+  // 36 clubs after a match night: some have played five matches, the others four.
+  const phase = Array.from({ length: 36 }, (_, i) => ({
+    id: "t_" + String(i).padStart(6, "0"), name: i === 5 ? "Arsenal" : i === 7 ? "Borussia Dortmund" : "Club " + i,
+    imageUrl: null, position: i + 1, points: 36 - i, played: i % 2 ? 4 : 5, wins: 3, draws: 1, losses: 1,
+    goalsFor: 10, goalsAgainst: 5, difference: 5,
+  }));
+  const teams = [{ id: "t_000005", name: "Arsenal" }, { id: "t_000007", name: "Borussia Dortmund" }];
+  const reads = [];
+  let Standings = await standings({ name: "Champions League", rows: phase }, reads, "Vega");
+  let html = renderToStaticMarkup(e(Standings, { competition: ucl, season: "2026/2027", matches: [], served: true, highlightTeams: teams }));
+  assert.match(html, /standings-table/);
+  assert.match(html, /matchs pris en compte/);
+  assert.match(html, /<tr[^>]*data-match-team="true"[^>]*>(?:(?!<\/tr>).)*Arsenal/s);
+  assert.match(html, /<tr[^>]*data-match-team="true"[^>]*>(?:(?!<\/tr>).)*Borussia Dortmund/s);
+  assert.doesNotMatch(html, /indisponible/);
+  // A club with nine matches: not a league phase.
+  Standings = await standings({ name: "Champions League", rows: phase.map((row, i) => (i ? row : { ...row, played: 9 })) }, reads, "Vega");
+  html = renderToStaticMarkup(e(Standings, { competition: ucl, season: "2026/2027", matches: [], served: true }));
+  assert.doesNotMatch(html, /standings-table/);
+  // A season of groups (before 2024/2025): a table computed from the results is not UEFA's.
+  Standings = await standings({ name: "Champions League", rows: phase }, reads, "Vega");
+  html = renderToStaticMarkup(e(Standings, { competition: ucl, season: "2023/2024", matches: [], served: true }));
+  assert.doesNotMatch(html, /standings-table/);
+});
