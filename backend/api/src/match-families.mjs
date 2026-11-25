@@ -307,6 +307,34 @@ export function lineupsBody(f, teams, players) {
   return body;
 }
 
+/**
+ * Our probable eleven of each side (GET /api/matches/{id}/lineups/probable, FAILURE_MODES §61), from
+ * api.match_probable_lineups and its players (in their stored order): a side not computed is null.
+ */
+export function probableLineupsBody(f, sides, players) {
+  const iso = (d) => (d == null ? null : String(d).slice(0, 10)); // dates read as text
+  const num = (v) => (v == null ? null : Number(v));
+  const computed = sides.map((s) => new Date(s.computed_at).toISOString()).sort();
+  const body = { match_id: f.id, method: sides[0].method, computedAt: computed.at(-1), home: null, away: null };
+  for (const l of sides) {
+    const mine = players.filter((p) => p.team_key === l.team_key);
+    body[l.side] = {
+      formation: l.formation ?? null,
+      basis: { lineups: l.basis_lineups, from: iso(l.basis_from), to: iso(l.basis_to) },
+      starters: mine.filter((p) => p.role === "starter").map((p) => ({
+        player_id: p.player_id, name: p.name, shirt_number: present(p.shirt_number) ? String(p.shirt_number) : null,
+        position_id: p.position_id ?? null, pitch_x: num(p.pitch_x), pitch_y: num(p.pitch_y), share: num(p.share),
+        image_url: p.image_url ?? null, replaces: p.replaces_id ? { player_id: p.replaces_id, name: p.replaces_name } : null,
+      })),
+      absent: mine.filter((p) => p.role === "absent").map((p) => ({
+        player_id: p.player_id, name: p.name, image_url: p.image_url ?? null, kind: p.absence_kind ?? null, label: p.absence_label ?? null,
+        expectedReturn: iso(p.expected_return), matchesRemaining: p.matches_remaining ?? null,
+      })),
+    };
+  }
+  return body;
+}
+
 export function eventsBody(mid, rows) {
   return {
     match_id: mid,

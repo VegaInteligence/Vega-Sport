@@ -3,24 +3,100 @@
  * photo, number, Vega grade, goals, cards and the minute he went off (hovered: his match in a
  * few figures; clicked: his performance of the match); beside it (under it on narrower screens),
  * each side's coach, substitutes with the minute they came on and whom they replaced, then those
- * who stayed on the bench, each opening his performance too. On a phone the pitch stands up. */
-import React, { useEffect, useMemo, useState } from "react";
-import { Empty, Media, Skeleton } from "./UI.jsx";
+ * who stayed on the bench, each opening his performance too. On a phone the pitch stands up.
+ * Before the kick-off each side shows the provider's line-up (official, or « prévisionnelle »),
+ * else our probable XI (outlined markers, its absents in place of the bench); from 90 minutes
+ * before the kick-off the line-ups are read again every minute until both are official. */
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ClubCrest, Empty, Media, Skeleton } from "./UI.jsx";
 import { useHoverBubble } from "./HoverCard.jsx";
+import { AbsenceGlyph, AbsentRows } from "./Absences.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useMatchSection from "../hooks/useMatchSection.js";
 import { useMatchGrades } from "../services/match-grades.js";
-import { lineupView, playerRows } from "../services/match-tabs.js";
+import {
+  LINEUPS_WATCH, lineupSides, lineupView, lineupsBeforeKickoff, lineupsWatched, playerRows, probableImages, probableView, probableWanted,
+} from "../services/match-tabs.js";
+import { absenceDate } from "../services/team-absences.js";
 import { number } from "../services/format.js";
 import { GRADE_HIGH } from "../services/grades.js";
 import s from "./MatchTabs.module.css";
 import o from "./MatchPlayerOpen.module.css";
 
+// A surname's particle stays with it: « Théo Le Bris » → « Le Bris », « Kevin De Bruyne » → « De Bruyne ».
+const PARTICLES = new Set(["de", "da", "di", "do", "dos", "du", "del", "der", "van", "von", "le", "la", "ter", "ten", "el", "al", "ben"]);
 const shortName = (name) => {
   const parts = String(name || "").trim().split(/\s+/);
-  return parts.length > 1 && parts.at(-1).length > 2 ? parts.at(-1) : name;
+  if (parts.length < 2 || parts.at(-1).length <= 2) return name;
+  return parts.length > 2 && PARTICLES.has(parts.at(-2).toLowerCase()) ? parts.slice(-2).join(" ") : parts.at(-1);
 };
 const gradeTone = (grade) => (grade == null ? "" : grade >= GRADE_HIGH ? s.gradeHigh : grade < 45 ? s.gradeLow : "");
+
+/** The time, read again every minute: the watch starts while the page stays open. */
+function useMinute() {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), LINEUPS_WATCH.every);
+    return () => clearInterval(timer);
+  }, []);
+  return now;
+}
+
+const STATE = {
+  official: "Composition officielle",
+  forecast: "Composition prévisionnelle",
+  probable: "Composition probable",
+};
+const shortDay = (iso) => absenceDate(iso, iso);
+function BasisLine({ basis }) {
+  if (!basis?.lineups) return null;
+  const span = basis.from && basis.to ? ` · ${shortDay(basis.from)} – ${shortDay(basis.to)}` : "";
+  return (
+    <p className={s.bubbleNote}>
+      D’après les {basis.lineups} derniers matchs{span}
+    </p>
+  );
+}
+/** A side's state beside its name: official, the provider's forecast, or ours (its basis when hovered). */
+function SideState({ data, bubble }) {
+  if (!data?.state) return null;
+  const hover =
+    data.state === "probable" && data.basis
+      ? {
+          tabIndex: 0,
+          onMouseEnter: (event) => bubble.show(event.currentTarget, <BasisLine basis={data.basis} />),
+          onMouseLeave: bubble.hide,
+          onFocus: (event) => bubble.show(event.currentTarget, <BasisLine basis={data.basis} />),
+          onBlur: bubble.hide,
+        }
+      : {};
+  return (
+    <span className={s.sideState} data-state={data.state} {...hover}>
+      <i aria-hidden="true" />
+      {STATE[data.state]}
+    </span>
+  );
+}
+/** Before the kick-off: each side's crest, name, formation and state, facing each other over the pitch. */
+function SidesHead({ match, sides, bubble }) {
+  return (
+    <div className={s.sidesHead}>
+      {["home", "away"].map((side) => {
+        const team = match[side];
+        return (
+          <div key={side} className={s.sideHead} data-side={side} data-lineup-state={sides[side]?.state || "none"}>
+            <ClubCrest club={team} size={28} />
+            <span className={s.sideName}>
+              <strong>{team.name}</strong>
+              {sides[side]?.formation && <span className={s.sideFormation}>{sides[side].formation}</span>}
+            </span>
+            {sides[side] ? <SideState data={sides[side]} bubble={bubble} /> : <span className={s.sideState} data-state="none">Non renseignée</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /** Phones get a standing pitch: home at the foot attacking up, away at the top. */
 function useStanding() {
@@ -41,6 +117,27 @@ function spot(p, side, standing) {
   if (standing)
     return side === "home" ? { left: across, top: 100 - depth } : { left: 100 - across, top: depth };
   return side === "home" ? { left: depth, top: across } : { left: 100 - depth, top: 100 - across };
+}
+
+/** A probable starter: how often he started in the basis, whom he replaces. */
+function ProbableLine({ p, basis }) {
+  const starts = p.share != null && basis?.lineups ? Math.round(p.share * basis.lineups) : null;
+  return (
+    <>
+      <p className={s.bubbleHead}>{p.name}</p>
+      {starts != null && (
+        <p className={s.bubbleNote}>
+          Titulaire {starts} fois sur {basis.lineups}
+        </p>
+      )}
+      {p.replaces && (
+        <p className={`${s.bubbleNote} ${s.bubbleReplaces}`}>
+          <AbsenceGlyph kind={p.replaces.kind || "unknown"} />
+          Remplace {p.replaces.name}
+        </p>
+      )}
+    </>
+  );
 }
 
 function PlayerLine({ p, row }) {
@@ -71,8 +168,9 @@ function PlayerLine({ p, row }) {
   );
 }
 
-function Marker({ p, side, standing, bubble, row, onOpen }) {
+function Marker({ p, side, standing, bubble, row, basis, onOpen }) {
   const at = spot(p, side, standing);
+  const line = p.probable ? <ProbableLine p={p} basis={basis} /> : <PlayerLine p={p} row={row} />;
   const body = (
     <>
       <span className={s.markerPhoto}>
@@ -96,17 +194,18 @@ function Marker({ p, side, standing, bubble, row, onOpen }) {
   );
   const style = { left: `${at.left}%`, top: `${at.top}%` };
   const hover = {
-    onMouseEnter: (event) => bubble.show(event.currentTarget, <PlayerLine p={p} row={row} />),
+    onMouseEnter: (event) => bubble.show(event.currentTarget, line),
     onMouseLeave: bubble.hide,
-    onFocus: (event) => bubble.show(event.currentTarget, <PlayerLine p={p} row={row} />),
+    onFocus: (event) => bubble.show(event.currentTarget, line),
     onBlur: bubble.hide,
   };
   return p.id ? (
     <button
       type="button"
-      className={`${s.marker} ${o.marker}`}
+      className={`${s.marker} ${o.marker} ${p.probable ? s.probable : ""}`}
       style={style}
-      aria-label={`${p.name}${p.shirt ? `, n° ${p.shirt}` : ""}`}
+      data-marker={p.probable ? "probable" : "lineup"}
+      aria-label={`${p.name}${p.shirt ? `, n° ${p.shirt}` : ""}${p.replaces ? `, remplace ${p.replaces.name}` : ""}`}
       onClick={() => {
         bubble.hide();
         onOpen(p.id);
@@ -116,7 +215,7 @@ function Marker({ p, side, standing, bubble, row, onOpen }) {
       {body}
     </button>
   ) : (
-    <span className={s.marker} style={style}>
+    <span className={`${s.marker} ${p.probable ? s.probable : ""}`} style={style} data-marker={p.probable ? "probable" : "lineup"}>
       {body}
     </span>
   );
@@ -142,15 +241,60 @@ function PitchLines({ standing }) {
   );
 }
 
-function SideBench({ side, team, data, onOpen }) {
+function BenchChips({ players, onOpen }) {
+  return (
+    <div className={o.chips}>
+      {players.map((p) => {
+        const text = `${p.shirt ? `${p.shirt} · ` : ""}${p.name}`;
+        return p.id ? (
+          <button type="button" key={p.id} className={`${o.open} ${o.chip}`} onClick={() => onOpen(p.id)}>
+            {text}
+          </button>
+        ) : (
+          <span key={p.name} className={o.chip}>
+            {text}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function SideBench({ side, team, data, before, asOf, onOpen }) {
   if (!data) return <p className={o.none}>Composition absente : {team?.name || side}</p>;
+  const head = (
+    <div className={o.benchHead}>
+      <Media name={team?.name} url={data.team?.image_url || team?.imageUrl} size={20} kind="club" />
+      <h3>{team?.name}</h3>
+      {data.formation && <strong>{data.formation}</strong>}
+    </div>
+  );
+  // Our probable XI: its absents in place of the bench.
+  if (data.state === "probable")
+    return (
+      <section className={`${o.bench} ${side === "away" ? o.away : ""}`} aria-label={`Absents de ${team?.name || side}`} data-lineup-state="probable">
+        {head}
+        <p className={o.label}>Absents</p>
+        {data.absent.length ? <AbsentRows rows={data.absent} asOf={asOf} /> : <p className={o.none}>Aucun absent</p>}
+      </section>
+    );
+  // Before the kick-off: the substitutes, nobody has come on yet.
+  if (before)
+    return (
+      <section className={`${o.bench} ${side === "away" ? o.away : ""}`} aria-label={`Banc de ${team?.name || side}`} data-lineup-state={data.state}>
+        {head}
+        {data.coach && (
+          <p className={o.coach}>
+            Entraîneur : <b>{data.coach}</b>
+          </p>
+        )}
+        <p className={o.label}>Remplaçants</p>
+        {data.bench.length ? <BenchChips players={data.bench} onOpen={onOpen} /> : <p className={o.none}>Non renseignés</p>}
+      </section>
+    );
   return (
     <section className={`${o.bench} ${side === "away" ? o.away : ""}`} aria-label={`Banc de ${team?.name || side}`}>
-      <div className={o.benchHead}>
-        <Media name={team?.name} url={data.team?.image_url || team?.imageUrl} size={20} kind="club" />
-        <h3>{team?.name}</h3>
-        {data.formation && <strong>{data.formation}</strong>}
-      </div>
+      {head}
       <p className={o.coach}>
         Entraîneur : <b>{data.coach || "non renseigné"}</b>
         {data.confirmed === false ? " · composition prévisionnelle" : ""}
@@ -185,20 +329,7 @@ function SideBench({ side, team, data, onOpen }) {
       {data.bench.length > 0 && (
         <>
           <p className={o.label}>Restés sur le banc</p>
-          <div className={o.chips}>
-            {data.bench.map((p) => {
-              const text = `${p.shirt ? `${p.shirt} · ` : ""}${p.name}`;
-              return p.id ? (
-                <button type="button" key={p.id} className={`${o.open} ${o.chip}`} onClick={() => onOpen(p.id)}>
-                  {text}
-                </button>
-              ) : (
-                <span key={p.name} className={o.chip}>
-                  {text}
-                </span>
-              );
-            })}
-          </div>
+          <BenchChips players={data.bench} onOpen={onOpen} />
         </>
       )}
     </section>
@@ -207,49 +338,85 @@ function SideBench({ side, team, data, onOpen }) {
 
 export default function MatchLineups({ match }) {
   const f = useFootball();
-  const lineups = useMatchSection(match, "lineups");
-  const events = useMatchSection(match, "events");
-  const players = useMatchSection(match, "players");
+  const now = useMinute();
+  const before = lineupsBeforeKickoff(match, now);
+  const lineupsSeen = useRef(null);
+  // Watched until both sides are official, from 90 min before the kick-off to 30 min after it.
+  const watch = lineupsWatched(match, lineupsSeen.current, now);
+  const lineups = useMatchSection(match, "lineups", true, { every: watch ? LINEUPS_WATCH.every : 0 });
+  if (lineups.data) lineupsSeen.current = lineups.data;
+  const settled = useRef(false);
+  if (lineups.data || lineups.error) settled.current = true;
+  // Ours only while a side lacks the provider's eleven; a 404 or a failed read leaves the other states.
+  const wanted = probableWanted(before, lineups.data);
+  const probable = useMatchSection(match, "lineups/probable", settled.current && wanted);
+  const events = useMatchSection(match, "events", !before);
+  const players = useMatchSection(match, "players", !before);
   const grades = useMatchGrades(match.id);
   const standing = useStanding();
   const bubble = useHoverBubble({ width: 280 });
   const rows = useMemo(() => playerRows(players.data), [players.data]);
   const byId = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
-  const view = useMemo(() => lineupView(lineups.data, events.data?.events, rows, grades), [lineups.data, events.data, rows, grades]);
-  if (lineups.loading && !lineups.data) return <Skeleton label="Chargement des compositions…" lines={4} />;
-  if (!lineups.data || (!view.home && !view.away)) return <Empty>Compositions non renseignées.</Empty>;
+  const images = useMemo(() => probableImages(probable.data), [probable.data]);
+  const view = useMemo(
+    () => lineupView(lineups.data, events.data?.events, rows, grades, images),
+    [lineups.data, events.data, rows, grades, images],
+  );
+  const sides = useMemo(() => lineupSides(view, probableView(probable.data)), [view, probable.data]);
+  if (!settled.current || (wanted && probable.loading && !probable.data))
+    return <Skeleton label="Chargement des compositions…" lines={4} />;
+  if (!sides.home && !sides.away) return <Empty>Compositions non renseignées.</Empty>;
   const open = (id) => f.setPlayer(`${match.id}:${id}`);
+  const asOf = probable.data?.computedAt?.slice(0, 10) || null;
+  const happened = ["home", "away"].some((side) =>
+    (sides[side]?.starters || []).some((p) => p.goals.length || p.ownGoals.length || p.cards.length || p.off),
+  );
   return (
-    <section className={`card ${s.panel}`}>
-      <div className={s.lineupHead}>
-        <h3>
-          {match.home.name} <span className={s.muted}>{view.home?.formation || ""}</span> · {match.away.name}{" "}
-          <span className={s.muted}>{view.away?.formation || ""}</span>
-        </h3>
-        <div className={s.legend}>
-          <span>⚽ but</span>
-          <span>
-            <i className={`${s.cardIcon} ${s.yellow}`} /> carton
-          </span>
-          <span className={s.off}>▼ sorti</span>
+    <section className={`card ${s.panel}`} data-lineups={before ? "before" : "played"}>
+      {before ? (
+        <SidesHead match={match} sides={sides} bubble={bubble} />
+      ) : (
+        <div className={s.lineupHead}>
+          <h3>
+            {match.home.name} <span className={s.muted}>{sides.home?.formation || ""}</span> · {match.away.name}{" "}
+            <span className={s.muted}>{sides.away?.formation || ""}</span>
+          </h3>
+          {happened && (
+            <div className={s.legend}>
+              <span>⚽ but</span>
+              <span>
+                <i className={`${s.cardIcon} ${s.yellow}`} /> carton
+              </span>
+              <span className={s.off}>▼ sorti</span>
+            </div>
+          )}
         </div>
-      </div>
+      )}
       <div className={o.lineups}>
         <div className={o.pitchCol}>
-          <div className={`${s.pitch} ${standing ? s.pitchStanding : ""}`}>
+          <div className={`${s.pitch} ${standing ? s.pitchStanding : ""}`} data-lineup-pitch="">
             <PitchLines standing={standing} />
             {["home", "away"].flatMap((side) =>
-              (view[side]?.starters || [])
+              (sides[side]?.starters || [])
                 .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
                 .map((p) => (
-                  <Marker key={`${side}:${p.id || p.name}`} p={p} side={side} standing={standing} bubble={bubble} row={byId.get(p.id)} onOpen={open} />
+                  <Marker
+                    key={`${side}:${p.id || p.name}`}
+                    p={p}
+                    side={side}
+                    standing={standing}
+                    bubble={bubble}
+                    row={byId.get(p.id)}
+                    basis={sides[side]?.basis}
+                    onOpen={open}
+                  />
                 )),
             )}
           </div>
         </div>
         <div className={o.benches}>
-          <SideBench side="home" team={match.home} data={view.home} onOpen={open} />
-          <SideBench side="away" team={match.away} data={view.away} onOpen={open} />
+          <SideBench side="home" team={match.home} data={sides.home} before={before} asOf={asOf} onOpen={open} />
+          <SideBench side="away" team={match.away} data={sides.away} before={before} asOf={asOf} onOpen={open} />
         </div>
       </div>
       {bubble.bubble}

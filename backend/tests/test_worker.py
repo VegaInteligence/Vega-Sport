@@ -636,6 +636,49 @@ class WorkerTest(unittest.TestCase):
         self.assertRegex(out.getvalue(), r"daily step=lineups error=WORKER_ZERODIVISIONERROR@test_worker\.py:\d+ retry_at=")
         self.assertNotEqual(self.worker._lineups, self.now.date())
 
+    def test_61m_the_probable_elevens_every_fifteen_minutes(self):
+        # FAILURE_MODES §61, 61m: the side work computes our probable elevens (probable.refresh, on the calculation
+        # connection) at most every PROBABLE_EVERY (15 minutes) of the daily pass that runs about every minute; a run
+        # that fails is logged without its text, waits RETRY_DAILY_AFTER, and the other steps run meanwhile.
+        from vega import lineup, probable
+
+        calls, failing = [], []
+
+        def refresh(conn, now):
+            if failing:
+                failing.pop(0)
+                raise RuntimeError("a player's name")
+            calls.append((conn is self.worker.calc_conn, now))
+            return {"matches": 12, "sides": 23, "deleted": 2}
+
+        self.addCleanup(setattr, probable, "refresh", probable.refresh)
+        self.addCleanup(setattr, lineup, "usuals_due", lineup.usuals_due)
+        probable.refresh = refresh
+        usuals = []
+        lineup.usuals_due = lambda conn, today: (usuals.append(today), [])[1]
+        self.assertEqual(probable.EVERY, timedelta(minutes=15))
+        start = self.now
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            for minute in range(16):
+                self.now = start + timedelta(minutes=minute)
+                self.worker.daily()
+        self.assertEqual(calls, [(True, start), (True, start + timedelta(minutes=15))])
+        self.assertEqual(out.getvalue().count("probable lineups matches=12 sides=23 deleted=2"), 2)
+        failing.append(True)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.now = start + timedelta(minutes=30)
+            self.worker.daily()
+            self.now += timedelta(minutes=15)
+            self.worker.daily()  # still waiting after the failure
+            self.now = start + timedelta(minutes=30) + RETRY_DAILY_AFTER
+            self.worker.daily()
+        self.assertEqual(len(calls), 3)
+        self.assertRegex(out.getvalue(), r"daily step=probable lineups error=WORKER_RUNTIMEERROR@test_worker\.py:\d+ retry_at=")
+        self.assertNotIn("a player's name", out.getvalue())
+        self.assertEqual(len(usuals), 19)  # the other steps ran at every pass
+
     def test_the_usual_line_ups_follow_the_ranking_and_the_matches_about_to_start_are_forecast_again(self):
         # 091: the side work writes the award year's usual line-ups when lineup.usuals_due names it; the
         # collection's own round reads the matches about to start (lineup.forecast_matches).

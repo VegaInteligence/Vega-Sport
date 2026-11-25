@@ -1,0 +1,321 @@
+{
+ "data": {
+  "match_id": "m_1LWSAq",
+  "method": "probable-v1",
+  "computedAt": "2026-11-28T17:45:00.000Z",
+  "home": {
+   "formation": "4-3-3",
+   "basis": {
+    "lineups": 10,
+    "from": "2026-09-27",
+    "to": "2026-11-22"
+   },
+   "starters": [
+    {
+     "player_id": "p_2Hn7OB",
+     "name": "Matvey Safonov",
+     "shirt_number": "39",
+     "position_id": 11,
+     "pitch_x": 0.1,
+     "pitch_y": 0.5,
+     "share": 1.0,
+     "image_url": "https://cdn.pitchapi.dev/images/players/2904e656ccc03cd08e3ee2c67308a36b8e53c88068ada2bd7d8af5ec89d827fe.webp",
+     "replaces": null
+    },
+    {
+     "player_id": "p_4QqLFm",
+     "name": "Achraf Hakimi",
+     "shirt_number": "2",
+     "position_id": 32,
+     "pitch_x": 0.36,
+     "pitch_y": 0.88,
+     "share": 0.8,
+     "image_url": "https://cdn.pitchapi.dev/images/players/df6f50ddd944ad5e786717a0ee639adf395e49c69255cd251a1e5efabc0c7778.webp",
+     "replaces": null
+    },
+    {
+     "player_id": "p_2gRmEE",
+     "name": "Marquinhos",
+     "shirt_number": "5",
+     "position_id": 34,
+     "pitch_x": 0.36,
+     "pitch_y": 0.63,
+     "share": 0.4,
+     "image_url": "https://cdn.pitchapi.dev/images/players/ff2b5bbdacefe92efd13f51ca950b73e378733db1eef6000211e6ca0fe3261c2.webp",
+     "replaces": {
+      "player_id": "p_2lkyxD",
+      "name": "Willian Pacho"
+     }
+    },
+    {
+     "player_id": "p_3jDkWb",
+     "name": "Ilya Zabarnyi",
+     "shirt_number": "6",
+     "position_id": 36,
+     "pitch_x": 0.36,
+     "pitch_y": 0.38,
+     "share": 0.7,
+     "image_url": "https://cdn.pitchapi.dev/images/players/c1cc15b81f8ffbb27bde19f63bbf4f783076cad9c2233059f1dcdf27623fbd6a.webp",
+     "replaces": null
+    },
+    {
+     "player_id": "p_4cffMU",
+     "name": "Nuno Mendes",
+     "shirt_number": "25",
+     "position_id": 38,
+     "pitch_x": 0.36,
+     "pitch_y": 0.13,
+     "share": 0.6,
+     "image_url": "https://cdn.pitchapi.dev/images/players/e1be93c3688af3827afa153b9691c5f2c5f71a8fd891015f893e1e652519382f.webp",
+     "replaces": null
+    },
+    {
+     "player_id": "p_0NNMGQ",
+     "name": "Warren Zaïre-Emery",
+     "shirt_number": "33",
+     "position_id": 73,
+     "pitch_x": 0.61,
+     "pitch_y": 0.79,
+     "share": 0.7,
+     "image_url": "https://cdn.pitchapi.dev/images/players/379bd80a5461f6996f5c2bd9e9eb1d524321f8bade1782803713588164a741e5.webp",
+     "replaces": null
+    },
+    {
+     "player_id": "p_0QyXN7",
+     "name": "Vitinha",
+     "shirt_number": "17",
+     "position_id": 75,
+     "pitch_x": 0.61,
+     "pitch_y": 0.5,
+     "share": 0.8,
+     "image_url": "https://cdn.pitchapi.dev/images/players/1a0ca4523503df91b799364718e61e219b38b3c4c66f769a3ad61467175c0b27.webp",
+     "replaces": null
+    },
+    {
+     "player_id": "p_0hSwTd",
+     "name": "João Neves",
+     "shirt_number": "87",
+     "position_id": 77,
+     "pitch_x": 0.61,
+     "pitch_y": 0.21,
+     "share": 0.9,
+     "image_url": "https://cdn.pitchapi.dev/images/players/d4868f33f5ccc14dcb50957dca75779acbd7556698e23c9367a4e2f900e212c0.webp",
+     "replaces": null
+    },
+    {
+     "player_id": "p_0qZnWU",
+     "name": "Maghnes Akliouche",
+     "shirt_number": "11",
+     "position_id": 103,
+     "pitch_x": 0.87,
+     "pitch_y": 0.79,
+     "share": 0.7,
+     "image_url": "https://cdn.pitchapi.dev/images/players/0b1180329a96b01b35d0086ee7cb166d3891ed41212904d817054d04653be06c.webp",
+     "replaces": null
+    },
+    {
+     "player_id": "p_1xKTvn",
+     "name": "Ousmane Dembélé",
+     "shirt_number": "10",
+     "position_id": 105,
+     "pitch_x": 0.87,
+     "pitch_y": 0.5,
+     "share": 0.5,
+     "image_url": "https://cdn.pitchapi.dev/images/players/aa48228e27f2d38c5e3dccdaa07038787a878d9b840c99ed1482bf5ac7a86437.webp",
+     "replaces": null
+    },
+    {
+     "player_id": "p_1oz2X0",
+     "name": "Senny Mayulu",
+     "shirt_number": "24",
+     "position_id": 107,
+     "pitch_x": 0.87,
+     "pitch_y": 0.21,
+     "share": 0.4,
+     "image_url": "https://cdn.pitchapi.dev/images/players/0571cb77e00e7715fc43938741af86e5cb79d01432ea7e01cd81b1f1d744c737.webp",
+     "replaces": {
+      "player_id": "p_4bGFWS",
+      "name": "Désiré Doué"
+     }
+    }
+   ],
+   "absent": [
+    {
+     "player_id": "p_2lkyxD",
+     "name": "Willian Pacho",
+     "image_url": "https://cdn.pitchapi.dev/images/players/6b6b6cdd9d684d5314bbb59bb170c293c1bde11bb1b716cc17c20f7ec6967147.webp",
+     "kind": "suspension",
+     "label": "Yellow card suspension",
+     "expectedReturn": null,
+     "matchesRemaining": 1
+    },
+    {
+     "player_id": "p_4bGFWS",
+     "name": "Désiré Doué",
+     "image_url": "https://cdn.pitchapi.dev/images/players/40ddd878f8126cdfe301c42861b8d7c613d668a12fcf540d9018be59c6d2676c.webp",
+     "kind": "injury",
+     "label": "Thigh injury",
+     "expectedReturn": "2026-12-06",
+     "matchesRemaining": null
+    }
+   ]
+  },
+  "away": {
+   "formation": "3-4-2-1",
+   "basis": {
+    "lineups": 10,
+    "from": "2026-09-20",
+    "to": "2026-11-22"
+   },
+   "starters": [
+    {
+     "player_id": "p_v1000001",
+     "name": "Yvon Mvogo",
+     "shirt_number": "38",
+     "position_id": 11,
+     "pitch_x": 0.1,
+     "pitch_y": 0.5,
+     "share": 1.0,
+     "image_url": null,
+     "replaces": null
+    },
+    {
+     "player_id": "p_v1000002",
+     "name": "Bamo Meïté",
+     "shirt_number": "24",
+     "position_id": 33,
+     "pitch_x": 0.29,
+     "pitch_y": 0.79,
+     "share": 0.9,
+     "image_url": null,
+     "replaces": null
+    },
+    {
+     "player_id": "p_v1000003",
+     "name": "Nathaniel Adjei",
+     "shirt_number": "3",
+     "position_id": 35,
+     "pitch_x": 0.29,
+     "pitch_y": 0.5,
+     "share": 0.8,
+     "image_url": null,
+     "replaces": null
+    },
+    {
+     "player_id": "p_v1000004",
+     "name": "Formose Mendy",
+     "shirt_number": "4",
+     "position_id": 37,
+     "pitch_x": 0.29,
+     "pitch_y": 0.21,
+     "share": 0.3,
+     "image_url": null,
+     "replaces": {
+      "player_id": "p_142BTs",
+      "name": "Montassar Talbi"
+     }
+    },
+    {
+     "player_id": "p_v1000005",
+     "name": "Igor Silva",
+     "shirt_number": "2",
+     "position_id": 62,
+     "pitch_x": 0.49,
+     "pitch_y": 0.88,
+     "share": 0.8,
+     "image_url": null,
+     "replaces": null
+    },
+    {
+     "player_id": "p_v1000006",
+     "name": "Laurent Abergel",
+     "shirt_number": "6",
+     "position_id": 64,
+     "pitch_x": 0.49,
+     "pitch_y": 0.63,
+     "share": 1.0,
+     "image_url": null,
+     "replaces": null
+    },
+    {
+     "player_id": "p_v1000007",
+     "name": "Noah Cadiou",
+     "shirt_number": "8",
+     "position_id": 66,
+     "pitch_x": 0.49,
+     "pitch_y": 0.38,
+     "share": 0.4,
+     "image_url": null,
+     "replaces": {
+      "player_id": "p_0HYXz5",
+      "name": "Jean-Victor Makengo"
+     }
+    },
+    {
+     "player_id": "p_v1000008",
+     "name": "Darlin Yongwa",
+     "shirt_number": "15",
+     "position_id": 68,
+     "pitch_x": 0.49,
+     "pitch_y": 0.13,
+     "share": 0.7,
+     "image_url": null,
+     "replaces": null
+    },
+    {
+     "player_id": "p_v1000009",
+     "name": "Théo Le Bris",
+     "shirt_number": "37",
+     "position_id": 84,
+     "pitch_x": 0.68,
+     "pitch_y": 0.7,
+     "share": 0.8,
+     "image_url": null,
+     "replaces": null
+    },
+    {
+     "player_id": "p_v1000010",
+     "name": "Tosin Aiyegun",
+     "shirt_number": "10",
+     "position_id": 86,
+     "pitch_x": 0.68,
+     "pitch_y": 0.3,
+     "share": 0.6,
+     "image_url": null,
+     "replaces": null
+    },
+    {
+     "player_id": "p_v1000011",
+     "name": "Bamba Dieng",
+     "shirt_number": "9",
+     "position_id": 105,
+     "pitch_x": 0.87,
+     "pitch_y": 0.5,
+     "share": 0.9,
+     "image_url": null,
+     "replaces": null
+    }
+   ],
+   "absent": [
+    {
+     "player_id": "p_142BTs",
+     "name": "Montassar Talbi",
+     "image_url": null,
+     "kind": "injury",
+     "label": "Knee injury",
+     "expectedReturn": null,
+     "matchesRemaining": null
+    },
+    {
+     "player_id": "p_0HYXz5",
+     "name": "Jean-Victor Makengo",
+     "image_url": null,
+     "kind": "suspension",
+     "label": "Red card suspension",
+     "expectedReturn": null,
+     "matchesRemaining": 2
+    }
+   ]
+  }
+ }
+}

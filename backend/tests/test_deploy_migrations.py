@@ -59,7 +59,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # §59 (VI-15): the players' suspensions (core.player_suspensions), the daily focus of the reader's queue, a club's absences.
          "174_absences_suspensions.sql",
          # #105 (§60): the Ballon d'Or race on the Score Vega v9.1 beside the v8 race (three tables, two reads).
-         "175_player_award.sql"]
+         "175_player_award.sql",
+         # §61: our probable elevens before the provider's line-ups (two tables, two reads; display only).
+         "176_match_probable_lineups.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -191,8 +193,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
         self.assertEqual(len(applied), 160)
         self.assertEqual(self.at_production, "migrations applied=160 total=160 logins=unchanged")
         self.assertEqual(self.merged_added, ADDED)
-        self.assertEqual(self.deployed, "migrations applied=20 total=180 logins=unchanged")
-        self.assertEqual(self.again, "migrations applied=0 total=180 logins=unchanged")
+        self.assertEqual(self.deployed, "migrations applied=21 total=181 logins=unchanged")
+        self.assertEqual(self.again, "migrations applied=0 total=181 logins=unchanged")
         self.assertEqual([v for v, *_ in self.migrations_after if v not in {w for w, *_ in self.migrations_before}], ADDED)
         self.assertEqual([r for r in self.migrations_after if r[0] < "155"], self.migrations_before)
         self.assertEqual(self.migrations_again, self.migrations_after)
@@ -206,7 +208,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
                     "SELECT count(*) FROM api.home_rules_v2",
                     "SELECT count(*) FROM api.home_importance_v2(2026::smallint, ARRAY[]::integer[])",
                     "SELECT count(*) FROM api.player_suspensions", "SELECT count(*) FROM api.player_suspension_reads",
-                    "SELECT count(*) FROM api.team_absence_players", "SELECT count(*) FROM api.team_absences"):
+                    "SELECT count(*) FROM api.team_absence_players", "SELECT count(*) FROM api.team_absences",
+                    "SELECT count(*) FROM api.match_probable_lineups", "SELECT count(*) FROM api.match_probable_lineup_players"):
             self.assertIsNotNone(self.read.execute(sql).fetchone()[0], sql)
         friendly = self.read.execute("SELECT match_id, tournament, home_name, away_name FROM api.home_internationals('2026-10-05', '2026-10-11')").fetchall()
         self.assertEqual([r[1:] for r in friendly], [("Friendly", "Brazil", "Japan")])

@@ -1,5 +1,17 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## « Compositions » tab, « Composition probable » — FAILURE_MODES § 61 (25 November 2026, branch `claude/composition-probable` from main 407c4c1, PR #215)
+
+- hugo validated the method (the study's P5, label `probable-v1`) and the mock-up (`/mnt/project-files/composition-probable/maquette/`); the mock-up's commit is the branch's first, reworded.
+- Failure modes first: § 61 (61a–61s), then the tests (red evidence `/mnt/project-files/composition-probable/implementation/evidence/red_*.txt`), then the code.
+- Worker: `vega/probable.py` in the daily pass at most every 15 min; club matches `not_started` within 7 days, each side from its last 10 complete confirmed elevens (5 at least), weights 0.8^k, injured, ill and suspended (this competition) players removed, players gone to another club or out of the read Transfermarkt squad dropped, slots from the template eleven. The method and the per-eleven weights sit behind `predict(method=…)` and `window_weights` for a later `probable-v2`. Display only: nothing the forecast, the line-up model or the rankings read is written (test 61k).
+- Migration 176: `agg.match_probable_lineups`, `agg.match_probable_lineup_players`, views `api.match_probable_lineups` and `api.match_probable_lineup_players`, grants. Read API: `GET /api/matches/{id}/lineups/probable` (404 unless `not_started` and computed; ETag on the match's revision and `computed_at`).
+- Site: per side officielle, prévisionnelle (`confirmed` false), probable, else « Non renseignée »; ours only before kick-off and while a side lacks the provider's eleven; line-ups re-read every 60 s from 90 min before to 30 min after kick-off until both are official.
+- Checks: Python `test_probable_lineups` 17/17, `test_worker` 47/47, deploy migrations and award 40/40, whole suite 1063 run once (2 failures from 176 itself, a view count and the archive guard's direct match key, both fixed and run again green; 1 skipped); read API 300/300; site 1030/1030; E2E sections K and C 15/15 (`/mnt/project-files/composition-probable/implementation/e2e/`).
+- Cost, local synthetic base (3 000 sides, 1.62 M line-up players): 10–11 s a run (`implementation/evidence/cost/`); worker → read API chain checked on it.
+- Review of #215 (§61t): the route reads the sides and their players in one statement (one snapshot), not two reads that could straddle a worker run; test red (2 statements) then green.
+- Not verified: production's share of `confirmed` true line-ups and its cost. Needs a Deploy: migration 176, worker, read API, site.
+
 ## Rotation du logo de la navbar — 25 novembre 2026
 
 - Hugo a validé l’aperçu desktop et mobile : l’astérisque tourne de 360° en 360 ms, puis le navigateur ouvre ou recharge l’accueil. La préférence de mouvement réduit déclenche la navigation immédiatement. Livraison directe sur `main` demandée.

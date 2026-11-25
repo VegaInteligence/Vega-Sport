@@ -16,12 +16,16 @@
  * - a substitute's pitch position is 0, as the source sends it;
  * - head-to-head meetings name the teams without their crests, as the source does;
  * - a family that was not collected, or that the source said was unavailable, is a 404.
+ *
+ * GET /api/matches/{id}/lineups/probable — our probable eleven of each side of a match not started
+ * (vega/probable.py, FAILURE_MODES §61), read from api.match_probable_lineups (176): a side not
+ * computed is null; a match not `not_started`, or with no side computed, is a 404.
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import * as F from "../match-families.mjs";
 
-const ROUTE = /^\/api\/matches\/(m_(?:[A-Za-z0-9]{6}|v\d{7}))(\/(?:lineups|events|shots|stats|players|players\/(?:halves|display)|momentum|advanced|advanced\/players|advanced\/network|heatmaps|h2h))?$/;
+const ROUTE = /^\/api\/matches\/(m_(?:[A-Za-z0-9]{6}|v\d{7}))(\/(?:lineups\/probable|lineups|events|shots|stats|players|players\/(?:halves|display)|momentum|advanced|advanced\/players|advanced\/network|heatmaps|h2h))?$/;
 const FAMILY = {
   "/lineups": "lineups", "/events": "events", "/shots": "shots", "/stats": "team_stats", "/players": "player_stats", "/players/display": "player_stats",
   "/players/halves": "player_halves", "/momentum": "momentum", "/advanced": "advanced", "/advanced/players": "advanced_players",
@@ -159,12 +163,44 @@ async function body(read, f, suffix, params) {
   return missing();
 }
 
+/** Our probable elevens (§61): their own rows and ETag (each run of the worker's step writes them again). */
+async function probable(read, req, id, params) {
+  if (params.has("v") && !/^[\w.-]{1,200}$/.test(params.get("v"))) reject(400, "Paramètre invalide.");
+  const [f] = await read(
+    `SELECT f.match_id, f.id, f.status, f.revision, f.home_internal_id, f.away_internal_id FROM api.fixtures f WHERE f.match_id=api.internal_id('match',$1)`,
+    [id],
+  );
+  if (!f) reject(404, "Match introuvable.");
+  if (f.status !== "not_started") missing();
+  // One statement, so one snapshot: the worker replaces both tables in one transaction, and two reads could
+  // straddle a run, pairing its sides with another run's players (§61t).
+  const sides = await read(
+    `SELECT l.team_key, l.side, l.method, l.computed_at, l.basis_lineups, l.basis_from::text AS basis_from, l.basis_to::text AS basis_to,
+       l.formation, COALESCE((SELECT json_agg(json_build_object('role', p.role, 'ord', p.ord, 'player_id', p.player_id, 'name', p.name,
+         'image_url', p.image_url, 'shirt_number', p.shirt_number, 'position_id', p.position_id, 'pitch_x', p.pitch_x, 'pitch_y', p.pitch_y,
+         'share', p.share, 'replaces_id', p.replaces_id, 'replaces_name', p.replaces_name, 'absence_kind', p.absence_kind,
+         'absence_label', p.absence_label, 'expected_return', p.expected_return::text, 'matches_remaining', p.matches_remaining)
+         ORDER BY p.role, p.ord)
+         FROM api.match_probable_lineup_players p WHERE p.match_key=l.match_key AND p.team_key=l.team_key), '[]'::json) AS players
+     FROM api.match_probable_lineups l WHERE l.match_key=$1`,
+    [f.match_id],
+  );
+  const players = sides.flatMap((s) => s.players.map((p) => ({ ...p, team_key: s.team_key })));
+  if (!sides.length) missing();
+  const computed = sides.map((s) => new Date(s.computed_at).toISOString()).sort();
+  const url = new URL(req.url);
+  const etag = `W/"match-v1-${createHash("sha256").update(`${url.pathname}|${f.revision}|${computed.join(",")}`).digest("hex")}"`;
+  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 15 });
+  return send(req, { data: F.probableLineupsBody(f, sides, players) }, 200, { etag, ttl: 15 });
+}
+
 export function createMatchDetailRoute(read) {
   return async (req, path, params) => {
     const m = path.match(ROUTE);
     if (!m) return null;
     const [, id, suffix = ""] = m;
     validateParams(params, suffix === "/heatmaps" ? ["frame", "v"] : ["v"]);
+    if (suffix === "/lineups/probable") return probable(read, req, id, params);
     if (params.has("frame") && !/^(acting_ltr|home_ltr)$/.test(params.get("frame"))) reject(400, "Paramètre invalide.");
     if (params.has("v") && !/^[\w.-]{1,200}$/.test(params.get("v"))) reject(400, "Paramètre invalide.");
     const [f] = await read(

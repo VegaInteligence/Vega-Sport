@@ -283,6 +283,7 @@ class Worker:
         self._award_due = set()  # the years it listed that are still to read again
         self._lineups = None  # UTC day of the last look at the line-up model (lineup.refresh)
         self._lineup_seen = {}  # matches whose line-ups gave no forecast: lineup.forecast_matches
+        self._probable = None  # when our probable elevens were last computed (probable.refresh, §61)
         self._retry_at = {}  # step of the daily pass that failed -> when it is tried again
         # SideProcess when the daily pass and the image copies run in a process of their own.
         self.side_process = None
@@ -498,6 +499,18 @@ class Worker:
             if ok:
                 self._archives = now.date()
                 print(f"archive seasons changed={changed}", flush=True)
+        # Our probable elevens of the club matches of the next 7 days (probable.py, §61): display only, nothing of the
+        # forecast reads them. Every side in scope is computed again at most every probable.EVERY, before the seasons'
+        # models, which can take the rest of the hour: the line-ups and the absence reads that came since are in.
+        from . import probable
+
+        if self._probable is None or now >= self._probable + probable.EVERY:
+            started = time.monotonic()
+            ok, counts = self._daily_step(("probable lineups",), now, lambda: probable.refresh(self.calc_conn, now))
+            if ok:
+                self._probable = now
+                print(f"probable lineups matches={counts['matches']} sides={counts['sides']} deleted={counts['deleted']} "
+                      f"seconds={time.monotonic() - started:.1f}", flush=True)
         _, due = self._daily_step(("due",), now, lambda: due_seasons(self.calc_conn, now))
         # A season whose models failed stays due: it waits like any failed step. The most
         # recent season first: a past season's ranking is the pass that takes the most memory,
