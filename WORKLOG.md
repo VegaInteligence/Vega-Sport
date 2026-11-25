@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Pays refusés — 25 novembre 2026
+
+- Décision de hugo (25 nov.) : bloquer la Corée du Nord seulement, pour l'instant. Petit changement isolé, sans ticket. Branche `claude/blocage-coree-du-nord` depuis main fb0de18.
+- API : `Restrictions.GeoRestriction` en liste noire `[KP]` sur la distribution (`infra/aws/api.yaml`), réponse 403 de CloudFront. Test écrit d'abord et vu rouge : `backend/tests/test_api_geo_block.py`. Vérifié : 25 tests des gabarits, cfn-lint us-east-2.
+- Site : règle du pare-feu Vercel (`geo_country` = `KP`, refus), posée par hugo dans le tableau de bord le 25 nov. (« Pays refusé », lue et vérifiée : `geo_country` eq `KP`, deny, active), pas dans le dépôt.
+- Accord de hugo (carte, 25 nov.) : fusionner, Deploy, règle Vercel. Prochaine action : Deploy, puis lire la restriction sur la distribution.
+
 ## Conditions générales de vente — 25 November 2026 (branch `claude/conditions-generales-de-vente`, issue #227)
 
 - hugo asked for classic SaaS sales terms. New static page `/conditions-generales-de-vente` (text `src/content/legal-sale.jsx`, 18 sections, one table of offers and prices), in the footer's « Informations » column and linked from the banners of the two other legal pages; the terms of use's « Offres payantes » points to it.
