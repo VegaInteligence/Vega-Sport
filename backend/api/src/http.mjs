@@ -57,14 +57,20 @@ export const noStoreHeaders = {
   "Vercel-CDN-Cache-Control": "no-store",
 };
 
+/** If-None-Match's entity tags: `{ any: true }` for '*', else `{ any: false, tags }`, each tag without its `W/` (the
+ * comparison is weak); null when the header is absent or malformed (it then matches nothing). */
+export function entityTags(value) {
+  if (!value) return null;
+  if (value.trim() === "*") return { any: true, tags: [] };
+  const grammar = /(?:W\/)?"[\x21\x23-\x7e\x80-\xff]*"/g;
+  if (!/^[\s,]*$/.test(value.replace(grammar, ""))) return null;
+  return { any: false, tags: (value.match(grammar) || []).map((tag) => tag.replace(/^W\//, "")) };
+}
+
 /** GET/HEAD If-None-Match uses weak comparison, including lists and '*'. */
 export function matchesEtag(value, etag) {
-  if (!value) return false;
-  if (value.trim() === "*") return true;
-  const tags = /(?:W\/)?"[\x21\x23-\x7e\x80-\xff]*"/g;
-  const candidates = value.match(tags) || [];
-  if (!/^[\s,]*$/.test(value.replace(tags, ""))) return false;
-  return candidates.some((tag) => tag.replace(/^W\//, "") === etag.replace(/^W\//, ""));
+  const held = entityTags(value);
+  return Boolean(held) && (held.any || held.tags.includes(etag.replace(/^W\//, "")));
 }
 
 export function send(req, value, status = 200, { etag, ttl = 0, maxBytes = 0, headers = {}, stale = null, personal = false } = {}) {

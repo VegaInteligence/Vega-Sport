@@ -513,10 +513,10 @@ class MigrationTest(unittest.TestCase):
         from vega import open_matchday_restore
 
         files = sorted(p.name for p in (ROOT / "sql").glob("[0-9][0-9][0-9]_*.sql"))
-        self.assertEqual(files[-1], "176_match_probable_lineups.sql")
-        self.assertIn(files[-1], open_matchday_restore.REVIEWED_SCHEMAS)
+        self.assertIn("176_match_probable_lineups.sql", files)  # 177 (GH137) came after it
+        self.assertIn("176_match_probable_lineups.sql", open_matchday_restore.REVIEWED_SCHEMAS)
         self.assertLessEqual({"agg.match_probable_lineups", "agg.match_probable_lineup_players"}, open_matchday_restore.ADDED_DEPENDENCIES)
-        text = "\n".join(line.split("--")[0] for line in (ROOT / "sql" / files[-1]).read_text(encoding="utf-8").splitlines())
+        text = "\n".join(line.split("--")[0] for line in (ROOT / "sql" / "176_match_probable_lineups.sql").read_text(encoding="utf-8").splitlines())
         # Display only: no statement names a forecast, line-up model or provider line-up table.
         for name in ("agg.match_forecasts", "agg.match_lineup_forecasts", "agg.lineup_usuals", "core.lineups", "core.lineup_players"):
             self.assertNotIn(name, text)
