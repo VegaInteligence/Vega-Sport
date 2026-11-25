@@ -5207,6 +5207,88 @@ the five, and P1a is used everywhere); how many of the window's opponents have a
 150); the competition types production's editions get; the cost on production's base; the study's gain measured with
 `probable.py`'s absent and gone instead of its own. The bubble's wording of the score waits for hugo.
 
+### 61.4 `probable-v3`: the study v5.1's V51 (25 Nov 2026; written before the tests)
+
+The study `/mnt/project-files/blesses-suspendus/onze-probable/v51/` (`etude_onze_postes_v51.py`, read only on
+production, run 1 of 25 Nov 2026, `resultats_run1.md`; its design from Astra's second answer, `composition-probable/
+codex/reponse_codex_v5.md`) froze L75 on the adjustment year and judged it on the validation (1 Aug to 25 Nov 2026), in
+the clubs of the five leagues (1 253 team-matches), against `probable-v2`: starters found +0.024 [−0.011; +0.066],
+starters in the right slot (line and lane of the official sheet) +0.449 [+0.373; +0.521] (7.23 against 6.78), and
++0.176 [+0.131; +0.219] against v2's eleven merely re-placed. The criterion fixed before held; that validation had
+been looked at for v5, so the study's section 5 (matches since 26 Nov 2026) is re-run to confirm it. Elsewhere nothing
+changes. Display only, as 61.1.
+
+#### 61.4.1 Rules
+
+- **Label.** `probable.METHOD` = `probable-v3`. `probable-v1` and `probable-v2` stay selectable (`predict`, `compute`,
+  `refresh(method=…)`), unchanged (61a–61ad hold under them).
+- **Elsewhere** (a club not of the five leagues, 61.3): `probable-v2`'s P1a, its eleven, replacements, slots and shares.
+- **Window and history.** The club's last LONG = 30 complete confirmed elevens are read (61.1's rules, LOOKBACK
+  included); the window is the last WINDOW = 10 of them: the weights, scores, split, template, absent, gone, basis and
+  the pool are the window's, as v2's. The 20 older elevens serve only the permitted lines.
+- **A slot's label** (line, lane): the line of `power.role_of(formation, position_id, top)` (G, D, M, A); the lane by
+  the rank of `pitch_y` among the eleven's players of that line: the lowest L, the highest R, the others C; a line of
+  two players or fewer is all C. A starter without a line or without `pitch_y` has no label. `pitch_y` is the
+  provider's slot coordinate, not mirrored away from home (the study: the same full back keeps his lane 94 % of the time
+  from one venue to the other).
+- **Role shares.** Over every eleven read in the run (each club's history, each (match, club) once), with each starter's
+  main role (`agg.player_power`, as 61.1): q(r, s) = the share of label s among the labelled starts of role r, and
+  ql(r, ln) = the share of line ln; a role with fewer than 20 labelled starts: q is the share of s among all labelled
+  starts, ql is 0. A starter without a main role counts under « none ».
+- **Fit** A(p, s) = (n_ps + 2 q(r, s)) / (n_p + 2): n_ps = Σ w (the window's similarity weights) over the elevens p
+  started with label s; n_p = Σ w over those he started with any label; r his main role.
+- **Permitted lines** of p: the line of his main role; every line he started in (with a label) in the history; with
+  fewer than 3 labelled starts in the history and a known role, also every outfield line ln with ql(r, ln) ≥ 0.10. A
+  keeper (his line in the window, else his role's, G) may take the G slot only, and nobody else may.
+- **The eleven (five leagues).** v2's template (61.3: the formation of greatest weight in the chosen split, its most
+  recent complete eleven, else the split's most recent complete one); no template: v2's eleven and slots. The pool:
+  every player who appeared in the window, neither absent nor gone. The template's slots are filled together, one player
+  each, by the assignment that maximises Σ (0.25 · S + 0.75 · S · A) (S the score of 61.3, λ 0.75), a slot without a
+  label counting 0 for anyone. A player out of his permitted lines (or a keeper rule broken) counts −1 000: if the
+  best assignment holds one, the side gets v2's eleven and slots instead. Fewer available players than slots: the
+  slots left over stay empty (one short, as v2).
+- **The slots.** The chosen players are re-assigned to the template's slots by the assignment that maximises Σ S · A
+  within the permitted lines; ties go to the slot v2's `place` would give them (61.1's rules, no replacement).
+- **`replaces`.** A player in the slot of a template starter who is absent (not gone) and not in the eleven names
+  that absent player; otherwise none.
+- **`share`** = the score (61.3); the site draws v3's rows as v2's (no « Titulaire N fois sur M »).
+- **Reads.** 61.3's, with LONG elevens per club instead of WINDOW (the sheets of the 20 older ones too). Read only; no
+  migration.
+
+#### 61.4.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| 61ae | Five leagues, 4-3-3: the left winger absent; on the bench a left winger (score 0.30, always on the left); the best attacking score a centre forward (0.57) who never plays wide | v3: the left winger at A-L, the centre forward at A-C; v2: the centre forward in the left winger's slot |
+| 61af | Absences in a five-league window (a winger, two wingers, a winger and the right winger); a midfielder absent where only a full back who played midfield in the history's older elevens (or a full back of few starts, his role's midfield share ≥ 0.10 with those elevens) can take the slot | each starter in one of his permitted lines; with the window alone as history, no assignment: 61ai; with the older elevens, a full back in midfield (corrected 25 Nov 2026 after the first run: the test had asked permitted lines of two absences without any assignment, which 61ai already gives to v2) |
+| 61ag | Few starts: a newcomer with no labelled start (a winger, the winger's starts 20 % in midfield); his role under 20 labelled starts | permitted A and M; only A |
+| 61ah | Keepers | a keeper only in the G slot, the G slot only to a keeper |
+| 61ai | No assignment within the permitted lines (a forward slot only a centre back can fill) | v2's eleven and slots, unchanged |
+| 61aj | Labels and fit by hand: a 5-3-2 (the left wing back y 0.11 at L, the left centre back y 0.31 at C), a 4-2-3-1; A with and without starts | as computed by hand |
+| 61ak | The same window, a club not of the five / no template | v2's eleven, replacements and slots |
+| 61al | `replaces` | the absent template starter's slot taker names him; a gone one is named by no one |
+| 61am | `probable-v1` and `probable-v2` selected after the change | the same elevens, replacements, slots and shares as before |
+| 61an | The worker's run under `vega_calc` | rows labelled `probable-v3`; basis = the window's 10 elevens; the history's 30 read; nothing else written (61k) |
+| 61ao | Parity with the study (`etude_onze_postes_v51.py`'s L75 on its two self-test worlds, with the study's q and ql given) | the same eleven and slots, case by case |
+
+61ae–61an: `backend/tests/test_probable_lineups.py`; 61ao: a draft outside the repository
+(`/mnt/project-files/composition-probable/probable-v3/parity/`).
+
+#### 61.4.3 Evidence (25 Nov 2026, branch `claude/probable-v3`, PR #225)
+
+- Tests: `test_probable_lineups` red 18 of 41 (3 failures, 15 errors), then green 41/41; `test_worker` 47/47; site
+  1 042/1 042 (local PostgreSQL 18; `/mnt/project-files/composition-probable/probable-v3/tests/`).
+- 61ao: `parity_v3.py` loads the study without its main() and compares, at each of its five-league sides, its L75 with
+  `predict(…, "probable-v3")` on its 30 elevens and its q and ql: world 1 488 sides, world 2 168, 0 mismatched (eleven,
+  slots, formation, share); the study's own v2 parity on the same module 973 + 341 cases, 0. Control (production's λ at
+  0.5): 66 + 3 mismatched, so the comparison sees a change. Neither world has a side without an assignment: the
+  fallback is covered by 61ai only.
+- Cost (`cost/bench_v3.py`, `bench_v2.py`'s synthetic base: 3 000 sides, all of the five leagues, 30 elevens each): a
+  run 21.5–22.2 s against 9.5–10.0 s for `probable-v2`; reads 10.9 s against 6.0 s (SHEETS 6.9 s against 2.9 s, WINDOWS
+  1.8 s against 0.9 s), the rest the labels and assignments. Production has far fewer five-league sides per run.
+- Not verified: production's step time (the worker logs `seconds=`), its share of fallbacks to v2, and the study's
+  section 5 (matches since 26 Nov 2026), to re-run monthly.
+
 ## 62. The match page in five tabs (issue #221; hugo, 25 Nov 2026: mock-up https://claude.ai/artifact/3KkomqcnEFUSvY71pf6eWY validated, « ok code et push ses changements »; written before the tests)
 
 Site only (`MatchDetail.jsx` and the components it draws); no API, worker or migration. Each block of the eight tabs

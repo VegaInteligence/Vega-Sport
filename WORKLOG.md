@@ -7,6 +7,14 @@
 - Site : règle du pare-feu Vercel (`geo_country` = `KP`, refus), posée par hugo dans le tableau de bord le 25 nov. (« Pays refusé », lue et vérifiée : `geo_country` eq `KP`, deny, active), pas dans le dépôt.
 - Accord de hugo (carte, 25 nov.) : fusionner, Deploy, règle Vercel. Prochaine action : Deploy, puis lire la restriction sur la distribution.
 
+## Conditions générales de vente — 25 November 2026 (branch `claude/conditions-generales-de-vente`, issue #227)
+
+- hugo asked for classic SaaS sales terms. New static page `/conditions-generales-de-vente` (text `src/content/legal-sale.jsx`, 18 sections, one table of offers and prices), in the footer's « Informations » column and linked from the banners of the two other legal pages; the terms of use's « Offres payantes » points to it.
+- Written for monthly and yearly subscriptions paid with Stripe, French law, consumers: renewal (L215-1 reminder for yearly), termination from « Mon compte » (L215-1-1), 14-day withdrawal with immediate access and pro rata (L221-25) plus the model form, conformity guarantee of digital services, mediation. The page says no paid offer is open yet.
+- Not decided, so owner fields (`legal-identity.js` `legalSale`, null): SIRET, VAT status, mediator, the four prices. The sales terms keep « Version provisoire » until they and the four identity fields are filled.
+- Tests first: `tests/legal-field.test.mjs` F7–F9, `tests/e2e/legal-pages.e2e.mjs` (third page, L5, L6, L14, L19, new L21), `consent.e2e.mjs` E18, `not-found-route.test.mjs`. Red 27/75, then green 75/75; consent 28/30 (2 account checks not run, as before); site 1 045/1 045; build OK.
+- To do when subscriptions open: the privacy page must describe Stripe and the subscription data; the decided values go in `legalSale`.
+
 ## La page match après la revue de hugo en production — FAILURE_MODES § 63 (25 November 2026, branch `claude/page-match-retours` from main fb0de18)
 
 - hugo's review of #223 in production (18 h 31): the shot map « dégueulasse », a search in Compositions, the finished match's strip on the Résumé, a longer « Les actions qui ont pesé le plus », the table in a tab of its own with the projection.
@@ -33,15 +41,24 @@
 - Tests first: `tests/e2e/match-tabs.e2e.mjs` (M1–M12) red 10/12, then green 14/14 (M14: the halves in Statistiques) (`/mnt/project-files/fusion-onglets-match/e2e-rouge/`, `e2e-vert/`). `match-before-kickoff.e2e.mjs` moved to the two-tab contract (and M13, the Résumé while live), 7/7 (`e2e-avant-coup-envoi/`). `match-page.e2e.mjs` updated (T, A1, V11, F3/F4) but not run: it needs the public API, which this cloud session cannot reach. Site 1 042/1 042, build OK.
 - Not verified: the real public API on a finished match.
 
-## « Composition probable » probable-v2 — FAILURE_MODES § 61.3 (25 November 2026, branch `claude/probable-v2` from main c83c53e, local only)
+## « Composition probable » probable-v3 — FAILURE_MODES § 61.4 (25 November 2026, branch `claude/probable-v3` from main fb0de18)
 
-- Goal: the worker's step writes `probable-v2`, the study v4's H1 (`/mnt/project-files/blesses-suspendus/onze-probable/v4/`, run 1, read only on production): 8.43 starters found out of 11 against 7.91 for `probable-v1` on 11 760 validation team-matches (five leagues 8.18 against 7.87). Not pushed, no PR yet; Linear coordination is the user's.
+- Goal: the worker's step writes `probable-v3`, the study v5.1's V51 (`/mnt/project-files/blesses-suspendus/onze-probable/v51/`, run 1, read only on production; design from Astra's second answer): in the five leagues' clubs on the validation (1 253 team-matches since 1 Aug 2026), starters found +0.024 [−0.011; +0.066] and starters in the right slot +0.449 [+0.373; +0.521] against v2, +0.176 against v2 merely re-placed. hugo chose « Coder la v5.1 et la mettre en ligne » (card, 25 Nov 19 h 26 Paris): PR now, Deploy with his OK. Confirmation on matches since 26 Nov: re-run the study's section 5 (22 weeks, 1 500 team-matches before it decides).
+- Method: five-league clubs only (elsewhere v2): v2's template; its slots filled together (Hungarian `assign`) by the greatest Σ 0.25 S + 0.75 S A, within the permitted lines (main role's, those started in among the last LONG 30 elevens, the role's lines of ≥ 10 % with fewer than 3 labelled starts; keepers only in goal); re-placed by Σ S A, ties to v2's slot; no assignment or no template: v2's eleven. Role shares over every eleven the run read. `replaces`: the absent template starter's slot taker. `probable-v1`/`-v2` selectable, unchanged.
+- Reads: WINDOWS with LIMIT 30 instead of 10 for v3 (the window is the last 10: basis unchanged), MAIN_ROLES over the histories' starters too; no migration. Site: v3 rows drawn as v2's (no count).
+- Tests first (§ 61.4, 61ae–61an): `test_probable_lineups` red (3 failures, 15 errors of 41), then green 41/41 (`/mnt/project-files/composition-probable/probable-v3/tests/`). One test corrected after the first run: 61af asked permitted lines on two absences that admit no assignment, which 61ai gives to v2; the row and the test now say so. `test_worker` 47/47, site 1 042/1 042 (the 61ac v3 assertion held without a site change). Parity 61ao with the study's L75 on its two self-test worlds: 656 five-league sides, 0 mismatched; the study's v2 parity 1 314 cases, 0 (`…/probable-v3/parity/`). Control (λ 0.5 in production): 69 mismatched.
+- Cost (synthetic base, 3 000 five-league sides): 21.5–22.2 s a run against 9.5–10.0 s for v2 (`…/probable-v3/cost/`).
+- Next: PR #225, CI, hugo's OK to merge and for one coordinated Deploy (worker and site); then the step's seconds in the worker's log and PSG's eleven in production; section 5 monthly.
+
+## « Composition probable » probable-v2 — FAILURE_MODES § 61.3 (25 November 2026, PR #218, main 492a136, Deploy 141)
+
+- Goal: the worker's step writes `probable-v2`, the study v4's H1 (`/mnt/project-files/blesses-suspendus/onze-probable/v4/`, run 1, read only on production): 8.43 starters found out of 11 against 7.91 for `probable-v1` on 11 760 validation team-matches (five leagues 8.18 against 7.87). Linear coordination is the user's.
 - Method: a club of the five leagues (a match, any status, of a PitchAPI edition of a `tm_history.LEAGUES` league in the award year) gets P11 (P10's score, a 2, on P7's similarity weights s 400, λ 0.3); any other P1a (the latest eleven, each absent or gone starter replaced by the best score of his line, else of the outfield lines, a keeper by a keeper). The window, lines, absent and gone stay `probable-v1`'s (where the study's own rules differ, `probable.py`'s are kept). `probable-v1` stays selectable: `predict`, `compute`, `refresh(method=…)`.
 - `share` is now the score (0–1), not a count of starts: the site draws « Titulaire N fois sur M » for `probable-v1` rows only. A wording for v2's score needs hugo's validation of a mock-up. Deploy the site with or before the worker.
 - Reads: the competition type and the opponents' Elo inside TARGETS and WINDOWS, one new read (FIVE). `vega_calc` holds SELECT on `core` and `agg` (017): no migration.
 - Tests first (§ 61.3, 61u–61ad): `test_probable_lineups` red (5 failures, 13 errors of 31), then green 31/31; `match-lineups-probable.test.mjs` red 1/5, then green 5/5. Then `test_worker` 47/47 and the site's `node --test tests/*.test.mjs` 1031/1031 (local PostgreSQL 18). Parity with the study's functions on its three self-test worlds and its unit windows: 88 552 cases (4 603 of them in the five leagues), 0 mismatched (evidence `/mnt/project-files/composition-probable/probable-v2/`).
 - Cost (61.1's synthetic base, 3 000 sides): 11 reads instead of 10; a run 11.0–12.9 s with no club of the five, 15.9–17.0 s with all of the five, against 10.1–11.8 s and 12.6–15.2 s for main's `probable-v1` in the same phases; `probable-v1` on the branch writes main's rows (33 000, identical). FIVE first joined a match's two teams by an OR (7.9 s), now by equality (0.2 s).
-- Next: review; a Deploy of the worker and the site (no migration); then check production's five-league keys, Elo coverage and the step's time.
+- In production since Deploy 141 (25 Nov 17 h 30 Paris).
 
 ## Fiche « Performance du joueur » et publication périmée — 25 novembre 2026
 

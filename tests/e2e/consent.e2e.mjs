@@ -39,8 +39,8 @@
 //  E16 localStorage throwing: the banner shows, nothing is measured, no page error.
 //  E17 The region is announced once (one polite live region holding the banner), and the banner appears without moving
 //     the page (the main heading's position is unchanged after it shows).
-//  E18 The footer's « Informations » column holds « Cookies » as its third entry on /, /clubs/, /confidentialite and
-//     /conditions-utilisation, looking like the two links beside it (font, size, weight, colour, line height, row
+//  E18 The footer's « Informations » column holds « Cookies » as its last entry, after the three legal links, on /,
+//     /clubs/, /confidentialite, /conditions-utilisation and /conditions-generales-de-vente, looking like the links beside it (font, size, weight, colour, line height, row
 //     height; the same colour on hover), desktop and phone.
 //  E19 The banner's title ends with the logo's asterisk, the very drawing the legal pages' titles use (same path),
 //     not the round point.
@@ -480,7 +480,7 @@ try {
     const { context, page } = await open({ geo: EU, viewport, stored: refused, label: `E18-${viewport.width}` });
     const seen = [];
     let ok = true;
-    for (const route of ["/", "/clubs/", "/confidentialite", "/conditions-utilisation"]) {
+    for (const route of ["/", "/clubs/", "/confidentialite", "/conditions-utilisation", "/conditions-generales-de-vente"]) {
       await goto(page, route);
       const column = page.locator('.site-footer nav[aria-label="Informations"]');
       await column.scrollIntoViewIfNeeded({ timeout: 10000 }).catch(() => {});
@@ -494,25 +494,25 @@ try {
         });
       });
       // The reference: a link of the column that is not the current page's (that one is highlighted).
-      const first = look.slice(0, 2).find((item) => item && !item.current);
-      const third = look[2];
+      const first = look.slice(0, 3).find((item) => item && !item.current);
+      const last = look[3];
       let hover = null;
-      if (third && viewport === desktop) {
+      if (last && viewport === desktop) {
         await page.locator('.site-footer nav[aria-label="Informations"] a').first().hover();
         const linkHover = await page.evaluate(() => getComputedStyle(document.querySelector('.site-footer nav[aria-label="Informations"] a')).color);
         await page.locator('.site-footer nav[aria-label="Informations"] button').hover();
         const buttonHover = await page.evaluate(() => getComputedStyle(document.querySelector('.site-footer nav[aria-label="Informations"] button')).color);
         hover = { linkHover, buttonHover };
       }
-      const same = third && first && third.tag === "BUTTON" && third.text === "Cookies" &&
-        ["font", "size", "weight", "color", "line", "h", "deco"].every((k) => first[k] === third[k]) &&
+      const same = last && first && last.tag === "BUTTON" && last.text === "Cookies" &&
+        ["font", "size", "weight", "color", "line", "h", "deco"].every((k) => first[k] === last[k]) &&
         (!hover || hover.linkHover === hover.buttonHover);
-      ok &&= Boolean(same) && look.length === 3;
+      ok &&= Boolean(same) && look.length === 4;
       seen.push({ route, look, hover });
     }
     if (viewport === phone) await shot(page, "E18-footer-phone");
     else await shot(page, "E18-footer-desktop");
-    check(`E18-${viewport.width}`, "« Cookies » third in « Informations », styled as the links beside it", seen, ok);
+    check(`E18-${viewport.width}`, "« Cookies » last in « Informations », after the three links, styled as the links beside it", seen, ok);
     await context.close();
   }
 

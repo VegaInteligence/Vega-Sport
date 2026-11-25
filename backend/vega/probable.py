@@ -4,7 +4,20 @@ Display only (FAILURE_MODES.md §61; hugo, 25 Nov 2026): the forecast, the line-
 core.lineups neither read nor receive anything of it. The match page shows it for a side the provider has sent no
 line-up for yet.
 
-The method, probable-v2 (§61.3), is the study v4's H1 (blesses-suspendus/onze-probable/v4/etude_onze_melange.py:
+The method, probable-v3 (§61.4), is the study v5.1's V51 (blesses-suspendus/onze-probable/v51/etude_onze_postes_v51.py:
+`predict_all`, its L75), judged there on its validation in the clubs of the five leagues (1 253 team-matches since 1 Aug
+2026) against probable-v2: starters found +0.024 [−0.011; +0.066], starters in the right slot (line and lane) +0.449
+[+0.373; +0.521]. Elsewhere it is probable-v2. In a club of the five leagues:
+- each slot is labelled (`labels`: its line, its lane by pitch_y); each player's fit to a label, A (`fit`), is his
+  weighted starts with it, drawn towards his main role's share of it (`role_shares`, over every eleven the run read);
+- the template is probable-v2's; its slots are filled together (`assign`) from the window's available players, by the
+  greatest Σ (1 − λ) S + λ S A (λ 0.75, S the score below), each player only in one of his permitted lines
+  (`permitted`: his role's, those he started in among the club's last LONG elevens, and his role's frequent ones when
+  he has few starts), a keeper only in goal; then re-placed by the greatest Σ S A, ties to probable-v2's slot;
+- no assignment within those lines, or no template: probable-v2's eleven.
+A template starter absent and out of the eleven is named by whoever takes his slot.
+
+probable-v2 (§61.3), still selectable, is the study v4's H1 (blesses-suspendus/onze-probable/v4/etude_onze_melange.py:
 `predict_xis` and `route`), chosen there over probable-v1 on its validation (11 760 team-matches since 1 Aug 2026): 8.43
 starters found out of 11 against 7.91 (+0.518, 95 % interval [+0.491; +0.545]); in the clubs of the five leagues 8.18
 against 7.87, elsewhere 8.46 against 7.91.
@@ -43,9 +56,10 @@ from .forecast import LEAGUE_PHASE_CUPS
 from .lineup import year_of
 from .power import award_year, role_of
 
-METHOD = "probable-v2"  # the method the worker's step writes
-METHODS = ("probable-v1", "probable-v2")
+METHOD = "probable-v3"  # the method the worker's step writes
+METHODS = ("probable-v1", "probable-v2", "probable-v3")
 WINDOW = 10  # the club's last complete confirmed elevens, every competition
+LONG = 30  # probable-v3: the club's last LONG of them are read, the history the permitted lines come from
 MIN_RECENT = 5  # below this many in the window: no probable eleven for that side
 DECAY = 0.8  # weight 0.8^k, k = 0 for the most recent eleven
 STARTERS = 11
@@ -59,6 +73,13 @@ OTHER_KIND = 0.3  # λ: an eleven of another competition type than the match's (
 MISSING_GAP = 150.0  # the Elo gap counted when either opponent's Elo is unknown
 PULL = 2.0  # a: the prior's weight in a player's score
 PRIOR = 0.6  # the prior when no eleven of the window has a substitute on its sheet
+# probable-v3's constants, the study v5.1's (L75, frozen on its adjustment year; Astra's lines).
+FIT_WEIGHT = 0.75  # λ: a player's worth in a slot, (1 − λ) S + λ S A
+FIT_PULL = 2.0  # the weight of his role's share in a player's fit A
+ROLE_MIN = 20  # a role with fewer labelled starts: its label shares are every role's, its line shares 0
+FEW = 3  # a player with fewer labelled starts in the history also takes his role's lines of ROLE_SHARE or more
+ROLE_SHARE = 0.10
+OUT = -1000.0  # the worth of a player out of his permitted lines, or of a keeper rule broken
 
 LINE = {"goalkeeper": "G", "centre_back": "D", "full_back": "D", "defensive_midfielder": "M", "central_midfielder": "M",
         "wide_midfielder": "M", "attacking_midfielder": "M", "winger": "A", "centre_forward": "A"}
@@ -84,7 +105,7 @@ def window_weights(method, window, target):
     """Each eleven's weight in `window` (oldest first) for the match `target`: the one place a method weighs them."""
     if method == "probable-v1":
         return weights(len(window))
-    if method == "probable-v2":
+    if method in ("probable-v2", "probable-v3"):
         return similarity_weights(window, target)
     raise ValueError(f"unknown method {method!r}")
 
@@ -151,6 +172,16 @@ def _tally(entries, wts, main_role):
     return starts, apps, last, lines_of, shapes, chosen
 
 
+def _lines(apps, lines_of, main_role):
+    """Each player's line in a window: that of his weighted starts (ties: the last in LINES' alphabetical order), never a
+    starter: his role's."""
+    line = {}
+    for p in apps:
+        lc = lines_of.get(p)
+        line[p] = max(sorted(lc), key=lambda x: (round(lc[x], 9), x)) if lc else LINE.get(main_role(p), "?")
+    return line
+
+
 def guess(entries, wts, main_role, gone=frozenset(), score=None, base=None):
     """The guessed eleven of a window (oldest first, weights of the same length): ([(player, line)], [(removed, line,
     replacement or None)]). The study's `guess()` as measured: the split of greatest weight (ties: the most recent);
@@ -161,10 +192,7 @@ def guess(entries, wts, main_role, gone=frozenset(), score=None, base=None):
     The study v4's two additions (probable-v2): `score` {player: score} comes first in that order (P11); `base`, an
     eleven [(player, line)], is kept as it is instead of the lines' choice, only its removed players replaced (P1a)."""
     starts, apps, last, lines_of, _, shape = _tally(entries, wts, main_role)
-    line = {}
-    for p in apps:
-        lc = lines_of.get(p)
-        line[p] = max(sorted(lc), key=lambda x: (round(lc[x], 9), x)) if lc else LINE.get(main_role(p), "?")  # never a starter: his role
+    line = _lines(apps, lines_of, main_role)
 
     def key(p):
         k = round(starts[p], 9), round(apps[p], 9), last.get(p, -1), -p
@@ -227,6 +255,18 @@ def place(xi, rep, window, wts, main_role, latest=False):
     when it is free; the others, most used first, the free slot nearest their weighted mean place in the window (ties:
     the template's order)."""
     starts, apps, last, _, shapes, chosen = _tally(window, wts, main_role)
+    formation, template, slots = _template(window, wts, shapes, chosen, latest)
+    if template is None:
+        return formation, [(p, None, None, None) for p, _ in xi]
+    slot_of = _slot_of(xi, rep, window, wts, (starts, apps, last), slots)
+    placed = sorted(((slot_of[p], p) for p, _ in xi if p in slot_of))
+    out = [(p, *slots[k][0]) for k, p in placed]
+    return formation, out + [(p, None, None, None) for p, _ in xi if p not in slot_of]
+
+
+def _template(window, wts, shapes, chosen, latest):
+    """`place`'s template: (formation, the template's eleven or None, its slots [((position_id, pitch_x, pitch_y),
+    starter)] in the template's order)."""
     if latest:
         split = list(range(len(window)))
         formation = window[-1].formation
@@ -240,8 +280,14 @@ def place(xi, rep, window, wts, main_role, latest=False):
     template = next((window[i] for i in reversed(split) if window[i].formation == formation and _complete(window[i])), None) \
         or next((window[i] for i in reversed(split) if _complete(window[i])), None)
     if template is None:
-        return formation, [(p, None, None, None) for p, _ in xi]
-    slots = sorted(((template.spots[p], p) for p in template.starters), key=lambda s: (s[0][1], s[0][2], s[0][0] or 0, s[1]))
+        return formation, None, []
+    return formation, template, sorted(((template.spots[p], p) for p in template.starters), key=lambda s: (s[0][1], s[0][2], s[0][0] or 0, s[1]))
+
+
+def _slot_of(xi, rep, window, wts, counts, slots):
+    """`place`'s slots of a guessed eleven, {player: index in `slots`} (a player left without a free slot is not in it);
+    `counts` the window's (starts, appearances, last appearance) of `_tally`."""
+    starts, apps, last = counts
     index = {p: k for k, (_, p) in enumerate(slots)}
 
     def mean(p):
@@ -273,21 +319,197 @@ def place(xi, rep, window, wts, main_role, latest=False):
         k = min(free, key=lambda k: (hypot(slots[k][0][1] - aim[0], slots[k][0][2] - aim[1]), k)) if aim else free[0]
         slot_of[p] = k
         taken.add(k)
-    placed = sorted(((slot_of[p], p) for p, _ in xi if p in slot_of))
-    out = [(p, *slots[k][0]) for k, p in placed]
-    return formation, out + [(p, None, None, None) for p, _ in xi if p not in slot_of]
+    return slot_of
 
 
-def predict(window, target, main_role, absent, gone, method=METHOD):
+# ------------------------------------------------------------------------- probable-v3: slots (line, lane), §61.4
+
+def labels(formation, spots):
+    """{starter: (line, lane)} of an eleven's {starter: (position_id, pitch_x, pitch_y)}: the line of his slot's role
+    (`role_of` with the eleven's highest slot), the lane by the rank of pitch_y in that line, the lowest L, the highest R,
+    the others C; a line of two players or fewer is all C. No line or no pitch_y: no label."""
+    top = max((s[0] or 0 for s in spots.values()), default=0)
+    by = defaultdict(list)
+    for p, (pos, _, y) in spots.items():
+        ln = LINE.get(role_of(formation, pos, top), "?")
+        if ln != "?" and y is not None:
+            by[ln].append((y, pos or 0, p))
+    out = {}
+    for ln, ms in by.items():
+        ms.sort()
+        for i, (_, _, p) in enumerate(ms):
+            out[p] = (ln, "C" if len(ms) <= 2 or 0 < i < len(ms) - 1 else "L" if i == 0 else "R")
+    return out
+
+
+def assign(val):
+    """The assignment that maximises Σ val[i][j], one column per row, each column once (rows <= columns): [each row's
+    column]. The Hungarian method, O(n² m), as the study's."""
+    n = len(val)
+    if not n:
+        return []
+    m = len(val[0])
+    inf = float("inf")
+    u, v, p, way = [0.0] * (n + 1), [0.0] * (m + 1), [0] * (m + 1), [0] * (m + 1)
+    for i in range(1, n + 1):
+        p[0], j0 = i, 0
+        minv, used = [inf] * (m + 1), [False] * (m + 1)
+        while True:
+            used[j0] = True
+            i0, delta, j1 = p[j0], inf, 0
+            row, ui = val[i0 - 1], u[i0]
+            for j in range(1, m + 1):
+                if not used[j]:
+                    cur = -row[j - 1] - ui - v[j]
+                    if cur < minv[j]:
+                        minv[j], way[j] = cur, j0
+                    if minv[j] < delta:
+                        delta, j1 = minv[j], j
+            for j in range(m + 1):
+                if used[j]:
+                    u[p[j]] += delta
+                    v[j] -= delta
+                else:
+                    minv[j] -= delta
+            j0 = j1
+            if p[j0] == 0:
+                break
+        while j0:
+            j1 = way[j0]
+            p[j0] = p[j1]
+            j0 = j1
+    out = [None] * n
+    for j in range(1, m + 1):
+        if p[j]:
+            out[p[j] - 1] = j - 1
+    return out
+
+
+class RoleShares:
+    """Over elevens' labelled starts, each starter under his main role: `label(r, s)` the share of label s among role r's
+    (fewer than ROLE_MIN: among every role's), `line(r, ln)` the share of line ln (fewer than ROLE_MIN: 0). A starter
+    without a main role counts under None."""
+
+    def __init__(self, entries, main_role):
+        self.n, self.labels, self.lines, self.all = Counter(), Counter(), Counter(), Counter()
+        for e in entries:
+            for p, lab in labels(e.formation, e.spots).items():
+                r = main_role(p)
+                self.n[r] += 1
+                self.labels[(r, lab)] += 1
+                self.lines[(r, lab[0])] += 1
+                self.all[lab] += 1
+
+    def label(self, role, lab):
+        n = self.n[role]
+        return self.labels[(role, lab)] / n if n >= ROLE_MIN else self.all[lab] / (self.all.total() or 1)
+
+    def line(self, role, ln):
+        n = self.n[role]
+        return self.lines[(role, ln)] / n if n >= ROLE_MIN else 0.0
+
+
+def role_shares(entries, main_role):
+    return RoleShares(entries, main_role)
+
+
+def fit_counts(window, wts):
+    """({player: Counter(label: Σ w started with it)}, {player: Σ w started with a label}) over the window."""
+    cnt, tot = defaultdict(Counter), Counter()
+    for e, w in zip(window, wts):
+        for p, lab in labels(e.formation, e.spots).items():
+            cnt[p][lab] += w
+            tot[p] += w
+    return cnt, tot
+
+
+def fit(p, lab, counts, shares, main_role):
+    """A(p, s) = (n_ps + FIT_PULL × q(r, s)) / (n_p + FIT_PULL): his weighted starts with label s, with any label, r his
+    main role."""
+    cnt, tot = counts
+    c = cnt[p].get(lab, 0.0) if p in cnt else 0.0
+    return (c + FIT_PULL * shares.label(main_role(p), lab)) / (tot.get(p, 0.0) + FIT_PULL)
+
+
+def permitted(history, main_role, shares):
+    """ok(p): the lines p may be given, {line}: his main role's; every line he started in (labelled) in the history's
+    last LONG elevens; with fewer than FEW such starts and a main role, also every outfield line of ROLE_SHARE or more
+    of his role's starts. The G slot's keeper rule is the caller's."""
+    seen, n = defaultdict(set), Counter()
+    for e in history[-LONG:]:
+        for p, lab in labels(e.formation, e.spots).items():
+            seen[p].add(lab[0])
+            n[p] += 1
+    memo = {}
+
+    def ok(p):
+        if p not in memo:
+            r = main_role(p)
+            got = {LINE.get(r, "?")} | seen.get(p, set())
+            if n[p] < FEW and r is not None:
+                got |= {ln for ln in "DMA" if shares.line(r, ln) >= ROLE_SHARE}
+            memo[p] = got
+        return memo[p]
+    return ok
+
+
+def _fitted(window, wts, main_role, removed, score, history, shares):
+    """probable-v3's eleven of a five-league club (the study v5.1's L75): (formation, the template's slots, {player:
+    slot index}), or None for v2's (no template, or no assignment within the permitted lines)."""
+    starts, apps, last, lines_of, shapes, chosen = _tally(window, wts, main_role)
+    formation, template, slots = _template(window, wts, shapes, chosen, latest=False)
+    if template is None:
+        return None
+    of = labels(template.formation, template.spots)
+    lab = [of.get(p) for _, p in slots]
+    line, counts, ok = _lines(apps, lines_of, main_role), fit_counts(window, wts), permitted(history, main_role, shares)
+
+    def worth(p, lb, lam, prefer=None, k=None):
+        if lb is None:
+            return 0.0
+        if (line.get(p, LINE.get(main_role(p), "?")) == "G") != (lb[0] == "G") or lb[0] not in ok(p):
+            return OUT
+        s = score.get(p, 0.0)
+        return (1 - lam) * s + lam * s * fit(p, lb, counts, shares, main_role) + (1e-6 if prefer and prefer.get(p) == k else 0.0)
+
+    def best(players, lam, prefer=None):
+        val = [[worth(p, lb, lam, prefer, k) for p in players] + [0.0] * max(0, len(lab) - len(players)) for k, lb in enumerate(lab)]
+        return {players[j]: k for k, j in enumerate(assign(val)) if j is not None and j < len(players)}
+
+    got = best(sorted(p for p in apps if p not in removed), FIT_WEIGHT)
+    if any(worth(p, lab[k], FIT_WEIGHT) <= OUT for p, k in got.items()):
+        return None
+    eleven = sorted(got)
+    # Re-placed by max Σ S × A within the permitted lines (λ 1); ties to the slot v2's `place` would give them.
+    prefer = _slot_of([(p, line.get(p, "?")) for p in eleven], [], window, wts, (starts, apps, last), slots)
+    return formation, slots, best(eleven, 1.0, prefer)
+
+
+def predict(window, target, main_role, absent, gone, method=METHOD, history=None, shares=None):
     """One side's probable eleven by `method`: {formation, starters: [(player, position_id, pitch_x, pitch_y, share,
     replaces)], absent: [(player, episode)]}. `absent` {player: episode} and `gone` {player} are the window's removed
     players; an absent one is listed and named by his replacement, a gone one neither.
 
     probable-v1: `guess` on 0.8^k; share = his starts / the window's elevens. probable-v2 (the study v4's H1): a club of
     the five leagues (`target.five`) `guess` with the score first (P11), any other the latest eleven with each removed
-    player replaced by the best score (P1a), both on `similarity_weights`; share = his score."""
+    player replaced by the best score (P1a), both on `similarity_weights`; share = his score. probable-v3 (the study
+    v5.1's V51, §61.4): a club of the five leagues the template's slots filled together within the permitted lines
+    (`_fitted`), `history` (the club's last LONG elevens, oldest first; default the window) giving those lines and
+    `shares` (`role_shares`; default the history's) the roles' shares; a template starter absent and out of the eleven
+    is named by whoever takes his slot; v2 elsewhere and wherever `_fitted` gives none."""
     wts = window_weights(method, window, target)
     removed = frozenset(absent) | frozenset(gone)
+    if method == "probable-v3" and target.five:
+        history, score = history or window, scores(window, wts)
+        got = _fitted(window, wts, main_role, removed, score, history, shares or role_shares(history, main_role))
+        if got is not None:
+            formation, slots, slot_of = got
+            owner = [p for _, p in slots]
+            placed = sorted((k, p) for p, k in slot_of.items())
+            starters = [(p, *slots[k][0], score[p], owner[k] if owner[k] in absent and owner[k] not in gone else None)
+                        for k, p in placed]
+            listed = [(p, e) for p, e in absent.items() if p not in gone]
+            return {"formation": formation, "starters": starters, "absent": sorted(listed, key=lambda pe: _absent_order(*pe))}
     if method == "probable-v1":
         xi, rep = guess(window, wts, main_role, removed)
         formation, spots = place(xi, rep, window, wts, main_role)
@@ -445,9 +667,9 @@ WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.is_current
                   AND k.provider_key = i.provider_key AND k.quarantined_at IS NOT NULL)"""
 
 
-def _windows(conn, teams, now):
-    """{team: [Entry]} (oldest first) of the teams with MIN_RECENT complete confirmed elevens or more."""
-    args = {"teams": sorted(teams), "now": now, "since": now - LOOKBACK, "first": (now - LOOKBACK).year - 1, "window": WINDOW,
+def _windows(conn, teams, now, n=WINDOW):
+    """{team: [Entry]} (oldest first): its last `n` complete confirmed elevens, for the teams with MIN_RECENT or more."""
+    args = {"teams": sorted(teams), "now": now, "since": now - LOOKBACK, "first": (now - LOOKBACK).year - 1, "window": n,
             "cups": list(LEAGUE_PHASE_CUPS)}
     rows = conn.execute(WINDOWS, args).fetchall()
     keys = [(season, match, team) for team, season, match, *_ in rows]
@@ -492,7 +714,9 @@ def compute(conn, now, method=METHOD):
         targets.append(Target(match, season, day, away, home, "away", competition, ctype, home_elo))
     if not targets:
         return []
-    windows = _windows(conn, {t.team_id for t in targets}, now)
+    # probable-v3 reads each club's last LONG elevens (the history of its permitted lines); the window is the last WINDOW.
+    histories = _windows(conn, {t.team_id for t in targets}, now, LONG if method == "probable-v3" else WINDOW)
+    windows = {team: entries[-WINDOW:] for team, entries in histories.items()}
     targets = [t for t in targets if t.team_id in windows]
     if not targets:
         return []
@@ -506,7 +730,8 @@ def compute(conn, now, method=METHOD):
     teams = sorted(windows)
     args = {"players": players, "player_since": [since[p] for p in players], "teams": teams,
             "team_since": [windows[t][0].day for t in teams], "now": now, "first": (now - LOOKBACK).year - 1}
-    roles = dict(conn.execute(MAIN_ROLES, (players,)).fetchall())
+    # The main roles of the windows' players, and of every starter of the histories (the role shares count them).
+    roles = dict(conn.execute(MAIN_ROLES, (sorted(set(players) | {p for h in histories.values() for e in h for p in e.starters}),)).fetchall())
     last_app = {(team, p): day for team, p, day in conn.execute(LAST_APPEARANCES, args).fetchall()}
     injuries = defaultdict(list)
     for p, kind, label, start, end in conn.execute(INJURIES, (players,)).fetchall():
@@ -525,6 +750,7 @@ def compute(conn, now, method=METHOD):
         links[p].add(key)
     today = now.date()
     main_role = roles.get
+    shares = role_shares([e for h in histories.values() for e in h], main_role) if method == "probable-v3" else None
     out = []
     for t in targets:
         window = windows[t.team_id]
@@ -545,7 +771,7 @@ def compute(conn, now, method=METHOD):
             episode = injury_absence(injuries.get(p, ()), last_app.get((t.team_id, p)), t.day)
             if episode is not None:
                 absent[p] = episode
-        out.append((t, window, predict(window, t, main_role, absent, gone, method)))
+        out.append((t, window, predict(window, t, main_role, absent, gone, method, histories[t.team_id], shares)))
     return out
 
 
