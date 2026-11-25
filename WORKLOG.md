@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Fiche joueur d'un match : zéros affichés — 25 novembre 2026
+
+- [VI-153](https://linear.app/vegainteligence/issue/VI-153), [GitHub #213](https://github.com/VegaInteligence/Vega-Sport/issues/213). Maquette ordinateur et mobile validée par Hugo. Afficher les zéros établis et « Non renseigné » quand la mesure manque. Lecture du PostgreSQL de Vega uniquement. Réalisation directe dans Codex à la demande de Hugo.
+- Branche `codex/match-player-stat-zeros`, base `407c4c1a`. Le tableau et la fiche partagent `/api/matches/{id}/players/display`. La route réutilise les apparitions publiées et les dribbles avancés enregistrés. Les familles brute et mi-temps restent indépendantes.
+- Vérification PostgreSQL/API : 9/9, dont une régression reproduite avant la modification. City–Napoli rejoué depuis les données de l'API de Vega. Gvardiol renvoie 0/0 et Doku 0 tir, 0,00 xG et 8/11. Le match n'a pas de statistiques par mi-temps dans l'API publique.
+- Preuves : `/Users/lemonnierhugo/.codex/visualizations/2026/11/25/01a2123c-d1fe-7a83-a684-535439cd464c/VERIFICATION.md`. E2E navigateur : 13/13 sur ordinateur et 13/13 sur iPhone, dont la période isolée de Sivis et zéro requête du navigateur à PitchAPI. Site 1 026/1 026, build OK. Prochaine étape : livrer la branche et vérifier le même parcours après déploiement.
+
 ## Injured and suspended players, the « renseignés » counter on the injuries alone — FAILURE_MODES § 59ao (24 November 2026, branch `claude/absents-compteur-blessures`)
 
 - hugo (card, 24 Nov): « Blessures lues seulement ». `GET /api/teams/{id}/absences`: `squad.read` counts the members whose injuries were read 45 days ago at most, whatever their suspensions; `asOf` is the oldest of those injuries reads. The view (174) and the absences listed are unchanged.

@@ -7,6 +7,7 @@ import { Empty, Media, Segments, Skeleton } from "./UI.jsx";
 import { Hint } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useMatchSection from "../hooks/useMatchSection.js";
+import useMatchPlayerStats from "../hooks/useMatchPlayerStats.js";
 import { useMatchGrades } from "../services/match-grades.js";
 import { boardRows, leaders, sortRows, BOARD_COLUMNS } from "../services/match-tabs.js";
 import { explain } from "../services/glossary.js";
@@ -39,10 +40,10 @@ function Leader({ title, value, row, detail, team, onOpen }) {
 function Cell({ row, column, best }) {
   const value = row[column.key];
   const text =
-    column.key === "grade" ? (
-      value == null ? "—" : <span className={`${s.grade} ${tone(value)}`}>{number(value, 0)}</span>
-    ) : value == null ? (
-      "—"
+    value == null ? (
+      <small className={s.muted}>Non renseigné</small>
+    ) : column.key === "grade" ? (
+      <span className={`${s.grade} ${tone(value)}`}>{number(value, 0)}</span>
     ) : (
       <>
         {number(value, column.digits || 0)}
@@ -55,7 +56,7 @@ function Cell({ row, column, best }) {
 
 export default function MatchPlayersBoard({ match }) {
   const f = useFootball();
-  const players = useMatchSection(match, "players");
+  const players = useMatchPlayerStats(match);
   const events = useMatchSection(match, "events");
   const grades = useMatchGrades(match.id);
   const [team, setTeam] = useState("all");
