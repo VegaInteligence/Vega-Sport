@@ -93,6 +93,91 @@
   text-align: left;
   pointer-events: none;
 }
+/* A bubble with a link in it (FAILURE_MODES § 71): it takes the pointer. */
+.bubbleInteractive {
+  pointer-events: auto;
+}
+/* A player's last matches before the kick-off (§ 71). */
+.recent .bubbleHead {
+  justify-content: space-between;
+}
+.recentStrip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.recentStrip li {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 4px 0;
+  border: 1px solid var(--border);
+}
+.recentStrip small,
+.recentMinutes {
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+.recentComp {
+  color: var(--ink);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+}
+.recentGrade {
+  min-width: 26px;
+  padding: 0 4px;
+  background: var(--surface-subtle);
+  color: var(--ink-strong);
+  font-size: var(--text-xs);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.recentTiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin: 0 0 10px;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+.recentTiles div {
+  min-width: 0;
+  padding: 6px 8px;
+  background: var(--surface-raised);
+}
+.recentTiles dt {
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.recentTiles dd {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: var(--text-lg);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.recentLink {
+  display: block;
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  color: var(--ink-strong);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+.recentLink:hover,
+.recentLink:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
 .bubbleHead {
   display: flex;
   align-items: center;
