@@ -38,11 +38,11 @@ ENRICHMENT_COLUMNS = {"home_score_ht", "away_score_ht", "revision", "updated_at"
 # Relations naming a match created after the reviewed captures: 141, 143, the Fjelstul World Cup Database's pair
 # (137_worldcup_database.sql), football-data.co.uk's (140_football_data.sql), the players' run's recorded exclusions
 # (155_player_grade_status.sql), the reviewed side corrections (156_team_side_corrections.sql) and International
-# Results' scorers (172_international_goals.sql) and our probable elevens (176_match_probable_lineups.sql). Each is still
-# checked for occupancy.
+# Results' scorers (172_international_goals.sql), our probable elevens (176_match_probable_lineups.sql) and the matches
+# graded on arrival of their statistics (178_match_grades_on_arrival.sql). Each is still checked for occupancy.
 ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals", "core.worldcup_matches", "core.footballdata_matches",
                       "agg.player_grade_exclusions", "core.team_side_corrections", "core.international_goals",
-                      "agg.match_probable_lineups", "agg.match_probable_lineup_players"}
+                      "agg.match_probable_lineups", "agg.match_probable_lineup_players", "agg.match_grade_arrivals"}
 # The Fjelstul World Cup Database's own match keys (137_worldcup_database.sql): text keys of core.worldcup_matches, never
 # an id of core.matches.
 FJELSTUL_MATCH_KEYS = frozenset({"core.worldcup_matches", "core.worldcup_appearances", "core.worldcup_goals",
@@ -87,13 +87,19 @@ REFS = {
 # started, which name a match (ADDED_DEPENDENCIES, checked for occupancy like the others; the restored Open Matchday
 # matches are finished, so none has a row there), two api views and two read grants to vega_calc; no column of
 # agg.power_runs. 177 (GH137) redefines four functions only (api.league_history_matches, _next, _scorers, _players): the
-# same rows, no table, no column. A later one needs its own review here.
+# same rows, no table, no column. 178 (§68) adds agg.player_contribution_refs, keyed by award year, role and indicator
+# (no column naming a match), and agg.match_grade_arrivals (match_id, integer, REFERENCES core.matches ON DELETE
+# CASCADE), the matches graded as soon as their player statistics arrived, which names a match (ADDED_DEPENDENCIES,
+# checked for occupancy like the others; it only holds matches kicked off in the last 7 days, so none of the restored
+# Open Matchday matches); both reference agg.power_runs (run_id) without a column of it; and an index of core.matches
+# (no column). A later one needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
                     "168_nation_world_ranking.sql", "169_player_level_measured.sql",
                     "170_nation_elo_national_set.sql", "171_home_importance_v2.sql", "172_international_goals.sql",
                     "173_nation_last_played.sql", "174_absences_suspensions.sql",
-                    "175_player_award.sql", "176_match_probable_lineups.sql", "177_league_history_lean_reads.sql")
+                    "175_player_award.sql", "176_match_probable_lineups.sql", "177_league_history_lean_reads.sql",
+                    "178_match_grades_on_arrival.sql")
 
 
 class Refusal(RuntimeError):

@@ -5625,7 +5625,8 @@ kept nowhere; `agg.team_elo` of a new match exists only after the next Elo pass.
   published players run with kept contribution references, and whose player statistics changed after that run started
   (their latest `updated_at` later than its `started_at`: the run did not read them). Not graded again: a match the
   step graded since its rows last changed, unless a players run of its year was published after that grading (its write
-  may have replaced or removed the step's grades). At most `LIMIT` = 40 matches a pass, the oldest rows first.
+  may have replaced or removed the step's grades). At most `LIMIT` = 40 matches a pass, the oldest rows first. The
+  finished matches are found by kick-off (178's index `matches_finished_kickoff`), never by reading every match.
 - **Its references.** The last published players run of the award year: its contribution references, now kept by
   every run in `agg.player_contribution_refs` (178: role, indicator, kind, α, β, p, s, run), and the grade references of
   its reference year (`grade_reference_year`, read with `read_grade_references`). A year without either (no run since

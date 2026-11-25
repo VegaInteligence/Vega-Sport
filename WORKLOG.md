@@ -1,5 +1,13 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Notes Vega d'un match dès l'arrivée des stats des joueurs — FAILURE_MODES § 68 (25 novembre 2026, [#236](https://github.com/VegaInteligence/Vega-Sport/issues/236), [VI-163](https://linear.app/vegainteligence/issue/VI-163), branche `claude/notes-par-match` depuis main 3cc7ac6)
+
+- Demande de hugo (21 h 37) : « met cela en match », après Sabah FK – Barcelone resté sans notes. Mesure en production d'abord (lecture seule, `/mnt/project-files/notes-match-par-match/arrivals_run1.txt`) : stats des joueurs 12 s après le statut « fini » ; le passage de la saison était parti 11 s avant elles (une course) ; sur 456 matchs en 14 jours, p95 7,5 min, aucune stat changée après une heure.
+- Choix : noter au plus tôt (à chaque tour de planification, toutes les 60 s) plutôt qu'à 10 min fixes, avec les références du dernier passage publié de l'année ; le passage complet garde sa cadence et corrige (`first_z` garde la note rapide).
+- Code : `vega/arrival_grades.py` (étape), `power.py` (références de contribution gardées par chaque passage, `restore_zeros` et `assign_roles` acceptent l'édition et les minutes de l'année, le passage ne supprime plus une note écrite après son début), `worker.match_grades`, migration 178 (`agg.player_contribution_refs`, `agg.match_grade_arrivals`).
+- Tests écrits d'abord : `backend/tests/test_grades_on_arrival.py` (68a à 68l) et `test_worker` (68m), rouges puis verts ; chaque règle vérifiée par une mutation qui fait échouer son test. Preuves : `/mnt/project-files/notes-match-par-match/tests/`.
+- Reste : PR, accord de hugo pour fusionner et déployer ; après le Deploy, lire `agg.match_grade_arrivals` et l'écart `first_z` / `z` au bout d'une semaine.
+
 ## Optimisations de l’accueil, des archives et du pilote — 25 novembre 2026
 
 - Sur `codex/optimisations-prioritaires-2511`, correction des [favoris VI-158](https://linear.app/vegainteligence/issue/VI-158), du [pilote VI-134](https://linear.app/vegainteligence/issue/VI-134), des [revalidations VI-77](https://linear.app/vegainteligence/issue/VI-77) et du [cache VI-85](https://linear.app/vegainteligence/issue/VI-85) pour la route de l’historique. Les deux derniers tickets couvrent aussi d’autres routes.

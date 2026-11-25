@@ -450,6 +450,21 @@ class Worker:
             print(f"lineup forecasts error={error_code(error)}", flush=True)
             return 0
 
+    def match_grades(self):
+        """The matches whose player statistics came after their year's players run, graded with that run's references
+        (arrival_grades.refresh, FAILURE_MODES §68). In the collection's own process: the side work can be an hour into
+        a season, and the statistics arrive within minutes of the final whistle."""
+        from . import arrival_grades
+
+        try:
+            done = arrival_grades.refresh(self.calc_conn, self.clock())
+            if done["matches"]:
+                print(f"match grades matches={done['matches']} players={done['players']}", flush=True)
+            return done["matches"]
+        except Exception as error:
+            print(f"match grades error={error_code(error)}", flush=True)
+            return 0
+
     def _daily_step(self, step, now, call):
         """Run one step of the daily pass unless it failed less than RETRY_DAILY_AFTER ago;
         (True, its result), or (False, None) when it waited or failed."""
@@ -670,6 +685,7 @@ class Worker:
                     print(f"planner error={error_code(error)}", flush=True)
                 if self.backfill is None:
                     self.lineup_forecasts()
+                    self.match_grades()
                 if self.reader_process is not None:
                     self.reader_process.tick()
                 if self.side_process is not None:

@@ -1348,11 +1348,14 @@ ZERO_IN_EDITION = ("np_goals", "assists", "big_chances_missed", "big_chances_cre
 SUMS = {"duels_attempted": ("duels_won", "duels_lost")}
 
 
-def restore_zeros(rows):
+def restore_zeros(rows, editions=None):
     """Give a blank its zero where the source publishes the statistic (see the module's
     notes), then add the totals of SUMS: `rows` are changed in place, and the number of
-    values restored is returned."""
+    values restored is returned. `editions`: {edition: the ZERO_IN_EDITION statistics its year's
+    rows show above zero}, for rows that are not the whole year (one match, §68)."""
     in_match, in_edition = defaultdict(set), defaultdict(set)
+    for edition, names in (editions or {}).items():
+        in_edition[edition].update(names)
     for r in rows:
         for name in ZERO_IN_MATCH:
             if (r.get(name) or 0) > 0:
@@ -1441,20 +1444,31 @@ def role_of(formation, pos, top):
     return None
 
 
-def assign_roles(rows):
-    """The role of each player-match: its slot's, else the player's most played role."""
-    top = defaultdict(int)
-    for r in rows:
-        if r["position_id"]:
-            key = (r["match_id"], r["team_id"])
-            top[key] = max(top[key], r["position_id"])
+def slot_minutes(rows, top=None):
+    """Each player's minutes in each slot role (role_of) over `rows`, and each row's slot role. `top`: each match and
+    team's highest slot, read from the rows when not given."""
+    if top is None:
+        top = defaultdict(int)
+        for r in rows:
+            if r["position_id"]:
+                key = (r["match_id"], r["team_id"])
+                top[key] = max(top[key], r["position_id"])
     slot_role = {}
     minutes = defaultdict(lambda: defaultdict(float))
     for r in rows:
-        role = role_of(r.get("formation"), r["position_id"], top[(r["match_id"], r["team_id"])])
+        role = role_of(r.get("formation"), r["position_id"], top.get((r["match_id"], r["team_id"]), 0) if r.get("top") is None else r["top"])
         slot_role[(r["match_id"], r["player_id"])] = role
         if role:
             minutes[r["player_id"]][role] += r["minutes_played"]
+    return minutes, slot_role
+
+
+def assign_roles(rows, year_minutes=None):
+    """The role of each player-match: its slot's, else the player's most played role. `year_minutes`: each player's
+    slot minutes over the award year (slot_minutes), for rows that are not the whole year (one match, §68)."""
+    minutes, slot_role = slot_minutes(rows)
+    if year_minutes is not None:
+        minutes = year_minutes
     for r in rows:
         role = slot_role[(r["match_id"], r["player_id"])]
         if role is None:
@@ -1502,8 +1516,23 @@ def fit_poisson(obs, iterations=25):
 
 
 def references(rows):
-    """Per role and indicator: how to expect a value, and the dispersion s (§§ 5–6)."""
+    """Per role and indicator: how to expect a value, and the dispersion s (§§ 5–6). Each expectation carries its
+    parameters (`expect.params`: kind, alpha, beta, rate), what agg.player_contribution_refs keeps (§68)."""
     return group_references(rows, "role")
+
+
+def expectation(kind, alpha=None, beta=None, rate=None, attempts=None):
+    """How a reference expects a value of a row: a volume per minutes and opponent, a conditional per attempt, a
+    relative at 0. The one constructor of the run's references and of the ones read back (read_contribution_refs);
+    the function carries its parameters (`params`)."""
+    if kind == "volume":
+        expect = lambda r: r["minutes_played"] / 90 * exp(alpha + beta * r["delta"])
+    elif kind == "conditional":
+        expect = lambda r: r[attempts] * rate
+    else:
+        expect = lambda r: 0.0
+    expect.params = (kind, alpha, beta, rate)
+    return expect
 
 
 def group_references(rows, key):
@@ -1525,25 +1554,51 @@ def group_references(rows, key):
                     if fit is None:
                         continue
                     a, b = fit
-                    expect = (lambda a, b: lambda r: r["minutes_played"] / 90 * exp(a + b * r["delta"]))(a, b)
+                    params = (kind, a, b, None)
                 elif kind == "conditional":
                     attempts = spec[3]
                     obs = [r for r in items if r[name] is not None and r[attempts] is not None]
                     made, tried = sum(r[name] for r in obs), sum(r[attempts] for r in obs)
                     if len(obs) < MIN_REFERENCE or tried <= 0:
                         continue
-                    p = made / tried
-                    expect = (lambda p, attempts: lambda r: r[attempts] * p)(p, attempts)
+                    params = (kind, None, None, made / tried)
                 else:
                     obs = [r for r in items if r[name] is not None]
                     if len(obs) < MIN_REFERENCE:
                         continue
-                    expect = lambda r: 0.0
+                    params = (kind, None, None, None)
+                expect = expectation(*params, attempts=spec[3] if kind == "conditional" else None)
                 values = [r for r in items if r[name] is not None and (kind != "conditional" or r[spec[3]] is not None)]
                 s = sqrt(sum((r[name] - expect(r)) ** 2 for r in values) / len(values))
                 if s > 1e-9:
                     refs[(role, name)] = (expect, s)
     return refs
+
+
+def _attempts(role, name):
+    for indicators in blocks_of(role).values():
+        for spec in indicators:
+            if spec[0] == name:
+                return spec[3] if spec[1] == "conditional" else None
+    return None
+
+
+def write_contribution_refs(conn, season, refs, run):
+    """The run's contribution references (references()), replacing the award year's (§68)."""
+    conn.execute("DELETE FROM agg.player_contribution_refs WHERE award_season = %s", (season,))
+    with conn.cursor().copy(
+            "COPY agg.player_contribution_refs(award_season, role, indicator, kind, alpha, beta, rate, spread, run_id) FROM STDIN") as copy:
+        for (role, name), (expect, s) in sorted(refs.items(), key=lambda item: item[0]):
+            copy.write_row((season, role, name, *expect.params, s, run))
+
+
+def read_contribution_refs(conn, season, run):
+    """The contribution references the run kept for the award year, as references() gives them: {(role, indicator):
+    (expect, s)}; empty when that run kept none (§68)."""
+    return {(role, name): (expectation(kind, alpha, beta, rate, _attempts(role, name)), s)
+            for role, name, kind, alpha, beta, rate, s in conn.execute(
+                """SELECT role, indicator, kind, alpha, beta, rate, spread FROM agg.player_contribution_refs
+                   WHERE award_season = %s AND run_id = %s""", (season, run)).fetchall()}
 
 
 def match_contribution(r, refs):
@@ -1901,7 +1956,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     rows = assign_roles(rows)
     excluded += [(r["edition"], r["match_id"], r["player_id"], "role_undetermined") for r in read if not r["role"]]
     del read
-    refs = references(rows)
+    refs = references(rows)  # kept with the ranking (step 3) for the grades of the matches that arrive after it (§68)
     count = len(rows)
     linked, top, women, clubs = team_leagues(rows, leagues)
     centre = level_centres(rows)
@@ -2001,6 +2056,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                     copy.write_row((season, player, role, x["matches"], int(x["minutes"]), x["total"], x["rate"], run))
         if write_refs:
             write_grade_references(conn, *write_refs)
+        write_contribution_refs(conn, season, refs, run)
         if partial:
             # No year is graded against a partial year's own references (an earlier rule's run kept them).
             for table in ("agg.match_grade_roles", "agg.match_grade_spreads", "agg.match_grade_quantiles"):
@@ -2140,12 +2196,23 @@ def grade_reference_year(season, today):
     return None
 
 
+# A grade written again (write_match_grades, arrival_grades): only one that moved, or whose minutes, role, team,
+# reference year or award year changed, is rewritten; first_z keeps the first grade of the player-match.
+GRADE_UPSERT = """ON CONFLICT (season_id, match_id, player_id) DO UPDATE SET award_season = EXCLUDED.award_season, team_id = EXCLUDED.team_id,
+             role = EXCLUDED.role, minutes = EXCLUDED.minutes, z = EXCLUDED.z, ref_season = EXCLUDED.ref_season, run_id = EXCLUDED.run_id,
+             changed_at = now()
+           WHERE abs(g.z - EXCLUDED.z) > 1e-4 OR g.minutes <> EXCLUDED.minutes OR g.role <> EXCLUDED.role
+             OR g.team_id IS DISTINCT FROM EXCLUDED.team_id OR g.ref_season IS DISTINCT FROM EXCLUDED.ref_season
+             OR g.award_season <> EXCLUDED.award_season"""
+
+
 def write_match_grades(conn, season, grades, ref_season, run):
     """The award year's grades where the statistics are (agg.player_match_grades), then the
     season sums of the editions it reads (agg.player_grade_editions). grades: [(edition,
     match, player, team, role, minutes, z)]. Only a grade that moved (or whose match changed)
     is rewritten, so changed_at and first_z show the drift between runs; a player-match no
-    longer graded this year is removed."""
+    longer graded this year is removed, unless its grade changed after the run started: the grade
+    arrival_grades gave a match whose rows came after the run's read (§68)."""
     conn.execute("""CREATE TEMP TABLE grades_now (season_id smallint, match_id integer, player_id integer, team_id integer,
                       role text, minutes smallint, z real) ON COMMIT DROP""")
     with conn.cursor().copy("COPY grades_now(season_id, match_id, player_id, team_id, role, minutes, z) FROM STDIN") as copy:
@@ -2154,18 +2221,14 @@ def write_match_grades(conn, season, grades, ref_season, run):
     conn.execute(
         """INSERT INTO agg.player_match_grades AS g (season_id, match_id, player_id, award_season, team_id, role, minutes, z, first_z, ref_season, run_id)
            SELECT n.season_id, n.match_id, n.player_id, %(season)s, n.team_id, n.role, n.minutes, n.z, n.z, %(ref)s, %(run)s FROM grades_now n
-           ON CONFLICT (season_id, match_id, player_id) DO UPDATE SET award_season = EXCLUDED.award_season, team_id = EXCLUDED.team_id,
-             role = EXCLUDED.role, minutes = EXCLUDED.minutes, z = EXCLUDED.z, ref_season = EXCLUDED.ref_season, run_id = EXCLUDED.run_id,
-             changed_at = now()
-           WHERE abs(g.z - EXCLUDED.z) > 1e-4 OR g.minutes <> EXCLUDED.minutes OR g.role <> EXCLUDED.role
-             OR g.team_id IS DISTINCT FROM EXCLUDED.team_id OR g.ref_season IS DISTINCT FROM EXCLUDED.ref_season
-             OR g.award_season <> EXCLUDED.award_season""",
+           """ + GRADE_UPSERT,
         {"season": season, "ref": ref_season, "run": run},
     )
     conn.execute(
         """DELETE FROM agg.player_match_grades g WHERE g.award_season = %s
+           AND g.changed_at < (SELECT r.started_at FROM agg.power_runs r WHERE r.id = %s)
            AND NOT EXISTS (SELECT 1 FROM grades_now n WHERE n.season_id = g.season_id AND n.match_id = g.match_id AND n.player_id = g.player_id)""",
-        (season,),
+        (season, run),
     )
     # The editions this year reads (its seasons and the next): each player's sums over his
     # matches of GRADE_SEASON_MINUTES or more, from both award years' grades.

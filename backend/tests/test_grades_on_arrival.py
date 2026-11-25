@@ -156,7 +156,6 @@ class GradesOnArrivalTest(unittest.TestCase):
         cls.captured = captured
         cls.year_run = cls.one("SELECT id, started_at FROM agg.power_runs WHERE kind='players' AND season_id=2026 AND status='published'")
         cls.graded = cls.grades(cls.M)
-        cls.editions = cls.edition_sums()
 
     @classmethod
     def one(cls, sql, *args):
@@ -216,7 +215,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         self.assertEqual(done["matches"], 1)
         self.assertEqual(done["players"], len(self.graded))
         self.assertRunGrades(self.grades(self.M))
-        self.assertEqual(self.grades(self.M)[self.home * 100][6], self.year_run[0])
+        self.assertEqual(self.grades(self.M)[self.home * 100][5], self.year_run[0])
 
     def test_68b_without_the_match_s_elo_the_teams_last_ratings_give_the_same_grades(self):
         saved = self.db.execute("SELECT * FROM agg.team_elo WHERE match_id=%s", (self.M,)).fetchall()
@@ -339,6 +338,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         self.race(self.M)
         self.step_now()
         player = self.home * 100 + 9
+        minutes = self.one("SELECT minutes_played FROM core.player_match_stats WHERE season_id=2026 AND match_id=%s AND player_id=%s", self.M, player)[0]
         with self.db.transaction():
             self.db.execute("UPDATE core.player_match_stats SET minutes_played = 0 WHERE season_id=2026 AND match_id=%s AND player_id=%s", (self.M, player))
         try:
@@ -346,7 +346,8 @@ class GradesOnArrivalTest(unittest.TestCase):
             self.assertNotIn(player, self.grades(self.M))
         finally:
             with self.db.transaction():
-                self.db.execute("UPDATE core.player_match_stats SET minutes_played = 90 WHERE season_id=2026 AND match_id=%s AND player_id=%s", (self.M, player))
+                self.db.execute("UPDATE core.player_match_stats SET minutes_played = %s WHERE season_id=2026 AND match_id=%s AND player_id=%s",
+                                (minutes, self.M, player))
             self.power.refresh_players(self.calc, 2026)
             type(self).year_run = self.one("SELECT id, started_at FROM agg.power_runs WHERE kind='players' AND season_id=2026 AND status='published'")
             type(self).graded = self.grades(self.M)
@@ -362,6 +363,7 @@ class GradesOnArrivalTest(unittest.TestCase):
     def test_68j_what_the_step_writes(self):
         untouched = ("agg.player_power", "agg.player_power_matches", "agg.player_contribution_refs", "agg.player_grade_exclusions")
         before = {t: self.db.execute(f"SELECT md5(coalesce(string_agg(t::text, ',' ORDER BY t::text), '')) FROM {t} t").fetchone()[0] for t in untouched}
+        editions = self.edition_sums()  # as the last run wrote them, from the grades M has again (tearDown)
         self.race(self.M)
         with self.db.transaction():
             self.db.execute("DELETE FROM agg.player_grade_editions WHERE season_id=2026 AND competition_season_id=2")
@@ -373,7 +375,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         self.assertEqual((stats_at, run, players), (latest, self.year_run[0], len(self.graded)))
         # The match's players' sums, by the run's formula (the other players' rows were deleted above and stay so).
         sums = {r[2]: r for r in self.edition_sums()}
-        expected = {r[2]: r for r in self.editions if r[2] in self.graded and self.graded[r[2]][2] >= 20}
+        expected = {r[2]: r for r in editions if r[2] in self.graded and self.graded[r[2]][2] >= 20}
         self.assertEqual(set(sums), {p for p, g in self.graded.items() if g[2] >= 20})
         for player, row in sums.items():
             self.assertEqual(row[:5], expected[player][:5], player)
@@ -384,7 +386,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         with self.db.transaction():
             self.db.execute("DELETE FROM agg.player_grade_editions WHERE season_id=2026 AND competition_season_id=2")
             with self.db.cursor() as cur:
-                cur.executemany("INSERT INTO agg.player_grade_editions VALUES (%s,%s,%s,%s,%s,%s)", self.editions)
+                cur.executemany("INSERT INTO agg.player_grade_editions VALUES (%s,%s,%s,%s,%s,%s)", editions)
 
     def test_68k_the_players_grade_status_moves_from_pending_to_graded(self):
         self.race(self.M)
