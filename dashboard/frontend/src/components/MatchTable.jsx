@@ -38,6 +38,7 @@ export default function MatchTable({ match }) {
         competition={competition}
         initialSeason={season}
         initialView="standings"
+        highlightTeams={[match.home, match.away]}
         embedded
       />
     </div>

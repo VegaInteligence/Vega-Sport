@@ -86,6 +86,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../services/standings-zones.js": await import("../dashboard/frontend/src/services/standings-zones.js"),
     "../services/competition-standings.js": standings,
     "../services/competition-selector.js": selector,
+    "../services/season-snapshot-fixtures.js": { seasonSnapshotFixtures: async (_f, scoped, c, s) => scoped.fixtures.get(c.id + ":" + s) },
     "../services/cup-catalog.js": cups,
     "../services/sportscore-standings.js": sportscore,
     "../services/uefa-standings.js": uefa,

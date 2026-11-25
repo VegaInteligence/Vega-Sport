@@ -38,6 +38,7 @@ import NationalFlag from "./NationalFlag.jsx";
 import { nationalTeamLabel } from "../services/national-flags.js";
 import { trophyArt } from "../services/trophy-art.js";
 import { FEATURED_EUROPE_IDS } from "../services/competition-selector.js";
+import { seasonSnapshotFixtures } from "../services/season-snapshot-fixtures.js";
 /**
  * A collected competition's page. A cup's (`hasKnockout`) has the edition's head: the page that holds it may offer a
  * sister competition's editions in the same selector (`editions`, `onEdition`: the World Cup's archive), open a view
@@ -58,6 +59,7 @@ export default function CompetitionEdition({
   onHighlight,
   heading = false,
   embedded = false,
+  highlightTeams,
 }) {
   const f = useFootball();
   // The five big leagues also offer their archived seasons, 2010/11–2020/21 (services/league-history.js).
@@ -180,7 +182,9 @@ export default function CompetitionEdition({
       ":" +
       (f.manifest.publicationVersion ||
         f.manifest.scouting?.sourceDigest ||
-        ""),
+        "") +
+      // The match's tab may read the season's partition (below): its value is kept apart from the page's.
+      (embedded ? ":match" : ""),
     async ({ signal }) => {
       const scoped = Object.assign(Object.create(f.client), {
         // The shared resource owns freshness. A client's older in-memory map
@@ -194,6 +198,11 @@ export default function CompetitionEdition({
         useCupSnapshot: hasKnockout || Boolean(competition?.cupWorker),
       });
       await f.client.loadFixtures.call(scoped, { signal });
+      // A match outside the site's season (§ 63.7): its tab reads that season's partition when the snapshot is empty.
+      if (embedded && !day)
+        return seasonSnapshotFixtures(f, scoped, competition, season, {
+          signal,
+        });
       return scoped.fixtures.get(
         day ? "date:" + day : competition.id + ":" + season,
       );
@@ -308,6 +317,7 @@ export default function CompetitionEdition({
             fixturesError={resource.error}
             onRetry={resource.retry}
             onNeedFixtures={needFixtures}
+            highlightTeams={highlightTeams}
             served
           />
         ) : supported &&

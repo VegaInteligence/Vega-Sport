@@ -2,7 +2,7 @@
 // the base's (first_half…), which a match without a summary version carries (backend/api/src/match-record.mjs).
 import test from "node:test";
 import assert from "node:assert/strict";
-import { shotPeriods, shotsOf } from "../dashboard/frontend/src/services/match-shots.js";
+import { shotGoal, shotPeriods, shotsOf } from "../dashboard/frontend/src/services/match-shots.js";
 
 const shots = (first, second, kicks) => [
   { id: "a", period: first },
@@ -30,4 +30,11 @@ test("R12 no period: no choice, every shot in « Match »", () => {
   const list = [{ id: "a" }, { id: "b", period: null }];
   assert.deepEqual(shotPeriods(list), []);
   assert.deepEqual(shotsOf(list, "all").map((s) => s.id), ["a", "b"]);
+});
+
+test("R20 the goal crossing in both spellings (§ 63.7)", () => {
+  assert.deepEqual(shotGoal({ goalY: 33.1, goalZ: 0.4 }), { y: 33.1, z: 0.4 });
+  assert.deepEqual(shotGoal({ goalCrossedY: 35, goalCrossedZ: 1.2 }), { y: 35, z: 1.2 });
+  assert.equal(shotGoal({ goalY: null, goalCrossedZ: 1 }), null);
+  assert.equal(shotGoal({}), null);
 });

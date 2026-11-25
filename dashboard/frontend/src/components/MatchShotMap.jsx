@@ -8,7 +8,7 @@ import { useHoverBubble } from "./HoverCard.jsx";
 import { ShotCard, eventId, shotText } from "./Charts.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { isNumber } from "../services/format.js";
-import { SHOOTOUT, shotPeriods, shotsOf } from "../services/match-shots.js";
+import { SHOOTOUT, shotGoal, shotPeriods, shotsOf } from "../services/match-shots.js";
 
 export { SHOT_PERIODS, shotPeriods, shotsOf } from "../services/match-shots.js";
 
@@ -130,7 +130,8 @@ const gz = (z) => GPAD + (GZ - Math.min(GZ, Math.max(0, z))) * G;
 /** The shoot-out on the goal: one numbered mark per kick, where it crossed the line. */
 function GoalMouth({ match, kicks, onPlayer }) {
   const bubble = useHoverBubble({ width: 240 });
-  const placed = kicks.filter((k) => isNumber(k.goalY) && isNumber(k.goalZ));
+  // Where each kick crossed the line, in either spelling (§ 63.7).
+  const placed = kicks.map((k) => ({ kick: k, goal: shotGoal(k) })).filter((p) => p.goal);
   if (!kicks.length) return <Empty>Aucun tir au but pour cette équipe.</Empty>;
   return (
     <>
@@ -152,13 +153,13 @@ function GoalMouth({ match, kicks, onPlayer }) {
           strokeWidth="5"
           strokeLinejoin="round"
         />
-        {placed.map((k) => (
+        {placed.map(({ kick: k, goal }) => (
           <Shot
             key={k.id || k.order}
             match={match}
             shot={k}
-            x={gx(k.goalY)}
-            y={gz(k.goalZ)}
+            x={gx(goal.y)}
+            y={gz(goal.z)}
             r={12}
             onPlayer={onPlayer}
             bubble={bubble}

@@ -5394,3 +5394,22 @@ match in round 14):
 - **R17** « Match précédent » / « Match suivant » point at the neighbours and keep `view`.
 - **R18** the competition's button opens the picker on round 14, the current match marked.
 - **R19** at 393 px: no sideways scroll, the current tile visible.
+
+### 63.7 Codex's second review of PR #224 (25 Nov 2026, 19 h 09; checked against the code, written before the tests)
+
+- **Goal crossings in both spellings.** The season's record of a match carries `goalCrossedY` / `goalCrossedZ`
+  (`match-record.mjs`), the shots family `goal_crossed_y/z` (normalised to `goalY` / `goalZ`): the shoot-out's goal
+  reads both (`shotGoal` in `services/match-shots.js`).
+- **The match's table keeps what « MatchStandings » did** (found while checking the finding): embedded, the
+  competition's block (a) highlights the match's two teams in the table (`data-match-team`, as before) and (b) when the
+  fixtures read gives an empty snapshot for a season the manifest holds, loads that competition's season partition
+  (`seasonSnapshotFixtures`, moved out of `MatchStandings.jsx`), so a deep-linked match of another season keeps its
+  table.
+
+Failure modes:
+
+- **R20** (`tests/match-shots.test.mjs`) `shotGoal` gives { y, z } from `goalY/goalZ` and from `goalCrossedY/Z`; null
+  without either.
+- **R21** (`match-tabs.e2e.mjs`) « Classement »: the table marks PSG's and Lorient's rows (`data-match-team`).
+- (b) has no E2E of its own here (it needs a manifest whose season is not the site's); it is the former loader's code,
+  moved unchanged and called the same way.

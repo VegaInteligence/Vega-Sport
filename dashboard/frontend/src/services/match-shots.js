@@ -36,3 +36,13 @@ export function shotPeriods(shots) {
 export function shotsOf(shots, period) {
   return (shots || []).filter((s) => (period === "all" ? shotPeriod(s) !== SHOOTOUT : shotPeriod(s) === period));
 }
+
+const finite = (value) => typeof value === "number" && Number.isFinite(value);
+
+/** Where a shot crossed the goal line, { y, z } in metres: the family's goalY / goalZ or the record's
+ * goalCrossedY / goalCrossedZ (§ 63.7); null without both. */
+export function shotGoal(shot) {
+  const y = finite(shot?.goalY) ? shot.goalY : shot?.goalCrossedY;
+  const z = finite(shot?.goalZ) ? shot.goalZ : shot?.goalCrossedZ;
+  return finite(y) && finite(z) ? { y, z } : null;
+}

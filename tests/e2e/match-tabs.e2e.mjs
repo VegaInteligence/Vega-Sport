@@ -493,7 +493,7 @@ try {
           return got;
         });
 
-      await check("R11/M8a « Classement »: the competition page's block, its table and its projection; no table in Avant-match",
+      await check("R11/R21/M8a « Classement »: the competition page's block, its table (the match's teams marked) and its projection; no table in Avant-match",
         { views: ["Classement", "Matchs", "Projection"], table: true, projection: 18, avantMatch: 0 }, async () => {
           await page.getByRole("tab", { name: "Classement" }).click();
           await page.waitForURL((url) => url.searchParams.get("view") === "standings");
@@ -502,6 +502,9 @@ try {
           const names = (await views.locator("button").allInnerTexts()).map((t) => t.trim());
           await panel(page).locator(".competition-standings table.standings-table").first().waitFor({ timeout: 30000 });
           await page.screenshot({ path: join(out, "classement-bureau.png"), fullPage: true });
+          // R21 (§ 63.7): the match's two teams marked in the table, as the former card did.
+          const marked = await panel(page).locator(".competition-standings tr[data-match-team]").count();
+          assert.equal(marked, 2, "R21 rows marked: " + marked);
           await views.getByRole("button", { name: "Projection", exact: true }).click();
           await panel(page).locator("table.season-projection tbody tr").first().waitFor();
           const projection = await panel(page).locator("table.season-projection tbody tr").count();
