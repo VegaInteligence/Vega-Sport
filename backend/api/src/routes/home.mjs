@@ -541,6 +541,10 @@ export function homeFavouritesQuery(filters, params, now, editions) {
   // anti-join) could not take the id: the view was computed for whole seasons before the join, 14.7 million buffers for
   // one player on a base of 240 000 appearances a season, and 503 after 8 s in production (GH #220). The keys become ids
   // in this statement (followed_players): the ids and the appearances are read in one snapshot.
+  // « Vos joueurs » of the week (GH #220 reopened, FAILURE_MODES_OPTIMISATIONS.md GH220.4): the followed players'
+  // appearances are cut to the displayed week first (your_apps), then the fixtures of those matches only are read, by
+  // their ids, as appearanceJson does. Joined on the appearances of the whole season, the planner rebuilt api.fixtures for
+  // the season once an appearance (687 984 provider lookups for one player, 7 s a followed player on production).
   const followedRows = "a.player_id=ANY(ARRAY(SELECT y.player_id FROM followed_players y WHERE y.player_id IS NOT NULL))";
   const sql = `/*vega:v2:home-favourites*/
 WITH publication AS MATERIALIZED (${publication}),
@@ -578,15 +582,19 @@ followed_players AS MATERIALIZED (
  SELECT DISTINCT ON(f.id) f.*,c.strength best_strength,c.favourites favourite_keys,extract(epoch FROM f.kickoff_at)*1000 time_ms,
  (f.kickoff_at AT TIME ZONE 'Europe/Paris')::date upcoming_day,(f.league_id=ANY(${uefa})) europe
  FROM candidates c JOIN favourite_fixtures f ON f.id=c.id ORDER BY f.id
-), your_matches AS MATERIALIZED (
- SELECT y.player_key,f.id match_key,a.date,a.minutes,a.grade,a.grade_z,a.goals,a.assists,
- CASE WHEN a.team_id=f.home_internal_id THEN f.away_team_id ELSE f.home_team_id END opponent_id,
- CASE WHEN a.team_id=f.home_internal_id THEN f.away_name ELSE f.home_name END opponent,
- CASE WHEN a.team_id=f.home_internal_id THEN f.score_home ELSE f.score_away END gf,
- CASE WHEN a.team_id=f.home_internal_id THEN f.score_away ELSE f.score_home END ga
+), your_apps AS MATERIALIZED (
+ SELECT y.player_key,a.season_id,a.match_id,a.team_id,a.date,a.minutes,a.grade,a.grade_z,a.goals,a.assists
  FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
- JOIN api.fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id CROSS JOIN period p
- WHERE ${followedRows} AND ${seasonPin("a")} AND a.date BETWEEN p.start_day AND p.end_day AND a.minutes>0
+ WHERE ${followedRows} AND ${seasonPin("a")} AND a.minutes>0
+ AND a.date BETWEEN (SELECT start_day FROM period) AND (SELECT end_day FROM period)
+), your_matches AS MATERIALIZED (
+ SELECT w.player_key,f.id match_key,w.date,w.minutes,w.grade,w.grade_z,w.goals,w.assists,
+ CASE WHEN w.team_id=f.home_internal_id THEN f.away_team_id ELSE f.home_team_id END opponent_id,
+ CASE WHEN w.team_id=f.home_internal_id THEN f.away_name ELSE f.home_name END opponent,
+ CASE WHEN w.team_id=f.home_internal_id THEN f.score_home ELSE f.score_away END gf,
+ CASE WHEN w.team_id=f.home_internal_id THEN f.score_away ELSE f.score_home END ga
+ FROM your_apps w JOIN api.fixtures f ON f.season_id=w.season_id AND f.match_id=w.match_id
+ WHERE ${seasonPin("f")} AND f.match_id=ANY(ARRAY(SELECT DISTINCT y.match_id FROM your_apps y))
 ), your_clubs AS MATERIALIZED (
  SELECT DISTINCT ON(y.player_id) y.player_key,y.player_id,a.player_name,a.image_url,a.team_id,a.team
  FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id

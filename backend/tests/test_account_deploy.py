@@ -591,6 +591,8 @@ class AccountDeployTest(unittest.TestCase):
             r"favourites club 200 \d+ ms db \? ms favourites=1 upcoming=0 yourPlayers=0 checked: the club \(strength 1\)",
             r"favourites player 200 \d+ ms db \? ms favourites=1 upcoming=0 yourPlayers=1 checked: a favourite naming the player, his match of the week",
             r"favourites both 200 \d+ ms db \? ms favourites=1 upcoming=0 yourPlayers=1 checked: the club \(strength 1\), a favourite naming the player, his match of the week",
+            # The stand-in home names no leader: the visitor's list (GH220.4) is the pick alone.
+            r"favourites many not checked \(the home names no other player\)",
         ]
         for scenario, failure in (("well", None), ("home-503", "favourites: FAILED the home of 2025/2026: status 503 DATA_UNAVAILABLE"),
                                   ("no-club", r"favourites club 200 .* FAILED: the club is not among the favourites with strength 1")):
@@ -605,7 +607,7 @@ class AccountDeployTest(unittest.TestCase):
                 step = lines.index("== 12. The home's personal read (a club, a player, both)")
                 if failure is None:
                     self.assertEqual(run.code, 0, run.log)
-                    self.assertEqual(len(lines), step + 6, run.out)
+                    self.assertEqual(len(lines), step + 7, run.out)
                     for line, check in zip(lines[step + 1:], checks):
                         self.assertRegex(line, f"^{check}$")
                     self.assertEqual(lines[-1], "done")

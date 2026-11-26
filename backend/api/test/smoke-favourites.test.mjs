@@ -17,6 +17,14 @@
 //          pair, first: exit 0 each; a pair given half or malformed: exit 2.
 //  GH220-r a manifest naming no season and /api/health saying the base is empty: the only skip (exit 0); the same
 //          manifest unconfirmed by /api/health: exit 1; seasons but no player anywhere: exit 1, « no player to follow ».
+// The reopened #220 (GH220.4, written before the probe changed): a fourth read follows a visitor's list, every read is
+// held to a budget of the base's time.
+//  GH220-y the seed's leaders: a fourth line « favourites many », its clubs with strength 1 and its players named, the
+//          list asked once (GH220-n's three lines become four).
+//  GH220-z a read whose db;dur is 3 001 ms: that line FAILED « db 3001 ms over 3000 ms », exit 1; 3 000 ms: passed.
+//  GH220-aa the home naming no player but the one followed: « favourites many not checked (the home names no other
+//          player) », the fourth read not asked.
+//  GH220-ab the fourth answer missing a club, or naming a player nowhere: exit 1, what is missing named.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { execFile, spawnSync } from "node:child_process";
@@ -109,18 +117,20 @@ const asked = (seen) =>
 const noPlayer = (body) => Object.assign(body.data, { potw: null, potwSeason: null, potwMatch: null });
 const nobody = (body) => Object.assign(noPlayer(body), { leaders: { goals: [], assists: [] } });
 
-test("GH220-n the seed's player of the week and the team of his match: three answers checked, no name, key or body", { skip }, async () => {
+test("GH220-n GH220-y the seed's player of the week and the team of his match, then its leaders: four answers checked, no name, key or body", { skip }, async () => {
   const url = await origin();
   const { code, out } = await probe(url);
   assert.equal(code, 0, out);
   const lines = out.trim().split("\n");
   assert.equal(lines[0], "favourites: following the player of the week of 2025/2026 and the team of his match");
-  assert.deepEqual(lines.slice(1).map((l) => l.split(" ").slice(0, 3).join(" ")), ["favourites club 200", "favourites player 200", "favourites both 200"]);
+  assert.deepEqual(lines.slice(1).map((l) => l.split(" ").slice(0, 3).join(" ")), ["favourites club 200", "favourites player 200", "favourites both 200", "favourites many 200"]);
   for (const line of lines.slice(1)) assert.match(line, /^favourites \w+ 200 \d+ ms db \d+ ms favourites=\d+ upcoming=\d+ yourPlayers=\d+ checked: .+$/);
   assert.match(lines[1], / checked: the club \(strength 1\)$/);
   assert.match(lines[2], / checked: a favourite naming the player, his match of the week$/);
   assert.match(lines[3], / checked: the club \(strength 1\), a favourite naming the player, his match of the week$/);
-  assert.equal(lines.length, 4, out);
+  // The seed's leaders: two scorers, each of his club.
+  assert.match(lines[4], / checked: 2 clubs \(strength 1\), 2 players named$/);
+  assert.equal(lines.length, 5, out);
   for (const secret of NAMES) assert.ok(!out.includes(secret), secret);
   // What it asked: the season the manifest names, every league, the ids the home gave.
   const scope = { season: "2025/2026", leagues: "all" };
@@ -128,6 +138,7 @@ test("GH220-n the seed's player of the week and the team of his match: three ans
     { ...scope, personalTeams: "t_aaaaa2" },
     { ...scope, personalPlayers: "p_aaaab4" },
     { ...scope, personalTeams: "t_aaaaa2", personalPlayers: "p_aaaab4" },
+    { ...scope, personalTeams: "t_aaaaa2,t_aaaaa1", personalPlayers: "p_aaaab4,p_aaaab1" },
   ]);
 });
 
@@ -247,7 +258,7 @@ test("GH220-q no player of the week: the leaders' player; none in the season: th
   assert.match(nation.out, /^favourites club 200 .* checked: the club \(strength 1\)$/m);
   assert.match(nation.out, /^favourites player 200 .* yourPlayers=0 checked: a favourite naming the player, his match of the week not checked \(no club of his in the base\)$/m);
   assert.match(nation.out, /^favourites both 200 .* yourPlayers=0 checked: the club \(strength 1\), a favourite naming the player, his match of the week not checked \(no club of his in the base\)$/m);
-  assert.deepEqual(asked(national.seen).map((q) => [q.personalTeams, q.personalPlayers]), [["t_natio1", undefined], [undefined, "p_natin1"], ["t_natio1", "p_natin1"]]);
+  assert.deepEqual(asked(national.seen).map((q) => [q.personalTeams, q.personalPlayers]), [["t_natio1", undefined], [undefined, "p_natin1"], ["t_natio1", "p_natin1"], ["t_natio1,t_aaaaa2,t_aaaaa1", "p_natin1,p_aaaab4,p_aaaab1"]]);
   // The same answers but his club known (a favourite player_club naming him) and « Vos joueurs » still empty: exit 1.
   const clubbed = await probe(await origin(async (url, real) => {
     if (url.pathname === "/api/read/home") return rewrite(real, (b) => { b.data.potw = { ...b.data.potw, playerId: "p_natin1", teamId: "t_natio1", matchId: "m_tst621", date: "2025-09-04" }; });
@@ -265,6 +276,7 @@ test("GH220-q no player of the week: the leaders' player; none in the season: th
   assert.equal(pair.code, 0, pair.out);
   assert.match(pair.out, /^favourites: following the club and the player given, in 2025\/2026$/m);
   assert.match(pair.out, /^favourites both 200 .* checked: the club \(strength 1\), the player named$/m);
+  assert.match(pair.out, /^favourites many not checked \(the home names no other player\)$/m);
   assert.deepEqual(asked(paired.seen).map((q) => [q.personalTeams, q.personalPlayers]), [["t_aaaaa1", undefined], [undefined, "p_aaaab1"], ["t_aaaaa1", "p_aaaab1"]]);
   for (const r of [leaders, previous, shifted, nation, clubbed, pair]) for (const secret of [...NAMES, "p_natin1", "t_natio1", "m_tst621", "Sélection"]) assert.ok(!r.out.includes(secret), secret);
 
@@ -297,4 +309,29 @@ test("GH220-r an empty base confirmed by /api/health: the only skip; seasons wit
   assert.deepEqual(asked(none.seen), []);
 
   assert.equal((await probe("not-a-url")).code, 2);
+});
+
+test("GH220-z GH220-ab a read over the budget of the base's time; the fourth answer missing a club or a player", { skip }, async () => {
+  const many = (url) => (url.searchParams.get("personalPlayers") || "").includes(",");
+  const timed = (dur, which) => favourites((url, real) => (which(url) ? rewrite(real, () => {}, { "server-timing": `total;dur=${dur}, db;dur=${dur};desc="2 queries"` }) : null));
+  const clubOnly = (url) => !url.searchParams.has("personalPlayers");
+  const over = await probe(await origin(timed(3001, clubOnly)));
+  assert.equal(over.code, 1, over.out);
+  assert.match(over.out, /^favourites club 200 \d+ ms db 3001 ms .* FAILED: db 3001 ms over 3000 ms$/m);
+  assert.match(over.out, /^favourites player 200 .* checked: /m);
+  const at3000 = await probe(await origin(timed(3000, many)));
+  assert.equal(at3000.code, 0, at3000.out);
+  assert.match(at3000.out, /^favourites many 200 \d+ ms db 3000 ms .* checked: 2 clubs \(strength 1\), 2 players named$/m);
+
+  const noClub = await probe(await origin(favourites((url, real) => (many(url) ? rewrite(real, (b) => { b.data.favourites = b.data.favourites.filter((f) => f.teamId !== "t_aaaaa1"); }) : null))));
+  assert.equal(noClub.code, 1, noClub.out);
+  assert.match(noClub.out, /^favourites many 200 .* FAILED: a club is not among the favourites with strength 1$/m);
+  const unnamed = (b) => {
+    b.data.favourites = b.data.favourites.map((f) => ({ ...f, players: f.players.filter((p) => p !== "p_aaaab1") }));
+    b.data.yourPlayers = b.data.yourPlayers.filter((p) => p.playerId !== "p_aaaab1");
+  };
+  const noPlayer = await probe(await origin(favourites((url, real) => (many(url) ? rewrite(real, unnamed) : null))));
+  assert.equal(noPlayer.code, 1, noPlayer.out);
+  assert.match(noPlayer.out, /^favourites many 200 .* FAILED: a player is named nowhere$/m);
+  for (const r of [over, at3000, noClub, noPlayer]) for (const secret of NAMES) assert.ok(!r.out.includes(secret), secret);
 });

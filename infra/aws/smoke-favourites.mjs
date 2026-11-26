@@ -17,10 +17,18 @@
 //   (his club or his national team) and, when the base knows a club of his, his match of the week in « Vos joueurs »
 //   (known by his national team only, or the answer's week another: said); another player named by the answer (a
 //   favourite or « Vos joueurs »).
+// - A visitor's list (GH220.4; GH #220 reopened: one club and one player passed while visitors' reads failed): a fourth
+//   read follows the player and club above, then the home's leaders (goals, then assists) and their clubs, at most five
+//   players and three clubs; each club a favourite with strength 1, each player named. The home naming no other player:
+//   said, not asked. Every read whose Server-Timing gives the base's time fails past 3 000 ms.
 const USAGE = "usage: node infra/aws/smoke-favourites.mjs https://<the read API's distribution> [--team t_… --player p_…]";
 const TEAM = /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 const PLAYER = /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 const SEASON = /^\d{4}(?:\/\d{4})?$/;
+// The base's time a read may take (Server-Timing db;dur), and the size of a visitor's list the fourth read follows
+// (FAILURE_MODES_OPTIMISATIONS.md GH220.4: production's old code took 29 s for three clubs and five players).
+const DB_BUDGET_MS = 3000;
+const MANY = { players: 5, clubs: 3 };
 
 class Stop {
   constructor(code) {
@@ -117,12 +125,15 @@ async function main() {
 
   const current = await home(season);
   let pick = null;
+  // The home whose leaders the fourth read follows: the pick's season's.
+  let picked = current;
   if (options.pair) pick = { season, source: `the club and the player given, in ${season}`, ...options.pair };
   else {
     const tried = [];
     for (const s of [season, before].filter(Boolean)) {
       const data = s === season ? current : await home(s);
       tried.push(s);
+      picked = data;
       const star = data.potw;
       if (isObject(star) && PLAYER.test(star.playerId ?? "") && TEAM.test(star.teamId ?? "") && typeof star.matchId === "string") {
         pick = { season: s, source: `the player of the week of ${s} and the team of his match`, team: star.teamId, player: star.playerId,
@@ -155,28 +166,73 @@ async function main() {
     const r = await read(`/api/read/home-favourites?${scope}&${new URLSearchParams(followed)}`);
     const { problems, checked, data, knows } = judge(r, followed, pick, context);
     if (name === "player") context.clubKnown = Boolean(knows);
-    const db = /db;dur=([\d.]+)/.exec(r.headers?.get("server-timing") || "")?.[1];
+    const db = budget(r, problems);
     const sizes = data ? ` favourites=${data.favourites.length} upcoming=${data.upcoming.length} yourPlayers=${data.yourPlayers.length}` : "";
     const outcome = problems.length ? ` FAILED: ${problems.join(", ")}` : ` checked: ${checked.join(", ")}`;
-    say(`favourites ${name} ${r.network ? "network" : r.status} ${r.ms ?? "-"} ms db ${db ? Math.round(Number(db)) : "?"} ms${sizes}${outcome}`);
+    say(`favourites ${name} ${r.network ? "network" : r.status} ${r.ms ?? "-"} ms db ${db ?? "?"} ms${sizes}${outcome}`);
+    if (problems.length) failed++;
+  }
+
+  // A visitor's list (GH220.4): the pick, then the home's leaders (goals, then assists) and their clubs, each once.
+  const boards = isObject(picked.leaders) ? picked.leaders : {};
+  const rows = [{ playerId: pick.player, teamId: pick.team }, ...[boards.goals, boards.assists].flatMap((r) => (Array.isArray(r) ? r : []))]
+    .filter((row) => isObject(row) && PLAYER.test(row.playerId ?? "") && TEAM.test(row.teamId ?? ""));
+  const list = { players: [...new Set(rows.map((row) => row.playerId))].slice(0, MANY.players), clubs: [...new Set(rows.map((row) => row.teamId))].slice(0, MANY.clubs) };
+  if (list.players.length < 2) say("favourites many not checked (the home names no other player)");
+  else {
+    const followed = { personalTeams: list.clubs.join(","), personalPlayers: list.players.join(",") };
+    const r = await read(`/api/read/home-favourites?${scope}&${new URLSearchParams(followed)}`);
+    const { problems, checked, data } = judgeMany(r, list);
+    const db = budget(r, problems);
+    const sizes = data ? ` favourites=${data.favourites.length} upcoming=${data.upcoming.length} yourPlayers=${data.yourPlayers.length}` : "";
+    const outcome = problems.length ? ` FAILED: ${problems.join(", ")}` : ` checked: ${checked.join(", ")}`;
+    say(`favourites many ${r.network ? "network" : r.status} ${r.ms ?? "-"} ms db ${db ?? "?"} ms${sizes}${outcome}`);
     if (problems.length) failed++;
   }
   return failed ? 1 : 0;
 }
 
-// What one answer shows of what was followed: the problems (none: it passed), what was checked, its data when its form
-// holds (for the sizes), and whether it knows a club of the player of the week.
-function judge(r, followed, pick, context) {
+// The base's time the answer gives (Server-Timing db;dur), rounded, or null; past the budget, a problem.
+function budget(r, problems) {
+  const raw = /db;dur=([\d.]+)/.exec(r.headers?.get("server-timing") || "")?.[1];
+  if (!raw) return null;
+  const db = Math.round(Number(raw));
+  if (db > DB_BUDGET_MS) problems.push(`db ${db} ms over ${DB_BUDGET_MS} ms`);
+  return db;
+}
+
+// The answer's form (200 JSON, private, its three lists, the publication's generation): the problems and its data.
+function form(r) {
   const why = unusable(r);
-  if (why) return { problems: [why], checked: [] };
+  if (why) return { problems: [why] };
   const body = r.json;
   const data = isObject(body) && isObject(body.data) ? body.data : null;
   const problems = [];
   if (!/^private\b/.test(r.headers.get("cache-control") || "")) problems.push("not private");
-  if (!data) return { problems: [...problems, "no data"], checked: [] };
+  if (!data) return { problems: [...problems, "no data"] };
   const missing = ["favourites", "upcoming", "yourPlayers"].filter((list) => !Array.isArray(data[list]));
-  if (missing.length) return { problems: [...problems, missing.map((list) => `no ${list}`).join(", ")], checked: [] };
+  if (missing.length) return { problems: [...problems, missing.map((list) => `no ${list}`).join(", ")] };
   if (!(typeof body.meta?.generation === "string" && /^\d+$/.test(body.meta.generation))) problems.push("no generation");
+  return { problems, data };
+}
+
+// The fourth read: each club a favourite with strength 1, each player named (a favourite or « Vos joueurs »).
+function judgeMany(r, list) {
+  const { problems, data } = form(r);
+  if (problems.length) return { problems, checked: [], data };
+  const favourites = data.favourites.filter(isObject);
+  const mine = data.yourPlayers.filter(isObject);
+  if (!list.clubs.every((team) => favourites.some((f) => f.teamId === team && f.strength === 1 && f.reason === "club")))
+    problems.push("a club is not among the favourites with strength 1");
+  const named = (player) => favourites.some((f) => Array.isArray(f.players) && f.players.includes(player)) || mine.some((p) => p.playerId === player);
+  if (!list.players.every(named)) problems.push("a player is named nowhere");
+  return { problems, checked: [`${list.clubs.length} clubs (strength 1)`, `${list.players.length} players named`], data };
+}
+
+// What one answer shows of what was followed: the problems (none: it passed), what was checked, its data when its form
+// holds (for the sizes), and whether it knows a club of the player of the week.
+function judge(r, followed, pick, context) {
+  const { problems, data } = form(r);
   if (problems.length) return { problems, checked: [], data };
 
   const checked = [];

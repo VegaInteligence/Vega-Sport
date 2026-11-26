@@ -24,6 +24,7 @@ import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import { context, get, skip } from "./context.mjs";
 import { homeFavouritesQuery, parseHomeRead } from "../src/routes/home.mjs";
 import { resolveEditions } from "../src/publication.mjs";
@@ -84,6 +85,61 @@ with db.transaction():
     x("""INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played, goals, touches)
          SELECT season_id, match_id, team_id, player_id, 45, 0, 20 FROM others WHERE played""")
 # The worker's daily pass keeps the partitions' statistics (ops.analyze_partitioned); the planner reads them.
+x("ANALYZE core.player_match_stats")
+x("ANALYZE core.lineup_players")
+`;
+  const done = spawnSync("python3", ["-c", script, backend, process.env.VEGA_V2_API_NODE_TEST_DSN], { encoding: "utf8" });
+  assert.equal(done.status, 0, done.stderr);
+});
+
+// GH220.4 (the reopened #220): a season of many matches and three followed players with many appearances in it, outside
+// the displayed week (2025-09-01 → 2025-09-07), and their few matches of the week (GH220-t–x).
+//   t_bk0001…t_bk0040 (9701…9740): 40 clubs; 1 500 finished matches between them, 1 Jul → 31 Aug 2025, in edition 1.
+//   p_bulk01 (club t_bk0001): 40 of them, and m_wk0001 (3 Sep, t_bk0001 – t_bk0002) and m_wk0002 (5 Sep, t_bk0003 – t_bk0001).
+//   p_bulk02 (club t_bk0002): 40 of them, m_wk0001 too (GH220-u), m_wk0004 (1 Sep, the week's first day) and m_wk0005
+//            (31 Aug, the day before: GH220-w).
+//   p_bulk03 (club t_bk0003): 40 of them, m_wk0002 for his club and m_wk0003 (4 Sep) for t_natio1 in an international
+//            edition of 2025 (l_intern: outside leagues=l_3FJFUl, GH220-v).
+before(() => {
+  if (skip) return;
+  const backend = fileURLToPath(new URL("../..", import.meta.url));
+  const script = `
+import sys
+sys.path[:0] = [sys.argv[1]]
+from vega.store import connect_local
+db = connect_local(sys.argv[2])
+x = db.execute
+with db.transaction():
+    for i in range(40):
+        x("INSERT INTO core.teams(id, name, country_code) VALUES (%s, %s, 'FRA')", (9701 + i, 'Club %02d' % (i + 1)))
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','pitchapi',%s,%s)", ('t_bk%04d' % (i + 1), 9701 + i))
+    x("INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, is_current) VALUES (9717, 9601, 2025, '2025/2026', true)")
+    matches = []
+    for i in range(1500):
+        home, away = 9701 + i % 40, 9701 + (i // 40 + i % 40 + 1) % 40
+        if away == home:
+            away = 9701 + (away - 9701 + 1) % 40
+        matches.append((9700 + i, 1, 'm_bk%04d' % (i + 1), '2025-%02d-%02d' % ((7, 1 + i % 31) if i % 62 < 31 else (8, 1 + i % 31)), home, away))
+    week = [(11201, 1, 'm_wk0001', '2025-09-03', 9701, 9702), (11202, 1, 'm_wk0002', '2025-09-05', 9703, 9701),
+            (11203, 9717, 'm_wk0003', '2025-09-04', 9601, 9602), (11204, 1, 'm_wk0004', '2025-09-01', 9702, 9704),
+            (11205, 1, 'm_wk0005', '2025-08-31', 9704, 9702)]
+    for mid, cs, key, day, home, away in matches + week:
+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, home_score, away_score,
+               match_date, kickoff_at) VALUES (%s,%s,2025,'pitchapi','finished',%s,%s,%s,%s,%s,%s)""", (mid, cs, home, away, mid % 3, mid % 2, day, day + 'T19:00:00Z'))
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match','pitchapi',%s,%s)", (key, mid))
+        x("INSERT INTO core.match_coverage(season_id, match_id, player_stats) VALUES (2025,%s,'ok')", (mid,))
+    for pid, key, club in ((9801, 'p_bulk01', 9701), (9802, 'p_bulk02', 9702), (9803, 'p_bulk03', 9703)):
+        x("INSERT INTO core.players(id, name) VALUES (%s,%s)", (pid, 'Suivi ' + key[-2:]))
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player','pitchapi',%s,%s)", (key, pid))
+        played = [(m[0], club) for m in matches if club in (m[4], m[5])][:40]
+        played += {9801: [(11201, 9701), (11202, 9701)], 9802: [(11201, 9702), (11204, 9702), (11205, 9702)],
+                   9803: [(11202, 9703), (11203, 9601)]}[pid]
+        for mid, team in played:
+            x("INSERT INTO core.lineup_players(season_id, match_id, team_id, player_id, is_starter, position_id) VALUES (2025,%s,%s,%s,true,81)", (mid, team, pid))
+            x("INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played, goals, touches) VALUES (2025,%s,%s,%s,90,%s,40)",
+              (mid, team, pid, mid % 2))
+x("ANALYZE core.matches")
+x("ANALYZE core.provider_ids")
 x("ANALYZE core.player_match_stats")
 x("ANALYZE core.lineup_players")
 `;
@@ -186,4 +242,72 @@ test("GH220-m each read of the followed player's appearances looks at his rows o
   const d = await followed("p_aaaab4");
   assert.deepEqual(d.favourites, [{ teamId: "t_aaaaa2", strength: 2, reason: "player_club", players: ["p_aaaab4"] }]);
   assert.deepEqual(d.yourPlayers.map((p) => p.matches.map((m) => m.matchId)), [["m_aaaaa1", "m_aaaaa4"]]);
+});
+
+// Rows each scan of `relations` looked at inside the CTE `name` of a JSON plan: returned and dropped by its filter, per loop.
+function examinedIn(plan, name, relations) {
+  const found = [];
+  const find = (node) => {
+    if (node["Subplan Name"] === `CTE ${name}`) found.push(node);
+    for (const child of node.Plans || []) find(child);
+  };
+  find(plan);
+  assert.equal(found.length, 1, `the plan holds the CTE ${name}`);
+  const scans = [];
+  const walk = (node) => {
+    const relation = node["Relation Name"] || "";
+    if (relations.test(relation))
+      scans.push({ relation, node: node["Node Type"], examined: ((node["Actual Rows"] || 0) + (node["Rows Removed by Filter"] || 0)) * (node["Actual Loops"] || 1) });
+    for (const child of node.Plans || []) walk(child);
+  };
+  walk(found[0]);
+  return scans;
+}
+
+test("GH220-t the followed players' matches of the week read the week's fixtures only, never the season's", { skip }, async () => {
+  const params = new URLSearchParams("season=2025/2026&leagues=all&personalPlayers=p_bulk01,p_bulk02,p_bulk03");
+  const filters = parseHomeRead(params, { personal: true });
+  const { sql, values } = homeFavouritesQuery(filters, params, context.now, await resolveEditions(context.reader.read, filters.scope));
+  const [row] = await context.reader.read(`EXPLAIN (ANALYZE, FORMAT JSON) ${sql}`, values);
+  const plan = row["QUERY PLAN"][0].Plan;
+  const count = (scans, relation) => scans.filter((s) => s.relation === relation).reduce((n, s) => n + s.examined, 0);
+  const scans = examinedIn(plan, "your_matches", /^(matches|provider_ids)$/);
+  // The season holds 1 500 matches of other clubs and each followed player 40 appearances outside the week; the week
+  // holds five matches of theirs.
+  assert.ok(count(scans, "matches") <= 100, `matches: ${JSON.stringify(scans)}`);
+  assert.ok(count(scans, "provider_ids") <= 500, `provider_ids: ${JSON.stringify(scans)}`);
+});
+
+const BASE_X = "c12b6ebe6fa24de5b373ff3d58f7d5303ffb74066c936820572879bd14661217";
+const bulkBrief = (d) => brief(d.yourPlayers).sort((a, b) => a.playerId.localeCompare(b.playerId));
+
+test("GH220-u GH220-w two followed players in one match; the week's first day kept, the day before not", { skip }, async () => {
+  const d = await followed("p_bulk01,p_bulk02");
+  assert.deepEqual(bulkBrief(d), [
+    { playerId: "p_bulk01", teamId: "t_bk0001", matches: [["m_wk0001", "t_bk0002", [2, 1]], ["m_wk0002", "t_bk0003", [0, 0]]], next: null },
+    { playerId: "p_bulk02", teamId: "t_bk0002", matches: [["m_wk0004", "t_bk0004", [2, 0]], ["m_wk0001", "t_bk0001", [1, 2]]], next: null },
+  ]);
+});
+
+test("GH220-v a match of the week outside the leagues asked (his national team) is still his", { skip }, async () => {
+  const d = (await get("/api/read/home-favourites?season=2025/2026&leagues=l_3FJFUl&personalPlayers=p_bulk03")).body.data;
+  assert.deepEqual(bulkBrief(d), [
+    { playerId: "p_bulk03", teamId: "t_bk0003", matches: [["m_wk0003", "t_natio2", [1, 1]], ["m_wk0002", "t_bk0001", [0, 0]]], next: null },
+  ]);
+});
+
+test("GH220-x the three followed players and their clubs together: the base commit's answer", { skip }, async () => {
+  const r = await get(`${favourites}&personalPlayers=p_bulk01,p_bulk02,p_bulk03&personalTeams=t_bk0001,t_bk0002,t_bk0003`);
+  assert.equal(r.response.status, 200);
+  const d = r.body.data;
+  assert.deepEqual(d.favourites.map((f) => [f.teamId, f.strength, f.reason, f.players]), [
+    ["t_bk0001", 1, "club", ["p_bulk01"]], ["t_bk0002", 1, "club", ["p_bulk02"]], ["t_bk0003", 1, "club", ["p_bulk03"]],
+    ["t_natio1", 3, "player_nation", ["p_bulk03"]],
+  ]);
+  // The whole answer, byte for byte, as the base commit (e401480) gave it on this base.
+  assert.equal(createHash("sha256").update(JSON.stringify(d)).digest("hex"), BASE_X, JSON.stringify(d));
+  assert.deepEqual(bulkBrief(d), [
+    ...bulkBrief(await followed("p_bulk01,p_bulk02")),
+    ...bulkBrief(await followed("p_bulk03")),
+  ]);
 });

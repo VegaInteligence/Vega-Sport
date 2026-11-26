@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Favoris de l'accueil, « Vos joueurs » de la semaine — GH220.4 (26 novembre 2026, [#220](https://github.com/VegaInteligence/Vega-Sport/issues/220) rouverte, [VI-158](https://linear.app/vegainteligence/issue/VI-158), branche `claude/v2-favoris-vos-joueurs` depuis main e401480)
+
+- Alarme `vega-v2-api-5xx` du 25 nov. (20 h 50 UTC) : uniquement `/api/read/home-favourites`, 503 après 8 s (57014) ; 133 lectures sur 168 ce jour-là, après #230. Mesure en lecture seule sur la production (`EXPLAIN ANALYZE`, demandée par hugo) : clubs ~0,5 s, ~7 s par joueur suivi, presque tout dans `your_matches` (la vue `api.fixtures` de la saison reconstruite pour chaque apparition du joueur). Relu par Astra (gpt-6.2-astra, xhigh).
+- Correctif : `your_apps` (apparitions coupées à la semaine) puis les fiches de ces seuls matchs par leurs ids. Vérification d'après déploiement : une quatrième lecture (jusqu'à 5 joueurs et 3 clubs des meneurs de l'accueil) et un budget de 3 000 ms du temps de la base sur chaque lecture.
+- Tests d'abord : GH220-t (rouge sur e401480) à x dans `home-favourites.test.mjs`, GH220-y à ab dans `smoke-favourites.test.mjs` ; 331 tests API verts après le correctif, `test_account_deploy` vert.
+- Suite : PR, puis Deploy avec l'accord de hugo ; lire la quatrième ligne de l'étape 12 et les 503 de la route le soir suivant ; fermer #220 ensuite.
+
 ## Notes Vega d'un match dès l'arrivée des stats des joueurs — FAILURE_MODES § 69 (25 novembre 2026, [#236](https://github.com/VegaInteligence/Vega-Sport/issues/236), [VI-163](https://linear.app/vegainteligence/issue/VI-163), branche `claude/notes-par-match` depuis main 3cc7ac6)
 
 - Demande de hugo (21 h 37) : « met cela en match », après Sabah FK – Barcelone resté sans notes. Mesure en production d'abord (lecture seule, `/mnt/project-files/notes-match-par-match/arrivals_run1.txt`) : stats des joueurs 12 s après le statut « fini » ; le passage de la saison était parti 11 s avant elles (une course) ; sur 456 matchs en 14 jours, p95 7,5 min, aucune stat changée après une heure.
