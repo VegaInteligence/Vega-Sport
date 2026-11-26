@@ -444,11 +444,9 @@ Outputs:
   # it). The Deploy cannot update this stack; the owner does, from his Mac
   # (backend/account/DEPLOYMENT.md, section 3).
   AccountGrants: {Value: '2'}
-  # Read by deploy.sh's preflight (FAILURE_MODES_OPTIMISATIONS.md GH157): 1 once this stack holds the grants of 26 November
-  # 2026 (the Deploy's state object, the edge logs in us-east-1, the alarms, rules and dashboard of GH204, the RDS log
-  # group of GH171; after the reviews of that day: the Deploy state's own bucket and object, ecr:DescribeRepositories,
-  # the release bucket's existence, the tasks a run settles, the buckets' and the alerts' handlers). The owner deploys it
-  # from the Mac before the next Deploy.
+  # Read by deploy.sh's preflight. Version 1 covers the Deploy state and observability
+  # (GH157, GH171, GH204); version 2 adds the read API's scoped origin invocation (GH257).
+  # The owner updates this stack before the next Deploy.
   DeployStateBucket: {Value: !Ref DeployStateBucket}
   DeployGrants: {Value: '2'}
   PilotRoleArn: {Value: !GetAtt PilotRole.Arn}

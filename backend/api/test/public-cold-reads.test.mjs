@@ -155,7 +155,10 @@ test("cold public read scenarios cover the club panels and cross-family reads", 
     await t.test(path, async () => {
       const { body } = await request(path, { expected: options?.status ?? 200, reason: options?.reason ?? null });
       if (verify) verify(body);
-      else assert.equal(body.error.code, "RESOURCE_NOT_FOUND");
+      else {
+        assert.ok(options?.reason, path + " has no fixture explanation");
+        assert.equal(body.error.code, "RESOURCE_NOT_FOUND");
+      }
     });
   }
   await t.test("inventory tracks the declared club panel paths", () => {
@@ -178,13 +181,20 @@ const EXPECTED = {
 
 async function plansFromRequests(stage) {
   const plans = report.plans[stage] = {};
+  const playerResults = {};
   for (const [family, path, sqlOfInterest] of [
     ["substitutions", substitutions, /api\.team_(?:substitute|change)_matches/],
     ["passing", passing, /api\.player_(?:profiles|identities)/],
     ["lineups", lineups, /api\.match_lineup_player_rows/],
+    ["players-league", "/api/read/players?season=" + season + "&league=l_3FJFUl&q=elie", /^\/\*vega:v2:players:rollup\*\//],
+    ["players-match", "/api/read/players?season=" + season + "&league=l_3FJFUl&match=m_aaaaa1&sort=name&direction=asc", /^\/\*vega:v2:players\*\//],
   ]) {
     const answer = await request(path);
     if (family === "substitutions") assert.deepEqual(answer.body.data, EXPECTED);
+    if (family.startsWith("players-")) {
+      const { data, pagination } = answer.body;
+      playerResults[family] = { data, pagination };
+    }
     const selected = answer.statements.filter(({ sql }) => sqlOfInterest.test(sql));
     assert.equal(selected.length, family === "substitutions" ? 2 : 1, family + " plan statements captured");
     plans[family] = [];
@@ -200,6 +210,7 @@ async function plansFromRequests(stage) {
       }
     }
   }
+  return playerResults;
 }
 
 function scans(node) {
@@ -213,6 +224,7 @@ function scans(node) {
 
 const facts = /^(matches|lineup_players|player_match_stats|match_events)(_|$)/;
 const people = /^(players|assets)(_|$)/;
+const playerListWork = /^(player_list_(editions|teams|positions)|player_grade_editions|provider_ids)(_|$)/;
 const profileOnly = /^(player_contracts|player_fact_observations|player_market_values|provider_players|provider_links)(_|$)/;
 const work = (plan, re) => plan.scans.filter((s) => re.test(s.relation)).reduce((n, s) => n + s.tuples, 0);
 const blocks = (plan) => ["Shared Hit Blocks", "Shared Read Blocks", "Temp Read Blocks", "Temp Written Blocks"]
@@ -229,9 +241,19 @@ test("substitutes and identity reads stay bounded as other teams, seasons and pr
     await request(substitutions.replace("t_v0008011", "t_zzzzzz"), { expected: 404 });
     await request(substitutions.replace(season, "2024/2025"), { expected: 404, reason: "A bench entry alone is not impact data." });
   });
-  await plansFromRequests("small");
+  const small = await plansFromRequests("small");
   await owner.query(readFileSync(new URL("./public-cold-reads-noise.sql", import.meta.url), "utf8"));
-  await plansFromRequests("loaded");
+  const loaded = await plansFromRequests("loaded");
+  await t.test("the player directory reads a separate populated league and keeps both selective results", async () => {
+    const other = await request("/api/read/players?season=" + season + "&league=l_cold01&limit=1");
+    assert.equal(other.body.pagination.total, 12000);
+    assert.equal(other.body.data.players.length, 1);
+    assert.match(other.body.data.players[0].id, /^p_n\d{5}$/);
+    assert.deepEqual(ids(loaded["players-league"].data.players), ["p_aaaab1"]);
+    assert.equal(loaded["players-league"].data.players[0].totals.goals, 2);
+    assert.deepEqual(ids(loaded["players-match"].data.players), ["p_aaaab4", "p_aaaab1", "p_aaaab2"]);
+    assert.deepEqual(loaded, small);
+  });
   for (const family of Object.keys(report.plans.loaded)) {
     await t.test(family + " plans", () => {
       for (const [i, plan] of report.plans.loaded[family].entries()) {
@@ -242,7 +264,18 @@ test("substitutes and identity reads stay bounded as other teams, seasons and pr
           loaded: { facts: work(plan, facts), people: work(plan, people), blocks: blocks(plan) },
           heavy: plan.scans.filter((s) => profileOnly.test(s.relation)),
         };
+        if (family.startsWith("players-")) {
+          checks.small.playerList = work(previous, playerListWork);
+          checks.loaded.playerList = work(plan, playerListWork);
+          const scenarios = (p) => p.scans.filter((s) => facts.test(s.relation) || people.test(s.relation) || playerListWork.test(s.relation));
+          checks.small.loops = scenarios(previous).reduce((n, s) => n + s.loops, 0);
+          checks.loaded.loops = scenarios(plan).reduce((n, s) => n + s.loops, 0);
+        }
         report.assertions.push(checks);
+        if (family.startsWith("players-")) {
+          assert.ok(checks.loaded.playerList < 500, JSON.stringify(checks));
+          assert.ok(checks.loaded.loops < 500, JSON.stringify(checks));
+        }
         assert.ok(checks.loaded.facts < 500, JSON.stringify(checks));
         assert.ok(checks.loaded.people < 500, JSON.stringify(checks));
         assert.ok(checks.loaded.blocks <= checks.small.blocks * 4 + 256, JSON.stringify(checks));
