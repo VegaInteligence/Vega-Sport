@@ -240,7 +240,7 @@ button.center:active {
 }
 
 /* ----------------------------------------------------------------------- picker */
-/* The window (§ 73.3, piste A « La fenêtre arrondie », hugo 26 Nov 11 h 08): 28 px corners, no frame, no line under the
+/* The window (§ 73.3, piste A « La fenêtre arrondie », hugo 26 Nov 11 h 08): 20 px corners (28 px first, hugo chose 20 px with the mock-up's slider at 11 h 15), no frame, no line under the
    title, the competition's logo before its name, the close button a round quiet pill like the arrows. `:root dialog`
    puts these above the site's square `.modal` whatever the order the sheets load in. */
 :root dialog.picker {
@@ -248,7 +248,7 @@ button.center:active {
   /* The same height whichever round is shown: the window does not jump between a round of three days and one of one. */
   height: min(800px, calc(100dvh - 48px));
   border: 0;
-  border-radius: 28px;
+  border-radius: 20px;
   box-shadow:
     0 30px 80px rgb(0 0 0 / 0.35),
     0 0 0 1px var(--pill-quiet);
@@ -599,7 +599,7 @@ button.center:active {
     height: calc(100dvh - 20px);
     max-height: calc(100dvh - 20px);
     margin: 10px;
-    border-radius: 28px;
+    border-radius: 20px;
   }
   :root dialog.picker[open] {
     max-height: calc(100dvh - 20px);

@@ -495,13 +495,13 @@ try {
         return got;
       });
 
-      await check("R49 the picker's window rounded (28 px), no frame nor line under the title, a round close button, the competition's logo, pills of 44 px at most",
-        { radius: "28px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widestMax: 44 }, async () => {
+      await check("R49 the picker's window rounded (20 px), no frame nor line under the title, a round close button, the competition's logo, pills of 44 px at most",
+        { radius: "20px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widestMax: 44 }, async () => {
         const { dialog, got } = await pickerWindow(page);
         await page.screenshot({ path: join(out, "choix-journee-fenetre-bureau.png") });
         await page.keyboard.press("Escape");
         await dialog.waitFor({ state: "detached" }).catch(() => {});
-        assert.deepEqual({ ...got, widest: undefined, margin: undefined }, { radius: "28px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widest: undefined, margin: undefined });
+        assert.deepEqual({ ...got, widest: undefined, margin: undefined }, { radius: "20px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widest: undefined, margin: undefined });
         assert.ok(got.widest <= 44, `widest pill ${got.widest}px`);
         return got;
       });
@@ -884,12 +884,12 @@ try {
         return { ...sizes, got };
       });
 
-      await check("R50 phone: the picker's window rounded (28 px) with a margin around it, not edge to edge", { radius: "28px", border: "0px", marginMin: 8 }, async () => {
+      await check("R50 phone: the picker's window rounded (20 px) with a margin around it, not edge to edge", { radius: "20px", border: "0px", marginMin: 8 }, async () => {
         const { dialog, got } = await pickerWindow(f.page);
         await f.page.screenshot({ path: join(out, "choix-journee-fenetre-telephone.png") });
         await f.page.keyboard.press("Escape");
         await dialog.waitFor({ state: "detached" }).catch(() => {});
-        assert.equal(got.radius, "28px");
+        assert.equal(got.radius, "20px");
         assert.equal(got.border, "0px");
         assert.ok(got.margin >= 8, `margin ${got.margin}px`);
         return got;

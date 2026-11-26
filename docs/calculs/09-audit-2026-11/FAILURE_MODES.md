@@ -5952,13 +5952,14 @@ yet, read as « 02:00 ».
 
 ### 73.3 The window (hugo, 26 Nov 2026, 11 h 04 on the release, a Champions League screenshot: « le truc rectangulaire droit la ca va pas du tout » ; mock-up https://claude.ai/artifact/ENDVBWG9YzVEPxPaXKi6gL, piste A « La fenêtre arrondie » chosen at 11 h 08 « va avec A envoie dans main »)
 
-- The picker is no longer the site's square dialog: 28 px corners, no frame, no line under the title, the competition's
+- The picker is no longer the site's square dialog: 20 px corners (28 px at first; hugo chose 20 px at 11 h 15 with the
+  mock-up's slider, « passe en 20px »), no frame, no line under the title, the competition's
   logo before its name, the close button a round quiet pill (32 px) like the arrows; `:root dialog.picker` above the
   site's `.modal` whatever the stylesheets' order. On a phone it keeps 10 px around it and its corners, no longer edge to
   edge. Every other dialog of the site is unchanged.
 - The numbered pills are 44 px wide at most: the 8 rounds of the Champions League no longer stretch over the width.
-- **R49** (`match-tabs.e2e.mjs`, computer) the window's radius 28 px, border 0, the header's line 0, the close button
+- **R49** (`match-tabs.e2e.mjs`, computer) the window's radius 20 px, border 0, the header's line 0, the close button
   50 % without border, a logo in the header, the widest pill ≤ 44 px. Red on dadd055 (0 px, 1 px, 1 px, square, no logo,
   pills stretched to the width).
-- **R50** (phone) radius 28 px, border 0, at least 8 px between the window and the screen's edges. Red on dadd055.
+- **R50** (phone) radius 20 px, border 0, at least 8 px between the window and the screen's edges. Red on dadd055.
 
