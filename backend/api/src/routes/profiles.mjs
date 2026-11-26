@@ -61,7 +61,7 @@
  * for a suspension, the matches remaining and the competition. 404 only for an unknown team.
  *
  * GET /api/matches/{id}/absences — each side's injured and suspended players on the day of a match that has kicked off
- * (181, FAILURE_MODES.md § 78): `on` the match day, each side `{ team, asOf, squad, absences }` in the shape of
+ * (181, FAILURE_MODES.md § 79): `on` the match day, each side `{ team, asOf, squad, absences }` in the shape of
  * /api/teams/{id}/absences, read as of that day (the squad of the match's season, the episodes over it, never a player
  * on its sheet; `matchesRemaining` null). 404 for an unknown match and one not started (its status `not_started`
  * and its kick-off to come: its card reads the teams').
@@ -659,7 +659,7 @@ export function createProfileRoute(read) {
       validateParams(params, []);
       const [f] = await read(
         // Started: the base's status says so, or its kick-off has passed (the base keeps « not_started » while the
-        // match is played; the live status lives elsewhere, and the page switches at the kick-off, § 78.1).
+        // match is played; the live status lives elsewhere, and the page switches at the kick-off, § 79.1).
         `SELECT f.match_id, f.home_team_id, f.away_team_id, coalesce(f.day, (f.kickoff_at AT TIME ZONE 'UTC')::date)::text AS day,
            (f.status <> 'not_started' OR f.kickoff_at <= now()) IS TRUE AS started
          FROM api.fixtures f WHERE f.match_id=api.internal_id('match',$1)`,
@@ -691,7 +691,7 @@ export function createProfileRoute(read) {
           absences: rows.filter((r) => r.side === key).map((r) => ({
             player: { id: r.player_id, name: r.name ?? null, imageUrl: r.image_url ?? null, role: r.role ?? null },
             kind: r.kind ?? null, label: r.label ?? null, start: r.start_date, expectedReturn: r.end_date ?? null,
-            // The count to serve read today says nothing of the match day (78.4).
+            // The count to serve read today says nothing of the match day (79.4).
             matchesMissed: r.matches_missed ?? null, matchesRemaining: null,
             competition: r.kind === "suspension" && r.competition_code
               ? { code: r.competition_code, id: r.competition_id ?? null, name: r.competition_name ?? null } : null,

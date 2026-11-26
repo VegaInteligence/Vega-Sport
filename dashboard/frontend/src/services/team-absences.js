@@ -30,7 +30,7 @@ export function useTeamAbsences(id) {
 }
 
 /**
- * A match's absent players on its day, once it has kicked off (/api/matches/{id}/absences, FAILURE_MODES.md § 78):
+ * A match's absent players on its day, once it has kicked off (/api/matches/{id}/absences, FAILURE_MODES.md § 79):
  * { id, on, home, away }, each side { team, asOf, squad, absences } in the shape above, read as of the match day
  * (`matchesRemaining` null). 404 (an unknown match, or one not started): null.
  */

@@ -94,7 +94,7 @@ REFS = {
 # Open Matchday matches); both reference agg.power_runs (run_id) without a column of it; and an index of core.matches
 # (no column). 179 (GH171) creates the extension pg_stat_statements and the view ops.statement_stats over it: no table,
 # no column of core, agg or ops, nothing naming a match. 180 (GH137M) creates the function api.matchday_rounds, which
-# reads matches and writes nothing: no table, no column. 181 (§78) creates two api views over core, agg and ops
+# reads matches and writes nothing: no table, no column. 181 (§79) creates two api views over core, agg and ops
 # (api.match_absence_players, api.match_absences) and their read grant: no table, no column, nothing written. A later one
 # needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",

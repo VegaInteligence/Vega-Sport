@@ -125,7 +125,7 @@ function Back({ absence, asOf, past = false }) {
         <strong className={s.unknown}>Inconnu</strong>
       </span>
     );
-  // A match already played: the return date alone, no « dans N j » (§ 78.6).
+  // A match already played: the return date alone, no « dans N j » (§ 79.6).
   const distance = past ? null : returnDistance(absence.expectedReturn, asOf);
   return (
     <span className={s.back}>
@@ -244,7 +244,7 @@ export function AbsentRows({ rows, asOf, past = false }) {
 }
 
 function MatchSide({ team, state, match, past = false }) {
-  // A match played: its side's rows are already those of its day (§ 78); before it, today's that count for it.
+  // A match played: its side's rows are already those of its day (§ 79); before it, today's that count for it.
   const view = absenceView(state.value, past ? {} : { match });
   let body;
   if (state.loading && !state.value) body = <p className={s.empty}>…</p>;
@@ -265,7 +265,7 @@ function MatchSide({ team, state, match, past = false }) {
 
 /** A match's absent players: before the kick-off each side's absents of today that count for it (the suspensions of
  *  this competition only, the injuries and illnesses not over by the kick-off); from the kick-off those of its day,
- *  read from the match (§ 78). */
+ *  read from the match (§ 79). */
 export function MatchAbsences({ match, started = false }) {
   return started ? <PlayedMatchAbsences match={match} /> : <UpcomingMatchAbsences match={match} />;
 }
@@ -273,8 +273,8 @@ export function MatchAbsences({ match, started = false }) {
 function PlayedMatchAbsences({ match }) {
   const day = useMatchAbsences(match?.id);
   if (!match?.home?.id || !match?.away?.id) return null;
-  // A side with none of its members read is « Non renseignés », never « Aucun absent » (§ 78.2), unless the day's
-  // episodes known with an end over it are there: those are shown (§ 78.4).
+  // A side with none of its members read is « Non renseignés », never « Aucun absent » (§ 79.2), unless the day's
+  // episodes known with an end over it are there: those are shown (§ 79.4).
   const value = (key) => {
     const sideOf = day.value?.[key];
     return sideOf?.squad?.read > 0 || sideOf?.absences?.length ? { id: sideOf.team, ...sideOf } : null;

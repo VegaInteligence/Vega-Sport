@@ -1,4 +1,4 @@
--- 26 Nov 2026 (FAILURE_MODES.md § 78, GitHub #252; hugo: « je veux pas qu'on les enlève de la page d'un match pour
+-- 26 Nov 2026 (FAILURE_MODES.md § 79, GitHub #252; hugo: « je veux pas qu'on les enlève de la page d'un match pour
 -- savoir quels joueurs étaient suspendus ou blessés pendant ce match »): each side's absent players on a match's day,
 -- for the « Absents » card of a match that has kicked off (GET /api/matches/{id}/absences). The episodes are those 160
 -- and 174 keep and never delete (core.player_injuries, core.player_suspensions), read as of the match day instead of
@@ -7,7 +7,7 @@
 -- vega:online
 SET LOCAL lock_timeout = '3s';
 
--- A match's sides on its day (78.2, 78.3): one row per member. A club linked to Transfermarkt: its squad of the match's
+-- A match's sides on its day (79.2, 79.3): one row per member. A club linked to Transfermarkt: its squad of the match's
 -- season when the base holds one, else the season before's (a calendar-year league is the provider's year before; the
 -- reader queues both, vega/transfermarkt.py), its members not marked gone on or before the day nor, by their dated
 -- moves, at another club that day (an arrival after the match, a move away before it). A national team not
@@ -44,7 +44,7 @@ CROSS JOIN LATERAL (
   WHERE i.entity_type = 'team' AND i.provider = 'transfermarkt' AND i.is_current AND i.entity_id = s.team_key
     AND NOT EXISTS (SELECT 1 FROM ops.provider_links k WHERE k.entity_type = 'team' AND k.provider = 'transfermarkt'
                     AND k.provider_key = i.provider_key AND k.quarantined_at IS NOT NULL)
-    -- The season's squad is not membership on every day of it (78.2): by his dated moves (core.player_transfers, not
+    -- The season's squad is not membership on every day of it (79.2): by his dated moves (core.player_transfers, not
     -- pending, still listed), a player whose last move on or before the day took him to another of our clubs, or who
     -- moved to this club only after the day, was not one of its members that day. A move to a club the base does not
     -- know (to_team_id empty) proves nothing; a player without a known move stays a member.
@@ -84,7 +84,7 @@ LEFT JOIN ops.transfermarkt_reads ri ON q.player_key IS NOT NULL AND ri.kind = '
 LEFT JOIN ops.transfermarkt_reads rs ON q.player_key IS NOT NULL AND rs.kind = 'suspensions' AND rs.provider_key = q.provider_key
   AND rs.read_at IS NOT NULL;
 
--- The episodes that kept a member out on the match day (78.4, 78.5), one row per episode:
+-- The episodes that kept a member out on the match day (79.4, 79.5), one row per episode:
 -- - an injury, an illness or an unclassified one: started on the day or before, not marked absent_since, its end on the
 --   day or later; with no end, only while his injuries were read no more than 45 days before the day (as 174 before
 --   the kick-off) and he played no match after its start and before the day;

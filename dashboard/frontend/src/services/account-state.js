@@ -27,6 +27,9 @@ let state = initial();
 const SERVER_STATE = initial();
 const listeners = new Set();
 let reading = null, readLocal = null, current = null;
+// While « Se déconnecter » or a deletion runs, the session still reads « signed in »: no new adapter may attach then,
+// or its first load writes the account back into the stores just emptied (FAILURE_MODES § 78).
+let leaving = false;
 
 function set(patch) {
   state = { ...state, ...patch };
@@ -59,7 +62,7 @@ function detach() {
 }
 
 function attach() {
-  if (!accountSyncOn() || state.status !== "signed-in" || !readLocal) return;
+  if (leaving || !accountSyncOn() || state.status !== "signed-in" || !readLocal) return;
   const accountId = state.user.id;
   if (current?.accountId === accountId) return;
   detach();
@@ -176,14 +179,19 @@ export async function signOut({ force = false } = {}) {
     }
   }
   const synced = accountSyncOn();
-  detach();
-  if (synced && accountId && clearPreferences()) forgetMerged(storage(), accountId);
+  leaving = true;
   try {
-    const client = await authClient();
-    await client.signOut();
-  } catch {}
-  clearHint(storage());
-  signedOut();
+    detach();
+    if (synced && accountId && clearPreferences()) forgetMerged(storage(), accountId);
+    try {
+      const client = await authClient();
+      await client.signOut();
+    } catch {}
+    clearHint(storage());
+    signedOut();
+  } finally {
+    leaving = false;
+  }
   return { ok: true };
 }
 
@@ -198,13 +206,18 @@ export async function eraseAccount() {
   } catch (error) {
     return { ok: false, error };
   }
-  detach();
-  if (accountId && clearPreferences()) forgetMerged(storage(), accountId);
+  leaving = true;
   try {
-    const client = await authClient();
-    await client.signOut();
-  } catch {}
-  clearHint(storage());
-  signedOut();
+    detach();
+    if (accountId && clearPreferences()) forgetMerged(storage(), accountId);
+    try {
+      const client = await authClient();
+      await client.signOut();
+    } catch {}
+    clearHint(storage());
+    signedOut();
+  } finally {
+    leaving = false;
+  }
   return { ok: true };
 }

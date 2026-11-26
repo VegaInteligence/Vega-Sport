@@ -70,7 +70,7 @@
 //  K3 The forecast's sentence is unchanged (« le modèle ne connaît ni les compositions ni les absents »).
 //  K4 Lorient not known (404): its half reads « Non renseignés », PSG's keeps its rows.
 //  K5 Neither side known (404), or both reads failing: no card, « Probabilités » still there, no page error.
-//  K6 The same match finished (its detail answered as finished, 2–1; FAILURE_MODES.md § 78): the « Absents » card stays,
+//  K6 The same match finished (its detail answered as finished, 2–1; FAILURE_MODES.md § 79): the « Absents » card stays,
 //     read from GET /api/matches/{id}/absences (its match day), not from the teams' absences of today: PSG Pacho and
 //     Kvaratskhelia, Lorient Makengo; a return date without « dans N j ». The route answering 404 or failing: no card.
 //  K7 Phone (393 px): the halves stacked, no sideways page scroll.
