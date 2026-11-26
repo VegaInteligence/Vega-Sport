@@ -1,7 +1,8 @@
 /**
  * GET /api/standings and GET /api/matchdays — the support and catalogue reads of
  * aws-app.js on main (relational-support.js, relational-catalog.js), same parameters
- * and same bodies, read from api.standing_rows and api.match_rounds (022).
+ * and same bodies, read from api.standing_rows (022) and api.matchday_rounds (180: the
+ * rows of 022's api.match_rounds for one league and season, read from its editions).
  *
  * Differences with the legacy read, by construction: standings come from the
  * official table when a source publishes one (SportScore), otherwise from Vega's own
@@ -88,10 +89,10 @@ export async function standingsBody(read, competition, season) {
 
 export async function matchdays(req, p, read) {
   const { competition, season } = validate(p, { competition: LEAGUE, season: YEAR }, true);
-  const rows = await read(
-    "SELECT id,name,playoff FROM api.match_rounds WHERE league_id=$1 AND (season=$2 OR native_season=$2) ORDER BY id",
-    [competition, season],
-  );
+  // The league's editions of that season first, then their matches by index (FAILURE_MODES_OPTIMISATIONS.md GH137M):
+  // api.match_rounds' rows and order, without building every match of the base. One statement: the answer and its
+  // validator (the hash of every field) come from one snapshot.
+  const rows = await read("SELECT id,name,playoff FROM api.matchday_rounds($1,$2) ORDER BY id", [competition, season]);
   if (!rows.length) missing();
   return respond(req, { matches: Object.fromEntries(rows.map((r) => [r.id, { name: r.name, playoff: r.playoff }])) }, "catalog");
 }

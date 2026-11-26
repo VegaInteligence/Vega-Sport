@@ -243,6 +243,63 @@ in SQL (cheaper since 177); it spares the transfer of their rows, the building o
 that skips the reads entirely would need a version kept by every writer of the tables they read (matches, teams,
 assets, provider ids, players, events, rounds, editions, player seasons): not done.
 
+## GH137M. `/api/matchdays`: the rounds of the season asked, read from its own editions (GH #137, VI-77; GH #145, VI-85)
+
+Counted in production (read only, by the coordinator, 26 Nov 2026; `optimisations-suite-2611/aws-revalidations-cibles-avant.json`,
+`aws-cache-public-avant.json`). Over 24 hours, the answers 304 the read API gave for the support routes, with the base's
+time they cost: `/api/matchdays` 56 (14.2 s in all, p95 477 ms), `/api/standings` 30 (24.2 s, p95 1 719 ms),
+`/api/cup-snapshot` 8 (10.1 s), `/api/rankings/associations` 18 (1.1 s). Two plain GETs from Paris of Premier League
+2026/27: `/api/matchdays` a `RefreshHit` of 748 ms (the origin's base 293 ms, one statement) then a `Hit` of 54 ms;
+`/api/standings` a `Miss` of 1 046 ms then a `Hit`. These counts say what a revalidation costs at the origin, route by
+route; two requests from one point of presence say nothing of the edge's hit ratio across visitors (GH149 measures
+that). `/api/matchdays` is the most revalidated of them and its refresh was seen directly: it comes first. Read in the
+code (`e4014803`): the route reads `api.match_rounds`, a view over `api.fixtures` (every match of the base with its
+teams, crests, venue, referee and keys), filtered on the computed league id and on the season label or native label;
+its validator is the SHA-256 of the answer, so a 304 costs the whole read. `/api/standings` (its withheld editions, the
+match page's « Classement » relying on its 404) is left as it is.
+
+### GH137M.1 Rules
+
+- **The same answer, the same validator.** For every `competition` and `season`, the rows of `api.match_rounds` (each
+  match's public id, its round's name, `playoff`), in the same order (the id), so the same body and the same ETag
+  (`W/"catalog-v1-<sha256 of the body>"`): an edge or a browser holding a tag of before the change gets its 304 after
+  it. No contract change: parameters, statuses, headers, body.
+- **The exact editions first.** One statement, through a function of the `api` schema (`api.matchday_rounds(league,
+  season)`, migration 180, `SECURITY DEFINER`, executable by `vega_read` alone): the league's editions (its current
+  PitchAPI key, else `l_v` and its id, as `api.fixtures` names it; never an archive's or a cup's edition) whose
+  season's label or native label is the one asked; then their matches through `matches_competition_kickoff` (the
+  editions' ids given as an array), each with its round (`core.rounds`), its current PitchAPI key (else `m_v` and its
+  id) and `playoff` (`has_playoff`, or a round of stage `playoff`), the round and the key looked up by index for each
+  match (review of the first plan: estimating ten times the matches it took, the planner hashed every round and every
+  match key of the base). Never `api.fixtures`, never another edition's match, round or key.
+  `api.match_rounds` stays (the tests' oracle).
+- **One snapshot.** The rows and the validator come from that one statement: the ETag is the hash of the answer built
+  from its rows (every field of every match), so a 304 holds exactly when the answer would be the same.
+- **Kept.** 400 for a missing, unknown, repeated or malformed parameter; 404 when no match of the selection has a
+  round; HEAD and `If-None-Match` as before; `public, max-age=0, s-maxage=60`. The migration is marked `-- vega:online`
+  (a function added: the worker's code is unaffected). What a revalidation still costs: the edition's matches read by
+  index and the hash, not the base.
+- **GH145 (the edge's time).** Not lengthened here: a longer time needs a perimeter of freshness for the route (which
+  writes change a round or a play-off flag, how soon the site must show them), which these counts do not give. The
+  access logs (GH149) can measure how often an answer changes, over a week for example, without that being a condition.
+  The private and dynamic routes keep their policies, `/api/league-history` its hour.
+
+### GH137M.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| GH137M-a | Every selection of the test base: a league by its PitchAPI key, by `l_v…` (no key), by a former key; a season by its label, by its native label (`2026` for a calendar-year league), not held; an archive's and a cup's edition; matches without a round, with a former key and a current one, without a key; a round of stage `playoff`; `has_playoff` | the base commit's status, body and ETag for each |
+| GH137M-b | HEAD; GET with the answer's tag; with a stale tag; `*`; HEAD with the tag | 200 without a body and the tag; 304; 200 with the answer; 304; 304 |
+| GH137M-c | A round renamed; a match moved to another round; `has_playoff` set; a round's stage set to `playoff`; a match's PitchAPI key changed; a match added to the edition, one taken out of it | another body and tag each, the base commit's; never 304 for the old tag |
+| GH137M-d | Writes outside the selection: another edition's round, another league's match, a match of another season of the same league | the same tag, 304 |
+| GH137M-e | An unknown league; a season not held; a league whose matches have no round; a malformed or missing parameter; a repeated or unknown one | 404; 404; 404; 400; 400 |
+| GH137M-f | One request whose selection holds 126 matches in a base of 20 000 more (other editions, archives) | one statement; `core.matches`, `core.rounds` and `core.provider_ids` read without a sequential scan, at most twice the selection's rows fetched from each (the base commit's statement reads `core.matches` through; the first version of the function every match key and round) |
+| GH137M-g | A local PostgreSQL 18 base sized on production (about 16 000 matches a season over six seasons, 150 000 archived): every league and season, the base commit's code and this one | identical status, body and ETag for each; their times and plans (`EXPLAIN ANALYZE`, buffers) |
+
+GH137M-a–f: `backend/api/test/matchdays-lean.test.mjs` (with `reference.test.mjs`); g: outside the repository (the
+evidence's `gh137/`). Not verifiable here: production's plan and time after the change (a Deploy, then the same
+24-hour count).
+
 ## GH171. The statements' statistics, Performance Insights and the PostgreSQL log (GH #171, VI-111)
 
 Seen before this change (re-read on `e4014803`): `shared_preload_libraries: pg_stat_statements` is set
