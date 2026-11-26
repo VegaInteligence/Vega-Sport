@@ -25,10 +25,10 @@
 //     the matches to come (tests/e2e/home-ticker.e2e.mjs), only its result ticks are compared, newest day first.
 //  R1 « Course au titre » opens on the country's league when it is among the tables (FR → Ligue 1, GB → Premier
 //     League), else the default (BR → Ligue 1).
-//  M1 The preferences panel's « Votre pays » line: choosing Brésil while detected in France changes « À l'affiche »
-//     to Brazil's five without a reload, the card never blank meanwhile; « Aucun pays » gives the no-country five;
-//     the menu's last item is « Aucun pays » and the button then says « Pays : Aucun pays »; Escape closes the menu,
-//     not the panel.
+//  M1 (FAILURE_MODES § 77, hugo 26 Nov 2026, 16 h 17 « enleve les reglage mon pays … c'est automatic dans les
+//     reglage comme actuelement ») The home has no country control (none in its toolbar, none in its settings panel);
+//     the country chosen in the account's settings (preferences.homeCountry, here Brésil kept in the browser while
+//     detected in France) gives Brazil's five; « Aucun pays » kept there gives the no-country five.
 //  P1 Phone 390 × 844 (Brazil): the same five, no sideways page scroll.
 //  A2 The API serves no `billboard` (older publication or backend) → the block stays, chosen from `highlights` as
 //     before VI-48 (with the test double's switch only).
@@ -334,56 +334,38 @@ await (async () => {
   await serverContext.close();
 })().catch((error) => check("V1/V2/V5 favourites", "the favourites' effects", String(error.message).split("\n")[0], false));
 
-// ---------- M1: the preferences panel's country line ----------
+// ---------- M1: the country is the account's setting, not the home's ----------
 await (async () => {
+  const keep = (code) => (context) =>
+    context.addInitScript((value) => {
+      const saved = JSON.parse(localStorage.getItem("orion.preferences.v1") || "{}");
+      localStorage.setItem("orion.preferences.v1", JSON.stringify({ ...saved, homeCountry: value }));
+    }, code);
   const context = await newContext({ country: "FR" });
+  await keep("BRA")(context);
   const page = await open(context, "menu");
-  await page.evaluate(() => (window.__noReload = true));
-  await page.locator("#home-competition-filter").click();
-  const dialog = page.locator("dialog[open]");
-  await dialog.waitFor({ timeout: 10000 });
-  const line = dialog.locator(".home-preferences-country"), control = line.locator("#home-country-filter");
-  const before = { heading: await line.locator("h3").textContent(), label: await control.getAttribute("aria-label") };
-  await page.waitForTimeout(300);
-  await dialog.screenshot({ path: path.join(out, "preferences-pays.png") });
-  await control.click();
-  const menu = dialog.getByRole("menu", { name: "Pays" });
-  await menu.waitFor({ timeout: 10000 });
-  const items = await menu.getByRole("menuitemradio").allTextContents();
-  await page.keyboard.press("Escape");
-  await page.waitForTimeout(300);
-  const afterEscape = { menu: await menu.count(), dialog: await page.locator("dialog[open]").count() };
-  // Brésil: the card follows without a reload, never blank meanwhile.
-  await control.click();
-  await page.evaluate(() => {
-    window.__blank = 0;
-    window.__watch = setInterval(() => { if (!document.querySelector(".home-next .home-next-main")) window.__blank++; }, 25);
+  await settle(page);
+  await page.locator('.home-settings-segment[data-key="competitions"]').click();
+  await page.locator(".home-settings-panel").waitFor({ timeout: 10000 });
+  const controls = await page.evaluate(() => {
+    const toolbar = document.querySelector(".home-toolbar");
+    return toolbar.querySelectorAll("#home-country-filter, .home-country-picker").length + (/Votre pays|Pays :/.test(toolbar.textContent) ? 1 : 0);
   });
-  await menu.getByRole("menuitemradio", { name: "Brésil", exact: true }).click();
-  const wantBr = expected.BR.five;
-  await page.waitForFunction((lead) => new URL(document.querySelector(".home-next-main")?.getAttribute("href") || "/", location.href).searchParams.get("id") === lead, wantBr?.lead, { timeout: 30000 }).catch(() => {});
-  await page.waitForTimeout(800);
+  await page.keyboard.press("Escape");
   const brazil = await card(page);
-  const blank = await page.evaluate(() => (clearInterval(window.__watch), window.__blank));
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("orion.preferences.v1") || "{}").homeCountry);
-  check("M1 Brésil chosen in the panel: Brazil's five, no reload, never blank", { five: wantBr, blank: 0, stored: "BRA", noReload: true },
-    { five: brazil, blank, stored, noReload: await page.evaluate(() => window.__noReload === true), label: await control.getAttribute("aria-label") },
-    sameCard(brazil, wantBr) && blank === 0 && stored === "BRA" && (await page.evaluate(() => window.__noReload === true)) && (await control.getAttribute("aria-label")) === "Pays : Brésil");
-  // Aucun pays: the five of no country.
-  await control.click();
-  await menu.getByRole("menuitemradio", { name: "Aucun pays" }).click();
-  const wantNone = expected.XX.five;
-  await page.waitForTimeout(1200);
-  const none = await card(page);
-  check("M1 « Aucun pays »: the no-country five, the button says so",
-    { heading: "Votre pays", before: "Pays : France", last: "Aucun pays", afterEscape: { menu: 0, dialog: 1 }, five: wantNone, label: "Pays : Aucun pays" },
-    { ...before, last: items.at(-1), count: items.length, afterEscape, five: none, label: await control.getAttribute("aria-label"), stored: await page.evaluate(() => JSON.parse(localStorage.getItem("orion.preferences.v1") || "{}").homeCountry) },
-    before.heading === "Votre pays" && before.label === "Pays : France" && items.at(-1) === "Aucun pays" && !items.includes("Ne rien afficher") &&
-      afterEscape.menu === 0 && afterEscape.dialog === 1 && sameCard(none, wantNone) && (await control.getAttribute("aria-label")) === "Pays : Aucun pays" &&
-      (await page.evaluate(() => window.__noReload === true)));
+  check("M1 no country on the home; Brésil kept in the settings gives Brazil's five", { controls: 0, five: expected.BR.five },
+    { controls, five: brazil }, controls === 0 && sameCard(brazil, expected.BR.five));
   await page.close();
   await context.close();
-})().catch((error) => check("M1 the preferences panel's country line", "the panel's line", String(error.message).split("\n")[0], false));
+  const noneContext = await newContext({ country: "FR" });
+  await keep("none")(noneContext);
+  const nonePage = await open(noneContext, "menu-none");
+  await settle(nonePage);
+  const none = await card(nonePage);
+  check("M1 « Aucun pays » kept in the settings: the no-country five", expected.XX.five, none, sameCard(none, expected.XX.five));
+  await nonePage.close();
+  await noneContext.close();
+})().catch((error) => check("M1 the country is the account's setting", "no control on the home", String(error.message).split("\n")[0], false));
 
 // ---------- P1: phone ----------
 {

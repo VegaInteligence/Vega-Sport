@@ -15,7 +15,6 @@ import {
   supportsCompactRead,
 } from "../services/compact-reads.js";
 import {
-  menuCountries,
   resolveHomeCountry,
 } from "../services/home-country.js";
 import {
@@ -26,8 +25,7 @@ import {
 import { chooseUpcoming } from "../services/home-upcoming.js";
 import { favouriteSets, titleRaceOpening } from "../services/preference-effects.js";
 import { fixtureWeek, parisDay } from "../services/fixtures.js";
-import HomePreferences from "../components/HomePreferences.jsx";
-import SeasonFilter from "../components/SeasonFilter.jsx";
+import HomeSettings from "../components/HomeSettings.jsx";
 import {
   HomeTicker,
   MatchOfTheWeek,
@@ -396,17 +394,6 @@ function CompactOverview() {
   const shownLocal = !country
     ? null
     : answered || (local.loading ? lastLocal.current : null);
-  const countries = useMemo(
-    () => menuCountries(f.manifest.competitions || []),
-    [f.manifest],
-  );
-  // The country menu of the preferences panel: the only control of the country.
-  const countryControl = {
-    country,
-    choice: f.preferences.homeCountry || "",
-    countries,
-    onChoose: (code) => f.savePreferences({ homeCountry: code }),
-  };
   // The synthesis refreshes in the background: the last one stays on screen, and a failed
   // refresh is tried again a minute later without a word on the page.
   const retrySummary = summary.retry;
@@ -432,8 +419,7 @@ function CompactOverview() {
         title="Vue d’ensemble"
         actions={
           <>
-            <SeasonFilter f={f} compact />
-            <HomePreferences f={f} country={countryControl} />
+            <HomeSettings f={f} />
           </>
         }
       >
@@ -518,7 +504,6 @@ function CompactOverview() {
               archived={archived}
               now={now}
               country={country}
-              countryControl={countryControl}
               countryLeagues={tickerLeagues}
               model={{
                 ...data,
@@ -575,7 +560,6 @@ function OverviewContent({
   now,
   model,
   country = null,
-  countryControl = null,
   countryLeagues = null,
 }) {
   // The visitor's favourites (every list; on the server, the home cookie's): effects 1, 2, 5.
@@ -622,8 +606,7 @@ function OverviewContent({
         title="Vue d’ensemble"
         actions={
           <>
-            <SeasonFilter f={f} compact />
-            <HomePreferences f={f} country={countryControl} />
+            <HomeSettings f={f} />
           </>
         }
       >
@@ -688,8 +671,7 @@ function OverviewContent({
           </div>
         )}
         <div className="home-toolbar-filters">
-          <SeasonFilter f={f} compact />
-          <HomePreferences f={f} country={countryControl} />
+          <HomeSettings f={f} />
         </div>
       </div>
       {!results.length && !internationals.length && !archived && (

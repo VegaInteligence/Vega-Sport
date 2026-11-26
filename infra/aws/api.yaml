@@ -237,7 +237,7 @@ Resources:
           'read.archive read.club read.clubs read.discipline read.home read.home-favourites read.home-local ' +
           'read.league read.performance read.player read.players read.presence scouting.routes search ' +
           'seasons.partition stadium standings status worldcup.matches matches.id matches.id.summary ' +
-          'matches.id.lineups.probable matches.id.lineups matches.id.events matches.id.shots ' +
+          'matches.id.absences matches.id.lineups.probable matches.id.lineups matches.id.events matches.id.shots ' +
           'matches.id.stats matches.id.players matches.id.players.halves matches.id.players.display ' +
           'matches.id.momentum matches.id.advanced matches.id.advanced.players matches.id.advanced.network ' +
           'matches.id.heatmaps matches.id.h2h players.id players.id.actions players.id.faced ' +

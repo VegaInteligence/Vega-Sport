@@ -168,8 +168,10 @@ class StatementStatisticsTest(unittest.TestCase):
             with psycopg.connect(as_login("vega_v2_collect", LEGACY["collect"]), autocommit=True) as c:
                 for _ in range(USED // 2):
                     c.execute("SELECT 'c' AS role, 'p' AS password").fetchone()
-            cls.db.execute("DROP ROLE IF EXISTS vega_statements_probe")
-            cls.db.execute("CREATE ROLE vega_statements_probe LOGIN PASSWORD 'otherRoleSecret000000000'")
+            # Created USED times, like the rest: run once, its entry was among the first evicted on a full module (CI).
+            for _ in range(USED):
+                cls.db.execute("DROP ROLE IF EXISTS vega_statements_probe")
+                cls.db.execute("CREATE ROLE vega_statements_probe LOGIN PASSWORD 'otherRoleSecret000000000'")
         # GH171-k: another base of the same server, with its own activity and its own password statement, and this
         # base's own statements, before 179 (the other base holds the extension, to read the module before 179).
         cls.other = {}

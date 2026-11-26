@@ -258,10 +258,42 @@ export default function CompetitionsPage() {
     cupIndex.value,
     workerCupIndex.value?.native,
   );
-  const catalog =
-    f.focus === "europe"
+  // § 78: the competitions chosen in the home's bar are this page's row and where it opens, as on the home (the Top 7
+  // focus keeps only its own). Nothing chosen, or exactly the Top 7 Europe + UEFA, and the page is as before.
+  const chosenLeagues = [];
+  for (const wanted of f.preferences?.favoriteLeagueIds || []) {
+    const competition = findCompetition(expandedCatalog, wanted);
+    if (
+      competition &&
+      !chosenLeagues.includes(competition) &&
+      (f.focus !== "europe" || inEuropeFocus(competition))
+    )
+      chosenLeagues.push(competition);
+  }
+  const featuredIds = [...FEATURED_LEAGUE_IDS, ...FEATURED_EUROPE_IDS];
+  const followsHome =
+    chosenLeagues.length > 0 &&
+    !(
+      chosenLeagues.length === featuredIds.length &&
+      chosenLeagues.every((c) => featuredIds.includes(c.id))
+    );
+  const catalog = followsHome
+    ? chosenLeagues
+    : f.focus === "europe"
       ? expandedCatalog.filter(inEuropeFocus)
       : expandedCatalog;
+  const spotlight = followsHome
+    ? [
+        ...orderedCompetitions(
+          chosenLeagues.filter((c) => !FEATURED_EUROPE_IDS.includes(c.id)),
+        ),
+        ...orderedFeatured(chosenLeagues, FEATURED_EUROPE_IDS),
+      ]
+    : [
+        ...orderedCompetitions(orderedFeatured(catalog, FEATURED_LEAGUE_IDS)),
+        // The three UEFA cups after the seven leagues, in their own order.
+        ...orderedFeatured(catalog, FEATURED_EUROPE_IDS),
+      ];
   // Effects 4 and 11: the saved competition, else the first favourite club's league, else the visitor's country's
   // (homeCountry, not « Aucun pays »), else the detected country / browser language, as before.
   const chosenId =
@@ -348,7 +380,9 @@ export default function CompetitionsPage() {
     );
   // A cup outside the featured row has a page of its own: no row of leagues above it, its name as the page's title.
   const standalone =
-    !directory && isCup(selected) && !FEATURED_EUROPE_IDS.includes(selected.id);
+    !directory &&
+    isCup(selected) &&
+    !spotlight.some((c) => c.id === selected.id);
   const currentView = selected
     ? availableView(selected.id, requestedEdition || openSeason, viewParam)
     : viewParam;
@@ -408,7 +442,13 @@ export default function CompetitionsPage() {
       path="/competitions/"
       hideHeading={standalone}
       loader={<CompetitionSkeleton />}
-      title={directory ? "Toutes les compétitions" : "Compétitions à la une"}
+      title={
+        directory
+          ? "Toutes les compétitions"
+          : followsHome
+            ? "Mes compétitions"
+            : "Compétitions à la une"
+      }
       actions={
         directory ? null : (
           <>
@@ -433,13 +473,7 @@ export default function CompetitionsPage() {
               aria-label="Choisir une compétition"
             >
               <div className="league-spotlight-grid">
-                {[
-                  ...orderedCompetitions(
-                    orderedFeatured(catalog, FEATURED_LEAGUE_IDS),
-                  ),
-                  // The three UEFA cups after the seven leagues, in their own order.
-                  ...orderedFeatured(catalog, FEATURED_EUROPE_IDS),
-                ].map((c) => (
+                {spotlight.map((c) => (
                   <button
                     key={c.id}
                     className="league-spotlight-item"

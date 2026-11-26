@@ -29,6 +29,19 @@ export function useTeamAbsences(id) {
   return useResource(key(id), load(id), Boolean(id));
 }
 
+/**
+ * A match's absent players on its day, once it has kicked off (/api/matches/{id}/absences, FAILURE_MODES.md § 79):
+ * { id, on, home, away }, each side { team, asOf, squad, absences } in the shape above, read as of the match day
+ * (`matchesRemaining` null). 404 (an unknown match, or one not started): null.
+ */
+export function useMatchAbsences(id, enabled = true) {
+  return useResource(
+    `match-absences:${id || "none"}`,
+    () => json(`/api/matches/${encodeURIComponent(id)}/absences`).then((body) => body?.data ?? null).catch(missing),
+    Boolean(id) && enabled,
+  );
+}
+
 /** Starts the read before its tab is open, so that the squad tab's card is there when the tab is. */
 export function primeTeamAbsences(id) {
   if (id) Promise.resolve(primeResource(key(id), load(id))).catch(() => {});

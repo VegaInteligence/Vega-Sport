@@ -70,8 +70,10 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          "179_statement_statistics.sql",
          # GH137M (#137): /api/matchdays read from the editions asked (a function, api.matchday_rounds; no table).
          "180_matchday_rounds.sql",
+         # §79 (#252): a match's absent players on its day, for the card kept after the kick-off (two views; no table).
+         "181_match_absences.sql",
          # GH137A (#137): the writers' data versions (five ops tables, functions, four triggers per table the api reads).
-         "181_data_versions.sql"]
+         "182_data_versions.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603

@@ -3,7 +3,7 @@
  *
  * A route of the manifest declares the api relations its statements name (`reads`). The build runs once: its own checks
  * of the request first (a request they refuse runs no statement, and needs no base), then its first statement waits for
- * one statement that reads the version of the relations (api.data_version, migration 181: the base's head, its day when
+ * one statement that reads the version of the relations (api.data_version, migration 182: the base's head, its day when
  * the answer reads current_date, and each source table's committed changes and partition tree), shared by statements
  * asked together. The tag is W/"<family>-v2-<check>-<content>": `content` the SHA-256 the route's former tag already
  * hashed, `check` 16 hexadecimal characters of the SHA-256 of the resource (the release, the runtime, the media base, the
@@ -12,7 +12,7 @@
  * build still asks is refused). Otherwise the answer is built, every statement checked against the declaration; a 413
  * over its size limit whatever is held;
  * else a 304 only when the request holds its tag (http.mjs's send: weak comparison, or '*'), a 200 otherwise. A version
- * that cannot be read (NULL, or a base before 181) gives the former tag, W/"<family>-v1-<content>".
+ * that cannot be read (NULL, or a base before 182) gives the former tag, W/"<family>-v1-<content>".
  */
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
@@ -49,13 +49,13 @@ export const REPRESENTATION = sha(JSON.stringify(["data-versions-v1", process.en
 const NAMES = /\bapi\.([a-z_][a-z0-9_]*)/g;
 /** The api relations a statement names. */
 export const relationsOf = (sql) => [...new Set([...String(sql).matchAll(NAMES)].map((m) => `api.${m[1]}`))];
-// What a statement reads of the clock, as ops.track_data_changes reads it in views and functions (181).
+// What a statement reads of the clock, as ops.track_data_changes reads it in views and functions (182).
 const DAY = /\b(current_date|age\s*\()/i;
 const TIME = /(\bnow\s*\(|\bcurrent_timestamp\b|\blocaltimestamp\b|\blocaltime\b|\bcurrent_time\b|\bclock_timestamp\b|\bstatement_timestamp\b|\btransaction_timestamp\b|\btimeofday\b|'(now|today|tomorrow|yesterday)')/i;
 export const clockOf = (sql) => (TIME.test(sql) ? "time" : DAY.test(sql) ? "day" : null);
 
 export const VERSION_SQL = "SELECT api.data_version($1::text[], $2::text) AS version";
-// A base without api.data_version (a schema before 181): no check, the former tags.
+// A base without api.data_version (a schema before 182): no check, the former tags.
 const MISSING = new Set(["42883", "42P01", "3F000"]);
 export const versionsMissing = (error) => MISSING.has(error?.code);
 

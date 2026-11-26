@@ -67,7 +67,7 @@ const ID = { m: "m_2FVfvL", p: "p_4NUmpH", t: "t_1LpqZD", l: "l_3FJFUl" };
 // The read API's routes whose path carries an id (backend/api/src: match-details.mjs, matches.mjs, profiles.mjs,
 // nations.mjs, worldcup.mjs) and the live function's.
 const PATTERNS = [
-  ...["", "/summary", "/lineups/probable", "/lineups", "/events", "/shots", "/stats", "/players", "/players/halves", "/players/display",
+  ...["", "/summary", "/absences", "/lineups/probable", "/lineups", "/events", "/shots", "/stats", "/players", "/players/halves", "/players/display",
     "/momentum", "/advanced", "/advanced/players", "/advanced/network", "/heatmaps", "/h2h"].map((s) => `/api/matches/${ID.m}${s}`),
   ...["", "/actions", "/faced", "/halves", "/injuries", "/partners", "/physical", "/return", "/similar", "/style", "/transfers"].map((s) => `/api/players/${ID.p}${s}`),
   ...["", "/absences", "/age-profile", "/passing", "/similar", "/squad", "/substitutions"].map((s) => `/api/teams/${ID.t}${s}`),

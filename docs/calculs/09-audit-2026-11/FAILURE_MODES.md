@@ -6087,3 +6087,118 @@ https://claude.ai/artifact/GxP3vebwEg17Eo4Fk5wdFm (piste 1, the recommended one,
   to the account. `brand.e2e.mjs` turns the computer light or dark instead of pressing the button (its B5n, B12d, B12h
   « same document » fail because the logo's link reloads the page after its turn, as before this change; B10 needs
   ORION_API_ORIGIN). `accounts.e2e.mjs` changes the theme through the settings' choice (not run here: it needs Neon).
+
+### 76.3 The account's button filled (hugo, 26 Nov 2026, 15 h 50 « met le bouton mon compte en blanc »)
+
+- **Mode:** signed in, « Mon compte » was a quiet veil beside a filled « Se connecter » of the signed-out header,
+  so the button read as a section of the track rather than the account.
+- **Change:** `navigation.css` gives `.topbar .account-entry-in` the colours of « Se connecter » (`--account-cta`,
+  ivory on night in the dark theme, night on ivory in the light one) at every width, the round with the initial too.
+- **Test:** `navbar.e2e.mjs` N14 wants the ivory fill in the dark theme at 1440 and 900 px; red on 60d8a81, green after
+  (barre 21/21).
+
+## 77. The home page's buttons and menus (hugo, 26 Nov 2026, 14 h 56 « passons a la page Vue d'ensemble les differentes interactions les boutons etc pour reonfte mais attention on garde toujours le meme esprit », « occupe toi des sous menu de bouton aussi »; mock-up https://claude.ai/artifact/DPfYC6jW2ooKwPGzmaGsdD; 16 h 17 « pour semaine en cours prend A et pour la bar de reglage prend B et enleve les reglage mon pays c'est pas un truc que le user regle c'est automatic dans les reglage comme actuelement », « une fois fait tu peux merge dans main »; written before the tests)
+
+The page keeps its blocks in their places; only what is clicked and what opens changes, with the rules of the match
+page (§ 72) and of the bar (§ 76): a pill for whatever is clicked, filled for the current choice and for a button
+whose menu is open, 22 px corners and no grey line for menus, windows and bubbles, a sheet from the bottom on a phone.
+
+- **The settings bar** (piste B): « 2026/2027 » and « Top 7 Europe + UEFA » in one track of 40 px (the bar's
+  `--control-h`), right of the week's title. A segment opens one panel under the track (22 px, no border, right edge
+  on the track's), filled while open (`aria-expanded`). Moving from one segment to the other keeps the same panel,
+  which slides to the new content. Escape or a click elsewhere closes it, focus back on its segment.
+  - **Saison**: the seasons as pills, the current one filled (`aria-pressed`); a choice changes the season
+    (`f.changeSeason`, as the select did) and closes the panel.
+  - **Compétitions**: « Toutes » and « Top 7 Europe + UEFA » in a track, the search in a pill, the competitions as
+    tiles with their logo, a chosen one filled; « Annuler » leaves the choice as it was, « Appliquer » saves it as the
+    window did (`favoriteLeagueIds`, the focus) and the segment then names it.
+  - **No country on the home**: the bar has no country and the panel no « Votre pays » (hugo: the country is
+    automatic, chosen in the account's settings as before, `CountryChoice` on /compte). The country chosen there
+    (`preferences.homeCountry`) still orders the cards.
+  - **Phone** (≤ 640 px): the track spans the width, the panel is a sheet from the bottom over a veil.
+- **The week's results** (« Semaine en cours », piste A): each match a 22 px card on the pills' track veil, no grey
+  line between them; the day a vertical pill.
+- **The page's pills**: the cards' links (« Classement complet », « Calendrier », « Tous les joueurs », « Le match »)
+  quiet 32 px pills (36 px on a phone); « Analyse complète du match » a filled pill; the leagues of « Course au titre »
+  in a track, the chosen one filled; « Efficaces / Maladroits » and « Buteurs / Passeurs » the match page's track;
+  the chips round; the phone's folds (« Détail du match », « Ses chiffres du match ») quiet pills of 40 px.
+- **The « i » and the windows**: on the home page an « i » is a veiled round with no border and its bubble has 22 px
+  corners and no border; a window opened from it (a player, a performance) has 22 px corners and a round close button.
+- **Regression of § 76 (f2d62a6)**: the generic `.nav-menu-panel` rule was removed with the old menus, so the country
+  menu of the account's settings (`HomeCountryMenu`) lost its box: the list was drawn in the flow, unframed, pushing
+  what follows. It gets its own floating menu again (22 px, the bar's panel colours, above the page).
+- Unchanged: the blocks, their order and their data; the account page's competitions window; the logos.
+
+### 77.1 The competitions' search clicked (hugo, 26 Nov 2026, 17 h 02 « quand je clicke sur recherche dans competiton sur la page d'aceeuile j'ai cette horreur fix moi ca », with a capture; written before the tests)
+
+- What broke: clicked, the search pill of the competitions' panel showed in two halves, a blue ring around the icon's end and the far end, and the field between them painted in another grey over the ring.
+- Why: the site's generic rules for a focused field (`styles.css`, `input:not([type="checkbox"]):not([type="radio"]):focus-visible`, background `--surface-hover`) are more specific than `.home-settings-search input[type="search"]`, so the field took a background of its own over the pill's inset ring.
+- Rule: the field stays transparent, borderless and without outline in every state (`:hover`, `:focus`, `:focus-visible`); focused, the whole pill lights up (`--pill-quiet-hover`, ink colour), with no ring, as the bar's search does.
+- Test: `tests/e2e/home-buttons.e2e.mjs` H15 (field transparent, 0 px border, no outline, no ring on the pill). Red on 8a89ac9, green after.
+
+## 78. The competitions chosen on the home follow the person (hugo, 26 Nov 2026, 17 h 06 « dailleurs aussi les competitons qu'un user choisi sur la page d'aceuil suivent sur la page copetion et si il log out et re log in les competition doivent revnir comme avant »; written before the tests)
+
+- What was there: the home's choice (`favoriteLeagueIds`, `focus`) is already in the preferences contract (`leagues`, `focus`) and synced to the account (`account-sync.js`), but nothing showed that it survives a sign-out and a sign-in, and /competitions ignored it: its row « Compétitions à la une » is always the seven leagues and the three UEFA cups, and it opens by the saved competition, a favourite club's league or the country, among every competition.
+- Rule 1, /competitions: with competitions chosen on the home, the row is titled « Mes compétitions » and holds exactly those (leagues by the site's order, then the UEFA cups), and the page opens on one of them (the saved competition when it is one of them, else the usual rules among them). With nothing chosen (« Toutes ») or the Top 7 preset, the page is as before. An address `?id=` still opens any competition.
+- Rule 2, the account: the choice is saved on the account; a sign-out puts this browser back to « nothing chosen » (§ VI-38, O1 to O3) and the next sign-in brings the same competitions back on the home and on /competitions, on this browser and on another.
+- Found while testing rule 2: « Se déconnecter » sometimes left the account's choice on the browser (2 sign-outs in 7 on 8a89ac9). `signOut` removes the sync and empties the stores, then waits for Neon's sign-out; while it waits the session still reads « signed in », and any change of the account state attached a new sync whose first load wrote the account's contract back into the emptied stores. Rule 3: no sync attaches while a sign-out or a deletion runs (`account-state.js`, `leaving`).
+- Test: `tests/e2e/accounts/competitions-follow.e2e.mjs` (F1 to F7), with the stand-ins of `accounts.e2e.mjs`. On 68442dd F3 (the row) is red, and F4 was red once (the stores kept the choice after a sign-out); after the change 8/8, F7 being four sign-outs in a row that each leave nothing chosen.
+
+## 79. A match's absent players kept once it has kicked off (hugo, 26 Nov 2026, 15 h 55 Paris « je veux pas qu'on les enlève de la page d'un match pour savoir quels joueurs étaient suspendus ou blessés pendant ce match », after Sabah FK – Barcelone; GitHub #252; written before the tests)
+
+The « Absents » card of the « Avant-match » tab (§ 59, mock-up validated on 24 Nov 2026) was drawn only while the match
+had not started (`MatchDetail.jsx`, `upcoming &&`), from `/api/teams/{id}/absences`, which knows today's absences only:
+from the kick-off the page lost who was out. The base keeps every episode it read (core.player_injuries, 160;
+core.player_suspensions, 174: never deleted), so the absences of a match day can be read again.
+
+**79.1 The read.** `GET /api/matches/{id}/absences` (api.match_absence_players, api.match_absences, migration 181):
+404 for an unknown match, and for a match not started: status `not_started` and its kick-off still to come (its card
+keeps `/api/teams/{id}/absences`, nothing changes before the kick-off). The base keeps `not_started` while a match is
+played (the live status lives elsewhere, `vega/live/store.py`) and the page switches at the kick-off: a passed kick-off
+counts as started (Codex's review of #253); otherwise `{ id, on, home, away }`, `on` the match day (its date, else its kick-off's UTC day), each side
+`{ team, asOf, squad: { players, read }, absences }` in the shape of `/api/teams/{id}/absences`. No query parameter.
+
+**79.2 Who belongs to a side on the match day.** A club linked to Transfermarkt: its Transfermarkt squad of the match's
+season when the base holds one, else of the season before (a calendar-year league is the provider's year before, the
+reader queues both: `transfermarkt.py`), its members not marked gone on or before the match day (`absent_since` empty
+or later). The season's squad is not membership on every day of it (Codex's review of #253): by his dated moves
+(core.player_transfers, not pending, still listed), a player whose last move on or before the day took him to another of
+our clubs, or who moved to this club only after the day (and never on or before it), was not a member that day; a move
+to a club the base does not know proves nothing, and a player without a known move stays a member. A national team not
+linked: the players its page shows (api.nation_players, as § 59ak). Neither: no member
+(`squad` 0 / 0, no absence), never « nobody was out ».
+
+**79.3 Read.** A member counts as read when his injuries have an accepted read no older than 45 days before the match
+day (the window of § 59, measured from the match instead of today); `asOf` is the oldest of those reads, null without
+one.
+
+**79.4 Out on the match day** (`D`):
+- an injury, an illness or an unclassified episode: started on `D` or before, not marked `absent_since`, and its end on
+  `D` or later; with no end, only while his injuries were read no more than 45 days before `D` (as 174 before the
+  kick-off: an open injury read long before is not known to last; Codex on #253) and he played no match (minutes > 0)
+  after its start and before `D`;
+- a suspension (clubs only, as § 59ak): of the match's own competition (its competition id), started on `D` or before,
+  ended on `D` or later, or with no end while his suspensions were read no more than 45 days before `D`;
+- `matchesRemaining` is null: the count read today says nothing of the match day. `readAt` as in § 59.
+
+**79.5 The sheet wins.** A player named on the match's sheet (core.lineup_players of that match, any team) or who played
+in it is never out, whatever the episode says (he came back, or the dates are approximate).
+
+**79.6 The page.** From the kick-off the « Avant-match » tab keeps its « Absents » card, read from this route (same card,
+same rows); a return date shows no « dans N j » (the match is past). Before the kick-off: unchanged.
+A side with no member read (79.2) is « Non renseignés » unless the route returns episodes for it (an end known over
+the day): those are shown (Codex on #253; E2E K6c). No card when neither side has a member read nor an episode.
+
+Cases (`backend/api/test/match-absences.test.mjs`, red before the migration):
+- **79a** an unknown match 404; a match not started with its kick-off to come 404, the same match once its kick-off has
+  passed 200; a query parameter 400.
+- **79b** an injury over the match day shown; one ended the day before and one started the day after not.
+- **79c** an open injury shown; the same open injury of a player who played between its start and the match not, nor
+  one whose injuries were read more than 45 days before the match day.
+- **79d** a player on the match's sheet never shown, even with an injury over the day.
+- **79e** a suspension of the match's competition shown (`matchesRemaining` null); one of another competition not.
+- **79f** an episode marked `absent_since` not shown; a member gone before the match not counted.
+- **79i** a player of the season's squad who joined after the match, and one whose last move before it took him to
+  another of our clubs: neither counted nor shown.
+- **79g** a club without its season's squad: the season before's; a side with no link: 0 / 0 and no absence.
+- **79h** `squad` and `asOf` from the reads no older than 45 days before the match day.

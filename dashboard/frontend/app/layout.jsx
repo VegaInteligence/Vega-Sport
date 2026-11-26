@@ -18,6 +18,7 @@ import "../src/home.css";
 import "../src/phone.css";
 import "../src/match-pills.css";
 import "../src/navigation.css";
+import "../src/home-pills.css";
 import "../src/account.css";
 import "../src/legal.css";
 // Consent: the Vercel measurement waits for « Accepter » in Europe (src/services/consent.js).

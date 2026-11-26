@@ -255,11 +255,10 @@ Manifest (each route module holds its paths' declarations, beside its code):
   breakouts, match, rounds, round, fates, index, edition, associations, club), `/api/club-links`,
   `/api/forecasts/{match,odds,season,live,swap}`, `/api/archives/index`, `/api/cups/index`, `/api/cup-index`,
   `/api/cup-table`, `/api/cup-snapshot`;
-- `support`: `/api/standings`, `/api/cups/edition`, `/api/player-honours`, `/api/club-facts`, `/api/coach-portrait`,
-  `/api/stadium`;
+- `support`: `/api/player-honours`, `/api/club-facts`, `/api/coach-portrait`, `/api/stadium`;
 - `profile`: `/api/players/{id}` and its `partners`, `similar`, `return`, `halves`, `actions`, `faced`, `injuries`,
-  `transfers`, `physical`, `style`; `/api/teams/{id}` and its `similar`, `substitutions`, `age-profile`, `passing`,
-  `squad`, `absences`; `/api/competitions`, `/api/player-market-values`, `/api/players/facts-coverage`;
+  `physical`, `style`; `/api/teams/{id}` and its `similar`, `substitutions`, `age-profile`, `passing`, `squad`,
+  `absences`; `/api/competitions`, `/api/player-market-values`, `/api/players/facts-coverage`;
 - `nations` (`/api/nations`, `/api/nations/{id}`), `worldcup` (`/api/worldcup/matches`, `/api/worldcup/matches/{key}`),
   `archive-details` (`/api/archives/details`), `player-form` (`/api/player-form`), `match-display`
   (`/api/matches/{id}/players/display`).
@@ -273,7 +272,28 @@ Manifest (each route module holds its paths' declarations, beside its code):
   (the read API writes nothing): with versions per table, every write of those tables makes every selection's
   signature stale, so the worker would rebuild all of them (each a read of the selection, the work a revalidation does
   today) after each write: more work than the revalidations it would save. Their answers under writes to another
-  match are measured in the evidence (`gh137/ingestion`: a 304 after each write, in their one statement).
+  match are measured in the evidence (`gh137/ingestion`: a 304 after each write, in their one statement). A read-free
+  304 for them on a fresh process (third review, finding 11) needs a receipt per selection kept by the worker (its
+  scoped version and digest, written in one statement) and versions scoped by season, so that the live collection's
+  writes to other seasons leave the receipts current: the marks of the tables carrying a `season_id` would carry it
+  (one mark per table, season and transaction), the fold would count them per season, `api.data_version` would take
+  the seasons a selection reads, and the worker would refresh the stale receipts a bounded number per round, the
+  exact digest statement answering meanwhile. **Open, not optimized by this change** (asked for by the coordinator's
+  decision of 26 Nov 2026; the next pass): it changes every writer's trigger (to be measured again, GH137A-q), and the
+  receipts' digests must be the routes' own (league-history's SQL, matchdays' JSON rebuilt in SQL, or the API's own
+  serializers run by the worker), checked against the routes for every selection.
+- **Kept on their content tags** (third review, finding 13): `/api/standings`, `/api/cups/edition` and
+  `/api/players/{id}/transfers`. Their written contracts keep a client's tag through a writer's pass that leaves
+  their bytes: a SportScore publication refused after it wrote `core.matches` and `core.team_seasons`
+  (`test_sportscore_standings.py` 35t), a cup import that rewrites only `core.competition_seasons.cup_checked_at` and
+  `updated_at` (`test_snapshot_roles.py` 35m–35o), the same edition from two bases of different histories
+  (`test_dfb_periods.py`), a refused Transfermarkt refresh that records its attempt in `ops.transfermarkt_reads`
+  (`test_transfermarkt_history.py` 35w–35z). A version per table changes with each of these writes, and a 304 may
+  only carry the tag the 200 would carry: only the content's tag keeps those contracts. Their base commit's
+  validators for now: every revalidation builds the answer, as before. **Open, not optimized by this change** (an
+  intermediate compatibility step, the coordinator's decision of 26 Nov 2026): a receipt kept by the worker (the
+  content's tag and its source version from one snapshot, or the cup import's stored `cup_digest`) is to give them a
+  cheap 304 that keeps the same tag; the next pass.
 - Not in it, and why: the compact reads `/api/read/*` (validated by the publication or their own versions), the match
   families on the match's revision, `/api/fixtures*`, `/api/matches/{id}/summary`, search, partition, Europe, the home,
   `/api/ops/*`, health, status and the manifest (their own validators); the media wrapper (`media=1`) fronts only
@@ -281,7 +301,7 @@ Manifest (each route module holds its paths' declarations, beside its code):
 
 ### GH137A.1 Rules
 
-**The writers (migration 181, not `-- vega:online`: it adds triggers to every table the reads see).**
+**The writers (migration 182, not `-- vega:online`: it adds triggers to every table the reads see).**
 - **What is a table a read sees.** `ops.track_data_changes()` walks the catalog from every `api` view and function:
   a view's dependencies (`pg_depend` of its rule), a function's schema-qualified names (`api.`, `core.`, `agg.`,
   `ops.`) and its dependencies, transitively; a partition counts as its root. Every base table reached carries four
@@ -325,7 +345,9 @@ Manifest (each route module holds its paths' declarations, beside its code):
   last migration and their count), written in the tracking's transaction; `api.data_version` is NULL whenever the
   schema is not that one. In the window, and after a failed tracking until the next run of `store.migrate`, every
   route answers as without versions (the base commit's tags, every statement run): never a 304 from a map that
-  misses a table.
+  misses a table. `store.migrate` asks `ops.data_tracking_stale()` (any role may: it says whether a tracking is due)
+  and tracks only then; a run that applies nothing to an up-to-date map needs no privilege of the owner (GH171's
+  administrator rotating the logins).
 - **Privileges.** Only the trigger function (SECURITY DEFINER) writes marks; `vega_collect` and `vega_calc` hold no
   privilege on the four tables nor the sequence (the default privileges of `ops` revoked for them); the fold may be run
   by the worker's two roles; `vega_read` runs `api.data_version` and reads nothing else of it; `PUBLIC` keeps only the
@@ -334,9 +356,11 @@ Manifest (each route module holds its paths' declarations, beside its code):
 **The read API.**
 - **Validation first, then the version.** A route's own checks of its parameters (unknown, repeated, malformed,
   missing) run before any statement: an intrinsically invalid request is its 400 (or 404) and no-store after zero
-  statements, the base reachable or not. The data validator runs each builder once against a reader that refuses
-  every statement: an error the builder raises before its first statement is the answer; once a statement is
-  asked, validation is over and the version is read. A builder that checked a parameter's form after its first
+  statements, the base reachable or not. The build runs once (third review, finding 12): its first statement waits
+  for the version, read once and shared by the statements it asks together; validation before it runs as written,
+  once. A held tag found current refuses every statement of the answer the build still asks, whatever it does with
+  the refusal (a statement caught and retried, `Promise.all`): the 304, and nothing else read. A version that fails
+  fails the request (503), even when the build catches its statements' rejections. A builder that checked a parameter's form after its first
   statement checks it first (`/api/rankings/round`: `round`, `race`): a malformed one is a 400 without the base, also
   for an edition the base does not hold (a 404 before; the same 400 body otherwise).
 - **The version, read before the answer.** `api.data_version(relations text[], clock text)` (SECURITY DEFINER):
@@ -352,7 +376,9 @@ Manifest (each route module holds its paths' declarations, beside its code):
   JSON); `check` 16 hexadecimal characters of the SHA-256 of the resource (the read API's release `VEGA_RELEASE`, else
   a value drawn per process, the Node.js version, the media base, the family, the path, the sorted parameters), the
   version, the answer's freshness and its content. Two processes of one release give the same tag for the same
-  version and content; another release, another tag.
+  version and content; another release, another tag. No release named (a local run, the end-to-end suites that start
+  one process per request): the code is the release, the SHA-256 of the read API's sources, its `package.json` and
+  the site's shared modules (`dashboard/shared`), so that every process of one tree agrees (third review, finding 13).
 - **A 304 only for the tag the 200 would carry (RFC 9110 § 13.1.2, RFC 9111 § 4.3.4).** Every 304, `*` aside, carries
   a tag the request holds, compared weakly as a whole, and that tag is the one a 200 to the same request would carry
   now: a cache can always tell which stored answer it freshens. So:
@@ -378,18 +404,17 @@ Manifest (each route module holds its paths' declarations, beside its code):
 
 **What it costs, measured (evidence `gh137/plans`, `gh137/ingestion`, `gh137/oracle2`).** One statement more for a
 request without a tag (the version, 1 to 1.7 ms warm on the seed for the widest partitioned closures); a revalidation
-of a current tag one statement in all (the 231-path oracle: 75 revalidations, 158 statements before, 75 after). The
-version is per table: a committed write anywhere in a table a route reads changes the route's version. Under live
-collection, `core.matches` changes with every score, and 72 relations read it: each holder of such an answer then gets
-one 200 per version change (its bytes again, under a new tag), where the base commit answered 304 after building it
-(measured: `/api/standings` of 2025/26, a 304 in one statement while nothing is written, then a 200 in two after each
-write to another match; the base's 304s ran its statements each time). `/api/league-history` and `/api/matchdays`
-keep their content tags (304 after every such write, as GH137-d and GH137M-d say); `/api/archives/index` reads no
-table the live collection writes (304 in one statement throughout). Versions scoped by season or edition (the marks
-of `core.matches` and of the season-partitioned facts carrying the row's `season_id`, a route declaring the seasons
-it reads) would keep the archived selections' tags under that collection; not done here: it needs, per route, a claim
-about the rows its views read that the strict mode cannot check, and `agg.standings` and `core.standings_official`
-carry no `season_id`.
+of a current tag one statement in all (the 231-path oracle: 75 revalidations, 158 statements before, 75 after, every
+intrinsic 400 without a statement). The version is per table: a committed write anywhere in a table a route reads
+changes the route's version. Under live collection, `core.matches` changes with every score, and 72 relations read it:
+each holder of such an answer then gets one 200 per version change (its bytes again, under a new tag), where the base
+commit answered 304 after building it. Measured with five writes to another match (`gh137/ingestion`, `*-r3`):
+`/api/cup-snapshot?kind=standings` a 304 in one statement while nothing is written (the base: two), then a 200 in three
+after each write (the base: a 304 in two); `/api/rankings/match` a 304 in one either way before (the base: one), a 200
+in two after each write. `/api/league-history`, `/api/matchdays` and the routes kept on their content tags (above)
+answer as the base commit (a 304 after every such write); `/api/archives/index` reads no table the live collection
+writes (a 304 in one statement throughout, the base: two). Versions scoped by season or edition would keep the
+archived selections' tags under that collection (the design above, with the receipts); not done here.
 
 ### GH137A.2 Failure modes and expected outcomes
 
@@ -403,13 +428,13 @@ carry no `season_id`.
 | GH137A-f | A committed change to a table of a route's closure (a row of the answer, a row elsewhere in the same table) | another check: built again; 200 with the current tag, the new answer if it changed, the same bytes if not; then 304 in one statement for that tag |
 | GH137A-g | The same change rolled back; in a rolled-back savepoint | no mark: 304 in one statement |
 | GH137A-h | An upsert of unchanged values (a `jsonb` column included); INSERT … ON CONFLICT DO NOTHING conflicting; DELETE of nothing | no mark; 304 in one statement |
-| GH137A-i | Another release (a held tag of it, same bytes); another migration applied and tracked | 200 with the current tag, then 304s in one statement; the same release and base: the same tag |
+| GH137A-i | Another release (a held tag of it, same bytes); another migration applied and tracked; two processes of one tree, no release named | 200 with the current tag, then 304s in one statement; the same release and base: the same tag; the two processes: one tag, a 304 in one statement |
 | GH137A-j | A route reading `current_date`, its base's day changed | another check |
 | GH137A-k | An undeclared `api` relation read while building | strict: error naming it; otherwise the former tag form |
 | GH137A-l | A base without `api.data_version` | the base commit's tags and outcomes |
 | GH137A-m | Two transactions writing one table at once; the fold during writes; TRUNCATE; a row moved across partitions; a partition created later | neither waits; two versions more; the fold changes no version; a mark each |
 | GH137A-n | Every request of the manifest, its base tables as PostgreSQL counts them (`pg_stat_xact_user_tables`, partitions to their root) | within its declared relations' closure; every table of every closure carries the four triggers |
-| GH137A-o | `/api/league-history`, `/api/matchdays` | GH137-a–n and GH137M-a–f as written, unchanged |
+| GH137A-o | `/api/league-history`, `/api/matchdays`; `/api/standings`, `/api/cups/edition`, `/api/players/{id}/transfers` after a writer's pass that leaves their bytes | GH137-a–n and GH137M-a–f as written, unchanged; the base commit's content tag, a 304 for it after such a pass (the suites named above, as written) |
 | GH137A-p | `/api/matches/{id}/players/display` of a finished match and of a match in play | each 304's freshness that of its answer (60, 15) |
 | GH137A-q | Writers' cost: 200 000-row insert, update, no-op update, delete; a transaction of many single-row upserts; two writers at once | within the bounds measured (evidence `gh137/`) |
 | GH137A-r | Readers' cost: the version statement on the seed, with marks pending and folded; 250 000 marks pending (a worker stopped) | index lookups only, about 1.5 ms; more than 10 000 pending marks on a source: NULL, at most 10 001 index entries read per source (about 2 ms; the draft counted them all, 10 to 30 ms and growing); the fold, 100 000 marks a call (about 0.1 s), the versions unchanged by it |
@@ -418,9 +443,9 @@ carry no `season_id`.
 | GH137A-u | An answer over its size limit, GET and HEAD, with its content's tag, `*`, nothing | 413, no tag, never 304 |
 | GH137A-v | Every 304 of every test, `*` aside | its tag weakly equals a tag the request held |
 | GH137A-w | A day changes without any write (the base's `current_date`, read in another time zone) for a route that reads it, and for one that does not | another check for the first (built again, 200), the same for the second |
-| GH137A-x | 181 on a base already populated at 180 (the API seed) and on an empty one; the locks it takes | applies on both; each table it adds triggers to is locked SHARE ROW EXCLUSIVE until its commit (not online: the services are stopped); the same answers from both |
-| GH137A-y | An intrinsically invalid request of every family (unknown, repeated, malformed or missing parameter), the base reachable and not; `/api/rankings/round` with a malformed `round` or `race` | 400 (or the route's 404), no-store, zero statements; never 503 |
-| GH137A-z | An existing api view given another table by a migration committed before its tracking, seen from another session; a tracking that fails; the next `store.migrate` | every version NULL in the window and after the failure (the base commit's tags); tracked again: versions, and the new table's writes move them |
+| GH137A-x | 182 on a base already populated at 181 (the API seed) and on an empty one; the locks it takes | applies on both; each table it adds triggers to is locked SHARE ROW EXCLUSIVE until its commit (not online: the services are stopped); the same answers from both |
+| GH137A-y | An intrinsically invalid request of every family (unknown, repeated, malformed or missing parameter), the base reachable and not; `/api/rankings/round` with a malformed `round` or `race`; a build asking statements together, or catching their rejections, with a current tag, another one, and a failing version | 400 (or the route's 404), no-store, zero statements; never 503; the checks run once; with a current tag, the version only; another tag, the genuine statements; a failing version, its error, never a 200 |
+| GH137A-z | An existing api view given another table by a migration committed before its tracking, seen from another session; a tracking that fails; the next `store.migrate`; a `store.migrate` run with nothing new by a role without the owner's rights | every version NULL in the window and after the failure (the base commit's tags); tracked again: versions, and the new table's writes move them; the run tracks nothing and passes |
 
 GH137A-a–e, k, p, s (route), t–w, y: `backend/api/test/data-versions.test.mjs` with the existing route tests run strict
 (`context.mjs` asks every 200 again with its tag and requires a 304 in one statement whose tag the request held); f–j,

@@ -1,4 +1,4 @@
-"""Versions kept by the writers (FAILURE_MODES_OPTIMISATIONS.md GH137A, migration 181) on a dedicated local base.
+"""Versions kept by the writers (FAILURE_MODES_OPTIMISATIONS.md GH137A, migration 182) on a dedicated local base.
 
 Failure modes, and what is expected:
 - a table a read sees changed while no version moves -> each committed transaction that really changes a table of a
@@ -15,9 +15,9 @@ Failure modes, and what is expected:
 - a table added by a later migration left untracked -> store.migrate's run tracks it;
 - the marks written by anyone but the trigger, or read by the read API directly -> vega_collect and vega_calc cannot
   write or read them, may fold; vega_read reads versions through api.data_version only;
-- the migration applied while the services write -> 181 is not marked online (it adds triggers to every written table);
+- the migration applied while the services write -> 182 is not marked online (it adds triggers to every written table);
 - versions never folded -> the worker folds them each planning round (Worker.publish).
-Added after the review of 26 Nov 2026 (GH137A-s; the draft of 181 left a version unchanged when a leaf was truncated):
+Added after the review of 26 Nov 2026 (GH137A-s; the draft of 182 left a version unchanged when a leaf was truncated):
 - a leaf partition truncated directly, a leaf created after the migration (plain, or by core.ensure_season_partitions)
   then truncated, a partition detached, attached with rows, detached concurrently -> the version changes each time; a
   detached table truncated does not change it; a TRUNCATE rolled back does not either; a row written into a leaf
@@ -496,7 +496,7 @@ class DataVersionsTest(unittest.TestCase):
         self.db.execute("DELETE FROM core.teams WHERE id = 913701")
 
     def test_the_migration_is_not_online(self):
-        self.assertFalse(migration.online(ROOT / "sql" / "181_data_versions.sql"))
+        self.assertFalse(migration.online(ROOT / "sql" / "182_data_versions.sql"))
 
     def test_the_worker_folds_each_round(self):
         self.db.execute("INSERT INTO core.gh137a_plain(id, label) VALUES (1, 'a')")

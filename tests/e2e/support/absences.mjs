@@ -111,6 +111,39 @@ export const franceAnswer = () => ({
   ],
 });
 
+// Test double of GET /api/matches/{id}/absences (FAILURE_MODES.md § 79, backend/api/test/match-absences.test.mjs checks
+// the real route against the same shape): { data: { id, on, home: { team, asOf, squad, absences }, away: { … } } }, each
+// side's absences in the shape above, read as of the match day (`matchesRemaining` null). serveMatchAbsences(context,
+// plan): plan.answer → 200, 404 / 500 / "abort" as serveAbsences; each request logged in plan.requests.
+export const MATCH_ABSENCES_PATH = /\/api\/matches\/([^/?#]+)\/absences(?:[?#]|$)/;
+export async function serveMatchAbsences(context, plan) {
+  plan.requests ||= [];
+  await context.route(MATCH_ABSENCES_PATH, async (route) => {
+    plan.requests.push({ id: decodeURIComponent(route.request().url().match(MATCH_ABSENCES_PATH)[1]), at: Date.now() });
+    const entry = plan.answer;
+    const headers = { "access-control-allow-origin": "*", "cache-control": "no-store" };
+    if (entry === "abort") return route.abort("connectionfailed").catch(() => {});
+    if (entry === undefined || entry === 404 || entry === 500)
+      return route.fulfill({ status: entry || 404, contentType: "application/json", headers, body: JSON.stringify({ error: "Donnée indisponible." }) }).catch(() => {});
+    return route.fulfill({ status: 200, contentType: "application/json", headers, body: JSON.stringify({ data: entry }) }).catch(() => {});
+  });
+}
+// The same PSG – Lorient once played (28 Nov 2026): PSG had Kvaratskhelia injured and Pacho suspended that day, Lorient
+// Makengo injured; Talbi was back and on the sheet, so the route does not name him.
+export const matchDayAnswer = (id) => ({
+  id, on: "2026-11-28",
+  home: { team: PSG, asOf: "2026-11-24", squad: { players: 25, read: 23 }, absences: [
+    absence(player("p_2lkyxD", "Willian Pacho", "centre_back"), { kind: "suspension", label: "Yellow card suspension", start: "2026-11-22",
+      expectedReturn: "2026-11-29", matchesMissed: 0, matchesRemaining: null, competition: { code: "FR1", id: LIGUE1, name: "Ligue 1" } }),
+    absence(player("p_2ZwqC5", "Khvicha Kvaratskhelia", "winger"), { kind: "injury", label: "Cruciate ligament tear", start: "2026-10-21",
+      expectedReturn: "2027-05-31", matchesMissed: 5 }),
+  ] },
+  away: { team: LORIENT, asOf: "2026-11-24", squad: { players: 26, read: 26 }, absences: [
+    absence(player("p_0HYXz5", "Jean-Victor Makengo", "central_midfielder"), { label: "Hamstring injury", start: "2026-11-08",
+      expectedReturn: "2026-12-14", matchesMissed: 2 }),
+  ] },
+});
+
 /** WCAG contrast of two CSS colours (rgb()/rgba() strings as getComputedStyle gives them). */
 export function contrast(a, b) {
   const lum = (c) => {
