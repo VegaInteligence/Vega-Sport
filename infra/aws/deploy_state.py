@@ -215,7 +215,7 @@ def main(argv):
     which.add_argument("--arn")
     which.add_argument("--none", action="store_true")
     parser.add_argument("changes", nargs="*")
-    args = parser.parse_args(argv)
+    args = parser.parse_intermixed_args(argv)
     try:
         if args.command in ("abandon", "resolve-migrate"):
             if not args.reason:

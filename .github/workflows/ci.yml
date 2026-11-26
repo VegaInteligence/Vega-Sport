@@ -102,6 +102,8 @@ jobs:
       - run: cfn-lint --regions us-east-1 -- infra/aws/waf.yaml
       # GH149: the distribution's access logs are delivered from us-east-1.
       - run: cfn-lint --regions us-east-1 -- infra/aws/edge-logs.yaml
+      - name: Deploy state CLI with the runner system Python
+        run: PYTHONPATH=backend:backend/tests /usr/bin/python3 -m unittest -v test_deploy_state
       - name: Deployment scripts parse
         run: bash -n infra/aws/deploy.sh && bash -n infra/aws/ci/secrets.sh
   image:

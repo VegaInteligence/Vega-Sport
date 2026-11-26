@@ -46,11 +46,25 @@ class MaintenanceEntriesTest(unittest.TestCase):
     def doc(self):
         return json.loads(json.loads(self.world.read_text())["s3"]["buckets"][BUCKET]["state.json"]["body"])
 
-    def run_state(self, *args):
+    def run_state(self, command, *args):
         env = {"PATH": f"{self.bin}:/usr/bin:/bin", "FAKE_STATE": str(self.world), "FAKE_LOG": str(self.tmp / "calls.log"),
                "FAKE_PYTHON_REAL": sys.executable, "HOME": str(self.tmp), "DEPLOY_LOCK_DIR": str(self.locks)}
-        return subprocess.run([sys.executable, str(ROOT / "infra/aws/deploy_state.py"), *args, "--bucket", BUCKET], capture_output=True,
+        return subprocess.run([sys.executable, str(ROOT / "infra/aws/deploy_state.py"), command, "--bucket", BUCKET, *args], capture_output=True,
                               text=True, env=env, timeout=60)
+
+    def test_set_persists_the_pre_stop_snapshot_with_trailing_changes(self):
+        owner = "gh-5551-1"
+        self.held(owner)
+        args = ("set", "--owner", owner, "--etag", '"held"', "phase=stopped", "before.worker=1", "before.backfill=1",
+                "before.image=previous", "before.digest=", "changed=false", "unsafe=false")
+        done = self.run_state(*args)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn("STATE_PHASE=stopped", done.stdout)
+        saved = self.doc()
+        self.assertEqual(saved["before"], {"worker": 1, "backfill": 1, "image": "previous", "digest": ""})
+        self.assertEqual((saved["phase"], saved["changed"], saved["unsafe"]), ("stopped", False, False))
+        self.assertEqual(self.run_state(*args).returncode, 5, "a stale ETag must still be refused")
+        self.assertEqual(self.doc(), saved)
 
     def test_GH157_ac_abandon_refuses_what_the_deploy_can_check(self):
         self.held("gh-5551-1")
