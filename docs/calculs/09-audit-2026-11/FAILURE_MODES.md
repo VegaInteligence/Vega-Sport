@@ -6096,3 +6096,49 @@ https://claude.ai/artifact/GxP3vebwEg17Eo4Fk5wdFm (piste 1, the recommended one,
   ivory on night in the dark theme, night on ivory in the light one) at every width, the round with the initial too.
 - **Test:** `navbar.e2e.mjs` N14 wants the ivory fill in the dark theme at 1440 and 900 px; red on 60d8a81, green after
   (barre 21/21).
+
+
+## 77. A match's absent players kept once it has kicked off (hugo, 26 Nov 2026, 15 h 55 Paris « je veux pas qu'on les enlève de la page d'un match pour savoir quels joueurs étaient suspendus ou blessés pendant ce match », after Sabah FK – Barcelone; GitHub #252; written before the tests)
+
+The « Absents » card of the « Avant-match » tab (§ 59, mock-up validated on 24 Nov 2026) was drawn only while the match
+had not started (`MatchDetail.jsx`, `upcoming &&`), from `/api/teams/{id}/absences`, which knows today's absences only:
+from the kick-off the page lost who was out. The base keeps every episode it read (core.player_injuries, 160;
+core.player_suspensions, 174: never deleted), so the absences of a match day can be read again.
+
+**77.1 The read.** `GET /api/matches/{id}/absences` (api.match_absence_players, api.match_absences, migration 181):
+404 for an unknown match, and for a match not started (its card keeps `/api/teams/{id}/absences`, nothing changes before
+the kick-off); otherwise `{ id, on, home, away }`, `on` the match day (its date, else its kick-off's UTC day), each side
+`{ team, asOf, squad: { players, read }, absences }` in the shape of `/api/teams/{id}/absences`. No query parameter.
+
+**77.2 Who belongs to a side on the match day.** A club linked to Transfermarkt: its Transfermarkt squad of the match's
+season when the base holds one, else of the season before (a calendar-year league is the provider's year before, the
+reader queues both: `transfermarkt.py`), its members not marked gone on or before the match day (`absent_since` empty
+or later). A national team not linked: the players its page shows (api.nation_players, as § 59ak). Neither: no member
+(`squad` 0 / 0, no absence), never « nobody was out ».
+
+**77.3 Read.** A member counts as read when his injuries have an accepted read no older than 45 days before the match
+day (the window of § 59, measured from the match instead of today); `asOf` is the oldest of those reads, null without
+one.
+
+**77.4 Out on the match day** (`D`):
+- an injury, an illness or an unclassified episode: started on `D` or before, not marked `absent_since`, and its end on
+  `D` or later; with no end, only while the player played no match (minutes > 0) after its start and before `D`;
+- a suspension (clubs only, as § 59ak): of the match's own competition (its competition id), started on `D` or before,
+  ended on `D` or later, or with no end while his suspensions were read no more than 45 days before `D`;
+- `matchesRemaining` is null: the count read today says nothing of the match day. `readAt` as in § 59.
+
+**77.5 The sheet wins.** A player named on the match's sheet (core.lineup_players of that match, any team) or who played
+in it is never out, whatever the episode says (he came back, or the dates are approximate).
+
+**77.6 The page.** From the kick-off the « Avant-match » tab keeps its « Absents » card, read from this route (same card,
+same rows); a return date shows no « dans N j » (the match is past). Before the kick-off: unchanged.
+
+Cases (`backend/api/test/match-absences.test.mjs`, red before the migration):
+- **77a** an unknown match 404; a match not started 404; a query parameter 400.
+- **77b** an injury over the match day shown; one ended the day before and one started the day after not.
+- **77c** an open injury shown; the same open injury of a player who played between its start and the match not.
+- **77d** a player on the match's sheet never shown, even with an injury over the day.
+- **77e** a suspension of the match's competition shown (`matchesRemaining` null); one of another competition not.
+- **77f** an episode marked `absent_since` not shown; a member gone before the match not counted.
+- **77g** a club without its season's squad: the season before's; a side with no link: 0 / 0 and no absence.
+- **77h** `squad` and `asOf` from the reads no older than 45 days before the match day.

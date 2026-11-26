@@ -70,7 +70,9 @@
 //  K3 The forecast's sentence is unchanged (« le modèle ne connaît ni les compositions ni les absents »).
 //  K4 Lorient not known (404): its half reads « Non renseignés », PSG's keeps its rows.
 //  K5 Neither side known (404), or both reads failing: no card, « Probabilités » still there, no page error.
-//  K6 The same match finished (its detail answered as finished, 2–1): no « Absents » card.
+//  K6 The same match finished (its detail answered as finished, 2–1; FAILURE_MODES.md § 77): the « Absents » card stays,
+//     read from GET /api/matches/{id}/absences (its match day), not from the teams' absences of today: PSG Pacho and
+//     Kvaratskhelia, Lorient Makengo; a return date without « dans N j ». The route answering 404 or failing: no card.
 //  K7 Phone (393 px): the halves stacked, no sideways page scroll.
 //  « Composition probable » (FAILURE_MODES.md §61, mock-up validated by hugo on 25 Nov 2026), on a match not started
 //  (PROBABLE_MATCH, default the replay's PSG – Lorient m_1LWSAq, kick-off 28 Nov 2026 19:45 UTC), the page's clock set
@@ -100,7 +102,7 @@ import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { LIGUE1, LORIENT, PSG, lorientAnswer, psgAnswer, serveAbsences } from "./support/absences.mjs";
+import { LIGUE1, LORIENT, PSG, lorientAnswer, matchDayAnswer, psgAnswer, serveAbsences, serveMatchAbsences } from "./support/absences.mjs";
 import { PROBABLE_KICKOFF, PROBABLE_MATCH_ID, serveLineups } from "./support/probable.mjs";
 
 const [base = "http://127.0.0.1:3000", api = base, id = "m_08LEIz", out = path.join(os.tmpdir(), "match-page-e2e")] = process.argv.slice(2);
@@ -124,7 +126,7 @@ const skip = (cid, expected, reason) => {
 const ABSENT_MATCH = process.env.ABSENT_MATCH || id;
 async function absentChecks(browser) {
   const IGNORE = /Failed to load resource|WebSocket|live\.invalid|ERR_NAME_NOT_RESOLVED/;
-  const openContext = async (contextOptions, plan, finished = false) => {
+  const openContext = async (contextOptions, plan, finished = false, matchPlan = {}) => {
     const ctx = await browser.newContext({ locale: "fr-FR", ...contextOptions });
     await ctx.route(/va\.vercel-scripts\.com/, (r) => r.abort());
     if (finished) await ctx.route(new RegExp(`/api/matches/${ABSENT_MATCH}/summary(\\?|$)`), async (route) => {
@@ -136,6 +138,7 @@ async function absentChecks(browser) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body), headers: { "access-control-allow-origin": "*" } });
     });
     await serveAbsences(ctx, plan);
+    await serveMatchAbsences(ctx, matchPlan);
     const page = await ctx.newPage();
     const before = consoleLog.length;
     page.on("console", (m) => m.type() === "error" && !IGNORE.test(m.text()) && consoleLog.push(`[absents] ${m.text().slice(0, 300)}`));
@@ -152,7 +155,8 @@ async function absentChecks(browser) {
     const sides = card ? [...card.querySelectorAll("section")].map((side) => ({
       team: side.querySelector("h3")?.textContent.replace(/\d+$/, "").trim(), count: side.querySelector("h3 b")?.textContent.trim() || null,
       crest: Boolean(side.querySelector("h3 [data-media-state], h3 img")),
-      rows: [...side.querySelectorAll("li")].map((li) => ({ name: li.querySelector("a strong")?.textContent.trim(), reason: li.querySelector("a small")?.textContent.trim() })),
+      rows: [...side.querySelectorAll("li")].map((li) => ({ name: li.querySelector("a strong")?.textContent.trim(), reason: li.querySelector("a small")?.textContent.trim(),
+        back: li.querySelector(":scope > span")?.textContent.trim() || null })),
       empty: side.querySelector("p")?.textContent.trim() || null,
       box: (({ top, bottom }) => ({ top: top + scrollY, bottom: bottom + scrollY }))(side.getBoundingClientRect()),
     })) : [];
@@ -199,12 +203,29 @@ async function absentChecks(browser) {
   check("K5 neither side known, or both reads failing: no card, the forecast stays", { "404": { card: false, forecast: true, errors: [] }, failure: { card: false, forecast: true, errors: [] } }, none,
     Object.values(none).every((v) => !v.card && v.forecast && !v.errors.length));
 
-  k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true);
+  const matchPlan = { answer: matchDayAnswer(ABSENT_MATCH) };
+  k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true, matchPlan);
   got = await read(k.page);
   await shotOf(k.page, "absents-match-finished");
-  check("K6 a finished match: no « Absents » card", { card: false }, { card: got.card, titles: got.titles }, !got.card);
+  const finishedHome = ["Khvicha Kvaratskhelia", "Willian Pacho"], finishedAway = ["Jean-Victor Makengo"];
+  const backs = got.sides.flatMap((side) => side.rows.map((r) => r.back));
+  check("K6 a finished match: the « Absents » card of its day, from /api/matches/{id}/absences, no « dans N j »",
+    { card: true, home: finishedHome, away: finishedAway, matchReads: 1, teamReads: 0, distance: false },
+    { card: got.card, home: names(got.sides[0]), away: names(got.sides[1]), matchReads: matchPlan.requests.length, teamReads: k.plan.requests.length, backs },
+    got.card && JSON.stringify(names(got.sides[0])) === JSON.stringify(finishedHome) && JSON.stringify(names(got.sides[1])) === JSON.stringify(finishedAway)
+      && matchPlan.requests.length >= 1 && k.plan.requests.length === 0 && !backs.some((b) => /dans /.test(b || "")));
   await k.page.close();
   await k.ctx.close();
+  const finishedNone = {};
+  for (const [label, entry] of [["404", 404], ["failure", "abort"]]) {
+    k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true, { answer: entry });
+    got = await read(k.page);
+    finishedNone[label] = { card: got.card, errors: k.errors() };
+    await k.page.close();
+    await k.ctx.close();
+  }
+  check("K6b a finished match whose day's read is 404 or fails: no card, no page error", { "404": { card: false, errors: [] }, failure: { card: false, errors: [] } },
+    finishedNone, Object.values(finishedNone).every((v) => !v.card && !v.errors.length));
 
   k = await openContext({ ...devices["iPhone 15"], viewport: { width: 393, height: 852 } }, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() });
   got = await read(k.page);

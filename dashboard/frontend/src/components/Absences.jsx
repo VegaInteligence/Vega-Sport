@@ -16,6 +16,7 @@ import {
   absenceTitle,
   absenceView,
   returnDistance,
+  useMatchAbsences,
   useTeamAbsences,
 } from "../services/team-absences.js";
 // The chart tokens (--mq-*) are scoped to their class: each root of these blocks carries it.
@@ -111,7 +112,7 @@ function Lane({ absence, scale }) {
   );
 }
 
-function Back({ absence, asOf }) {
+function Back({ absence, asOf, past = false }) {
   if (absenceKind(absence) === "suspension")
     return (
       <span className={s.back}>
@@ -124,7 +125,8 @@ function Back({ absence, asOf }) {
         <strong className={s.unknown}>Inconnu</strong>
       </span>
     );
-  const distance = returnDistance(absence.expectedReturn, asOf);
+  // A match already played: the return date alone, no « dans N j » (§ 77.6).
+  const distance = past ? null : returnDistance(absence.expectedReturn, asOf);
   return (
     <span className={s.back}>
       <strong>{absenceDate(absence.expectedReturn, asOf)}</strong>
@@ -215,7 +217,7 @@ export function AbsenceBoard({ view, loading = false }) {
 }
 
 /** A side's absent players in a list: portrait, name, reason, return (a match's sides; a probable XI's absents). */
-export function AbsentRows({ rows, asOf }) {
+export function AbsentRows({ rows, asOf, past = false }) {
   const f = useFootball();
   return (
     <ul className={`${s.sideRows} ${chartTokens}`}>
@@ -233,7 +235,7 @@ export function AbsentRows({ rows, asOf }) {
                 </small>
               </span>
             </Link>
-            <Back absence={a} asOf={asOf} />
+            <Back absence={a} asOf={asOf} past={past} />
           </li>
         );
       })}
@@ -241,13 +243,14 @@ export function AbsentRows({ rows, asOf }) {
   );
 }
 
-function MatchSide({ team, state, match }) {
-  const view = absenceView(state.value, { match });
+function MatchSide({ team, state, match, past = false }) {
+  // A match played: its side's rows are already those of its day (§ 77); before it, today's that count for it.
+  const view = absenceView(state.value, past ? {} : { match });
   let body;
   if (state.loading && !state.value) body = <p className={s.empty}>…</p>;
   else if (!view) body = <p className={s.empty}>Non renseignés</p>;
   else if (!view.rows.length) body = <p className={s.empty}>Aucun absent</p>;
-  else body = <AbsentRows rows={view.rows} asOf={view.asOf} />;
+  else body = <AbsentRows rows={view.rows} asOf={view.asOf} past={past} />;
   return (
     <section className={s.side}>
       <h3>
@@ -260,9 +263,32 @@ function MatchSide({ team, state, match }) {
   );
 }
 
-/** A match still to be played: each side's absent players, the suspensions of this competition only (by its id),
- *  the injuries and illnesses not over by the kick-off. */
-export function MatchAbsences({ match }) {
+/** A match's absent players: before the kick-off each side's absents of today that count for it (the suspensions of
+ *  this competition only, the injuries and illnesses not over by the kick-off); from the kick-off those of its day,
+ *  read from the match (§ 77). */
+export function MatchAbsences({ match, started = false }) {
+  return started ? <PlayedMatchAbsences match={match} /> : <UpcomingMatchAbsences match={match} />;
+}
+
+function PlayedMatchAbsences({ match }) {
+  const day = useMatchAbsences(match?.id);
+  if (!match?.home?.id || !match?.away?.id) return null;
+  // A side with none of its members read is « Non renseignés », never « Aucun absent » (§ 77.2).
+  const value = (key) => (day.value?.[key]?.squad?.read > 0 ? { id: day.value[key].team, ...day.value[key] } : null);
+  // Not read (404, a failure) or neither side read: no card rather than two empty halves.
+  if (!day.loading && !value("home") && !value("away")) return null;
+  const side = (key) => ({ loading: day.loading, value: value(key) });
+  return (
+    <MatchCard title="Absents" className={s.matchCard}>
+      <div className={`${s.sides} ${chartTokens}`}>
+        <MatchSide team={match.home} state={side("home")} past />
+        <MatchSide team={match.away} state={side("away")} past />
+      </div>
+    </MatchCard>
+  );
+}
+
+function UpcomingMatchAbsences({ match }) {
   const home = useTeamAbsences(match?.home?.id);
   const away = useTeamAbsences(match?.away?.id);
   if (!match?.home?.id || !match?.away?.id) return null;

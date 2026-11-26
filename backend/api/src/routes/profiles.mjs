@@ -60,6 +60,11 @@
  * the oldest of those reads; each absence names its player, kind, label, start, expected return, matches missed and,
  * for a suspension, the matches remaining and the competition. 404 only for an unknown team.
  *
+ * GET /api/matches/{id}/absences — each side's injured and suspended players on the day of a match that has kicked off
+ * (181, FAILURE_MODES.md § 77): `on` the match day, each side `{ team, asOf, squad, absences }` in the shape of
+ * /api/teams/{id}/absences, read as of that day (the squad of the match's season, the episodes over it, never a player
+ * on its sheet; `matchesRemaining` null). 404 for an unknown match and a match not started (its card reads the teams').
+ *
  * GET /api/players/{id}/transfers — the player's transfers once they were read, oldest first
  * (135): the date, the kind (transfer, free, loan, loan_return, internal; null when the
  * provider gives none), the fee when it is known, the club left and the club joined. A club
@@ -111,6 +116,8 @@ const FACED = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/faced$/;
 const INJURIES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/injuries$/;
 // GET /api/teams/{id}/absences: a club's current injured and suspended players (api.team_absences, 174).
 const TEAM_ABSENCES = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/absences$/;
+// GET /api/matches/{id}/absences: a match's absent players on its day (api.match_absences, 181).
+const MATCH_ABSENCES = /^\/api\/matches\/(m_(?:[A-Za-z0-9]{6}|v\d{7}))\/absences$/;
 // GET /api/players/{id}/transfers: a player's transfers, oldest first (api.player_transfers, 135).
 const TRANSFERS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/transfers$/;
 const SQUAD = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/squad$/;
@@ -645,6 +652,51 @@ export function createProfileRoute(read) {
           readAt: r.read_on,
         })),
       });
+    }
+    const matchAbsences = path.match(MATCH_ABSENCES);
+    if (matchAbsences) {
+      validateParams(params, []);
+      const [f] = await read(
+        `SELECT f.match_id, f.status, f.home_team_id, f.away_team_id,
+           coalesce(f.day, (f.kickoff_at AT TIME ZONE 'UTC')::date)::text AS day
+         FROM api.fixtures f WHERE f.match_id=api.internal_id('match',$1)`,
+        [matchAbsences[1]],
+      );
+      // Before the kick-off the card reads each team's absences of today (§ 59); an unknown match is 404 too.
+      if (!f || f.status === "not_started") reject(404, "Donnée indisponible.");
+      const [squads, rows] = await Promise.all([
+        read(
+          `SELECT side, count(*)::int AS players, count(*) FILTER (WHERE is_read)::int AS read,
+             min(injuries_read_at::date) FILTER (WHERE is_read)::text AS as_of
+           FROM api.match_absence_players WHERE match_key=$1 GROUP BY side`,
+          [f.match_id],
+        ),
+        read(
+          `SELECT side, player_id, name, image_url, role, kind, label, start_date::text AS start_date, end_date::text AS end_date,
+             matches_missed, competition_code, competition_id, competition_name, read_on::text AS read_on
+           FROM api.match_absences WHERE match_key=$1
+           ORDER BY side, start_date DESC, name, label`,
+          [f.match_id],
+        ),
+      ]);
+      const side = (key, team) => {
+        const squad = squads.find((r) => r.side === key);
+        return {
+          team,
+          asOf: squad?.as_of ?? null,
+          squad: { players: squad?.players ?? 0, read: squad?.read ?? 0 },
+          absences: rows.filter((r) => r.side === key).map((r) => ({
+            player: { id: r.player_id, name: r.name ?? null, imageUrl: r.image_url ?? null, role: r.role ?? null },
+            kind: r.kind ?? null, label: r.label ?? null, start: r.start_date, expectedReturn: r.end_date ?? null,
+            // The count to serve read today says nothing of the match day (77.4).
+            matchesMissed: r.matches_missed ?? null, matchesRemaining: null,
+            competition: r.kind === "suspension" && r.competition_code
+              ? { code: r.competition_code, id: r.competition_id ?? null, name: r.competition_name ?? null } : null,
+            readAt: r.read_on,
+          })),
+        };
+      };
+      return respond(req, { id: matchAbsences[1], on: f.day, home: side("home", f.home_team_id), away: side("away", f.away_team_id) });
     }
     const transfers = path.match(TRANSFERS);
     if (transfers) {

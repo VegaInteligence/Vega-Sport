@@ -1,5 +1,14 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Absents gardés sur la page d'un match après le coup d'envoi — FAILURE_MODES § 77 (26 novembre 2026, GitHub #252, branche `claude/absents-apres-match`)
+
+- Demande de hugo (15 h 55, après Sabah – Barcelone) : ne plus enlever les absents de la page d'un match, pour savoir qui était blessé ou suspendu ce jour-là.
+- Migration 181 (deux vues, en ligne) : `api.match_absence_players` (effectif Transfermarkt de la saison du match, sinon la saison d'avant ; lu si les blessures ont une lecture de 45 jours au plus avant le jour du match) et `api.match_absences` (épisodes en cours le jour du match, suspensions de la compétition du match seulement, jamais un joueur de la feuille).
+- Route `GET /api/matches/{id}/absences` (`profiles.mjs`) : 404 pour un match inconnu ou pas commencé. Famille `matches.id.absences` ajoutée à la fonction CloudFront des journaux (`infra/aws/api.yaml`).
+- Site : la carte « Absents » de l'onglet Avant-match reste après le coup d'envoi, lue par cette route, sans « dans N j ». Avant le coup d'envoi rien ne change. Maquette : celle du 24 novembre (§ 59), la même carte.
+- Tests : `match-absences.test.mjs` 3/3 (rouges avant la migration), E2E K6/K6b (`match-page.e2e.mjs`) rouges avant, verts après ; site 1 119/1 119 ; build du site OK. Preuves : `/mnt/project-files/absents-apres-match/`.
+- Reste : Deploy (migration 181 et route), à demander à hugo.
+
 ## Barre de navigation : piste B et panneau qui glisse en tuiles — FAILURE_MODES § 76 (26 novembre 2026, sur main depuis 6c75337)
 
 - Demandes de hugo : maquette de la barre (14 h 35), piste B choisie avec des sous-menus à revoir (14 h 44), maquette des sous-menus, piste 1 « Un panneau qui glisse, en tuiles », puis « t'es un boss envoie ca en prod ».
