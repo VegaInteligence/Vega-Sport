@@ -1271,7 +1271,13 @@ class DeployFlowTest(unittest.TestCase):
         self.assert_done(stopped)
         w = stopped.state["services"]["worker"]
         self.assertEqual((w["desired"], w["replacements"]), (0, first.state["services"]["worker"]["replacements"]))
-        started = self.deploy(stopped.state)
+        # The workflow's default (keep, GH157-y): the zero asked for stays, nothing started or replaced.
+        kept = self.deploy(stopped.state)
+        self.assert_done(kept)
+        w = kept.state["services"]["worker"]
+        self.assertEqual((w["desired"], w["replacements"], w["starts"]), (0, first.state["services"]["worker"]["replacements"], first.state["services"]["worker"]["starts"]))
+        # A restart asked for (WORKER_DESIRED_COUNT=1): started once, not replaced.
+        started = self.deploy(kept.state, {"WORKER_DESIRED_COUNT": "1"})
         self.assert_done(started)
         w = started.state["services"]["worker"]
         self.assertEqual((w["desired"], w["replacements"], w["starts"]), (1, first.state["services"]["worker"]["replacements"], first.state["services"]["worker"]["starts"] + 1))
