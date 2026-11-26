@@ -6096,3 +6096,35 @@ https://claude.ai/artifact/GxP3vebwEg17Eo4Fk5wdFm (piste 1, the recommended one,
   ivory on night in the dark theme, night on ivory in the light one) at every width, the round with the initial too.
 - **Test:** `navbar.e2e.mjs` N14 wants the ivory fill in the dark theme at 1440 and 900 px; red on 60d8a81, green after
   (barre 21/21).
+
+## 77. The home page's buttons and menus (hugo, 26 Nov 2026, 14 h 56 « passons a la page Vue d'ensemble les differentes interactions les boutons etc pour reonfte mais attention on garde toujours le meme esprit », « occupe toi des sous menu de bouton aussi »; mock-up https://claude.ai/artifact/DPfYC6jW2ooKwPGzmaGsdD; 16 h 17 « pour semaine en cours prend A et pour la bar de reglage prend B et enleve les reglage mon pays c'est pas un truc que le user regle c'est automatic dans les reglage comme actuelement », « une fois fait tu peux merge dans main »; written before the tests)
+
+The page keeps its blocks in their places; only what is clicked and what opens changes, with the rules of the match
+page (§ 72) and of the bar (§ 76): a pill for whatever is clicked, filled for the current choice and for a button
+whose menu is open, 22 px corners and no grey line for menus, windows and bubbles, a sheet from the bottom on a phone.
+
+- **The settings bar** (piste B): « 2026/2027 » and « Top 7 Europe + UEFA » in one track of 40 px (the bar's
+  `--control-h`), right of the week's title. A segment opens one panel under the track (22 px, no border, right edge
+  on the track's), filled while open (`aria-expanded`). Moving from one segment to the other keeps the same panel,
+  which slides to the new content. Escape or a click elsewhere closes it, focus back on its segment.
+  - **Saison**: the seasons as pills, the current one filled (`aria-pressed`); a choice changes the season
+    (`f.changeSeason`, as the select did) and closes the panel.
+  - **Compétitions**: « Toutes » and « Top 7 Europe + UEFA » in a track, the search in a pill, the competitions as
+    tiles with their logo, a chosen one filled; « Annuler » leaves the choice as it was, « Appliquer » saves it as the
+    window did (`favoriteLeagueIds`, the focus) and the segment then names it.
+  - **No country on the home**: the bar has no country and the panel no « Votre pays » (hugo: the country is
+    automatic, chosen in the account's settings as before, `CountryChoice` on /compte). The country chosen there
+    (`preferences.homeCountry`) still orders the cards.
+  - **Phone** (≤ 640 px): the track spans the width, the panel is a sheet from the bottom over a veil.
+- **The week's results** (« Semaine en cours », piste A): each match a 22 px card on the pills' track veil, no grey
+  line between them; the day a vertical pill.
+- **The page's pills**: the cards' links (« Classement complet », « Calendrier », « Tous les joueurs », « Le match »)
+  quiet 32 px pills (36 px on a phone); « Analyse complète du match » a filled pill; the leagues of « Course au titre »
+  in a track, the chosen one filled; « Efficaces / Maladroits » and « Buteurs / Passeurs » the match page's track;
+  the chips round; the phone's folds (« Détail du match », « Ses chiffres du match ») quiet pills of 40 px.
+- **The « i » and the windows**: on the home page an « i » is a veiled round with no border and its bubble has 22 px
+  corners and no border; a window opened from it (a player, a performance) has 22 px corners and a round close button.
+- **Regression of § 76 (f2d62a6)**: the generic `.nav-menu-panel` rule was removed with the old menus, so the country
+  menu of the account's settings (`HomeCountryMenu`) lost its box: the list was drawn in the flow, unframed, pushing
+  what follows. It gets its own floating menu again (22 px, the bar's panel colours, above the page).
+- Unchanged: the blocks, their order and their data; the account page's competitions window; the logos.

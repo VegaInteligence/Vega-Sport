@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Page Vue d'ensemble (l'accueil) : boutons et sous-menus — FAILURE_MODES § 77 (26 novembre 2026)
+
+- Demandes de hugo (14 h 56, 16 h 17) : refaire les interactions et les boutons de l'accueil « en gardant le même esprit », sous-menus compris. Maquette https://claude.ai/artifact/DPfYC6jW2ooKwPGzmaGsdD : résultats de la semaine en piste A, barre de réglages en piste B, **sans pays** (automatique, réglé dans Paramètres de /compte). « une fois fait tu peux merge dans main ».
+- `HomeSettings.jsx` : Saison · Compétitions dans une piste de 40 px, un panneau qui glisse entre les deux (saisons en pilules, compétitions en tuiles avec logo, Toutes / Top 7, recherche, Annuler / Appliquer), feuille du bas au téléphone. `HomePreferences.jsx` garde la fenêtre pour /compte et partage sa logique (`useHomeCompetitions`, `useCompetitionDraft`, `applyCompetitionDraft`) ; la ligne « Votre pays » en est retirée.
+- `home-pills.css` : résultats de la semaine en cartes de 22 px, liens, action principale, onglets de ligue, sélecteurs, plis, « i », bulles et fenêtres ouvertes depuis l'accueil. Répare aussi le menu Pays de Paramètres, sans cadre depuis f2d62a6.
+- Tests : `tests/e2e/home-buttons.e2e.mjs` H1 à H14 et X1, rouges sur 6fac550 (14/15), verts après (15/15) ; barre 21/21. `home-country.e2e.mjs` M1 réécrit (pays lu dans les préférences), non relancé ici : le rejeu du 24 nov. n'a pas `home-local`.
+
 ## Barre de navigation : piste B et panneau qui glisse en tuiles — FAILURE_MODES § 76 (26 novembre 2026, sur main depuis 6c75337)
 
 - Demandes de hugo : maquette de la barre (14 h 35), piste B choisie avec des sous-menus à revoir (14 h 44), maquette des sous-menus, piste 1 « Un panneau qui glisse, en tuiles », puis « t'es un boss envoie ca en prod ».

@@ -118,11 +118,7 @@ async function overview({
     },
     "../services/compact-reads.js": await src("services/compact-reads.js"),
     "../services/fixtures.js": await src("services/fixtures.js"),
-    "../components/HomePreferences.jsx": {
-      __esModule: true,
-      default: () => null,
-    },
-    "../components/SeasonFilter.jsx": {
+    "../components/HomeSettings.jsx": {
       __esModule: true,
       default: () => null,
     },

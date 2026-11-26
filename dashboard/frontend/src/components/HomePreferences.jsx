@@ -3,7 +3,6 @@
 import React, { useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { Media, Modal } from "./UI.jsx";
-import HomeCountryMenu from "./HomeCountryMenu.jsx";
 import { normalizeText } from "../model.js";
 import { inEuropeFocus } from "../../../shared/competition-scope.js";
 import {
@@ -13,7 +12,11 @@ import {
   orderedCompetitions,
 } from "../services/competition-selector.js";
 
-function CompetitionPicker({ f, competitions, initialIds, onClose, country }) {
+/**
+ * The choice being made in a competitions picker (the home's settings panel, the account's window): the chosen ids,
+ * the search, the competitions it leaves, and whether the choice is the Top 7 Europe + UEFA preset.
+ */
+export function useCompetitionDraft(competitions, initialIds) {
   const [selected, setSelected] = useState(() => new Set(initialIds));
   const [query, setQuery] = useState("");
   const search = normalizeText(query).trim();
@@ -25,14 +28,103 @@ function CompetitionPicker({ f, competitions, initialIds, onClose, country }) {
   const europe = competitions.filter(inEuropeFocus).map((c) => c.id);
   const isEurope =
     selected.size === europe.length && europe.every((id) => selected.has(id));
+  const toggle = (id) =>
+    setSelected((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  return {
+    selected,
+    setSelected,
+    query,
+    setQuery,
+    visible,
+    europe,
+    isEurope,
+    toggle,
+  };
+}
+
+/** The draft saved: one selection owns the whole home scope (the former single-league and Europe constraints go). */
+export function applyCompetitionDraft(f, draft) {
+  const ids = [...draft.selected];
+  f.changeFocus(draft.isEurope && ids.length ? "europe" : "all");
+  f.setFilters((current) => ({ ...current, league: "all", match: "all" }));
+  f.savePreferences({ favoriteLeagueIds: ids, onboardingComplete: true });
+}
+
+/** « 3 sélectionnées », or « Toutes les compétitions » when nothing is chosen. */
+export const draftCount = (draft) =>
+  draft.selected.size
+    ? `${draft.selected.size} sélectionnée${draft.selected.size > 1 ? "s" : ""}`
+    : "Toutes les compétitions";
+
+/** The competitions the home follows: every competition of the manifest, the ids in force and their name. */
+export function useHomeCompetitions(f) {
+  const competitions = useMemo(() => {
+    const byId = new Map();
+    for (const season of f.manifest.seasons || [])
+      for (const chunk of season.chunks || [])
+        for (const competition of chunk.competitions || [])
+          if (!byId.has(competition.id)) byId.set(competition.id, competition);
+    if (!byId.size)
+      for (const competition of f.competitions)
+        byId.set(competition.id, competition);
+    return orderedCompetitions([...byId.values()]);
+  }, [f.manifest, f.competitions]);
+  const ids =
+    f.filters.league !== "all"
+      ? [f.filters.league]
+      : f.preferences.favoriteLeagueIds.length
+        ? f.preferences.favoriteLeagueIds
+        : f.focus === "europe"
+          ? competitions.filter(inEuropeFocus).map((c) => c.id)
+          : [];
+  const effectiveIds =
+    f.focus === "europe"
+      ? ids.filter((id) =>
+          inEuropeFocus(competitions.find((c) => c.id === id) || { id }),
+        )
+      : ids;
+  const europe = competitions.filter(inEuropeFocus);
+  const isEurope =
+    effectiveIds.length === europe.length &&
+    europe.every((c) => effectiveIds.includes(c.id));
+  const label =
+    ids.length && !effectiveIds.length
+      ? "Aucune compétition"
+      : isEurope && effectiveIds.length
+        ? "Top 7 Europe + UEFA"
+        : effectiveIds.length === 1
+          ? competitionLabel(
+              competitions.find((c) => c.id === effectiveIds[0]) || {
+                name: "1 compétition",
+              },
+            )
+          : effectiveIds.length
+            ? `${effectiveIds.length} compétitions`
+            : "Toutes les compétitions";
+  const active = effectiveIds.length > 0 || ids.length > 0;
+  return { competitions, ids, label, active };
+}
+
+function CompetitionPicker({ f, competitions, initialIds, onClose }) {
+  const draft = useCompetitionDraft(competitions, initialIds);
+  const {
+    selected,
+    setSelected,
+    query,
+    setQuery,
+    visible,
+    europe,
+    isEurope,
+    toggle,
+  } = draft;
 
   function apply() {
-    const ids = [...selected];
-    // One selection owns the whole home scope. Remove the former single-league
-    // and Europe constraints before applying the saved custom/all selection.
-    f.changeFocus(isEurope && ids.length ? "europe" : "all");
-    f.setFilters((current) => ({ ...current, league: "all", match: "all" }));
-    f.savePreferences({ favoriteLeagueIds: ids, onboardingComplete: true });
+    applyCompetitionDraft(f, draft);
     onClose();
   }
 
@@ -44,9 +136,7 @@ function CompetitionPicker({ f, competitions, initialIds, onClose, country }) {
       footer={
         <>
           <span className="competition-selection-count" role="status">
-            {selected.size
-              ? `${selected.size} sélectionnée${selected.size > 1 ? "s" : ""}`
-              : "Toutes les compétitions"}
+            {draftCount(draft)}
           </span>
           <button
             className="button button-secondary"
@@ -65,23 +155,6 @@ function CompetitionPicker({ f, competitions, initialIds, onClose, country }) {
         </>
       }
     >
-      {country && (
-        // The visitor's country (VI-48): the matches the home's cards favour (home-priority.js).
-        // It applies at once.
-        <section
-          className="home-competition-section home-preferences-country"
-          aria-label="Votre pays"
-        >
-          <h3>Votre pays</h3>
-          <HomeCountryMenu
-            id="home-country-filter"
-            country={country.country}
-            choice={country.choice}
-            countries={country.countries}
-            onChoose={country.onChoose}
-          />
-        </section>
-      )}
       <div
         className="competition-presets"
         role="group"
@@ -131,14 +204,7 @@ function CompetitionPicker({ f, competitions, initialIds, onClose, country }) {
                 <input
                   type="checkbox"
                   checked={selected.has(competition.id)}
-                  onChange={() =>
-                    setSelected((previous) => {
-                      const next = new Set(previous);
-                      if (next.has(competition.id)) next.delete(competition.id);
-                      else next.add(competition.id);
-                      return next;
-                    })
-                  }
+                  onChange={() => toggle(competition.id)}
                 />
                 <Media name={competition.name} url={competition.imageUrl} />
                 <span>
@@ -157,56 +223,12 @@ function CompetitionPicker({ f, competitions, initialIds, onClose, country }) {
 }
 
 /**
- * The home page's competitions: a button and the picker it opens. `trigger` ({ className, text, label }): another
- * button for the same picker (the account page's plain word).
+ * The competitions' window, opened from a button: the account's plain word (`trigger`: { className, text, label }), or
+ * the players' filters. The home page uses its settings bar instead (HomeSettings.jsx, FAILURE_MODES § 77).
  */
-export default function HomePreferences({ f, country = null, trigger = null }) {
+export default function HomePreferences({ f, trigger = null }) {
   const [open, setOpen] = useState(false);
-  const competitions = useMemo(() => {
-    const byId = new Map();
-    for (const season of f.manifest.seasons || [])
-      for (const chunk of season.chunks || [])
-        for (const competition of chunk.competitions || [])
-          if (!byId.has(competition.id)) byId.set(competition.id, competition);
-    if (!byId.size)
-      for (const competition of f.competitions)
-        byId.set(competition.id, competition);
-    return orderedCompetitions([...byId.values()]);
-  }, [f.manifest, f.competitions]);
-  const ids =
-    f.filters.league !== "all"
-      ? [f.filters.league]
-      : f.preferences.favoriteLeagueIds.length
-        ? f.preferences.favoriteLeagueIds
-        : f.focus === "europe"
-          ? competitions.filter(inEuropeFocus).map((c) => c.id)
-          : [];
-  const effectiveIds =
-    f.focus === "europe"
-      ? ids.filter((id) =>
-          inEuropeFocus(competitions.find((c) => c.id === id) || { id }),
-        )
-      : ids;
-  const europe = competitions.filter(inEuropeFocus);
-  const isEurope =
-    effectiveIds.length === europe.length &&
-    europe.every((c) => effectiveIds.includes(c.id));
-  const label =
-    ids.length && !effectiveIds.length
-      ? "Aucune compétition"
-      : isEurope && effectiveIds.length
-        ? "Top 7 Europe + UEFA"
-        : effectiveIds.length === 1
-          ? competitionLabel(
-              competitions.find((c) => c.id === effectiveIds[0]) || {
-                name: "1 compétition",
-              },
-            )
-          : effectiveIds.length
-            ? `${effectiveIds.length} compétitions`
-            : "Toutes les compétitions";
-
-  const active = effectiveIds.length > 0 || ids.length > 0;
+  const { competitions, ids, label, active } = useHomeCompetitions(f);
   return (
     <>
       {trigger ? (
@@ -240,7 +262,6 @@ export default function HomePreferences({ f, country = null, trigger = null }) {
           f={f}
           competitions={competitions}
           initialIds={ids}
-          country={country}
           onClose={() => setOpen(false)}
         />
       )}
