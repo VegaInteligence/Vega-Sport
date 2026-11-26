@@ -768,6 +768,8 @@ class ModelsTest(unittest.TestCase):
             # The reads.
             self.assertEqual(self.one("SELECT count(*) FROM api.match_forecasts WHERE match_key = 9100")[0], 1)
             self.assertEqual(self.one("SELECT count(*) FROM api.season_projections WHERE competition_season_id = 1")[0], 8)
+            # § 73 (S13): the replays the site prints beside the projection.
+            self.assertEqual(x("SELECT DISTINCT simulations FROM api.season_projections WHERE competition_season_id = 1").fetchall(), [(10_000,)])
         finally:
             forecast.MIN_FIT = minimum
         # Too few matches to fit a model: nothing is forecast, and what was is gone.

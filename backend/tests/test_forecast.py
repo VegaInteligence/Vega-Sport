@@ -1,8 +1,12 @@
 """Match forecasts and season projections (vega/forecast.py): the formulas, without a database.
 The database pass over a synthetic season is in test_models.py."""
 
+import json
+import math
+import os
 from pathlib import Path
 import random
+import subprocess
 import sys
 import unittest
 
@@ -443,6 +447,159 @@ class ForecastTest(unittest.TestCase):
         self.assertEqual(forecast.nation_code("Turkiye"), "TUR")
         self.assertEqual(forecast.nation_code("Îles Féroé"), "FRO")
         self.assertEqual(forecast.nation_code("Bosnia and Herzegovina"), "BIH")
+
+
+def reference(table, fixtures, model, strengths, simulations, spread, seed):
+    """A league's replays as they were before § 73 (one stream, Knuth's Poisson draw): the law `simulate` must keep."""
+    rng, teams = random.Random(seed), sorted(table)
+    left = {t: sum(t in f for f in fixtures) for t in teams}
+    reach = {t: spread * (left[t] / (left[t] + table[t][3])) ** 0.5 if left[t] + table[t][3] else 0.0 for t in teams}
+    (ah, bh), (aa, ba) = model["home"], model["away"]
+
+    def goals(rate):
+        limit, k, p = math.exp(-rate), 0, rng.random()
+        while p > limit:
+            k, p = k + 1, p * rng.random()
+        return k
+
+    counts = {t: [0] * len(teams) for t in teams}
+    for _ in range(simulations):
+        now = {t: strengths[t] + (rng.gauss(0.0, reach[t]) if reach[t] else 0.0) for t in teams}
+        row = {t: list(table[t][:3]) for t in teams}
+        for h, a in fixtures:
+            d = (now[h] + forecast.ELO_HOME - now[a]) / 400
+            hs, as_ = goals(math.exp(ah + bh * d)), goals(math.exp(aa - ba * d))
+            for t, f, g in ((h, hs, as_), (a, as_, hs)):
+                row[t][0] += 3 if f > g else 1 if f == g else 0
+                row[t][1] += f
+                row[t][2] += g
+        for place, t in enumerate(sorted(teams, key=lambda t: (-row[t][0], -(row[t][1] - row[t][2]), -row[t][1], rng.random()))):
+            counts[t][place] += 1
+    return {t: [c / simulations for c in counts[t]] for t in teams}
+
+
+class LeagueReplaysTest(unittest.TestCase):
+    """A league replayed 10,000 times, each number tied to its match or its club
+    (docs/calculs/09-audit-2026-11/FAILURE_MODES.md § 73: S1 to S12, written before the code)."""
+
+    def league(self, clubs=20, played=110):
+        """A league part-way: club i of strength 1900 − 25 i; `played` of its home-and-away matches are behind (the
+        stronger side won 2-0 when 100 points or more above, 1-1 otherwise), the others are left."""
+        strengths = {t: 1900.0 - 25 * t for t in range(clubs)}
+        pairs = [(h, a) for h in range(clubs) for a in range(clubs) if h != a]
+        random.Random(1).shuffle(pairs)
+        rows = {t: [0, 0, 0, 0] for t in range(clubs)}
+        for h, a in pairs[:played]:
+            gap = strengths[h] - strengths[a]
+            hs, as_ = (2, 0) if gap >= 100 else (0, 2) if gap <= -100 else (1, 1)
+            for t, f, g in ((h, hs, as_), (a, as_, hs)):
+                rows[t][0] += 3 if f > g else 1 if f == g else 0
+                rows[t][1] += f
+                rows[t][2] += g
+                rows[t][3] += 1
+        return {t: tuple(r) for t, r in rows.items()}, pairs[played:], strengths
+
+    def drawn(self, table, fixtures, match):
+        """The league once `match` is played, 1-1."""
+        after = dict(table)
+        for t in match:
+            points, scored, conceded, played = after[t]
+            after[t] = (points + 1, scored + 1, conceded + 1, played + 1)
+        rest = list(fixtures)
+        rest.remove(match)
+        return after, rest
+
+    def test_s1_a_match_played_elsewhere_leaves_the_other_clubs_points_as_they_were(self):
+        strengths = {t: 1700.0 - 30 * t for t in range(6)}
+        table = {t: (10 - t, 8, 6, 6) for t in range(6)}
+        fixtures = [(4, 5)] + [(h, a) for h in range(4) for a in range(4) if h != a]  # 4 and 5 have nothing else left
+        before = forecast.simulate(table, fixtures, MODEL, strengths, simulations=500, seed=11)
+        after = forecast.simulate(*self.drawn(table, fixtures, (4, 5)), MODEL, strengths, simulations=500, seed=11)
+        for club in range(4):
+            self.assertEqual(before[club]["points"], after[club]["points"])
+        self.assertEqual(after[4]["points"], table[4][0] + 1)
+
+    def test_s2_a_match_played_moves_the_clubs_that_did_not_play_by_what_it_changes(self):
+        table, fixtures, strengths = self.league()
+        match = next(f for f in fixtures if set(f) <= {9, 10, 11, 12})
+        before = forecast.simulate(table, fixtures, MODEL, strengths, simulations=1000, seed=42)
+        after = forecast.simulate(*self.drawn(table, fixtures, match), MODEL, strengths, simulations=1000, seed=42)
+        moves = [abs(sum(before[t]["positions"][:4]) - sum(after[t]["positions"][:4])) for t in table if t not in match]
+        self.assertLess(sum(moves) / len(moves), 0.003)
+
+    def test_s3_one_match_keeps_the_law_of_the_score_grid(self):
+        grid = forecast.score_grid(*forecast.rates(MODEL, 1650, 1600), 0.0)
+        win, draw, _ = forecast.outcome(grid)
+        one = forecast.simulate({0: (0, 0, 0, 0), 1: (0, 0, 0, 0)}, [(0, 1)], MODEL, {0: 1650, 1: 1600}, spread=0.0, seed=5)
+        self.assertAlmostEqual(one[0]["positions"][0], win + draw / 2, delta=0.02)
+        self.assertAlmostEqual(one[0]["points"], 3 * win + draw, delta=0.05)
+        self.assertAlmostEqual(one[1]["points"], 3 * (1 - win - draw) + draw, delta=0.05)
+
+    def test_s4_nothing_systematic_differs_from_the_replays_before(self):
+        table, fixtures, strengths = self.league(clubs=6, played=14)
+        old = reference(table, fixtures, MODEL, strengths, 4000, forecast.STRENGTH_SPREAD, 7)
+        new = forecast.simulate(table, fixtures, MODEL, strengths, simulations=20000, seed=7)
+        for club in table:
+            for place in range(6):
+                self.assertAlmostEqual(new[club]["positions"][place], old[club][place], delta=0.03)
+
+    def test_s5_two_clubs_meeting_twice_more_play_two_matches(self):
+        grid = forecast.score_grid(*forecast.rates(MODEL, 1600, 1600), 0.0)
+        win, draw, _ = forecast.outcome(grid)
+        cells = [(i, j, grid[i][j]) for i in range(len(grid)) for j in range(len(grid)) if grid[i][j] > 1e-9]
+        twice = 0.0  # the home side first after two independent matches: points, then goal difference (the goals follow)
+        for i, j, p in cells:
+            for k, l, q in cells:
+                points = (3 if i > j else 1 if i == j else 0) + (3 if k > l else 1 if k == l else 0)
+                other = (3 if j > i else 1 if i == j else 0) + (3 if l > k else 1 if k == l else 0)
+                margin = (points - other, i + k - j - l)
+                twice += p * q * (1.0 if margin > (0, 0) else 0.5 if margin == (0, 0) else 0.0)
+        self.assertGreater(twice - (win + draw / 2), 0.02)  # the two answers are far enough apart to tell
+        two = forecast.simulate({0: (0, 0, 0, 0), 1: (0, 0, 0, 0)}, [(0, 1), (0, 1)], MODEL, {0: 1600, 1: 1600}, simulations=40000, spread=0.0, seed=5)
+        self.assertAlmostEqual(two[0]["positions"][0], twice, delta=0.01)
+
+    def test_s6_another_process_gives_the_same_answer(self):
+        code = ("import json, sys; sys.path.insert(0, sys.argv[1]); from vega import forecast; "
+                "clubs = ['Arsenal', 'Brighton', 'Chelsea', 'Everton']; "
+                "print(json.dumps(forecast.simulate({c: (3 * i, 4, 4, 3) for i, c in enumerate(clubs)}, "
+                "[(h, a) for h in clubs for a in clubs if h != a], json.loads(sys.argv[2]), {c: 1700 - 40 * i for i, c in enumerate(clubs)}, simulations=200, seed=8), sort_keys=True))")
+        root = str(Path(__file__).resolve().parents[1])
+        runs = [subprocess.run([sys.executable, "-c", code, root, json.dumps(MODEL)], env={**os.environ, "PYTHONHASHSEED": salt},
+                               capture_output=True, text=True, check=True).stdout for salt in ("1", "2")]
+        self.assertEqual(runs[0], runs[1])
+        self.assertEqual(len(json.loads(runs[0])), 4)
+
+    def test_s7_two_editions_of_the_same_clubs_are_not_copies(self):
+        table, fixtures, strengths = self.league(clubs=6, played=14)
+        self.assertNotEqual(forecast.simulate(table, fixtures, MODEL, strengths, simulations=300, seed=1),
+                            forecast.simulate(table, fixtures, MODEL, strengths, simulations=300, seed=2))
+
+    def test_s8_a_match_of_a_club_without_a_strength_is_left_out(self):
+        out = forecast.simulate({0: (3, 1, 0, 1), 1: (0, 0, 1, 1)}, [(0, 9)], MODEL, {0: 1700, 1: 1600}, simulations=100)
+        self.assertEqual(set(out), {0, 1, 9})
+        self.assertEqual([out[t]["points"] for t in (0, 1, 9)], [3.0, 0.0, 0.0])
+        self.assertEqual(out[0]["positions"][0], 1.0)
+
+    def test_s9_clubs_level_on_everything_share_the_places(self):
+        level = forecast.simulate({0: (5, 3, 3, 4), 1: (5, 3, 3, 4)}, [], MODEL, {0: 1600, 1: 1600})
+        self.assertAlmostEqual(level[0]["positions"][0], 0.5, delta=0.02)
+        self.assertAlmostEqual(level[0]["positions"][0] + level[1]["positions"][0], 1.0)
+
+    def test_s10_ten_thousand_replays_unless_asked_otherwise(self):
+        self.assertEqual(forecast.SIMULATIONS, 10_000)
+        table, fixtures, strengths = self.league(clubs=6, played=14)
+        shares = [s for p in forecast.simulate(table, fixtures, MODEL, strengths, seed=4).values() for s in p["positions"]]
+        self.assertTrue(all(abs(s * 10_000 - round(s * 10_000)) < 1e-6 for s in shares))
+        self.assertTrue(any(abs(s * 1_000 - round(s * 1_000)) > 1e-3 for s in shares))
+
+    def test_s11_a_rate_far_above_football_s_ends(self):
+        out = forecast.simulate({0: (0, 0, 0, 0), 1: (0, 0, 0, 0)}, [(0, 1), (1, 0)], MODEL, {0: 3600, 1: 1000}, simulations=200, spread=0.0)
+        self.assertEqual([out[0]["points"], out[1]["points"]], [6.0, 0.0])
+        self.assertEqual(out[0]["positions"], [1.0, 0.0])
+
+    def test_s12_numpy_is_pinned_for_the_worker_s_image(self):
+        lines = (Path(__file__).resolve().parents[1] / "requirements.txt").read_text(encoding="utf-8").split()
+        self.assertEqual(len([line for line in lines if line.startswith("numpy==")]), 1)
 
 
 if __name__ == "__main__":

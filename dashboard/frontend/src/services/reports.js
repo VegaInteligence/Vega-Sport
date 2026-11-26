@@ -9,6 +9,10 @@ export const REPORT_TITLES = {
   match: ["Le match", "Les statistiques", "Probabilité de victoire", "Les meilleures notes", "Avant le match", "Le joueur du match"],
 };
 
+/** The projection card's line: how many season ends were simulated (the number the projection gives, none when it gives none). */
+export const outlookNote = (outlook) =>
+  `${outlook.replays ? `${Number(outlook.replays).toLocaleString("fr-FR")} fins` : "Fins"} de saison simulées après ${outlook.played} journées`;
+
 export function reportImageUrl(id, n, season) {
   return `/api/rapport/image?${new URLSearchParams({ id, n: String(n), ...(season ? { season } : {}) })}`;
 }

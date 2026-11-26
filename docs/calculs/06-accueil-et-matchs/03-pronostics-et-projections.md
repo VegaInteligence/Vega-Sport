@@ -85,9 +85,41 @@ Seules les compositions confirmées sont lues : le « dernier onze » ou le onze
 
 ## La projection d'un championnat
 
-Pour chaque championnat national en cours (au moins 8 clubs, tours réguliers seulement) : le classement actuel, puis les matchs restants **rejoués 1 000 fois** avec les lois ci-dessus. Chaque simulation classe les clubs aux points, à la différence de buts puis aux buts marqués ; la projection donne à chaque club ses points moyens en fin de saison et la part des simulations où il finit à chaque place (titre = première place).
+Pour chaque championnat national en cours (au moins 8 clubs, tours réguliers seulement) : le classement actuel, puis les matchs restants **rejoués 10 000 fois** avec les lois ci-dessus. Chaque simulation classe les clubs aux points, à la différence de buts puis aux buts marqués ; la projection donne à chaque club ses points moyens en fin de saison et la part des simulations où il finit à chaque place (titre = première place).
 
 La force d'un club n'est pas connue exactement et bougera d'ici la fin de saison : chaque simulation décale chaque force d'un tirage d'une loi normale d'écart-type **90 points Elo × √(part de ses matchs restant à jouer)**. Sans ce décalage, un leader de novembre était champion à 99,9 %.
+
+### 10 000 tirages, chacun lié à son match (26 novembre 2026)
+
+Jusqu'à ce jour, un championnat était rejoué 1 000 fois, tous les tirages pris à la suite dans une seule série de nombres aléatoires. Deux défauts, mesurés sur la Premier League du 26 novembre 2026 (classement, 270 matchs restants, Elo et modèle lus sur l'API publique, rejoués en local avec le code du worker) :
+
+- **le bruit d'un calcul** : le titre d'Arsenal, publié à 78,2 %, allait de 74,6 à 81,3 % sur 60 calculs (écart-type 1,4 point) ;
+- **le bruit d'un jour à l'autre** : un match qui sort de la liste décale tous les tirages suivants. Après un Newcastle 1-1 Manchester United, le titre d'Arsenal passait de 79,1 à 76,7 %, pour un effet réel nul ; les chances de finir dans les quatre premiers des 18 clubs qui n'avaient pas joué bougeaient de 0,8 point en moyenne (2,5 au plus), pour un effet réel de 0,09.
+
+Depuis ([forecast.py](../../../backend/vega/forecast.py), `simulate`) :
+
+- **10 000 tirages** ;
+- **chaque club a sa série** (le décalage de sa force, puis ce qui départage une égalité) et **chaque match la sienne** (ses deux scores), nommées par l'édition et par les clubs. Un match joué, reporté ou ajouté laisse les nombres de tous les autres matchs tels quels : ce qui bouge d'un jour à l'autre est ce que les résultats ont changé ;
+- **les buts par inversion** : les buts d'une équipe sont le premier nombre dont la probabilité cumulée de Poisson atteint son nombre aléatoire. Un taux qui bouge un peu garde le score ou le déplace d'un but. La loi est la même qu'avant (deux lois de Poisson indépendantes) ;
+- deux clubs qui se rencontrent encore deux fois sur le même terrain (championnats à trois ou quatre tours) : chaque rencontre a sa série.
+
+| Premier League, 26 novembre 2026 | 1 000 tirages, une série | 10 000 tirages liés |
+|---|---:|---:|
+| Titre d'Arsenal sur 60 calculs | 74,6 à 81,3 % (écart-type 1,4) | 77,3 à 79,2 % (écart-type 0,42) |
+| Quatre premiers, Brighton, sur 60 calculs | 45,9 à 55,2 % (écart-type 1,6) | 49,3 à 52,2 % (écart-type 0,47) |
+| Titre d'Arsenal après Newcastle 1-1 Manchester United | 79,1 → 76,7 % | 78,2 → 78,2 % |
+| Quatre premiers des 18 clubs qui n'ont pas joué : mouvement moyen, le plus grand | 0,81 et 2,50 points | 0,09 et 0,29 point |
+| Temps de calcul (machine de développement) | 0,3 à 0,6 s | 0,55 s |
+
+Référence : 300 000 tirages de la même loi tirés autrement ; aucune part du nouveau calcul ne s'en écarte de plus de 1,1 point. Entrées, commande et sortie : [league-replays-20261126](../../../backend/verification/league-replays-20261126/run.py).
+
+**Écarté.** La correction des petits scores de Dixon et Coles dans les tirages : les nuls passent de 21,9 à 22,6 % par match rejoué et aucune part ne bouge de plus de 0,2 point.
+
+**Les coupes et la Ligue des nations** sont rejouées 10 000 fois elles aussi, avec leur code d'avant : une seule série par compétition, leurs nombres ne sont pas liés.
+
+**Pas mesuré :** le temps sur le worker (0,5 vCPU).
+
+**Ce que ces tirages ne règlent pas.** Le décalage des forces pèse dix fois plus que le bruit des tirages : sur le même état de la Premier League, le titre d'Arsenal vaut 95,4 % sans décalage, 93,3 % à 30 points, 87,1 % à 60, 78,4 % à 90 et 66,2 % à 130. La vérification ci-dessous (55 saisons, depuis la mi-parcours seulement) est la prochaine chose à élargir.
 
 ### Vérification sur des saisons passées
 
@@ -109,7 +141,7 @@ Depuis 2024/2025, la Ligue des champions, la Ligue Europa et la Ligue Conférenc
 
 ### La phase de ligue
 
-Elle est rejouée comme un championnat (même modèle, mêmes 1 000 simulations, même décalage des forces), avec deux règles propres :
+Elle est rejouée comme un championnat (même modèle, mêmes 10 000 simulations, même décalage des forces), avec deux règles propres :
 
 - **huit matchs par club** : un match à élimination directe peut apparaître dans la base avant que son tour soit nommé ; une fois qu'un club a ses huit matchs (joués, puis à jouer par date), tout match suivant n'est pas de la phase de ligue ;
 - **classement** aux points, puis à la différence de buts, puis aux buts marqués, puis au hasard (les critères suivants du règlement, buts à l'extérieur, victoires, coefficient, ne sont pas lus).
@@ -132,7 +164,7 @@ Chaque simulation joue ensuite le tableau, selon le règlement UEFA :
 - **Tirs au but** : à égalité après la prolongation, chaque club passe **une fois sur deux** (50/50). Ces deux règles ont été choisies le 16 novembre 2026.
 - **Tours déjà tirés ou joués** : un tirage connu remplace le tirage au sort ; un match déjà joué compte avec son score réel (tirs au but compris) et seuls les matchs restants sont rejoués. Un tirage partiel des barrages garde les rencontres tirées et tire les clubs restants dans leurs paires.
 
-Chaque club reçoit la part des simulations où il finit dans les huit premiers, de la 9ᵉ à la 24ᵉ place, au-delà de la 24ᵉ, puis où il joue les huitièmes, les quarts, les demies, la finale, et où il gagne. Sur 1 000 simulations, les parts d'un tour font toujours le nombre de clubs du tour : 16 en huitièmes, 8 en quarts, 4 en demies, 2 en finale, 1 vainqueur.
+Chaque club reçoit la part des simulations où il finit dans les huit premiers, de la 9ᵉ à la 24ᵉ place, au-delà de la 24ᵉ, puis où il joue les huitièmes, les quarts, les demies, la finale, et où il gagne. Sur les 10 000 simulations, les parts d'un tour font toujours le nombre de clubs du tour : 16 en huitièmes, 8 en quarts, 4 en demies, 2 en finale, 1 vainqueur.
 
 La route `/api/forecasts/season` rend alors `format: "league-phase"` et, pour chaque club, `stages` (`top8`, `playoff`, `out`, `r16`, `qf`, `sf`, `final`, `win`) ; sur le site, la vue « Projection » de la coupe en fait une colonne chacune, ombrée selon la part, et colore les huit premières places et les places 9 à 24 du classement projeté.
 
@@ -220,7 +252,7 @@ Code : `knockout_projections` et `simulate_knockout` dans [forecast.py](../../..
 - **Tous les clubs ont un Elo.** Sinon la coupe attend, comme une coupe européenne.
 - **La Coupe d'Allemagne** est lue chez OpenLigaDB, qui donne ses tours et ses tirs au but. La copie d'open-matchday n'est pas projetée.
 
-**Le calcul.** Les tours restants sont rejoués 1 000 fois :
+**Le calcul.** Les tours restants sont rejoués 10 000 fois :
 
 - les rencontres déjà tirées sont jouées telles quelles, et les matchs déjà joués comptent avec leur score ;
 - chaque tour suivant est tiré au hasard, en un match, chez le premier tiré ;
@@ -282,7 +314,7 @@ Code : `nations_projections`, `simulate_nations` et `uefa_order` dans [forecast.
 
 **Quelles éditions.** La Ligue A (lue chez OpenLigaDB) et les Ligues B à D (lues chez International Results), à partir de 2026/2027. Chaque groupe se joue en aller-retour : une manche ni jouée ni annoncée est un match qui reste à jouer (International Results ne donne pas les matchs à venir). Une édition dont une sélection n'a pas d'Elo attend, comme une coupe.
 
-**Le calcul.** Les matchs restants sont rejoués 1 000 fois d'après l'Elo de chaque sélection ; sa force peut bouger jusqu'au 30 juin (90 points × √(part de l'année qui reste)). Chaque groupe est classé comme l'UEFA le fait, et comme le classement du site :
+**Le calcul.** Les matchs restants sont rejoués 10 000 fois d'après l'Elo de chaque sélection ; sa force peut bouger jusqu'au 30 juin (90 points × √(part de l'année qui reste)). Chaque groupe est classé comme l'UEFA le fait, et comme le classement du site :
 
 1. les points ;
 2. entre sélections à égalité : points, différence de buts et buts de leurs matchs entre elles, repris entre celles qui restent à égalité ;

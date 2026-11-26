@@ -143,7 +143,7 @@ export function buildClubReport({ id, season, read, clubs, projection, forecasts
     const n = own.places.length;
     const table = [...rows].sort((a, b) => b.points - a.points || b.projectedPoints - a.projectedPoints);
     const share = (from, to) => round(own.places.slice(from, to).reduce((t, x) => t + (x || 0), 0) * 100, 1);
-    outlook = { league: projection.competition, played: own.played, points: own.points, projectedPoints: round(own.projectedPoints, 1),
+    outlook = { league: projection.competition, replays: projection.model?.replays ?? null, played: own.played, points: own.points, projectedPoints: round(own.projectedPoints, 1),
       position: table.findIndex((r) => r.id === id) + 1, teams: n, title: share(0, 1), top4: share(0, 4), relegation: share(n - 3, n),
       places: own.places.map((x) => round((x || 0) * 100, 1)),
       table: table.map((r) => ({ id: r.id, name: r.name, played: r.played, points: r.points, projectedPoints: round(r.projectedPoints, 1) })) };
