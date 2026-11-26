@@ -5881,8 +5881,12 @@ clubs' crests, and slightly smaller choices (Probabilité de victoire / xG cumul
   arrows (round), its other tiles (radius 22 px), « Tous les joueurs », the line-ups' search and the substitutes' chips,
   the lists, the season stepper and « Voir tout » of « Classement »: `--pill-quiet` (white 7 % in dark, night 6 % in
   light), a darker veil on hover. A saved match keeps its accent on « Enregistrer ».
-- **Sizes.** The head's pills 44 px (the back link 34 px, 36 px on a phone); a choice 32 px, 13 px text (36 px, 14 px
-  on a phone). « Tous les joueurs » takes the footer's padding so that the best grades still end with the shot map
+- **Sizes.** A choice 32 px, 13 px text (36 px, 14 px on a phone). After the first release hugo found the head's
+  buttons too big: the back link, the competition's button, « Rapport du match », « Enregistrer », the lists and the
+  players' search take a choice's size too; the season stepper of « Classement » the height of the views' choices
+  beside it (36 px, 40 px on a phone); the thread's arrows keep 44 px.
+- **One pill, no frame.** The players' search of « Compositions » is one pill: its label has no border nor fill
+  around the field (hugo's screenshot of the release: a rectangle around the rounded field). « Tous les joueurs » takes the footer's padding so that the best grades still end with the shot map
   (§ 63.3, R10).
 - **No slash** between the back link and the competition's button. **No frame, no fill** behind the scoreboard's crests.
 - **Unchanged:** the six tabs (the selected one's colour and line), the logos, « Meilleure note du match » and the three
@@ -5897,11 +5901,64 @@ clubs' crests, and slightly smaller choices (Probabilité de victoire / xG cumul
   (tokens aside), each token is set in dark and light, the layout imports the sheet; the crests have `border: 0` and
   `background: none`; MatchNav has no slash. Red on main (no sheet).
 - **R42** (`tests/e2e/match-tabs.e2e.mjs`, computer, dark, a build) back link, competition, report and bookmark are
-  pills without border; no slash; competition and report 44 px; the report filled, the others quiet; round 44 px
+  pills without border; no slash; back link, competition, report and bookmark 32 px; the report filled, the others quiet; round 44 px
   arrows; the current tile filled, another quiet, radius 22 px; both crests `0px` and transparent; the choices' track
   round, the pressed choice filled and 32 px; the selected tab, its line and the best grade's block exactly as main
   draws them (read on main 64ac3f9 in a build). Red on main.
 - **R43** (same page, light) the filled ones night on ivory, the quiet ones night 6 %. Red on main.
-- **R44** (phone) competition and report 44 px, a choice 36 px, the report round. Red on main.
+- **R44** (phone) competition, report and a choice 36 px, the report round. Red on main.
+- **R45** (computer, after the release) in « Classement » the season stepper 36 px, the height of the views' choices; in
+  « Compositions » the players' search 32 px, radius 999 px, its label with no border (`0px`) and no fill. Red on
+  5a4476b (stepper 44, the label's 1 px frame on the surface, field 34), green after.
 - The E2E's season pages now answer the publication the API's manifest names (GH129-m pins them to it): with « e2e »
   the head's thread and button were never drawn and R15–R19 failed on main before § 72.
+
+## 73. The round picker: every round, numbered (hugo, 26 Nov 2026, 10 h 32 « the one right now sucks as hell »; mock-up https://claude.ai/artifact/UEAvpQrYfJ5VqQafWT9jJC, piste A chosen at 10 h 38 « but change the day selector like 1,2,3 », version 2 approved at 10 h 40 « ok super envoie en main »; written before the tests)
+
+The picker that opens from the competition's button in the match page's head showed one scrolling strip of rounds, and
+only the rounds played: the provider names the round of played matches only (`round_name` null for the others), so
+Ligue 1 stopped at 11 of 34 and the 207 matches to come were nowhere. 140 of them carry midnight UTC for a time not set
+yet, read as « 02:00 ».
+
+### 73.1 Rules
+
+- **Every round of a league.** `inferRounds` (`services/match-nav.js`): only when every named round is a number (no
+  play-off) and the named rounds hold `size` matches between `2 × size` clubs. A named round short of matches (under
+  way, or a match postponed) takes, again and again, a match to come of two clubs it lacks when that match is the next
+  of both. The matches left, by kick-off, make rounds of `size` with every club once, numbered after the last named,
+  at most `2 × (clubs − 1)`; at the first that does not, the rest stays unnamed and out of the picker, as before. Never a
+  match in a wrong round, never a match lost: Ligue 1 2026/2027 read on 26 Nov, 306 matches in 34 rounds of 9.
+- **A time not set is no time.** A midnight UTC kick-off shared by five matches or more is a date without its time
+  (`withoutUnsetTimes`): « à venir » in the picker, no time on the thread's tile. A single real midnight kick-off keeps it.
+- **Numbered pills, all in sight.** The rounds are pills 1 to 34 in a grid, no scrolling: rows as even as can be on a
+  computer (17 + 17; one row up to 19), 9 a row on a phone. Played in a veil, the next outlined, the later plain, the
+  chosen one filled, a dot on the open match's round. A cup's named rounds wrap at their width. Under them, a bar and
+  « 11 journées jouées sur 34 » (numbered rounds only).
+- **The round's head** « 11ᵉ journée », its dates and « 9 matchs joués » / « 3 joués sur 9 » / « à venir », the
+  previous / next arrows beside it; its matches under their day, the open match filled. The club search lists by round.
+- **Unchanged:** the competition's button, the thread of matches (its gap kept at 4 px), the search's results, Escape.
+
+### 73.2 Failure modes and expected outcomes
+
+- **R46** (`tests/match-nav-rounds.test.mjs`) a double round robin of 18 clubs, 11 rounds played: 34 rounds of 9, each
+  with the 18 clubs, every match in its own round; a round under way (3 of 9 played) takes its own 6; a postponed match
+  of round 5 set after round 12 goes back to round 5; a round-20 match moved inside round 19 stops the rounds there, none
+  made up, none of the named ones short; a cup unchanged; a match to come has its place in the thread. Red on main
+  (11 rounds).
+- **R48** (same file) a round at midnight UTC loses its time, one real midnight kick-off keeps it. Red on main.
+- **R47** (`tests/e2e/match-tabs.e2e.mjs`, computer, dark, a build) the rounds 13, 14, 15 as pills, played / played /
+  next, 14 pressed and dotted, a 3-column grid with no scroll, 32 px, « 2 journées jouées sur 3 », « 14ᵉ journée »,
+  two arrows, the matches under their days, the open match filled ivory; « Journée suivante » goes to 15. Red on main.
+
+### 73.3 The window (hugo, 26 Nov 2026, 11 h 04 on the release, a Champions League screenshot: « le truc rectangulaire droit la ca va pas du tout » ; mock-up https://claude.ai/artifact/ENDVBWG9YzVEPxPaXKi6gL, piste A « La fenêtre arrondie » chosen at 11 h 08 « va avec A envoie dans main »)
+
+- The picker is no longer the site's square dialog: 28 px corners, no frame, no line under the title, the competition's
+  logo before its name, the close button a round quiet pill (32 px) like the arrows; `:root dialog.picker` above the
+  site's `.modal` whatever the stylesheets' order. On a phone it keeps 10 px around it and its corners, no longer edge to
+  edge. Every other dialog of the site is unchanged.
+- The numbered pills are 44 px wide at most: the 8 rounds of the Champions League no longer stretch over the width.
+- **R49** (`match-tabs.e2e.mjs`, computer) the window's radius 28 px, border 0, the header's line 0, the close button
+  50 % without border, a logo in the header, the widest pill ≤ 44 px. Red on dadd055 (0 px, 1 px, 1 px, square, no logo,
+  pills stretched to the width).
+- **R50** (phone) radius 28 px, border 0, at least 8 px between the window and the screen's edges. Red on dadd055.
+

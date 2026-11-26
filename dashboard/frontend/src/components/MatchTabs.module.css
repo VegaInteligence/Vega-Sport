@@ -1208,14 +1208,11 @@
   align-items: center;
   flex: 0 1 260px;
   min-width: 0;
-  height: 30px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  transition: border-color 0.15s;
-}
-.search:focus-within {
-  border-color: var(--border-strong);
+  height: var(--pill-h-sm, 32px);
+  /* The field itself is the pill (match-pills.css, § 72): no frame around it. */
+  border: 0;
+  border-radius: 999px;
+  background: none;
 }
 .search :global(.icon) {
   position: absolute;
@@ -1242,6 +1239,6 @@
 @media (max-width: 640px) {
   .search {
     flex: 1 1 100%;
-    height: var(--control-h);
+    height: var(--pill-h-sm, var(--control-h));
   }
 }

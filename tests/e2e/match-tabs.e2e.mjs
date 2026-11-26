@@ -16,7 +16,11 @@
 // next keep the view · R18 the competition's button opens the picker · R19 the head on a phone.
 // § 64 (hugo, 19 h 39): R26 each team in its crest's colour, blue and violet without one.
 // § 72 (hugo, 26 Nov, piste A of the buttons' mock-up): R42 the head and the choices as pills (dark) · R43 the same in
-// light · R44 the pills on a phone; the six tabs, the best grade and the leaders unchanged.
+// light · R44 the pills on a phone; the six tabs, the best grade and the leaders unchanged · R45 (hugo's review of the
+// release) the season stepper the height of the choices, the players' search without a frame around its pill.
+// § 73 (hugo chose piste A « Les journées numérotées » of the round picker's mock-up, 26 Nov): R47 the rounds as numbered
+// pills, all in sight, the round's matches by day · § 73.3 (hugo, 11 h 04: « le truc rectangulaire droit ») R49 the
+// window rounded, R50 on a phone with a margin.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -151,6 +155,8 @@ const FIXTURES = [13, 14, 15].flatMap((round, r) => [0, 1, 2, 3].map((k) => {
     score_home: played ? k % 3 : null, score_away: played ? 1 : null };
 }));
 const ORDER = FIXTURES.map((m) => m.id);
+// Round 14's days in Paris: the picker shows its matches under each (§ 73, R47).
+const DAYS_14 = new Set(FIXTURES.filter((m) => m.round_name === "14").map((m) => new Date(m.time_utc).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }))).size;
 const momentum = { points: Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, value: Math.round(Math.sin(i / 6) * 60) })) };
 const forecast = {
   match: id, points: Array.from({ length: 91 }, (_, minute) => {
@@ -185,6 +191,26 @@ async function check(name, expected, run) {
     result.passed = false;
   }
   process.stdout.write((result.passed ? "PASS " : "FAIL ") + name + (result.passed ? "" : " — " + result.actual.split("\n")[0]) + "\n");
+}
+
+/** The round picker's window (§ 73.3): its corners, frame, header line, close button, logo, widest pill, margins. */
+async function pickerWindow(page) {
+  await page.locator(".match-head button[data-match-picker]").click();
+  const dialog = page.getByRole("dialog");
+  await dialog.waitFor();
+  await page.waitForTimeout(300);
+  const got = await dialog.evaluate((d) => {
+    const cs = getComputedStyle(d), head = d.querySelector(".modal-header"), close = d.querySelector(".modal-close");
+    const r = d.getBoundingClientRect();
+    return {
+      radius: cs.borderTopLeftRadius, border: cs.borderTopWidth, headLine: getComputedStyle(head).borderBottomWidth,
+      close: getComputedStyle(close).borderRadius, closeBorder: getComputedStyle(close).borderTopWidth,
+      logo: Boolean(head.querySelector("img, svg, [data-media-state]")),
+      widest: Math.max(...[...d.querySelectorAll('[role="group"][aria-label="Journées"] button')].map((b) => Math.round(b.getBoundingClientRect().width))),
+      margin: Math.round(Math.min(r.left, innerWidth - r.right, r.top, innerHeight - r.bottom)),
+    };
+  });
+  return { dialog, got };
 }
 
 /** A page on the match, its families mocked. `plan`: { status, minutes (from kick-off), roundName, forecast, momentum }. */
@@ -372,8 +398,9 @@ try {
           const pill = (x, what) => { assert.ok(x, what + " missing"); assert.equal(x.radius, "999px", what + " radius"); assert.equal(x.border, "0px", what + " border"); };
           pill(got.back, "back"); pill(got.competition, "competition"); pill(got.report, "report"); pill(got.bookmark, "bookmark");
           assert.equal(got.slash, 0, "no « / » between the back link and the competition");
-          assert.equal(got.competition.h, 44, "competition height");
-          assert.deepEqual([got.report.bg, got.report.color, got.report.h], [fill, ink, 44], "report filled");
+          // hugo, after the first release: the head's buttons the size of a choice (32 px), the arrows 44 px.
+          assert.deepEqual([got.competition.h, got.bookmark.h, got.back.h], [32, 32, 32], "head heights");
+          assert.deepEqual([got.report.bg, got.report.color, got.report.h], [fill, ink, 32], "report filled");
           assert.deepEqual([got.back.bg, got.bookmark.bg, got.competition.bg], [quiet, quiet, quiet], "quiet pills");
           assert.deepEqual([got.step.radius, got.step.border, got.step.w, got.step.h], ["50%", "0px", 44, 44], "round steps");
           assert.deepEqual([got.current.bg, got.current.color, got.current.radius, got.current.border], [fill, ink, "22px", "0px"], "current tile");
@@ -429,6 +456,53 @@ try {
         await page.keyboard.press("Escape");
         await dialog.waitFor({ state: "detached" }).catch(() => {});
         assert.deepEqual(got, { round: "regular:14", current: 1 });
+        return got;
+      });
+
+      await check("R47 the rounds as numbered pills, all in sight; played in a veil, the next outlined, the chosen filled; the round's matches by day",
+        { rounds: ["13", "14", "15"], states: ["played", "played", "next"], pressed: "14", dot: "14", cols: 3, heights: [32], progress: "2 journées jouées sur 3",
+          head: "14ᵉ journée", steps: 2, days: DAYS_14, current: { bg: "rgb(244, 241, 234)" }, scroll: false }, async () => {
+        await page.locator(".match-head button[data-match-picker]").click();
+        const dialog = page.getByRole("dialog");
+        await dialog.waitFor();
+        const got = await dialog.evaluate((d) => {
+          const grid = d.querySelector('[role="group"][aria-label="Journées"]');
+          const buttons = [...grid.querySelectorAll("button")];
+          const row = d.querySelector('a[aria-current="page"]');
+          return {
+            rounds: buttons.map((b) => b.textContent.trim()),
+            states: buttons.map((b) => b.dataset.state || ""),
+            pressed: buttons.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent.trim(),
+            dot: buttons.find((b) => b.hasAttribute("data-current"))?.textContent.trim(),
+            cols: getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+            heights: [...new Set(buttons.map((b) => Math.round(b.getBoundingClientRect().height)))],
+            progress: d.querySelector("[data-round-progress] span")?.textContent.trim(),
+            head: d.querySelector("h3")?.textContent.trim(),
+            steps: d.querySelectorAll('button[aria-label^="Journée "]').length,
+            days: d.querySelectorAll("h4").length,
+            current: { bg: getComputedStyle(row).backgroundColor },
+            scroll: grid.scrollWidth > grid.clientWidth,
+          };
+        });
+        await page.screenshot({ path: join(out, "choix-journee-bureau.png") });
+        await dialog.getByRole("button", { name: "Journée suivante" }).click();
+        const after = await dialog.evaluate((d) => d.querySelector('[role="group"] button[aria-pressed="true"]')?.textContent.trim());
+        await page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "detached" }).catch(() => {});
+        assert.equal(after, "15", "« Journée suivante » goes to 15");
+        assert.deepEqual(got, { rounds: ["13", "14", "15"], states: ["played", "played", "next"], pressed: "14", dot: "14", cols: 3, heights: [32],
+          progress: "2 journées jouées sur 3", head: "14ᵉ journée", steps: 2, days: DAYS_14, current: { bg: "rgb(244, 241, 234)" }, scroll: false });
+        return got;
+      });
+
+      await check("R49 the picker's window rounded (28 px), no frame nor line under the title, a round close button, the competition's logo, pills of 44 px at most",
+        { radius: "28px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widestMax: 44 }, async () => {
+        const { dialog, got } = await pickerWindow(page);
+        await page.screenshot({ path: join(out, "choix-journee-fenetre-bureau.png") });
+        await page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "detached" }).catch(() => {});
+        assert.deepEqual({ ...got, widest: undefined, margin: undefined }, { radius: "28px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widest: undefined, margin: undefined });
+        assert.ok(got.widest <= 44, `widest pill ${got.widest}px`);
         return got;
       });
 
@@ -666,6 +740,29 @@ try {
           return { ...got, allViews: names };
         });
 
+      await check("R45 the season stepper the height of the views' choices; the players' search one pill, no frame around it",
+        { stepper: "= choices (36 px)", searchFrame: "0px, transparent", searchRadius: "999px" }, async () => {
+          await f.go("standings");
+          const views = panel(page).getByRole("group", { name: "Vue de la compétition" });
+          await views.waitFor();
+          const stepper = panel(page).locator(".edition-stepper").first();
+          await stepper.waitFor();
+          const heights = { stepper: Math.round((await stepper.boundingBox()).height), choices: Math.round((await views.boundingBox()).height) };
+          await panel(page).locator(".competition-detail-head, .edition-stepper").first().screenshot({ path: join(out, "pilules-saison-bureau.png") }).catch(() => {});
+          await f.go("lineups");
+          const input = panel(page).getByRole("searchbox", { name: "Rechercher un joueur" });
+          await input.waitFor();
+          const search = await input.evaluate((el) => {
+            const box = getComputedStyle(el.parentElement), field = getComputedStyle(el);
+            return { frame: box.borderTopWidth + ", " + (box.backgroundColor === "rgba(0, 0, 0, 0)" ? "transparent" : box.backgroundColor), radius: field.borderTopLeftRadius, h: Math.round(el.getBoundingClientRect().height) };
+          });
+          const got = { ...heights, search };
+          await input.evaluate((el) => el.parentElement.parentElement.scrollIntoView({ block: "center" }));
+          await page.screenshot({ path: join(out, "pilules-recherche-bureau.png") });
+          assert.deepEqual(got, { stepper: 36, choices: 36, search: { frame: "0px, transparent", radius: "999px", h: 32 } });
+          return got;
+        });
+
       await check("M9 the former addresses", { shots: "Résumé", players: "Compositions", standings: "Classement", stats: "Statistiques" }, async () => {
         const got = {};
         for (const view of ["shots", "players", "standings", "stats"]) {
@@ -776,15 +873,26 @@ try {
         assert.ok(resume <= 0 && lineups <= 0, JSON.stringify({ resume, lineups }));
         return { resume, lineups };
       });
-      await check("R44 phone: the pills keep 44 px for the competition and the report, 36 px for a choice", { competition: 44, report: 44, pressed: 36 }, async () => {
+      await check("R44 phone: the competition, the report and a choice all 36 px", { competition: 36, report: 36, pressed: 36 }, async () => {
         await f.go();
         await settle(f.page, "Le match minute par minute");
         const got = await pills(f.page);
         const sizes = { competition: got.competition?.h, report: got.report?.h, pressed: got.pressed?.h };
-        assert.deepEqual(sizes, { competition: 44, report: 44, pressed: 36 });
+        assert.deepEqual(sizes, { competition: 36, report: 36, pressed: 36 });
         assert.equal(got.report.radius, "999px", "report radius");
         await f.page.locator(".match-head").screenshot({ path: join(out, "pilules-haut-telephone.png") });
         return { ...sizes, got };
+      });
+
+      await check("R50 phone: the picker's window rounded (28 px) with a margin around it, not edge to edge", { radius: "28px", border: "0px", marginMin: 8 }, async () => {
+        const { dialog, got } = await pickerWindow(f.page);
+        await f.page.screenshot({ path: join(out, "choix-journee-fenetre-telephone.png") });
+        await f.page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "detached" }).catch(() => {});
+        assert.equal(got.radius, "28px");
+        assert.equal(got.border, "0px");
+        assert.ok(got.margin >= 8, `margin ${got.margin}px`);
+        return got;
       });
     } finally {
       await f.close();
