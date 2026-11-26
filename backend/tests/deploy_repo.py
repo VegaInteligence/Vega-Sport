@@ -6,14 +6,33 @@ temporary git repository of them, so that the real deploy.sh exports a real comm
 VEGA_DEPLOY_TREE names another git tree to deploy instead (its files as git would export them; the tests and their
 stand-ins stay this checkout's): the product files before a change, to show the tests red against them.
 """
+import hashlib
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = Path(os.environ.get("VEGA_DEPLOY_TREE") or ROOT)
 PARTS = ("backend", "infra", "dashboard")
+
+
+def machine_host():
+    """This machine as a workstation's Deploy names it (FAILURE_MODES_OPTIMISATIONS.md GH157-u, GH157-af): (its short
+    host name, that name and the first 10 hex digits of the SHA-256 of its machine identity — Linux's /etc/machine-id,
+    32 hex digits not all zero; macOS's IOPlatformUUID, a UUID not null — when it has one, else the short name)."""
+    short = subprocess.run(["hostname", "-s"], capture_output=True, text=True).stdout.strip() or "unknown"
+    ident = ""
+    if Path("/etc/machine-id").is_file():
+        value = Path("/etc/machine-id").read_text().strip().lower()
+        ident = value if re.fullmatch(r"[0-9a-f]{32}", value) and value.strip("0") else ""
+    elif Path("/usr/sbin/ioreg").exists():
+        out = subprocess.run(["/usr/sbin/ioreg", "-rd1", "-c", "IOPlatformExpertDevice"], capture_output=True, text=True).stdout
+        found = re.search(r'"IOPlatformUUID" = "([^"]*)"', out)
+        value = (found.group(1) if found else "").upper()
+        ident = value if re.fullmatch(r"[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}", value) and value.replace("-", "").strip("0") else ""
+    return short, f"{short}-{hashlib.sha256(ident.encode()).hexdigest()[:10]}" if ident else short
 
 
 def tracked(root=ROOT):

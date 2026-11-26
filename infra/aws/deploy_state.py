@@ -161,24 +161,26 @@ def update(bucket, owner, etag, changes, done=False, release=False):
 
 
 def this_host():
-    return subprocess.run(["hostname", "-s"], capture_output=True, text=True).stdout.strip() or "unknown"
+    return run_lock.host()
 
 
 def abandon(bucket, holder, reason):
-    """The owner's attestation that the holder is dead, for what nothing here can check: a workstation's run of another
-    host. A GitHub run is the Deploy's to check (GitHub says when its attempt completed); a run of this host too (its run
-    lock, held while any process of the run lives: run_lock.py)."""
+    """The owner's attestation that the holder is dead, for what nothing here can prove (GH157-ag): a workstation's run
+    whose lock is not in this machine's lock directory (another machine's, of any name or identity; this one's before a
+    restart or a cleaning of it) or whose name has no run token (an earlier Deploy's). Refused for a GitHub run (the
+    Deploy asks GitHub whether its attempt completed) and for a run whose lock is here: held, it lives; free, the Deploy
+    takes it over itself (run_lock.py)."""
     doc, etag = get(bucket)
     if doc.get("owner") != holder:
         raise Refused(1, f"{holder} does not hold the Deploy state (its holder: {doc.get('owner')}); nothing is written")
     if re.fullmatch(r"gh-\d+-\d+", holder):
         raise Refused(1, f"{holder} is a GitHub run: the Deploy asks GitHub whether its attempt completed; nothing is written")
-    found = re.fullmatch(r"host:([^:]+):(\d+):(\d+)", holder)
-    if found and found[1] == this_host():
-        lock = run_lock.path(found[2], found[3])
-        state = "held: a process of that run lives" if run_lock.held(lock) else "free: no process of that run lives"
-        raise Refused(1, f"{holder} ran on this host, which can tell (its lock {lock} is {state}): the Deploy checks it itself; nothing is written")
-    doc["abandoned"] = {"holder": holder, "at": int(time.time()), "reason": reason, "by": this_host()}
+    state, lock = run_lock.holder_state(holder)
+    if state == "held":
+        raise Refused(1, f"{holder}: its lock {lock} is held: a process of that run lives; nothing is written")
+    if state == "free":
+        raise Refused(1, f"{holder}: its lock {lock} is here and free: the Deploy takes it over itself; nothing is written")
+    doc["abandoned"] = {"holder": holder, "at": int(time.time()), "reason": reason, "by": this_host() or run_lock.short_name()}
     put(bucket, doc, etag=etag)
     return f"deploy state: {holder} attested dead by the owner ({reason}); the next Deploy takes the state over"
 

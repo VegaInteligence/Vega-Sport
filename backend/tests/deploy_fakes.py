@@ -37,7 +37,8 @@ request repeated with one token returns its task); `faults.migrate_running` ({"f
 task RUNNING for that many rounds of the waiter; `faults.list_lag` (n) answers the next n ListTasks by token empty, as
 an eventually consistent list; a task marked `missing` answers MISSING; `overlaps` records a migrate task started while
 another ran; no worker stack, no cluster. SSM keeps each region's parameters apart (`<region>:<name>` outside the
-default region) and deletes. `faults.build_fail`: the image build fails.
+default region) and deletes. `faults.build_fail`: the image build fails. `faults.no_machine_identity`: the machine has
+no identity of its own (`infra/aws/run_lock.py host` runs for real, its sources absent; GH157-af).
 """
 import fcntl
 import hashlib
@@ -719,6 +720,11 @@ def python3(argv):
         open(path, "w").write(kind)
         print(path)
         return
+    if argv == ["infra/aws/run_lock.py", "host"] and load().get("faults", {}).get("no_machine_identity"):
+        # A machine with no identity of its own (GH157-af): the real script, its two sources absent.
+        real = os.environ["FAKE_PYTHON_REAL"]
+        os.execv(real, [real, "-c", "import sys; sys.path.insert(0, 'infra/aws'); from pathlib import Path; import run_lock; "
+                        "run_lock.MACHINE_ID = run_lock.IOREG = Path('/nonexistent/vega-machine-identity'); sys.exit(run_lock.main(['host']))"])
     if argv[:1] and argv[0].startswith("infra/aws/") and argv[0].endswith(".py"):
         real = os.environ["FAKE_PYTHON_REAL"]
         os.execv(real, [real, *argv])

@@ -27,7 +27,8 @@
 # deployed, the schedule that starts its ingestor is off), MIGRATE_WAIT_ROUNDS (6: rounds of ten minutes a migrate task
 # is waited for), MIGRATE_REPLAY_WINDOW (3600 s: how long after its asking a migrate request whose answer is unknown is
 # replayed), CLOSE_ROUNDS and CLOSE_PAUSE (240 × 15 s: how long a stack's operation in progress is awaited before the
-# first change). The Deploy's state: s3://vega-v2-deploy-state-<account>-<region>/state.json, in the roles stack's bucket
+# first change), DEPLOY_LOCK_DIR (/tmp: where a workstation's run keeps its lock, a directory of this machine's own). The
+# Deploy's state: s3://vega-v2-deploy-state-<account>-<region>/state.json, in the roles stack's bucket
 # (GH157.3); another run's is taken over only once that run is known dead (infra/aws/README.md, Takeover and first install).
 # VI-35: WAF_MODE (Count or Block; unset, the web ACL keeps its mode, Count the first time).
 # GH220: SMOKE_TEAM and SMOKE_PLAYER, both or neither (public ids t_… and p_…): the club and the player step 12 follows;
@@ -162,15 +163,24 @@ account_preflight
   echo "deploy: stack vega-v2-deploy-roles: its output DeployGrants is not 1: the owner updates it from the Mac with infra/aws/deploy-roles.yaml (infra/aws/README.md, One-time setup); nothing is changed" >&2
   exit 1
 }
-# Who deploys: a GitHub run (its run and attempt), else a workstation's (its host, its process, its start). A
-# workstation's run holds, from here, a lock every command it starts inherits (descriptor 9, infra/aws/run_lock.py):
-# while any process of the run lives, another Deploy of this host sees it held (GH157-ad).
+# Who deploys: a GitHub run (its run and attempt), else a workstation's: host:<this machine>:<its process>:<a token of its
+# own, 32 random hex digits>. A workstation's run holds, from here, a lock every command it starts inherits (descriptor 9
+# on <DEPLOY_LOCK_DIR, /tmp>/vega-deploy-<token>.lock, infra/aws/run_lock.py): while any process of the run lives, it is
+# held (GH157-ad). This machine: its short name and a digest of its machine identity (run_lock.py host, GH157-u); a
+# machine without one names no host and a workstation's Deploy stops there (GH157-af).
+THIS_HOST=$(python3 infra/aws/run_lock.py host) || THIS_HOST=
+LOCK_DIR=${DEPLOY_LOCK_DIR:-/tmp}
 OWNER=${GITHUB_RUN_ID:+gh-$GITHUB_RUN_ID-${GITHUB_RUN_ATTEMPT:-1}}
 if [ -z "$OWNER" ]; then
-  RUN_START=$(date +%s)
-  OWNER="host:$(hostname -s 2>/dev/null || echo unknown):$$:$RUN_START"
-  exec 9>>"/tmp/vega-deploy-$$-$RUN_START.lock"
-  python3 infra/aws/run_lock.py hold 9 || { echo "deploy: this run's lock /tmp/vega-deploy-$$-$RUN_START.lock could not be taken: nothing is changed" >&2; exit 1; }
+  if [ -z "$THIS_HOST" ]; then
+    echo "deploy: this machine has no identity of its own (no /etc/machine-id, no IOPlatformUUID, or a placeholder): a workstation's Deploy is named by it, so that another machine of its short name is never taken for this one: deploy from GitHub Actions (the Deploy workflow), or give this machine an identity (on Linux: systemd-machine-id-setup). Nothing is changed." >&2
+    exit 1
+  fi
+  RUN_TOKEN=$(python3 infra/aws/run_lock.py token)
+  OWNER="host:$THIS_HOST:$$:$RUN_TOKEN"
+  RUN_LOCK="$LOCK_DIR/vega-deploy-$RUN_TOKEN.lock"
+  exec 9>>"$RUN_LOCK"
+  python3 infra/aws/run_lock.py hold 9 || { echo "deploy: this run's lock $RUN_LOCK could not be taken: nothing is changed" >&2; exit 1; }
 fi
 STATE=off STATE_ETAG= STATE_PHASE=idle STATE_OWNER= STATE_BEFORE_WORKER= STATE_BEFORE_BACKFILL= STATE_BEFORE_IMAGE= STATE_BEFORE_DIGEST=
 STATE_CHANGED=false STATE_UNSAFE=false STATE_TOOK_OVER= STATE_TOOK_OVER_AGE= STATE_HOLDER= STATE_HOLDER_PHASE= STATE_HOLDER_AGE= STATE_ABANDONED=
@@ -178,11 +188,13 @@ STATE_MIGRATE_TOKEN= STATE_MIGRATE_PHASE= STATE_MIGRATE_ARN= STATE_MIGRATE_TASKD
 TAKEOVER_PROOF= HOLDER_WHY=
 # Another run is known dead (FAILURE_MODES_OPTIMISATIONS.md GH157.3), never for its age and never on a word alone: a
 # GitHub run once GitHub says its attempt completed (a hosted runner's job is over, its machine gone); a workstation's run
-# of this host once no process of it lives (its run lock free: the shell and every command it started); a run the owner
-# attested dead (deploy_state.py abandon), which is what a workstation of another host needs. HOLDER_WHY says what would
-# prove it otherwise.
+# once its lock is found in this machine's lock directory and free (no process of it lives: the shell and every command it
+# started); a run the owner attested dead (deploy_state.py abandon). A lock held: the run lives. A lock absent or
+# unreadable here, or a name without a run token (an earlier Deploy's): nothing is proved — another machine's run (of any
+# name or identity, a clone), or this one's before a restart or a cleaning of the lock directory — and only the owner's
+# attestation lets the next Deploy take it over (GH157-ag). HOLDER_WHY says what would prove it otherwise.
 known_dead() {
-  local holder=$1 status host pid start lock
+  local holder=$1 status host lock_state lock attest
   TAKEOVER_PROOF= HOLDER_WHY=
   [ -n "$holder" ] || return 1
   if [ -n "$STATE_ABANDONED" ] && [ "$STATE_ABANDONED" = "$holder" ]; then
@@ -198,17 +210,17 @@ known_dead() {
     HOLDER_WHY="Its GitHub run is not known finished (GitHub answered: ${status:-nothing}): once it has ended, the next Deploy takes it over."
     return 1
   fi
-  if [[ $holder =~ ^host:([^:]+):([0-9]+):([0-9]+)$ ]]; then
-    host=${BASH_REMATCH[1]} pid=${BASH_REMATCH[2]} start=${BASH_REMATCH[3]}
-    if [ "$host" != "$(hostname -s 2>/dev/null || echo unknown)" ]; then
-      HOLDER_WHY="It ran on host $host, which this run cannot check: once its processes are known gone (that machine off, or the run's shell and the commands it started stopped), the owner attests it: python3 infra/aws/deploy_state.py abandon --bucket $STATE_BUCKET --holder '$holder' --reason '<what was checked>' (infra/aws/README.md); the next Deploy then takes it over."
-      return 1
-    fi
-    lock="/tmp/vega-deploy-$pid-$start.lock"
-    if python3 infra/aws/run_lock.py free "$lock"; then
-      TAKEOVER_PROOF="no process of its run lives on this host (its lock $lock is free)"; return 0
-    fi
-    HOLDER_WHY="A process of its run is alive on this host (its lock $lock is held: its shell, or a command it started such as an aws cloudformation deploy): wait for them or stop them all; the next Deploy then takes it over."
+  if [[ $holder =~ ^host:([^:]+):[0-9]+:[^:]+$ ]]; then
+    host=${BASH_REMATCH[1]}
+    read -r lock_state lock < <(python3 infra/aws/run_lock.py state "$holder") || lock_state=unreadable
+    attest="once its processes are known gone (that machine off or restarted, or the run's shell and every command it started stopped), the owner attests it: python3 infra/aws/deploy_state.py abandon --bucket $STATE_BUCKET --holder '$holder' --reason '<what was checked>' (infra/aws/README.md); the next Deploy then takes it over"
+    case "$lock_state" in
+      free) TAKEOVER_PROOF="no process of its run lives (its lock $lock is here and free)"; return 0 ;;
+      held) HOLDER_WHY="A process of its run is alive on this machine (its lock $lock is held: its shell, or a command it started such as an aws cloudformation deploy): wait for them or stop them all; the next Deploy then takes it over." ;;
+      untokened) HOLDER_WHY="It ran on host $host under an earlier Deploy's name (no run token), which this run cannot check: nothing here proves it dead; $attest." ;;
+      absent) HOLDER_WHY="Its lock $lock is not in this machine's lock directory (it ran on host $host: another machine, or this one before a restart or a cleaning of $LOCK_DIR), which this run cannot check: nothing here proves it dead; $attest." ;;
+      *) HOLDER_WHY="Its lock $lock cannot be read here ($lock_state), which this run cannot check: nothing here proves it dead; $attest." ;;
+    esac
     return 1
   fi
   HOLDER_WHY="Its name is neither a GitHub run's nor a workstation's: the owner settles it (infra/aws/README.md, Takeover and first install)."

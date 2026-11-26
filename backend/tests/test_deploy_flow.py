@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import shutil
 import signal
 import subprocess
@@ -26,7 +27,7 @@ import unittest
 from urllib.parse import urlsplit, urlunsplit
 
 import deploy_fakes
-from deploy_repo import ROOT, SOURCE, Repo, git
+from deploy_repo import ROOT, SOURCE, Repo, git, machine_host
 from prerequisites import required
 
 try:
@@ -44,7 +45,9 @@ EVIDENCE = Path(os.environ.get("VEGA_DEPLOY_FLOW_EVIDENCE") or Path(tempfile.get
 # The Deploy's state: one object in the roles stack's bucket, before any other creation (GH157.3).
 STATE_BUCKET = f"vega-v2-deploy-state-{ACCOUNT}-us-east-2"
 STATE_KEY = "state.json"
-HOST = subprocess.run(["hostname", "-s"], capture_output=True, text=True).stdout.strip() or "unknown"
+# This machine in a workstation run's name, and its short host name alone (another machine's, when this one has an
+# identity of its own).
+SHORT, HOST = machine_host()
 
 
 def local(dsn):
@@ -714,15 +717,24 @@ class DeployFlowTest(unittest.TestCase):
         return [c for c in run.calls if c["tool"] == "aws" and c["argv"][:2] == ["s3api", "put-object"] and STATE_BUCKET in c["argv"]]
 
     @staticmethod
-    def live_deploy(seconds=120, start=1764100000):
-        """A process of this host holding a workstation run's lock (/tmp/vega-deploy-<its pid>-<start>.lock, as deploy.sh
-        and every command it starts do): a run of this host that lives, host:<host>:<its pid>:<start>."""
-        process = subprocess.Popen([sys.executable, "-c", "import fcntl, os, sys, time\n"
-                                    f"f = open(f'/tmp/vega-deploy-{{os.getpid()}}-{start}.lock', 'a')\n"
-                                    "fcntl.flock(f, fcntl.LOCK_EX)\nprint('held', flush=True)\n"
-                                    f"time.sleep({seconds})\n"], stdout=subprocess.PIPE, text=True)
+    def live_deploy(seconds=120, lock_dir="/tmp"):
+        """A process holding a workstation run's lock (<lock_dir>/vega-deploy-<token>.lock, as deploy.sh and every command it
+        starts do): a run that lives on this machine. The process and the run's token."""
+        token = secrets.token_hex(16)
+        process = subprocess.Popen([sys.executable, "-c", "import fcntl, sys, time\n"
+                                    "f = open(sys.argv[1], 'a')\nfcntl.flock(f, fcntl.LOCK_EX)\nprint('held', flush=True)\n"
+                                    "time.sleep(float(sys.argv[2]))\n", f"{lock_dir}/vega-deploy-{token}.lock", str(seconds)],
+                                   stdout=subprocess.PIPE, text=True)
         assert process.stdout.readline().strip() == "held"
-        return process
+        return process, token
+
+    def attest(self, world, holder, lock_dir):
+        """The owner's `deploy_state.py abandon` of `holder`, from the machine whose lock directory is `lock_dir`."""
+        tmp = Path(tempfile.mkdtemp(prefix="attest-", dir=self.tmp))
+        env = {"PATH": f"{self.bin}:/usr/bin:/bin:/usr/sbin:/sbin", "HOME": str(tmp), "FAKE_STATE": str(world), "FAKE_LOG": str(tmp / "calls.log"),
+               "FAKE_PYTHON_REAL": sys.executable, "DEPLOY_LOCK_DIR": str(lock_dir), "FAKE_RUN": "owner"}
+        return subprocess.run([sys.executable, "infra/aws/deploy_state.py", "abandon", "--bucket", STATE_BUCKET, "--holder", holder,
+                               "--reason", "test: that machine checked"], cwd=self.repo.path, env=env, capture_output=True, text=True, timeout=60)
 
     def test_GH157_s_a_missing_bucket_beside_the_worker_is_not_a_first_install(self):
         for case in ("the worker stack exists", "the repository alone exists"):
@@ -757,14 +769,23 @@ class DeployFlowTest(unittest.TestCase):
         self.assert_released(a_run)
 
     def test_GH157_u_another_run_is_taken_over_only_once_known_dead(self):
-        alive = self.live_deploy()
-        gone = subprocess.Popen(["sleep", "0"])
-        gone.wait()
+        alive, alive_token = self.live_deploy()
+        # A run that ended on this machine: its lock stays, free. A run whose lock is not here: another machine's (of any
+        # name and identity), or this one's before a restart or a cleaning of /tmp.
+        gone_token, absent_token = secrets.token_hex(16), secrets.token_hex(16)
+        gone_lock = Path(f"/tmp/vega-deploy-{gone_token}.lock")
+        gone_lock.touch()
         try:
             cases = [("gh-555-1", {"github": {"555-1": "in_progress"}}, False), ("gh-556-1", {"github": {"556-1": "completed"}}, True),
-                     ("gh-557-1", {}, False), ("host:elsewhere:4242:1764100000", {}, False),
-                     (f"host:{HOST}:{alive.pid}:1764100000", {}, False), (f"host:{HOST}:{gone.pid}:1764100000", {}, True),
-                     ("host:elsewhere:4243:1764100000", {"abandoned": True}, True)]
+                     ("gh-557-1", {}, False), (f"host:elsewhere:4242:{absent_token}", {}, False),
+                     (f"host:{HOST}:{alive.pid}:{alive_token}", {}, False), (f"host:{HOST}:4243:{gone_token}", {}, True),
+                     (f"host:{HOST}:4244:{absent_token}", {}, False),
+                     # An earlier Deploy's name, without a run token: nothing here can tell whether it lives.
+                     (f"host:{HOST}:4245:1764100000", {}, False),
+                     ("host:elsewhere:4246:1764100000", {"abandoned": True}, True)]
+            if SHORT != HOST:
+                # A workstation of this short name that is another machine: its lock is not here.
+                cases.append((f"host:{SHORT}:4247:{absent_token}", {}, False))
             for holder, extra, taken in cases:
                 with self.subTest(holder=holder, extra=extra):
                     fields = {"abandoned": {"holder": holder, "at": int(time.time()), "reason": "test: its laptop is off", "by": "owner"}} if extra.get("abandoned") else {}
@@ -786,6 +807,7 @@ class DeployFlowTest(unittest.TestCase):
             alive.kill()
             alive.wait()
             alive.stdout.close()
+            gone_lock.unlink(missing_ok=True)
 
     def test_GH157_v_a_live_run_is_never_taken_over_a_dead_one_s_operations_are_awaited(self):
         first = self.deployed()
@@ -802,7 +824,7 @@ class DeployFlowTest(unittest.TestCase):
         finally:
             a_run = self.resumed(a, a_tmp, world)
         self.assertNotEqual(b.code, 0, b.log)
-        self.assertRegex(b.log, rf"another Deploy \(host:{re.escape(HOST)}:\d+:\d+\) holds the Deploy state")
+        self.assertRegex(b.log, rf"another Deploy \(host:{re.escape(HOST)}:\d+:[0-9a-f]{{32}}\) holds the Deploy state")
         self.assertIn("is alive", b.log)
         # B only tried the state's conditional creation, which S3 refused (the object is A's).
         self.assertEqual([c for c in self.changed(b) if c != ["s3api", "put-object"]], [], "B changed nothing")
@@ -828,7 +850,7 @@ class DeployFlowTest(unittest.TestCase):
         self.change_world(world, left)
         b2 = self.deploy(None, {**local, "FAKE_RUN": "laptop-b2"}, world=world)
         self.assert_done(b2)
-        self.assertRegex(b2.log, r"taking over host:.*no process of its run lives on this host \(its lock /tmp/vega-deploy-\d+-\d+\.lock is free\)")
+        self.assertRegex(b2.log, r"taking over host:.*no process of its run lives \(its lock /tmp/vega-deploy-[0-9a-f]{32}\.lock is here and free\)")
         statuses = [c for c in b2.calls if c["tool"] == "cfn-status" and c["argv"] == ["vega-v2-live"]]
         self.assertEqual([c["status"] for c in statuses[:3]], ["UPDATE_IN_PROGRESS", "UPDATE_IN_PROGRESS", "UPDATE_COMPLETE"], "awaited to its end")
         first_change = b2.index(lambda c: c["tool"] == "aws" and c["argv"][:2] in (["cloudformation", "deploy"], ["cloudformation", "update-stack"]))
@@ -1069,7 +1091,7 @@ class DeployFlowTest(unittest.TestCase):
         try:
             self.wait_for(a_tmp / "calls.log", '"paused"')
             holder = json.loads(json.loads(world.read_text())["s3"]["buckets"][STATE_BUCKET][STATE_KEY]["body"])["owner"]
-            _, _, pid, start = holder.split(":")
+            _, _, pid, token = holder.split(":")
             # The run's shell alone: its aws cloudformation deploy (the stand-in, suspended in its call) lives on.
             os.kill(int(pid), signal.SIGKILL)
             time.sleep(0.5)
@@ -1078,14 +1100,14 @@ class DeployFlowTest(unittest.TestCase):
             a_run = self.resumed(a, a_tmp, world)
         self.assertNotEqual(b.code, 0, b.log)
         self.assertIn(f"another Deploy ({holder}) holds the Deploy state", b.log)
-        self.assertIn("is alive on this host", b.log)
+        self.assertIn("is alive on this machine", b.log)
         self.assertEqual([c for c in self.changed(b) if c != ["s3api", "put-object"]], [], "B changed nothing")
         # Once the command has ended, the run is dead: taken over.
-        self.assertTrue(self.lock_free(f"/tmp/vega-deploy-{pid}-{start}.lock"), "the command ended")
+        self.assertTrue(self.lock_free(f"/tmp/vega-deploy-{token}.lock"), "the command ended")
         c = self.deploy(None, {**local, "FAKE_RUN": "laptop-e"}, world=world)
         self.assert_done(c)
         self.assertIn(f"taking over {holder}", c.log)
-        self.assertIn("no process of its run lives on this host", c.log)
+        self.assertIn("no process of its run lives (its lock", c.log)
         del a_run
 
     def test_GH157_ae_a_replay_s_refusal_or_a_recent_missing_settles_nothing(self):
@@ -1137,6 +1159,90 @@ class DeployFlowTest(unittest.TestCase):
             self.assertEqual(len([c for c in late.calls if c["tool"] == "ecs-missing-fresh"]) >= 2, True, "MISSING read, then the task")
             self.assertEqual(late.state.get("overlaps", []), [])
             self.assertIn("181_offline_probe_ae.sql", self.applied())
+
+    def test_GH157_af_a_workstation_without_identity_never_names_a_host(self):
+        local = {"GITHUB_RUN_ID": None, "FAKE_RUN": "laptop-f"}
+        with self.subTest("a workstation's Deploy on a machine with no identity of its own"):
+            state = self.production_state()
+            state["faults"]["no_machine_identity"] = True
+            run = self.deploy(state, local)
+            self.assertNotEqual(run.code, 0, run.log)
+            self.assertIn("this machine has no identity of its own", run.log)
+            self.assertIn("deploy from GitHub Actions", run.log)
+            self.assertEqual(self.changed(run), [], "nothing tried, the state's creation included")
+            self.assertNotIn(STATE_KEY, run.state["s3"]["buckets"][STATE_BUCKET])
+        gone = subprocess.Popen(["sleep", "0"])
+        gone.wait()
+        with self.subTest("a GitHub run there, a workstation's run in the state under this machine's short name"):
+            state = self.held(self.production_state(), f"host:{SHORT}:{gone.pid}:1764100000", 7200)
+            state["faults"]["no_machine_identity"] = True
+            run = self.deploy(state)
+            self.assertNotEqual(run.code, 0, run.log)
+            self.assertIn("which this run cannot check", run.log)
+            self.assertEqual([c for c in self.changed(run) if c != ["s3api", "put-object"]], [], "nothing changed")
+        with self.subTest("a GitHub run there, the state free"):
+            state = self.production_state()
+            state["faults"]["no_machine_identity"] = True
+            run = self.deploy(state)
+            self.assert_done(run)
+            self.assert_released(run)
+
+    def test_GH157_ag_two_file_spaces_one_machine_identity(self):
+        """Two machines of one name and one identity (a clone), each its own lock directory (DEPLOY_LOCK_DIR): a run's
+        lock found here and free proves it dead; held, it lives; absent (on the other machine, or here before a restart),
+        nothing is proved: only the owner's attestation lets the next Deploy take over, never above a lock still held."""
+        first = self.deployed()
+        world = self.tmp / f"world-{self.scenarios:02d}.json"
+        one, two = (Path(tempfile.mkdtemp(prefix=f"space-{n}-", dir=self.tmp)) for n in ("one", "two"))
+        state = first.state
+        state["faults"]["pause"] = {"run": "clone-a", "call": ["cloudformation", "deploy"], "stack": "vega-v2-live"}
+        world.write_text(json.dumps(state))
+        local = {"GITHUB_RUN_ID": None}
+        a, a_tmp = self.deploy(None, {**local, "FAKE_RUN": "clone-a", "DEPLOY_LOCK_DIR": str(one)}, background=True, world=world)
+        try:
+            self.wait_for(a_tmp / "calls.log", '"paused"')
+            holder = json.loads(json.loads(world.read_text())["s3"]["buckets"][STATE_BUCKET][STATE_KEY]["body"])["owner"]
+            self.assertRegex(holder, rf"^host:{re.escape(HOST)}:\d+:[0-9a-f]{{32}}$")
+            lock = one / f"vega-deploy-{holder.rsplit(':', 1)[1]}.lock"
+            self.assertTrue(lock.exists(), "its lock in machine one's directory")
+            elsewhere = self.deploy(None, {**local, "FAKE_RUN": "clone-b", "DEPLOY_LOCK_DIR": str(two)}, world=world)
+            here = self.deploy(None, {**local, "FAKE_RUN": "clone-c", "DEPLOY_LOCK_DIR": str(one)}, world=world)
+            over_held = self.attest(world, holder, one)
+        finally:
+            os.killpg(a.pid, signal.SIGKILL)  # the whole run on machine one: its shell and its aws
+            a.wait(30)
+            a.stdout.close()
+            a.stderr.close()
+        for run in (elsewhere, here):
+            self.assertNotEqual(run.code, 0, run.log)
+            self.assertEqual([c for c in self.changed(run) if c != ["s3api", "put-object"]], [], "nothing changed")
+        self.assertIn(f"another Deploy ({holder}) holds the Deploy state", elsewhere.log)
+        self.assertIn("is not in this machine's lock directory", elsewhere.log)
+        self.assertIn("nothing here proves it dead", elsewhere.log)
+        self.assertIn("is alive on this machine", here.log)
+        self.assertNotEqual(over_held.returncode, 0, over_held.stderr)
+        self.assertIn(f"its lock {lock} is held", over_held.stderr)
+        self.assertNotIn("abandoned", json.loads(json.loads(world.read_text())["s3"]["buckets"][STATE_BUCKET][STATE_KEY]["body"]))
+        # A dead: from machine two still nothing proves it; from machine one its lock is free: taken over.
+        still = self.deploy(None, {**local, "FAKE_RUN": "clone-b2", "DEPLOY_LOCK_DIR": str(two)}, world=world)
+        self.assertNotEqual(still.code, 0, still.log)
+        self.assertIn("nothing here proves it dead", still.log)
+        taken = self.deploy(None, {**local, "FAKE_RUN": "clone-c2", "DEPLOY_LOCK_DIR": str(one)}, world=world)
+        self.assert_done(taken)
+        self.assertIn(f"taking over {holder} (no process of its run lives (its lock {lock} is here and free)", taken.log)
+        # A run of this machine before a restart (its lock gone with /tmp): the owner's attestation, then taken over.
+        restarted = f"host:{HOST}:4248:{secrets.token_hex(16)}"
+        self.change_world(world, lambda w: w["s3"]["buckets"][STATE_BUCKET].update({STATE_KEY: {"body": json.dumps(
+            {"version": 1, "owner": restarted, "beat": int(time.time()) - 600, "phase": "running", "before": None, "changed": False,
+             "unsafe": False, "migrate": None}), "etag": '"held"'}}))
+        refused = self.deploy(None, {**local, "FAKE_RUN": "clone-c3", "DEPLOY_LOCK_DIR": str(one)}, world=world)
+        self.assertNotEqual(refused.code, 0, refused.log)
+        self.assertIn("nothing here proves it dead", refused.log)
+        attested = self.attest(world, restarted, one)
+        self.assertEqual(attested.returncode, 0, attested.stderr)
+        after = self.deploy(None, {**local, "FAKE_RUN": "clone-c4", "DEPLOY_LOCK_DIR": str(one)}, world=world)
+        self.assert_done(after)
+        self.assertIn(f"taking over {restarted} (the owner attested it dead", after.log)
 
     # --- GH158: the image named by its inputs --------------------------------------------------------------------------
 
