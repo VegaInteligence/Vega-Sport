@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  The read API distribution's access logs (stack vega-v2-edge-logs, FAILURE_MODES_OPTIMISATIONS.md GH149): CloudFront's
+  standard logging v2, set up with CloudWatch Logs' delivery in us-east-1, into the log group vega-v2-api-access (14
+  days), each record holding the request's family (the function vega-v2-api-family of api.yaml), its behaviour, method,
+  status, result, times and size, and nothing that names a visitor, a path or a query. Four saved queries give the
+  cache by family (infra/aws/edge-cache-report.mjs folds them). deploy.sh deploys it with --region us-east-1, after api.yaml.
+Parameters:
+  DistributionId:
+    Type: String
+    AllowedPattern: 'E[A-Z0-9]{8,20}'
+    Description: The read API's distribution (vega-v2-api output DistributionId)
+Rules:
+  OnlyInUsEast1:
+    Assertions:
+      - Assert: !Equals [!Ref 'AWS::Region', us-east-1]
+        AssertDescription: A distribution's access log delivery is set up in us-east-1 only.
+Resources:
+  # A CloudWatch Logs destination of CloudFront's delivery is named with [\w-] only.
+  AccessLog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: vega-v2-api-access
+      RetentionInDays: 14
+      Tags: [{Key: project, Value: vega-v2}]
+  AccessSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: vega-v2-api-access
+      LogType: ACCESS_LOGS
+      ResourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${DistributionId}'
+  AccessDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: vega-v2-api-access
+      OutputFormat: json
+      # The group's plain ARN (its GetAtt Arn ends with :*).
+      DestinationResourceArn: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${AccessLog}'
+  # The fields, and only these (GH149.1): no address, path, query, cookie, agent, referer, request id, country or host.
+  AccessDelivery:
+    Type: AWS::Logs::Delivery
+    Properties:
+      DeliverySourceName: !Ref AccessSource
+      DeliveryDestinationArn: !GetAtt AccessDestination.Arn
+      RecordFields:
+        - 'timestamp(ms)'
+        - cache-behavior-path-pattern
+        - viewer-request-log-data
+        - cs-method
+        - sc-status
+        - x-edge-result-type
+        - x-edge-response-result-type
+        - x-edge-detailed-result-type
+        - time-taken
+        - time-to-first-byte
+        - origin-fbl
+        - origin-lbl
+        - sc-bytes
+  # Counts and bytes by family, behaviour, result, method and status, over the window the query is run for;
+  # edge-cache-report.mjs --live folds them into each family's hit and refresh shares.
+  CacheQuery:
+    Type: AWS::Logs::QueryDefinition
+    Properties:
+      Name: vega-v2/api-cache-by-family
+      LogGroupNames: [!Ref AccessLog]
+      QueryString: >-
+        fields coalesce(`viewer-request-log-data`, "-") as family, `cache-behavior-path-pattern` as behaviour, `x-edge-result-type` as result,
+        `cs-method` as method, `sc-status` as status, `sc-bytes` as size
+        | stats count(*) as n, sum(size) as bytes by family, behaviour, result, method, status
+  # The times, each group one family of the report (FAILURE_MODES_OPTIMISATIONS.md GH149.1, review of 26 Nov 2026):
+  # the values of the function's form outside data/* by value (`-`, written for a value the function did not set, is
+  # `unlogged`; a record without the field reads `-` too), but `other`; `other` with the values outside the form,
+  # pooled; data/* (`media`) alone. edge-cache-report.mjs runs each one behind its window's filter.
+  LatencyQuery:
+    Type: AWS::Logs::QueryDefinition
+    Properties:
+      Name: vega-v2/api-latency-by-family
+      LogGroupNames: [!Ref AccessLog]
+      QueryString: >-
+        fields coalesce(`viewer-request-log-data`, "-") as family, `cache-behavior-path-pattern` as behaviour, `time-taken` as taken
+        | filter behaviour != "data/*" and family like /^[a-z0-9.-]{1,40}$/ and family != "other"
+        | stats pct(taken, 50) as p50, pct(taken, 95) as p95 by family
+  OtherLatencyQuery:
+    Type: AWS::Logs::QueryDefinition
+    Properties:
+      Name: vega-v2/api-latency-other
+      LogGroupNames: [!Ref AccessLog]
+      QueryString: >-
+        fields coalesce(`viewer-request-log-data`, "-") as family, `cache-behavior-path-pattern` as behaviour, `time-taken` as taken
+        | filter behaviour != "data/*" and (family = "other" or family not like /^[a-z0-9.-]{1,40}$/)
+        | stats pct(taken, 50) as p50, pct(taken, 95) as p95
+  MediaLatencyQuery:
+    Type: AWS::Logs::QueryDefinition
+    Properties:
+      Name: vega-v2/api-latency-media
+      LogGroupNames: [!Ref AccessLog]
+      QueryString: >-
+        fields `cache-behavior-path-pattern` as behaviour, `time-taken` as taken
+        | filter behaviour = "data/*"
+        | stats pct(taken, 50) as p50, pct(taken, 95) as p95
+Outputs:
+  AccessLogGroup: {Value: !Ref AccessLog}

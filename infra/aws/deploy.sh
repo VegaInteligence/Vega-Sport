@@ -195,6 +195,10 @@ if [ -n "$media" ] && [ "$media" != None ]; then api "$media/"; else
   api "$media/"  # the distribution's domain is known now: serve the media map
 fi
 echo "read API: $media"
+# GH149: the distribution's access logs (standard logging v2), set up in us-east-1 where CloudFront's delivery lives: each
+# record holds the request's family (api.yaml EdgeFamily), its result, times and size, nothing naming a visitor or a path.
+echo "== 8b. Access logs of the distribution (us-east-1, vega-v2-api-access, 14 days)"
+stack vega-v2-edge-logs edge-logs.yaml --region us-east-1 --parameter-overrides DistributionId="$(output vega-v2-api DistributionId)"
 if [ "${IMPORT_ARCHIVES:-false}" = true ] && [ -n "$ARCHIVES" ]; then
   echo "== 9. Historical archives (runs for a while; logs /ecs/vega-v2-worker, prefix archives)"
   run_task vega-v2-archives
