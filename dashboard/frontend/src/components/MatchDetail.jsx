@@ -663,7 +663,7 @@ export default function MatchDetail({ match }) {
             }
           >
             {upcoming && <MatchForecast match={match} />}
-            {upcoming && <MatchAbsences match={match} />}
+            <MatchAbsences match={match} started={!upcoming} />
             {upcoming && <MatchOdds match={match} />}
             <MatchContext match={match} />
           </Suspense>
