@@ -92,14 +92,15 @@ REFS = {
 # CASCADE), the matches graded as soon as their player statistics arrived, which names a match (ADDED_DEPENDENCIES,
 # checked for occupancy like the others; it only holds matches kicked off in the last 7 days, so none of the restored
 # Open Matchday matches); both reference agg.power_runs (run_id) without a column of it; and an index of core.matches
-# (no column). A later one needs its own review here.
+# (no column). 179 (GH171) creates the extension pg_stat_statements and the view ops.statement_stats over it: no table,
+# no column of core, agg or ops, nothing naming a match. A later one needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
                     "168_nation_world_ranking.sql", "169_player_level_measured.sql",
                     "170_nation_elo_national_set.sql", "171_home_importance_v2.sql", "172_international_goals.sql",
                     "173_nation_last_played.sql", "174_absences_suspensions.sql",
                     "175_player_award.sql", "176_match_probable_lineups.sql", "177_league_history_lean_reads.sql",
-                    "178_match_grades_on_arrival.sql")
+                    "178_match_grades_on_arrival.sql", "179_statement_statistics.sql")
 
 
 class Refusal(RuntimeError):

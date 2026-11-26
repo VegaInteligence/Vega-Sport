@@ -73,6 +73,8 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/vega-v2-live*'
                   # VI-38: the account API (account.yaml), its two functions' log groups.
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/vega-v2-account*'
+                  # GH171: the PostgreSQL log the base exports (database.yaml PostgresqlLog, 14 days).
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/rds/instance/vega-football-db-postgres/postgresql*'
               - Sid: LogsDescribe
                 Effect: Allow
                 Action: ['logs:DescribeLogGroups']

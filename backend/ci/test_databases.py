@@ -55,6 +55,8 @@ SUITES = {
     "VEGA_V2_ACCOUNT_TEST_DSN": "vega_v2_account_test",
     # The run of backend/account/sql by vega.migrate (test_account_migrations.py): apart from the account suite's base.
     "VEGA_V2_ACCOUNT_MIGRATE_TEST_DSN": "vega_v2_account_migrate_test",
+    # The statements' statistics (test_statement_statistics.py, FAILURE_MODES_OPTIMISATIONS.md GH171).
+    "VEGA_V2_STATEMENTS_TEST_DSN": "vega_v2_statements_test",
 }
 
 

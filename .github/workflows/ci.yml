@@ -36,6 +36,13 @@ jobs:
       - uses: actions/setup-node@v7
         with: {node-version: '24', package-manager-cache: false}
       - run: pip install -r backend/requirements.txt
+      # The base preloads pg_stat_statements (database.yaml); the service's server does once restarted with it
+      # (backend/tests/test_statement_statistics.py, FAILURE_MODES_OPTIMISATIONS.md GH171).
+      - name: Preload pg_stat_statements as the base does
+        run: |
+          python -c "import psycopg; c = psycopg.connect('postgresql://postgres:v2-ci-only@127.0.0.1:5432/postgres', autocommit=True); c.execute(\"ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'\")"
+          docker restart ${{ job.services.postgres.id }}
+          for i in $(seq 1 60); do python -c "import psycopg, sys; c = psycopg.connect('postgresql://postgres:v2-ci-only@127.0.0.1:5432/postgres'); sys.exit(0 if 'pg_stat_statements' in c.execute('SHOW shared_preload_libraries').fetchone()[0] else 1)" && exit 0; sleep 2; done; exit 1
       - name: Disposable test databases
         run: python backend/ci/test_databases.py postgresql://postgres:v2-ci-only@127.0.0.1:5432 >> "$GITHUB_ENV"
       # Before the Python suites: their end-to-end tests read through the real API (pg). Under CI=true a missing
@@ -43,6 +50,9 @@ jobs:
       - name: Read API dependencies
         run: npm ci --prefix backend/api
       - name: Python suites
+        env:
+          # GH171-l reads the server's own log (docker logs) of the service container (FAILURE_MODES_OPTIMISATIONS.md).
+          VEGA_V2_PG_CONTAINER: ${{ job.services.postgres.id }}
         run: python -m unittest discover -s backend/tests -v
       - name: Read API suites
         run: npm test --prefix backend/api
