@@ -179,10 +179,10 @@ class Run:
         out = []
         for c in self.calls:
             a = c["argv"]
-            if c["tool"] in ("ecs-task", "s3-body", "hang"):
-                continue  # the stand-ins' own records (what a task did, a state written)
-            if c["tool"] == "python3" and a[:1] in (["infra/aws/image_identity.py"], ["infra/aws/deploy_state.py"]):
-                continue  # the Deploy's own computations: they change nothing (the state's writes are aws s3api calls)
+            if c["tool"] not in ("aws", "docker", "python3", "node", "npm"):
+                continue  # the stand-ins' own records (what a task did, a status read, a wait, a state written), gh's reads
+            if c["tool"] == "python3" and a[:1] in (["infra/aws/image_identity.py"], ["infra/aws/deploy_state.py"], ["infra/aws/run_lock.py"]):
+                continue  # the Deploy's own computations and its local lock: they change nothing (the state's writes are aws s3api calls)
             if c["tool"] == "docker":
                 if a[:1] == ["build"] and "--target" not in a:
                     out.append(("docker build", a[a.index("-t") + 1].rsplit(":", 1)[0]))
@@ -214,7 +214,9 @@ class Run:
                 out.append(("s3 cp", a[-1]))
             elif a[:2] == ["ecs", "run-task"]:
                 online = ["--online"] if "--overrides" in a and "--online" in a[a.index("--overrides") + 1] else []
-                out.append(("ecs run-task", a[a.index("--task-definition") + 1], *online))
+                # By its family: the task definition is the worker stack's exact revision (GH157.3), checked in test_deploy_flow.py.
+                family = a[a.index("--task-definition") + 1].rsplit("/", 1)[-1].split(":")[0]
+                out.append(("ecs run-task", family, *online))
         return out
 
     def overrides(self, stack):
