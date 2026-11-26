@@ -3,7 +3,8 @@
 Reads the changed paths on stdin (one per line, or NUL-separated with -z: `git diff --name-only --no-renames -z`)
 and prints GitHub outputs (KEY=value lines) for $GITHUB_OUTPUT:
 
-  suites=["python","api"]   the matrix of the « Suites » job (python, deploy, api), [] when none
+  suites=["python","api"]   the suites the change needs (python, deploy, api), [] when none
+  parts=["python-1",...]    the matrix of the « Suites » job: each suite's parts (PARTS), [] when none
   site=true|false           the site's tests and build
   infra=true|false          the stacks' templates and the Deploy state CLI
   image=true|false          the worker image
@@ -72,6 +73,10 @@ ZONES = {
     "package": (r"backend/api/", r"backend/account/", r"infra/aws/package_api\.py$", r"infra/aws/[^/]+\.mjs$"),
 }
 SUITES = ("python", "deploy", "api")
+# Each suite's entries in the « Suites » matrix, side by side on their own runner and PostgreSQL: python_suites.py
+# balances the Python and Deploy parts by measured time (durations.json, about 4 min 30 each on 26 Nov 2026 against
+# 18 min for the Deploy's suites in one entry); the Node suites share one base (--test-concurrency=1), about 5 min.
+PARTS = {"python": 2, "deploy": 4, "api": 1}
 FLAGS = ("site", "infra", "image", "package")
 
 # Zone -> the tests whose sources name the files they read (globs from the repository's root).
@@ -152,7 +157,9 @@ def zones(paths, full=False, root=ROOT):
 
 
 def outputs(needed):
-    lines = ["suites=" + json.dumps([s for s in SUITES if s in needed], separators=(",", ":"))]
+    suites = [s for s in SUITES if s in needed]
+    parts = [s if PARTS[s] == 1 else f"{s}-{i}" for s in suites for i in range(1, PARTS[s] + 1)]
+    lines = ["suites=" + json.dumps(suites, separators=(",", ":")), "parts=" + json.dumps(parts, separators=(",", ":"))]
     lines += [f"{zone}={'true' if zone in needed else 'false'}" for zone in FLAGS]
     return "\n".join(lines)
 

@@ -570,8 +570,8 @@ class StatementStatisticsTest(unittest.TestCase):
         step = re.search(r"\n      - name: Python suites\n(?:        .*\n)+", CI)
         self.assertIsNotNone(step, "no step « Python suites »")
         self.assertRegex(step.group(0), r"\n          VEGA_V2_PG_CONTAINER: \$\{\{ job\.services\.postgres\.id \}\}\n")
-        # The python and deploy parts of the suites (backend/ci/python_suites.py): together the whole discovery.
-        self.assertRegex(step.group(0), r"\n        run: python backend/ci/python_suites.py \$\{\{ matrix\.suite \}\}\n")
+        # The python-N and deploy-N parts of the suites (backend/ci/python_suites.py): together the whole discovery.
+        self.assertRegex(step.group(0), r"\n        run: python backend/ci/python_suites.py \$\{\{ matrix\.part \}\}\n")
 
 
 if __name__ == "__main__":

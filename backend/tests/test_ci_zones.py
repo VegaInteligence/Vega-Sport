@@ -8,19 +8,25 @@ Failure modes guarded here:
 - a file a test reads by name (README, fixture, workflow, Python module read by a Node test, a renamed component)
   skips that test's suite (Astra's review of #247, eight cases);
 - a path no rule knows, or an empty list, skips anything; notes nobody reads start a suite;
-- the two parts of the Python suites miss a test of the whole discovery, or run one twice;
-- ci.yml no longer feeds the zones to its jobs.
+- the parts of the Python and Deploy suites miss a test of the whole discovery, run one twice, leave one empty or
+  drift apart (one part far longer than another: the 18 minutes of the Deploy's suites in one entry);
+- a module that fails to import is counted in a part, or fails one part only, instead of failing every part;
+- ci.yml no longer feeds the zones and the parts to its jobs, or cancels main's run in progress (all eleven of main's
+  runs cancelled on 26 Nov 2026, main never checked whole).
 """
 
+from collections import Counter
 from pathlib import Path
 import json
 import re
+import statistics
 import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend/ci"))
 import changed_suites  # noqa: E402
+import durations  # noqa: E402
 import python_suites  # noqa: E402
 
 CI = (ROOT / ".github/workflows/ci.yml").read_text()
@@ -83,7 +89,8 @@ class ZonesTest(unittest.TestCase):
         self.assertEqual(needed("backend/ci/test_databases.py"), everything)
         self.assertEqual(needed(full=True), everything)
         self.assertEqual(changed_suites.outputs(everything),
-                         'suites=["python","deploy","api"]\nsite=true\ninfra=true\nimage=true\npackage=true')
+                         'suites=["python","deploy","api"]\n'
+                         'parts=["python-1","python-2","deploy-1","deploy-2","deploy-3","deploy-4","api"]\nsite=true\ninfra=true\nimage=true\npackage=true')
         self.assertEqual(needed(), everything)
         self.assertEqual(needed("", " "), everything)
 
@@ -120,7 +127,7 @@ class ZonesTest(unittest.TestCase):
         import subprocess
         out = subprocess.run([sys.executable, str(ROOT / "backend/ci/changed_suites.py"), "-z"], capture_output=True,
                              text=True, input="dashboard/frontend/src/styles.css\0tests/a b.test.mjs\0", check=True).stdout
-        self.assertEqual(out.splitlines(), ["suites=[]", "site=true", "infra=false", "image=false", "package=false"])
+        self.assertEqual(out.splitlines(), ["suites=[]", "parts=[]", "site=true", "infra=false", "image=false", "package=false"])
 
     def test_i_the_two_parts_are_the_whole_discovery_once(self):
         ids = lambda part: [t.id() for t in python_suites.tests(python_suites.part(part))]
@@ -130,6 +137,82 @@ class ZonesTest(unittest.TestCase):
         self.assertEqual({i.split(".")[0] for i in deploy}, set(changed_suites.DEPLOY_MODULES))
         self.assertIn("test_ci_zones.ZonesTest.test_i_the_two_parts_are_the_whole_discovery_once", python)
 
+    def test_i2_the_matrix_s_parts_run_the_whole_discovery_each_test_once(self):
+        ids = lambda part: [t.id() for t in python_suites.tests(python_suites.part(part))]
+        whole = Counter(ids("all"))
+        self.assertEqual(set(whole.values()), {1})
+        parts = json.loads(re.search(r"parts=(\[.*\])", changed_suites.outputs(set(changed_suites.ZONES))).group(1))
+        ran = Counter()
+        for name in parts:
+            if name != "api":
+                found = ids(name)
+                self.assertTrue(found, f"{name} runs nothing")
+                ran.update(found)
+        self.assertEqual(ran, whole)
+        self.assertEqual(parts, ["python-1", "python-2", "deploy-1", "deploy-2", "deploy-3", "deploy-4", "api"])
+
+    def test_i3_a_part_keeps_its_units_whole_and_in_discovery_order(self):
+        order = {i: n for n, i in enumerate(t.id() for t in python_suites.discover())}
+        owner = {}
+        for name in python_suites.names()[3:]:
+            found = [t.id() for t in python_suites.tests(python_suites.part(name))]
+            self.assertEqual(found, sorted(found, key=order.get), name)
+            for unit in {durations.unit(i) for i in found}:
+                # A method of test_deploy_flow, or a whole module elsewhere, is never split between two parts.
+                self.assertEqual(owner.setdefault(unit, name), name, unit)
+        self.assertIn("test_deploy_flow.DeployFlowTest.test_GH157_x_runtask_refused_lost_unknown_missing_and_past_its_window", owner)
+        self.assertIn("test_account_deploy", owner)
+
+    def test_i4_the_parts_are_balanced_by_measured_time_and_a_new_unit_weighs_the_median(self):
+        self.assertEqual(python_suites.assign(["a", "b", "c", "d"], 2, {"a": 5, "b": 4, "c": 3, "d": 2}),
+                         {"a": 1, "b": 2, "c": 2, "d": 1})
+        # An unknown unit weighs the median of the known ones (3), ties broken by id.
+        self.assertEqual(python_suites.assign(["x", "a", "b"], 2, {"a": 5, "b": 1}), {"a": 1, "x": 2, "b": 2})
+        weights = json.loads(python_suites.DURATIONS.read_text())
+        for group, count in (("python", changed_suites.PARTS["python"]), ("deploy", changed_suites.PARTS["deploy"])):
+            tests = [t for t in python_suites.discover() if python_suites.group(t) == group]
+            units = sorted({durations.unit(t.id()) for t in tests})
+            known = [u for u in units if u in weights]
+            # The file still describes the suites: a refresh is due once a fifth of the time is guessed.
+            self.assertGreaterEqual(len(known), 0.8 * len(units), f"durations.json is stale for {group}")
+            loads = [0.0] * count
+            default = statistics.median(weights[u] for u in known)
+            for u, i in python_suites.assign(units, count, weights).items():
+                loads[i - 1] += weights.get(u, default)
+            self.assertLess(max(loads), 1.25 * sum(loads) / count, (group, loads))
+
+    def test_i5_a_module_that_fails_to_import_fails_every_part_before_any_test(self):
+        import subprocess
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "test_broken.py").write_text("import no_such_module_anywhere\n")
+            Path(tmp, "test_fine.py").write_text("import unittest\nclass T(unittest.TestCase):\n    def test_x(self): pass\n")
+            with self.assertRaises(ImportError) as raised:
+                python_suites.part("python-1", start=Path(tmp))
+            self.assertIn("test_broken", str(raised.exception))
+            with self.assertRaises(ImportError):
+                python_suites.part("all", start=Path(tmp))
+        # A part the matrix does not have is refused, not run empty.
+        out = subprocess.run([sys.executable, str(ROOT / "backend/ci/python_suites.py"), "deploy-9"], capture_output=True, text=True)
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("usage", out.stderr)
+
+    def test_i6_durations_reads_a_ci_log(self):
+        log = [
+            "2026-11-26T09:53:17.7984913Z ##[endgroup]",
+            "2026-11-26T09:53:45.0313890Z test_GH1 (test_deploy_flow.DeployFlowTest.test_GH1) ... ok",
+            "2026-11-26T09:53:45.1000000Z test_GH2 (test_deploy_flow.DeployFlowTest.test_GH2)",
+            "2026-11-26T09:53:50.0000000Z deploy.sh step 3",
+            "2026-11-26T09:54:00.1000000Z A docstring's first line ... ok",
+            "2026-11-26T09:54:01.1000000Z test_a (test_worker.WorkerTest.test_a) ... ok",
+            "2026-11-26T09:54:03.1000000Z test_b (test_worker.WorkerTest.test_b) ... skipped 'no docker'",
+        ]
+        got = durations.from_log(log)
+        self.assertEqual(set(got), {"test_deploy_flow.DeployFlowTest.test_GH1", "test_deploy_flow.DeployFlowTest.test_GH2", "test_worker"})
+        self.assertAlmostEqual(got["test_deploy_flow.DeployFlowTest.test_GH1"], 27.2, places=1)
+        self.assertAlmostEqual(got["test_deploy_flow.DeployFlowTest.test_GH2"], 15.07, places=1)
+        self.assertAlmostEqual(got["test_worker"], 3.0, places=1)
+
 
 class WorkflowTest(unittest.TestCase):
     def test_j_ci_yml_feeds_the_zones_to_its_jobs(self):
@@ -138,13 +221,18 @@ class WorkflowTest(unittest.TestCase):
         self.assertRegex(CI, r"github\.ref == 'refs/heads/main'")
         # Every change is classified (no workflow-level paths filter); only a PR's or main's older run is cancelled.
         self.assertNotRegex(CI, r"\n    paths:")
-        self.assertIn("cancel-in-progress: true", CI)
         self.assertIn("github.run_id", CI)
-        self.assertIn("suite: ${{ fromJSON(needs.changes.outputs.suites) }}", CI)
-        self.assertIn("if: needs.changes.outputs.suites != '[]'", CI)
+        # Main's run in progress is never cancelled: only a pull request's (or a branch push's own) is.
+        self.assertIn("cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}", CI)
+        self.assertNotIn("cancel-in-progress: true", CI)
+        self.assertIn("parts: ${{ steps.zones.outputs.parts }}", CI)
+        self.assertIn("part: ${{ fromJSON(needs.changes.outputs.parts) }}", CI)
+        self.assertIn("if: needs.changes.outputs.parts != '[]'", CI)
+        self.assertNotIn("matrix.suite", CI)
+        self.assertIn("if: startsWith(matrix.part, 'deploy-')", CI)
         for zone in ("site", "infra", "image", "package"):
             self.assertIn(f"if: needs.changes.outputs.{zone} == 'true'", CI)
-        self.assertIn("run: python backend/ci/python_suites.py ${{ matrix.suite }}", CI)
+        self.assertIn("run: python backend/ci/python_suites.py ${{ matrix.part }}", CI)
         self.assertEqual(set(json.loads(re.search(r'suites=(\[.*\])', changed_suites.outputs(set(changed_suites.ZONES))).group(1))),
                          set(changed_suites.SUITES))
 
