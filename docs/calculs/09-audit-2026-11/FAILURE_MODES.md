@@ -5881,8 +5881,12 @@ clubs' crests, and slightly smaller choices (Probabilité de victoire / xG cumul
   arrows (round), its other tiles (radius 22 px), « Tous les joueurs », the line-ups' search and the substitutes' chips,
   the lists, the season stepper and « Voir tout » of « Classement »: `--pill-quiet` (white 7 % in dark, night 6 % in
   light), a darker veil on hover. A saved match keeps its accent on « Enregistrer ».
-- **Sizes.** The head's pills 44 px (the back link 34 px, 36 px on a phone); a choice 32 px, 13 px text (36 px, 14 px
-  on a phone). « Tous les joueurs » takes the footer's padding so that the best grades still end with the shot map
+- **Sizes.** A choice 32 px, 13 px text (36 px, 14 px on a phone). After the first release hugo found the head's
+  buttons too big: the back link, the competition's button, « Rapport du match », « Enregistrer », the lists and the
+  players' search take a choice's size too; the season stepper of « Classement » the height of the views' choices
+  beside it (36 px, 40 px on a phone); the thread's arrows keep 44 px.
+- **One pill, no frame.** The players' search of « Compositions » is one pill: its label has no border nor fill
+  around the field (hugo's screenshot of the release: a rectangle around the rounded field). « Tous les joueurs » takes the footer's padding so that the best grades still end with the shot map
   (§ 63.3, R10).
 - **No slash** between the back link and the competition's button. **No frame, no fill** behind the scoreboard's crests.
 - **Unchanged:** the six tabs (the selected one's colour and line), the logos, « Meilleure note du match » and the three
@@ -5897,11 +5901,14 @@ clubs' crests, and slightly smaller choices (Probabilité de victoire / xG cumul
   (tokens aside), each token is set in dark and light, the layout imports the sheet; the crests have `border: 0` and
   `background: none`; MatchNav has no slash. Red on main (no sheet).
 - **R42** (`tests/e2e/match-tabs.e2e.mjs`, computer, dark, a build) back link, competition, report and bookmark are
-  pills without border; no slash; competition and report 44 px; the report filled, the others quiet; round 44 px
+  pills without border; no slash; back link, competition, report and bookmark 32 px; the report filled, the others quiet; round 44 px
   arrows; the current tile filled, another quiet, radius 22 px; both crests `0px` and transparent; the choices' track
   round, the pressed choice filled and 32 px; the selected tab, its line and the best grade's block exactly as main
   draws them (read on main 64ac3f9 in a build). Red on main.
 - **R43** (same page, light) the filled ones night on ivory, the quiet ones night 6 %. Red on main.
-- **R44** (phone) competition and report 44 px, a choice 36 px, the report round. Red on main.
+- **R44** (phone) competition, report and a choice 36 px, the report round. Red on main.
+- **R45** (computer, after the release) in « Classement » the season stepper 36 px, the height of the views' choices; in
+  « Compositions » the players' search 32 px, radius 999 px, its label with no border (`0px`) and no fill. Red on
+  5a4476b (stepper 44, the label's 1 px frame on the surface, field 34), green after.
 - The E2E's season pages now answer the publication the API's manifest names (GH129-m pins them to it): with « e2e »
   the head's thread and button were never drawn and R15–R19 failed on main before § 72.

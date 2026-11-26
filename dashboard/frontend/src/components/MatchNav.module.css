@@ -50,8 +50,8 @@
 .step {
   display: grid;
   place-items: center;
-  width: var(--pill-h);
-  height: var(--pill-h);
+  width: var(--pill-step);
+  height: var(--pill-step);
   border: 0;
   border-radius: 50%;
   background: var(--pill-quiet);
@@ -186,7 +186,7 @@ a.step:focus-visible,
   min-width: 0;
   max-width: 100%;
   min-height: var(--pill-h);
-  padding: 0 18px 0 8px;
+  padding: 0 14px 0 6px;
   border: 0;
   border-radius: 999px;
   background: var(--pill-quiet);

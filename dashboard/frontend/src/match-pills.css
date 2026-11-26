@@ -14,10 +14,13 @@ html {
   --pill-quiet-ink: #e9eaec;
   --pill-track: rgb(255 255 255 / 0.05);
   --pill-focus: #72beff;
-  --pill-h: 44px;
-  --pill-h-sm: 34px;
-  --pill-pad: 22px;
-  --pill-text: 14.5px;
+  /* hugo, 26 Nov (after the first release): the head's buttons, the round's button and the season stepper the size of
+     a choice (« Vue d'ensemble », « Classement »…): 32 px, 13 px text. The thread's arrows keep 44 px. */
+  --pill-h: 32px;
+  --pill-h-sm: 32px;
+  --pill-step: 44px;
+  --pill-pad: 14px;
+  --pill-text: 13px;
   --pill-text-sm: 13px;
 }
 html[data-theme="light"] {
@@ -31,10 +34,10 @@ html[data-theme="light"] {
 }
 @media (max-width: 640px) {
   html {
-    --pill-h: 44px;
+    --pill-h: 36px;
     --pill-h-sm: 36px;
-    --pill-pad: 20px;
-    --pill-text: 15px;
+    --pill-pad: 14px;
+    --pill-text: 14px;
     --pill-text-sm: 14px;
   }
 }
@@ -167,13 +170,13 @@ html[data-theme="light"] {
 /* -------------------------------------- « Classement »: the season stepper, the lists */
 :root .match-detail .edition-stepper {
   gap: 0;
-  padding: 3px;
+  padding: 2px;
   background: var(--pill-track);
   box-shadow: inset 0 0 0 1px var(--pill-quiet);
 }
 :root .match-detail .edition-stepper button {
-  width: calc(var(--pill-h) - 6px);
-  height: calc(var(--pill-h) - 6px);
+  width: var(--pill-h);
+  height: var(--pill-h);
   color: var(--pill-quiet-ink);
   font-size: 16px;
 }
@@ -181,8 +184,8 @@ html[data-theme="light"] {
   background: var(--pill-quiet-hover);
 }
 :root .match-detail .edition-stepper select {
-  height: calc(var(--pill-h) - 6px);
-  min-height: calc(var(--pill-h) - 6px);
+  height: var(--pill-h);
+  min-height: var(--pill-h);
   padding: 0 30px 0 14px;
   font-size: var(--pill-text);
   background-position: right 10px center;
