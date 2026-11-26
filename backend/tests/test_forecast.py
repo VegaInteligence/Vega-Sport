@@ -450,7 +450,7 @@ class ForecastTest(unittest.TestCase):
 
 
 def reference(table, fixtures, model, strengths, simulations, spread, seed):
-    """A league's replays as they were before § 73 (one stream, Knuth's Poisson draw): the law `simulate` must keep."""
+    """A league's replays as they were before § 74 (one stream, Knuth's Poisson draw): the law `simulate` must keep."""
     rng, teams = random.Random(seed), sorted(table)
     left = {t: sum(t in f for f in fixtures) for t in teams}
     reach = {t: spread * (left[t] / (left[t] + table[t][3])) ** 0.5 if left[t] + table[t][3] else 0.0 for t in teams}
@@ -480,7 +480,7 @@ def reference(table, fixtures, model, strengths, simulations, spread, seed):
 
 class LeagueReplaysTest(unittest.TestCase):
     """A league replayed 10,000 times, each number tied to its match or its club
-    (docs/calculs/09-audit-2026-11/FAILURE_MODES.md § 73: S1 to S12, written before the code)."""
+    (docs/calculs/09-audit-2026-11/FAILURE_MODES.md § 74: S1 to S12, written before the code)."""
 
     def league(self, clubs=20, played=110):
         """A league part-way: club i of strength 1900 − 25 i; `played` of its home-and-away matches are behind (the

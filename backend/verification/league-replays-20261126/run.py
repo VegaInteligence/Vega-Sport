@@ -1,4 +1,4 @@
-"""The league replays of FAILURE_MODES.md § 73 on a real league: the Premier League of 26 November 2026.
+"""The league replays of FAILURE_MODES.md § 74 on a real league: the Premier League of 26 November 2026.
 
 Rerun, from the repository root, with the worker's libraries (backend/requirements.txt):
     python backend/verification/league-replays-20261126/run.py

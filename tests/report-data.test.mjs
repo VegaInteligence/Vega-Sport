@@ -94,7 +94,7 @@ test("a club's season: record, top players, projection and coming matches", () =
   // A regular plays 270 minutes or more: none here, so nobody is ranked; the list holds them all.
   assert.deepEqual([r.top.length, r.players.map((p) => p.name)], [0, ["Güler", "Mbappé", "Rarely"]]);
   assert.deepEqual([r.outlook.position, r.outlook.title, r.outlook.top4, r.club.league], [2, 32.2, 100, "LaLiga"]);
-  // § 73 (S14): the projection says how many times the season was replayed, and the card prints that number.
+  // § 74 (S14): the projection says how many times the season was replayed, and the card prints that number.
   assert.equal(r.outlook.replays, null);
   const replayed = buildClubReport({ id: "t1", season: "2026/2027", read, clubs: { rows: [] }, projection: { ...projection, model: { replays: 10000 } } }, today);
   assert.equal(replayed.outlook.replays, 10000);

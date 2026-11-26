@@ -20,7 +20,7 @@ A league's random numbers are tied to what they are drawn for: each club has its
 edition and the clubs. A match played leaves every other match's numbers as they were: what
 moves from one day to the next is what the results changed. With 1,000 replays on one
 stream, a draw between two other clubs moved a leader's title by 2 points
-(docs/calculs/09-audit-2026-11/FAILURE_MODES.md § 73). The cups keep one stream each.
+(docs/calculs/09-audit-2026-11/FAILURE_MODES.md § 74). The cups keep one stream each.
 
 Version 2 adds a club's recent form to its strength for the matches about to be played:
   Δ' = Δ + F_xG × (x_home − x_away) + F_luck × (l_home − l_away)

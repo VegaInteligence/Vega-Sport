@@ -1,6 +1,6 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
-## Projection : 10 000 tirages liés à leur match — FAILURE_MODES § 73 (26 novembre 2026, branche `claude/replays-10000` depuis main 5a4476bd46, worktree `~/Agents/worktrees/vega-replays-10000-20261126`)
+## Projection : 10 000 tirages liés à leur match — FAILURE_MODES § 74 (26 novembre 2026, branche `claude/replays-10000` depuis main 5a4476bd46, main dadd055d71 fusionné, worktree `~/Agents/worktrees/vega-replays-10000-20261126`)
 
 - Demande de Romain : « On replay les saisons 1000 fois en faisant un monte carlo, mais on ne peut pas améliorer cela ? », puis « Oui, 10 000 » (10 000 tirages liés au match pour les championnats).
 - Mesuré avant (Premier League du 26 nov., API publique, code du worker en local) : titre d'Arsenal de 74,6 à 81,3 % sur 60 calculs à 1 000 tirages ; après un nul entre deux autres clubs, 79,1 → 76,7 % pour un effet réel nul (une seule série de nombres : un match qui sort décale tous les suivants).
@@ -9,13 +9,22 @@
 - Tests écrits d'abord : S1 à S12 (`test_forecast.py`, `LeagueReplaysTest` ; S1, S2, S10, S12 rouges avant), S13 (`test_models.py`), S14 (`tests/report-data.test.mjs`, rouge avant). Local : `test_forecast.py` 37/37 ; suite Python 1 224 OK, 700 sautés (pas de PostgreSQL 17+ ici : `ANALYZE ONLY`), 1 erreur d'import déjà sur main (`test_account_capacity`, sans `PYTHONPATH`) ; tests du site 1 074 OK, 9 échecs identiques sur main.
 - Preuve : `backend/verification/league-replays-20261126/` (`inputs.json`, `run.py`, `output.txt`) : 6 contrôles sur 6 ; Arsenal 77,3 à 79,2 % sur 60 calculs (écart-type 0,42) ; après le nul, 78,2 → 78,2 % ; les 18 clubs qui n'ont pas joué bougent de 0,09 point en moyenne (0,81 avant) ; 0,55 s pour 20 clubs.
 - Pas vérifié : la passe en base (S13, CI sur PostgreSQL 18) ; le temps sur le worker (0,5 vCPU) ; la production. Linear : non consulté ni mis à jour (règle de Romain : jamais Linear depuis `~/Perso/Vega`).
-- Reste : pousser et ouvrir la PR sur le mot de Romain ; le film dit encore « Season replayed 1,000 times » ; élargir le backtest du décalage des forces (30 points donnent Arsenal à 93 %, 90 à 78 %), non commencé.
+- Poussé sur le mot de Romain (« Oui, pousse ») ; § 73 renuméroté § 74 (main a pris § 73 entre-temps). Reste : le film dit encore « Season replayed 1,000 times » ; élargir le backtest du décalage des forces (30 points donnent Arsenal à 93 %, 90 à 78 %), non commencé.
+
+## Choix de la journée : les 34 journées numérotées — FAILURE_MODES § 73 (26 novembre 2026, branche `claude/choix-journee` depuis main 287c5ac)
+
+- hugo trouvait la fenêtre du choix de journée mauvaise. Maquette à trois pistes (https://claude.ai/artifact/UEAvpQrYfJ5VqQafWT9jJC) : il a pris la piste A en demandant des numéros 1, 2, 3…, puis a validé la version 2 (« ok super envoie en main »).
+- Constat : la fenêtre ne montrait que les journées jouées (11 sur 34 en Ligue 1), le fournisseur ne nommant pas la journée des matchs à venir ; 140 de ces matchs portent minuit UTC pour une heure pas encore fixée (« 02:00 »).
+- `inferRounds` et `withoutUnsetTimes` (`services/match-nav.js`) : journées à venir déduites des dates (chaque paquet de 9 contient les 18 clubs), journées incomplètes ou matchs reportés recasés, rien d'inventé quand les dates ne collent pas ; heure non fixée affichée « à venir ». Ligue 1 lue le 26 novembre : 306 matchs sur 306 en 34 journées.
+- `MatchNav.jsx` et `MatchNav.module.css` : pilules numérotées toutes visibles (17 + 17 à l'ordinateur, 9 par ligne au téléphone), jouées en voile, prochaine en contour, choisie en plein, point sur la journée du match ; barre de progression ; flèches à côté du titre ; matchs rangés par jour ; fenêtre de hauteur fixe.
+- Tests écrits d'abord : R46 et R48 (`tests/match-nav-rounds.test.mjs`), R47 (`match-tabs.e2e.mjs`, sur une build) rouges sur main, verts après ; site 1 118/1 118, match-tabs 34/34.
 
 ## Boutons en pilule sur la page match — FAILURE_MODES § 72 (26 novembre 2026, [#245](https://github.com/VegaInteligence/Vega-Sport/issues/245), branche `claude/boutons-pilule-page-match` depuis main 64ac3f9)
 
 - Demande de hugo : les boutons carrés à bordure grise remplacés par des pilules (modèle : « Rejoindre la liste d'attente »). Maquettes : page compétition (pistes A et B), puis page match en piste A, sans fond derrière les logos, sélecteurs un peu plus petits, blocs « Meilleure note » et repères inchangés ; validée avec « ok pour la page match envoie en prod ».
 - Code : `match-pills.css` (jetons `--pill-*` en sombre et en clair, règles `:root .match-detail …`, indépendantes de l'ordre des feuilles entre `next dev` et la build), `MatchNav.module.css` (retour, compétition, flèches rondes, tuiles arrondies, match affiché plein, plus de barre oblique), `MatchPlayerOpen.module.css` (puces des remplaçants), `analysis.css` (logos du tableau de score sans cadre ni fond).
 - Tests écrits d'abord : R41 (`match-head-style.test.mjs`), R42 à R44 (`match-tabs.e2e.mjs`, sur une build) rouges sur main, verts après ; R10 (notes jusqu'au pied de la carte des tirs) cassé par la pilule « Tous les joueurs », corrigé par le rembourrage du pied de carte. Le mock des pages de la saison de l'E2E répond maintenant la publication du manifeste (R15 à R19 échouaient sur main depuis GH129-m). Site 1 111/1 111 ; `match-tabs.e2e.mjs` 32/32. Preuves : `/mnt/project-files/design-boutons/page-match-prod/`.
+- PR #246 fusionnée (5a4476b). Retour de hugo sur la mise en ligne : boutons du haut (rapport, enregistrer, journée) et sélecteur de saison trop grands, rectangle autour de la recherche des joueurs. Tout à la taille d'un choix (32 px, 36 sur téléphone), flèches du fil à 44 px, plus de cadre autour de la recherche (`MatchTabs.module.css`). R42, R44 corrigés et R45 ajouté, rouges sur 5a4476b puis verts (33/33) ; poussé directement sur main à sa demande.
 - Reste : la page compétition et le reste du site (en-tête, recherche) quand hugo le demandera.
 
 ## Favoris de l'accueil, « Vos joueurs » de la semaine — GH220.4 (26 novembre 2026, [#220](https://github.com/VegaInteligence/Vega-Sport/issues/220) rouverte, [VI-158](https://linear.app/vegainteligence/issue/VI-158), branche `claude/v2-favoris-vos-joueurs` depuis main e401480)
