@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import HomeCountryMenu from "./HomeCountryMenu.jsx";
-import HomePreferences from "./HomePreferences.jsx";
+import { FollowedCompetitionsPicker } from "./CompetitionPicker.jsx";
 import { useAccount } from "../hooks/useAccount.js";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { accountSyncOn } from "../services/account-switch.js";
@@ -238,7 +238,7 @@ export function CountryChoice({ page }) {
 /** The home page's competitions' picker, opened from a plain word. */
 export function CompetitionsChoice({ page, children = "Modifier" }) {
   return (
-    <HomePreferences
+    <FollowedCompetitionsPicker
       f={page.f}
       trigger={{ className: "account-link", text: children, label: "Modifier les compétitions suivies" }}
     />

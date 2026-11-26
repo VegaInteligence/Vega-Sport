@@ -1,4 +1,6 @@
 "use client";
+
+import { CompetitionPicker } from "./CompetitionPicker.jsx";
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -632,11 +634,11 @@ export function PlayerPerformanceStats({ id, children }) {
     url.searchParams.set("performanceSeason", event.target.value);
     window.history.replaceState(null, "", url);
   };
-  const selectCompetition = (event) => {
+  const selectCompetition = (value) => {
     const url = new URL(window.location.href);
-    if (event.target.value === "all")
+    if (value === "all")
       url.searchParams.delete("performanceCompetition");
-    else url.searchParams.set("performanceCompetition", event.target.value);
+    else url.searchParams.set("performanceCompetition", value);
     url.searchParams.set("performanceSeason", "all");
     window.history.replaceState(null, "", url);
   };
@@ -647,23 +649,13 @@ export function PlayerPerformanceStats({ id, children }) {
     >
       <PlayerProfileFilters>
         <div className="player-performance-filters">
-          <label className="player-performance-season">
-            Compétition
-            <select value={competition} onChange={selectCompetition}>
-              <option value="all">Toutes les compétitions</option>
-              {competition !== "all" &&
-                !competitionOptions.some(({ id }) => id === competition) && (
-                  <option value={competition} disabled={!validCompetition}>
-                    {selectedCompetitionName}
-                  </option>
-                )}
-              {competitionOptions.map(({ id, name }) => (
-                <option key={id} value={id}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <CompetitionPicker
+            value={competition}
+            competitions={competition !== "all" && !competitionOptions.some(({ id }) => id === competition)
+              ? [{ id: competition, name: selectedCompetitionName, disabled: !validCompetition }, ...competitionOptions]
+              : competitionOptions}
+            onChange={selectCompetition}
+          />
           <label className="player-performance-season">
             Saison
             <select value={season} onChange={selectSeason}>

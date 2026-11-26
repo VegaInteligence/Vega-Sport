@@ -1,4 +1,6 @@
 "use client";
+
+import { CompetitionPicker } from "./CompetitionPicker.jsx";
 /* Club profile tabs: identity rail and the overview, statistics, style,
  * matches and squad tabs (the player profile adapted to a club). */
 import React, { useMemo, useState } from "react";
@@ -896,11 +898,10 @@ export function Matches({ dossier }) {
         title="Tous les matchs"
         action={
           comps.length > 1 && (
-            <Segments
-              label="Compétition"
+            <CompetitionPicker
               value={scope}
               onChange={setScope}
-              items={[["all", "Toutes"], ...comps]}
+              competitions={comps.map(([id, name]) => ({ id, name }))}
             />
           )
         }

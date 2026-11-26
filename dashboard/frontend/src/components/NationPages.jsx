@@ -1,4 +1,6 @@
 "use client";
+
+import { CompetitionPicker } from "./CompetitionPicker.jsx";
 /* The nation pages (VI-18, approved mock-up of 16 Nov 2026): the national teams ranked by their
  * Vega Elo, and one nation's page built like a club's: its identity rail, then its season, its
  * Elo, its matches, the players of its latest tournament and its runs in the major tournaments.
@@ -676,19 +678,6 @@ function MatchCarousel({ nation }) {
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, [update, groups]);
-  useEffect(() => {
-    // The jump row follows the group in view, sideways only: scrollIntoView would also move the
-    // page to the row when it is below the fold (a phone opened 800 px down the page).
-    const button = track.current?.parentElement?.parentElement?.querySelector(
-      `[data-jump="${at.group}"]`,
-    );
-    const row = button?.parentElement;
-    if (!row) return;
-    const b = button.getBoundingClientRect(),
-      r = row.getBoundingClientRect();
-    if (b.left < r.left) row.scrollLeft += b.left - r.left;
-    else if (b.right > r.right) row.scrollLeft += b.right - r.right;
-  }, [at.group]);
   if (!groups.length) return null;
   const scroll = (direction) =>
     track.current?.scrollBy({
@@ -726,20 +715,19 @@ function MatchCarousel({ nation }) {
         </span>
       }
     >
-      <div className={s.jump} role="tablist" aria-label="Compétitions">
-        {groups.map((group, i) => (
-          <button
-            key={group.key}
-            type="button"
-            role="tab"
-            data-jump={i}
-            aria-selected={at.group === i}
-            onClick={() => jump(i)}
-          >
-            {group.label}
-          </button>
-        ))}
-      </div>
+      {groups.length > 1 && (
+        <CompetitionPicker
+          label="Compétitions"
+          value={String(at.group)}
+          competitions={groups.map((group, index) => ({
+            id: String(index),
+            name: group.label,
+            detail: group.stage,
+          }))}
+          allLabel={null}
+          onChange={(id) => jump(Number(id))}
+        />
+      )}
       <div className={s.rail}>
         <div className={s.track} ref={track} onScroll={update}>
           {groups.map((group, i) => (
@@ -1088,11 +1076,10 @@ function Matches({ nation }) {
     >
       {labels.length > 1 && (
         <div className={s.filters}>
-          <Segments
-            label="Compétition"
+          <CompetitionPicker
             value={competition}
             onChange={setCompetition}
-            items={[["all", "Toutes"], ...labels.map((l) => [l, l])]}
+            competitions={labels.map((name) => ({ id: name, name }))}
           />
         </div>
       )}

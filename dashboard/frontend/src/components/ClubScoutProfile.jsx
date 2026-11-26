@@ -4,6 +4,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import BackLink from "./BackLink.jsx";
 import SeasonSelect from "./SeasonSelect.jsx";
+import { CompetitionPicker } from "./CompetitionPicker.jsx";
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -344,6 +345,9 @@ function ComparisonBar({ dossier, cmp, active }) {
   const played = dossier.competitions
     .filter((c) => c.id !== dossier.league?.id)
     .map((c) => single(competitions.find((x) => x.id === c.id) || c));
+  const options = [...new Map([...competitions, ...played, own]
+    .filter((item) => item.id)
+    .map((item) => [item.id, item])).values()];
   const loading = state.status !== "ready";
   const leagueName = dossier.league?.name || "Championnat";
   return (
@@ -373,33 +377,16 @@ function ComparisonBar({ dossier, cmp, active }) {
           </button>
         </div>
         <div className={s.comparePick} data-active={scope === "competition"}>
-          <SearchMenu
-            placeholder="Chercher une compétition…"
-            suggestionsLabel="Compétitions jouées par le club"
-            suggestions={played}
-            minLength={1}
-            itemKey={(item) => item.id}
-            search={(query) => {
-              const needle = normalizeText(query);
-              return competitions
-                .filter(
-                  (c) =>
-                    normalizeText(c.name).includes(needle) ||
-                    normalizeText(countryLabel(c.country)).includes(needle),
-                )
-                .map((c) => (c.id === dossier.league?.id ? own : single(c)));
+          <CompetitionPicker
+            label="Compétition de comparaison"
+            value={scope === "competition" ? cmp.competition?.id : scope === "league" ? own.id : "all"}
+            summary={scope === "competition" ? cmp.competition?.name : "Autre compétition"}
+            competitions={options}
+            allLabel={null}
+            onChange={(id) => {
+              const item = options.find((option) => option.id === id);
+              if (item) cmp.pick(item.own ? own : single(item));
             }}
-            button={
-              scope === "competition" && cmp.competition ? (
-                <MenuItem item={cmp.competition} />
-              ) : (
-                <span>Autre compétition</span>
-              )
-            }
-            renderItem={(item) => (
-              <MenuItem item={item} meta={refMeta(item, dossier)} />
-            )}
-            onSelect={cmp.pick}
           />
         </div>
         {scope === "europe" && (
@@ -428,13 +415,6 @@ function ComparisonBar({ dossier, cmp, active }) {
       )}
     </section>
   );
-}
-
-function refMeta(item, dossier) {
-  if (item.own) return "Championnat du club";
-  if (dossier.competitions.some((c) => c.id === item.id))
-    return `${countryLabel(item.country)} · compétition jouée par le club`;
-  return countryLabel(item.country);
 }
 
 /** Every club of the referential behind one indicator or phase index. */
@@ -816,29 +796,8 @@ function Comparison({ dossier, rival, onRival }) {
 
 /* -------------------------------------------------------- similar clubs */
 
-const MAJOR = [
-  ["ENG", "Premier League"],
-  ["ESP", "LaLiga"],
-  ["ITA", "Serie A"],
-  ["GER", "Bundesliga"],
-  ["FRA", "Ligue 1"],
-  ["POR", "Liga Portugal"],
-  ["NED", "Eredivisie"],
-];
 const ALL_LEAGUES = { id: "all", name: "Tous les championnats", all: true };
 
-/** The whole base in the league menu: a globe where a league has its crest. */
-const AllLeaguesItem = ({ meta }) => (
-  <span className={c.menuItem}>
-    <Icon name="globe" className={c.menuIcon} />
-    <span>
-      <strong>{ALL_LEAGUES.name}</strong>
-      {meta && <small>{meta}</small>}
-    </span>
-  </span>
-);
-
-/** Where a neighbour plays: its place, its league and country, its record. */
 const neighbourMeta = (club) =>
   [
     club.position != null && ordinal(club.position),
@@ -861,51 +820,17 @@ function Similar({ dossier, onCompare }) {
     dossier.id,
     league.all ? null : league.id,
   );
-  const suggestions = useMemo(() => {
-    const own = leagues.find((item) => item.id === dossier.league?.id);
-    const major = MAJOR.map(([country, name]) =>
-      leagues.find((item) => item.country === country && item.name === name),
-    );
-    return [ALL_LEAGUES, own, ...major].filter(
-      (item, i, list) => item && list.findIndex((x) => x?.id === item.id) === i,
-    );
-  }, [leagues, dossier.league]);
   const list = state.value || [];
   return (
     <div className={c.stack}>
       <div className={s.toolbar}>
-        <SearchMenu
-          label="Chercher des profils proches dans"
-          placeholder="Chercher un championnat…"
-          suggestionsLabel="Toute la base, championnat du club et grands championnats"
-          suggestions={suggestions}
-          minLength={1}
-          search={(query) => {
-            const needle = normalizeText(query);
-            return leagues.filter(
-              (item) =>
-                normalizeText(item.name).includes(needle) ||
-                normalizeText(countryLabel(item.country)).includes(needle),
-            );
-          }}
-          button={
-            league.all ? (
-              <AllLeaguesItem />
-            ) : (
-              <MenuItem item={league} meta={countryLabel(league.country)} />
-            )
-          }
-          renderItem={(item) =>
-            item.all ? (
-              <AllLeaguesItem meta="Championnats de niveau comparable" />
-            ) : (
-              <MenuItem
-                item={item}
-                meta={`${countryLabel(item.country)}${item.id === dossier.league?.id ? " · championnat du club" : ""}`}
-              />
-            )
-          }
-          onSelect={setLeague}
+        <CompetitionPicker
+          label="Championnat des clubs similaires"
+          value={league.id}
+          summary={league.name}
+          competitions={leagues}
+          allLabel={ALL_LEAGUES.name}
+          onChange={(id) => setLeague(leagues.find((item) => item.id === id) || ALL_LEAGUES)}
         />
         <Info
           label="Clubs similaires"

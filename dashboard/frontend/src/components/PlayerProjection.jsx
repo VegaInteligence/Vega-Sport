@@ -1,4 +1,6 @@
 "use client";
+
+import { CompetitionPicker } from "./CompetitionPicker.jsx";
 /* Projection tab: every club of a Top 7 championship sorted by how the
  * player compares with its regulars at his position, and his place in the
  * chosen club. Clubs and players come from the published compact reads. */
@@ -241,26 +243,16 @@ export default function PlayerProjection({ profile, profiles, team, ready }) {
             </p>
           </div>
         </div>
-        <div
-          className={s.leagues}
-          role="group"
-          aria-label="Championnat projeté"
-        >
-          {leagues.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={item.id === leagueId}
-              onClick={() => {
-                setPicked(item.id);
-                setSelectedId(null);
-              }}
-            >
-              {item.name}
-              {item.id === home ? " · actuel" : ""}
-            </button>
-          ))}
-        </div>
+        <CompetitionPicker
+          label="Championnat projeté"
+          value={leagueId}
+          competitions={leagues.map((item) => ({ ...item, name: item.id === home ? `${item.name} · actuel` : item.name }))}
+          allLabel={null}
+          onChange={(id) => {
+            setPicked(id);
+            setSelectedId(null);
+          }}
+        />
       </div>
 
       <section className={`${scout.card} ${scout.block}`}>

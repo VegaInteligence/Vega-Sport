@@ -21,7 +21,7 @@ import { date } from "../services/format.js";
 import { useResource } from "../services/resources.js";
 import { orderedCompetitions } from "../services/competition-selector.js";
 import { AsyncState, Card, Empty, Pager } from "./UI.jsx";
-import CompetitionOptions from "./CompetitionOptions.jsx";
+import { CompetitionPicker } from "./CompetitionPicker.jsx";
 
 const PAGE_SIZE = 50;
 
@@ -309,20 +309,13 @@ function SeasonArchive({
             ))}
           </select>
         </label>
-        <label>
-          Compétition{" "}
-          <select
-            aria-label="Compétition des archives"
-            value={competition}
-            disabled={!edition}
-            onChange={(event) =>
-              setParams({ ac: event.target.value, ap: null, av: null })
-            }
-          >
-            <option value="all">Toutes les compétitions</option>
-            <CompetitionOptions competitions={competitions} />
-          </select>
-        </label>
+        <CompetitionPicker
+          label="Compétition des archives"
+          value={competition}
+          competitions={competitions}
+          disabled={!edition}
+          onChange={(id) => setParams({ ac: id, ap: null, av: null })}
+        />
         <label>
           Équipe ou buteur{" "}
           <input

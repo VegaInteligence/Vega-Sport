@@ -6,7 +6,6 @@ import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
-import CompetitionScope from "./CompetitionScope.jsx";
 import { AdvancedPanel, AdvancedToggle } from "./AdvancedFilters.jsx";
 import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
 import SiteHeader from "./SiteHeader.jsx";
@@ -15,9 +14,8 @@ import TabBar from "./TabBar.jsx";
 import PageWorkspace from "./PageWorkspace.jsx";
 import NavigationPrefetch from "./NavigationPrefetch.jsx";
 import PlayerSearchResults from "./PlayerSearchResults.jsx";
-import HomePreferences from "./HomePreferences.jsx";
+import { CompetitionPicker, EUROPE_SCOPE, FollowedCompetitionsPicker } from "./CompetitionPicker.jsx";
 import SeasonFilter from "./SeasonFilter.jsx";
-import CompetitionOptions from "./CompetitionOptions.jsx";
 import { PLAYER_RANKINGS } from "../services/player-leaderboard.js";
 import {
   competitionLabel,
@@ -113,8 +111,8 @@ export function Filters({ kind = "performances" }) {
         f.filters.leagues?.length)) ||
     (!fixtures && f.filters.match !== "all");
   const competitions = useMemo(
-    () => orderedCompetitions(f.competitions),
-    [f.competitions],
+    () => orderedCompetitions(f.allCompetitions || f.competitions),
+    [f.allCompetitions, f.competitions],
   );
   const selected = competitions.find((c) => c.id === f.filters.league);
   return (
@@ -146,30 +144,23 @@ export function Filters({ kind = "performances" }) {
         {/* One row of pills on a phone; transparent on a wide screen. */}
         <div className="filter-rail">
           {home ? (
-            <HomePreferences f={f} />
+            <FollowedCompetitionsPicker f={f} />
           ) : (
-            <div className="filter-field">
-              <label htmlFor="league-filter">Compétition</label>
-              <div className="filter-input-wrap">
-                <Icon name="trophy" />
-                <select
-                  id="league-filter"
-                  value={f.filters.league}
-                  onChange={(e) =>
-                    f.setFilters((v) => ({
-                      ...v,
-                      league: e.target.value,
-                      leagues: [],
-                      match: "all",
-                    }))
-                  }
-                >
-                  <option value="all">Toutes les compétitions</option>
-                  <CompetitionOptions competitions={competitions} />
-                </select>
-                <Icon name="chevron" className="select-chevron" />
-              </div>
-            </div>
+            <CompetitionPicker
+              controlId="league-filter"
+              competitions={competitions}
+              selectedIds={f.filters.leagues}
+              value={f.filters.league === "all" && f.focus === "europe" ? EUROPE_SCOPE : f.filters.league}
+              summary={f.filters.leagues?.length > 1 ? `${f.filters.leagues.length} compétitions` : undefined}
+              topEurope
+              onChange={(value) => {
+                const preset = value === "all" || value === EUROPE_SCOPE;
+                const focus = value === EUROPE_SCOPE ? "europe" : "all";
+                if (preset ? f.focus !== focus : !f.competitions.some((competition) => competition.id === value))
+                  f.changeFocus(focus);
+                f.setFilters((v) => ({ ...v, league: preset ? "all" : value, leagues: [], match: "all" }));
+              }}
+            />
           )}
           {!home && <SeasonFilter f={f} />}
           {players && (
@@ -204,7 +195,6 @@ export function Filters({ kind = "performances" }) {
               onToggle={() => setAdvancedOpen((open) => !open)}
             />
           )}
-          {!home && <CompetitionScope />}
           {home && active && (
             <button className="filter-reset-button" onClick={reset}>
               <Icon name="reset" /> Réinitialiser

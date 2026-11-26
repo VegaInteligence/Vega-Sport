@@ -1,10 +1,12 @@
 "use client";
+
+import { CompetitionPicker } from "./CompetitionPicker.jsx";
 /* The « Physique » tab: his match load of the season (every player: minutes, starts, rest
  * between matches, the last four weeks) and, where his competition is tracked
  * (/api/players/{id}/physical), his figures per 90 minutes placed among the players of his
  * role, his top speed match by match and his distance split by pace. */
 import React, { useId, useMemo, useState } from "react";
-import { Segments, Skeleton } from "./UI.jsx";
+import { Skeleton } from "./UI.jsx";
 import {
   CalendarColumns,
   DistributionStrip,
@@ -235,7 +237,7 @@ export default function PlayerPhysical({ id, season, rows }) {
               </p>
             </div>
             {blocks.length > 1 && (
-              <Segments label="Compétition" value={block.name} items={blocks.map((b) => [b.name, b.name])} onChange={setChosen} />
+              <CompetitionPicker value={block.name} competitions={blocks.map(({ name }) => ({ id: name, name }))} allLabel={null} onChange={setChosen} />
             )}
           </div>
           <div className={s.grid2}>

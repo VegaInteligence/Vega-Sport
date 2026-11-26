@@ -2,14 +2,11 @@
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
-import { Media } from "./UI.jsx";
 import {
   applyCompetitionDraft,
-  draftCount,
-  useCompetitionDraft,
   useHomeCompetitions,
 } from "./HomePreferences.jsx";
-import { competitionCountryLabel } from "../services/competition-selector.js";
+import { CompetitionsPane } from "./CompetitionPicker.jsx";
 
 // The home page's settings bar (FAILURE_MODES § 77, piste B of https://claude.ai/artifact/DPfYC6jW2ooKwPGzmaGsdD):
 // the season and the competitions in one track, and one panel under it that slides from one to the other, as the
@@ -36,106 +33,6 @@ function SeasonPane({ f, close }) {
         </button>
       ))}
     </div>
-  );
-}
-
-function CompetitionsPane({ f, competitions, ids, close }) {
-  const draft = useCompetitionDraft(competitions, ids);
-  const {
-    selected,
-    setSelected,
-    query,
-    setQuery,
-    visible,
-    europe,
-    isEurope,
-    toggle,
-  } = draft;
-  return (
-    <>
-      <div className="home-settings-tools">
-        <div
-          className="home-settings-presets"
-          role="group"
-          aria-label="Sélections de compétitions"
-        >
-          <button
-            type="button"
-            aria-pressed={selected.size === 0}
-            onClick={() => setSelected(new Set())}
-          >
-            Toutes
-          </button>
-          <button
-            type="button"
-            aria-pressed={isEurope && selected.size > 0}
-            onClick={() => setSelected(new Set(europe))}
-          >
-            Top 7 Europe + UEFA
-          </button>
-        </div>
-        <label className="home-settings-search">
-          <Icon name="search" />
-          <input
-            type="search"
-            aria-label="Rechercher une compétition"
-            placeholder="Compétition ou pays…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
-      </div>
-      <div
-        className="home-settings-tiles"
-        role="group"
-        aria-label="Compétitions"
-      >
-        {visible.map((competition) => (
-          <button
-            key={competition.id}
-            type="button"
-            className="home-settings-tile"
-            data-league={competition.id}
-            aria-pressed={selected.has(competition.id)}
-            onClick={() => toggle(competition.id)}
-          >
-            {selected.has(competition.id) && (
-              <Icon name="check" className="home-settings-check" />
-            )}
-            <Media name={competition.name} url={competition.imageUrl} />
-            <strong>{competition.name}</strong>
-            <small>{competitionCountryLabel(competition)}</small>
-          </button>
-        ))}
-        {!visible.length && (
-          <p className="home-settings-empty">
-            Aucune compétition pour cette recherche.
-          </p>
-        )}
-      </div>
-      <div className="home-settings-foot">
-        <span className="home-settings-count" role="status">
-          {draftCount(draft)}
-        </span>
-        <button
-          type="button"
-          className="home-settings-action"
-          onClick={() => close(true)}
-        >
-          Annuler
-        </button>
-        <button
-          type="button"
-          className="home-settings-action is-filled"
-          onClick={() => {
-            applyCompetitionDraft(f, draft);
-            close(true);
-          }}
-        >
-          Appliquer
-        </button>
-      </div>
-    </>
   );
 }
 
@@ -252,10 +149,10 @@ export default function HomeSettings({ f }) {
                 <SeasonPane f={f} close={close} />
               ) : (
                 <CompetitionsPane
-                  f={f}
                   competitions={competitions}
                   ids={ids}
                   close={close}
+                  onApply={(draft) => applyCompetitionDraft(f, draft)}
                 />
               )}
             </div>

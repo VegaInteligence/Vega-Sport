@@ -14,7 +14,7 @@ import React, {
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import ClubSkeleton from "../components/ClubSkeleton.jsx";
-import CompetitionOptions from "../components/CompetitionOptions.jsx";
+import { CompetitionPicker } from "../components/CompetitionPicker.jsx";
 import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
 import { Media, Pager, Empty, Skeleton } from "../components/UI.jsx";
 const ClubScoutProfile = lazy(
@@ -441,17 +441,12 @@ export default function ClubsPage() {
                   ))}
                 </select>
               </label>
-              <label className="club-directory-select">
-                <span>Compétition</span>
-                <select
-                  aria-label="Compétition des clubs"
-                  value={activeCompetitionId}
-                  onChange={(e) => setCompetitionId(e.target.value)}
-                >
-                  <option value="all">Toutes les compétitions</option>
-                  <CompetitionOptions competitions={competitions} />
-                </select>
-              </label>
+              <CompetitionPicker
+                label="Compétition des clubs"
+                competitions={competitions}
+                value={activeCompetitionId}
+                onChange={setCompetitionId}
+              />
               <label className="club-directory-select">
                 <span>Saison</span>
                 <select

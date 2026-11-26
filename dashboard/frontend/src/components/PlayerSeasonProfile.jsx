@@ -1,4 +1,6 @@
 "use client";
+
+import { CompetitionPicker } from "./CompetitionPicker.jsx";
 import { playerRecordResource } from "../services/player-prefetch.js";
 import React, {
   lazy,
@@ -731,18 +733,12 @@ export default function PlayerSeasonProfile({
                 <>
                   {view === "overview" && competitions.length > 1 && (
                     <FilterGroup>
-                      <Segments
-                        label="Compétition"
+                      <CompetitionPicker
                         value={competition}
                         onChange={(value) =>
                           setOverviewScope({ key: scopeKey, competition: value })
                         }
-                        items={[
-                          ["all", "Toutes"],
-                          ...competitions
-                            .slice(0, 4)
-                            .map((name) => [name, name]),
-                        ]}
+                        competitions={competitions.slice(0, 4).map((name) => ({ id: name, name }))}
                       />
                     </FilterGroup>
                   )}

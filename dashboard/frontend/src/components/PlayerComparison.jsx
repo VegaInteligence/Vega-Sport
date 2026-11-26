@@ -36,7 +36,7 @@ import { AsyncState, Empty, Media, Modal } from "./UI.jsx";
 import { MetricInfo, MetricPicker, ReportButton } from "./ResearchUI.jsx";
 import { COLORS } from "./ResearchCharts.jsx";
 import c from "./PlayerComparison.module.css";
-import CompetitionOptions from "./CompetitionOptions.jsx";
+import { CompetitionPicker } from "./CompetitionPicker.jsx";
 
 export async function comparisonSamples(f, entries, { signal } = {}) {
   const routing = await playerRoutes(
@@ -224,18 +224,13 @@ function PlayerCard({
             </option>
           ))}
         </select>
-        <select
-          aria-label={`Compétition de ${entry.name} ${index + 1}`}
+        <CompetitionPicker
+          label={`Compétition de ${entry.name} ${index + 1}`}
           value={entry.scope.league}
-          onChange={(e) =>
-            onChange({
-              scope: { ...entry.scope, league: e.target.value, leagues: [] },
-            })
-          }
-        >
-          <option value="all">Toutes ses compétitions</option>
-          <CompetitionOptions competitions={competitions} />
-        </select>
+          competitions={competitions}
+          summary={entry.scope.leagues?.length > 1 ? `${entry.scope.leagues.length} compétitions` : undefined}
+          onChange={(league) => onChange({ scope: { ...entry.scope, league, leagues: [] } })}
+        />
       </div>
       <dl className={c.facts}>
         <div>

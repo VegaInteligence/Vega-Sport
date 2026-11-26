@@ -110,12 +110,15 @@ const spotlight = (page) => page.locator('.league-spotlight-item[aria-pressed="t
 {
   const followed = ["l_4WFCIZ", "l_3FJFUl"];
   let v = await visit("/matchs", { preferences: { favoriteLeagueIds: followed }, tag: "P9" });
-  const state = async (page) => ({ control: await page.locator("#league-filter").inputValue().catch(() => null), url: new URL(page.url()).searchParams.get("league") });
+  const state = async (page) => ({ control: await page.locator("#league-filter").getAttribute("data-value").then((value) => value === "europe" ? "all" : value).catch(() => null), url: new URL(page.url()).searchParams.get("league") });
   let s = await state(v.page);
   check("P9 the league filter starts on the first followed league", { control: "l_4WFCIZ", url: "l_4WFCIZ" }, s, s.control === "l_4WFCIZ" && s.url === "l_4WFCIZ");
   await shot(v.page, "09-matchs-ligue-suivie", ".filter-panel");
   // Cleared: stays cleared for the visit, after a reload.
-  await v.page.locator("#league-filter").selectOption("all");
+  await v.page.locator("#league-filter").click();
+  const picker = v.page.locator(".settings-picker-panel");
+  await picker.getByRole("button", { name: "Toutes", exact: true }).click();
+  await picker.getByRole("button", { name: "Appliquer", exact: true }).click();
   await v.page.waitForTimeout(800);
   await v.page.goto(base + "/matchs", { waitUntil: "load" });
   await v.page.waitForTimeout(4000);
@@ -135,7 +138,7 @@ const spotlight = (page) => page.locator('.league-spotlight-item[aria-pressed="t
 
 // ---------- P10: the players' league filter ----------
 {
-  const state = async (page) => page.locator("#league-filter").inputValue().catch(() => null);
+  const state = async (page) => page.locator("#league-filter").getAttribute("data-value").then((value) => value === "europe" ? "all" : value).catch(() => null);
   let v = await visit("/joueurs", { preferences: { favoriteLeagueIds: ["l_3FJFUl"] }, tag: "P10" });
   let s = await state(v.page);
   check("P10 one followed league: the players' filter starts on it", "l_3FJFUl", s, s === "l_3FJFUl");

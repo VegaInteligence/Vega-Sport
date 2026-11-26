@@ -733,3 +733,39 @@ html:has(.home-page) .modal-close:hover {
     display: none;
   }
 }
+
+.settings-picker {
+  width: fit-content;
+  min-width: 0;
+  max-width: 100%;
+}
+.settings-picker > .home-settings {
+  max-width: 100%;
+}
+.settings-picker-panel.home-settings-panel {
+  position: fixed;
+  inset: var(--picker-top, 12px) auto auto var(--picker-left, 12px);
+  margin: 0;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+.settings-picker-panel::backdrop {
+  background: transparent;
+}
+.home-settings-tile:disabled,
+.home-settings-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+@media (max-width: 640px) {
+  .settings-picker-panel.home-settings-panel {
+    inset: auto 0 0;
+    width: auto;
+    max-width: none;
+    max-height: 86dvh;
+  }
+  .settings-picker-panel::backdrop {
+    background: var(--backdrop, rgb(0 0 0 / 0.45));
+  }
+}
