@@ -194,13 +194,14 @@ TAKEOVER_PROOF= HOLDER_WHY=
 # started); a run the owner attested dead (deploy_state.py abandon). A lock held: the run lives. A lock absent or
 # unreadable here, or a name without a run token (an earlier Deploy's): nothing is proved — another machine's run (of any
 # name or identity, a clone), or this one's before a restart or a cleaning of the lock directory — and only the owner's
-# attestation lets the next Deploy take it over (GH157-ag). HOLDER_WHY says what would prove it otherwise.
+# attestation lets the next Deploy take it over (GH157-ag), and never over its lock still held here (an attestation
+# written on another machine, where that lock does not show). HOLDER_WHY says what would prove it otherwise.
 known_dead() {
-  local holder=$1 status host lock_state lock attest
+  local holder=$1 status host lock_state lock attest attested= over=
   TAKEOVER_PROOF= HOLDER_WHY=
   [ -n "$holder" ] || return 1
   if [ -n "$STATE_ABANDONED" ] && [ "$STATE_ABANDONED" = "$holder" ]; then
-    TAKEOVER_PROOF="the owner attested it dead (deploy_state.py abandon)"; return 0
+    attested=yes over=", and the owner's attestation does not stand over it"
   fi
   if [[ $holder =~ ^gh-([0-9]+)-([0-9]+)$ ]]; then
     if [ -z "${GITHUB_REPOSITORY:-}" ] || ! command -v gh >/dev/null 2>&1; then
@@ -218,13 +219,17 @@ known_dead() {
     attest="once its processes are known gone (that machine off or restarted, or the run's shell and every command it started stopped), the owner attests it: python3 infra/aws/deploy_state.py abandon --bucket $STATE_BUCKET --holder '$holder' --reason '<what was checked>' (infra/aws/README.md); the next Deploy then takes it over"
     case "$lock_state" in
       free) TAKEOVER_PROOF="no process of its run lives (its lock $lock is here and free)"; return 0 ;;
-      held) HOLDER_WHY="A process of its run is alive on this machine (its lock $lock is held: its shell, or a command it started such as an aws cloudformation deploy): wait for them or stop them all; the next Deploy then takes it over." ;;
+      held) HOLDER_WHY="A process of its run is alive on this machine (its lock $lock is held: its shell, or a command it started such as an aws cloudformation deploy)$over: wait for them or stop them all; the next Deploy then takes it over."; return 1 ;;
+    esac
+    if [ -n "$attested" ]; then TAKEOVER_PROOF="the owner attested it dead (deploy_state.py abandon)"; return 0; fi
+    case "$lock_state" in
       untokened) HOLDER_WHY="It ran on host $host under an earlier Deploy's name (no run token), which this run cannot check: nothing here proves it dead; $attest." ;;
       absent) HOLDER_WHY="Its lock $lock is not in this machine's lock directory (it ran on host $host: another machine, or this one before a restart or a cleaning of $LOCK_DIR), which this run cannot check: nothing here proves it dead; $attest." ;;
       *) HOLDER_WHY="Its lock $lock cannot be read here ($lock_state), which this run cannot check: nothing here proves it dead; $attest." ;;
     esac
     return 1
   fi
+  if [ -n "$attested" ]; then TAKEOVER_PROOF="the owner attested it dead (deploy_state.py abandon)"; return 0; fi
   HOLDER_WHY="Its name is neither a GitHub run's nor a workstation's: the owner settles it (infra/aws/README.md, Takeover and first install)."
   return 1
 }

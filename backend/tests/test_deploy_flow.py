@@ -1243,6 +1243,30 @@ class DeployFlowTest(unittest.TestCase):
         after = self.deploy(None, {**local, "FAKE_RUN": "clone-c4", "DEPLOY_LOCK_DIR": str(one)}, world=world)
         self.assert_done(after)
         self.assertIn(f"taking over {restarted} (the owner attested it dead", after.log)
+        # The owner's attestation from machine two over a run that lives on machine one: written (nothing on machine two
+        # shows that lock), but it never stands over a lock still held: machine one's Deploy refuses; A2 dead, taken over.
+        self.change_world(world, lambda w: w["faults"].update(pause={"run": "clone-a2", "call": ["cloudformation", "deploy"], "stack": "vega-v2-live"}))
+        a2, a2_tmp = self.deploy(None, {**local, "FAKE_RUN": "clone-a2", "DEPLOY_LOCK_DIR": str(one)}, background=True, world=world)
+        try:
+            self.wait_for(a2_tmp / "calls.log", '"paused"')
+            holder2 = json.loads(json.loads(world.read_text())["s3"]["buckets"][STATE_BUCKET][STATE_KEY]["body"])["owner"]
+            lock2 = one / f"vega-deploy-{holder2.rsplit(':', 1)[1]}.lock"
+            attested_elsewhere = self.attest(world, holder2, two)
+            over_lock = self.deploy(None, {**local, "FAKE_RUN": "clone-c5", "DEPLOY_LOCK_DIR": str(one)}, world=world)
+        finally:
+            os.killpg(a2.pid, signal.SIGKILL)
+            a2.wait(30)
+            a2.stdout.close()
+            a2.stderr.close()
+        self.assertEqual(attested_elsewhere.returncode, 0, attested_elsewhere.stderr)
+        self.assertNotEqual(over_lock.code, 0, over_lock.log)
+        self.assertIn(f"its lock {lock2} is held", over_lock.log)
+        self.assertIn("the owner's attestation does not stand over it", over_lock.log)
+        self.assertEqual([c for c in self.changed(over_lock) if c != ["s3api", "put-object"]], [], "nothing changed")
+        self.change_world(world, lambda w: w["faults"].pop("pause"))
+        last = self.deploy(None, {**local, "FAKE_RUN": "clone-c6", "DEPLOY_LOCK_DIR": str(one)}, world=world)
+        self.assert_done(last)
+        self.assertIn(f"taking over {holder2} (no process of its run lives (its lock {lock2} is here and free)", last.log)
 
     # --- GH158: the image named by its inputs --------------------------------------------------------------------------
 
