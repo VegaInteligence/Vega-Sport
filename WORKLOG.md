@@ -1,14 +1,21 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
-## Absents gardés sur la page d'un match après le coup d'envoi — FAILURE_MODES § 77 (26 novembre 2026, GitHub #252, branche `claude/absents-apres-match`)
+## Absents gardés sur la page d'un match après le coup d'envoi — FAILURE_MODES § 78 (26 novembre 2026, GitHub #252, branche `claude/absents-apres-match`)
 
 - Demande de hugo (15 h 55, après Sabah – Barcelone) : ne plus enlever les absents de la page d'un match, pour savoir qui était blessé ou suspendu ce jour-là.
 - Migration 181 (deux vues, en ligne) : `api.match_absence_players` (effectif Transfermarkt de la saison du match, sinon la saison d'avant ; lu si les blessures ont une lecture de 45 jours au plus avant le jour du match) et `api.match_absences` (épisodes en cours le jour du match, suspensions de la compétition du match seulement, jamais un joueur de la feuille).
 - Route `GET /api/matches/{id}/absences` (`profiles.mjs`) : 404 pour un match inconnu ou pas commencé. Famille `matches.id.absences` ajoutée à la fonction CloudFront des journaux (`infra/aws/api.yaml`).
 - Site : la carte « Absents » de l'onglet Avant-match reste après le coup d'envoi, lue par cette route, sans « dans N j ». Avant le coup d'envoi rien ne change. Maquette : celle du 24 novembre (§ 59), la même carte.
 - Tests : `match-absences.test.mjs` 3/3 (rouges avant la migration), E2E K6/K6b (`match-page.e2e.mjs`) rouges avant, verts après ; site 1 119/1 119 ; build du site OK. Preuves : `/mnt/project-files/absents-apres-match/`.
-- Relecture Codex de #253 (deux P2, corrigées) : un match dont le coup d'envoi est passé compte comme commencé même si la base dit encore « not_started » ; l'effectif de la saison exclut un joueur arrivé après le match ou parti dans un autre de nos clubs avant (transferts datés). 77a et 77i rouges avant, verts après.
+- Relecture Codex de #253 (deux P2, corrigées) : un match dont le coup d'envoi est passé compte comme commencé même si la base dit encore « not_started » ; l'effectif de la saison exclut un joueur arrivé après le match ou parti dans un autre de nos clubs avant (transferts datés). 78a et 78i rouges avant, verts après.
 - Reste : Deploy (migration 181 et route), à demander à hugo.
+
+## Page Vue d'ensemble (l'accueil) : boutons et sous-menus — FAILURE_MODES § 77 (26 novembre 2026)
+
+- Demandes de hugo (14 h 56, 16 h 17) : refaire les interactions et les boutons de l'accueil « en gardant le même esprit », sous-menus compris. Maquette https://claude.ai/artifact/DPfYC6jW2ooKwPGzmaGsdD : résultats de la semaine en piste A, barre de réglages en piste B, **sans pays** (automatique, réglé dans Paramètres de /compte). « une fois fait tu peux merge dans main ».
+- `HomeSettings.jsx` : Saison · Compétitions dans une piste de 40 px, un panneau qui glisse entre les deux (saisons en pilules, compétitions en tuiles avec logo, Toutes / Top 7, recherche, Annuler / Appliquer), feuille du bas au téléphone. `HomePreferences.jsx` garde la fenêtre pour /compte et partage sa logique (`useHomeCompetitions`, `useCompetitionDraft`, `applyCompetitionDraft`) ; la ligne « Votre pays » en est retirée.
+- `home-pills.css` : résultats de la semaine en cartes de 22 px, liens, action principale, onglets de ligue, sélecteurs, plis, « i », bulles et fenêtres ouvertes depuis l'accueil. Répare aussi le menu Pays de Paramètres, sans cadre depuis f2d62a6.
+- Tests : `tests/e2e/home-buttons.e2e.mjs` H1 à H14 et X1, rouges sur 6fac550 (14/15), verts après (15/15) ; barre 21/21. `home-country.e2e.mjs` M1 réécrit (pays lu dans les préférences), non relancé ici : le rejeu du 24 nov. n'a pas `home-local`.
 
 ## Barre de navigation : piste B et panneau qui glisse en tuiles — FAILURE_MODES § 76 (26 novembre 2026, sur main depuis 6c75337)
 

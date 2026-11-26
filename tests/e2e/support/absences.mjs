@@ -111,7 +111,7 @@ export const franceAnswer = () => ({
   ],
 });
 
-// Test double of GET /api/matches/{id}/absences (FAILURE_MODES.md § 77, backend/api/test/match-absences.test.mjs checks
+// Test double of GET /api/matches/{id}/absences (FAILURE_MODES.md § 78, backend/api/test/match-absences.test.mjs checks
 // the real route against the same shape): { data: { id, on, home: { team, asOf, squad, absences }, away: { … } } }, each
 // side's absences in the shape above, read as of the match day (`matchesRemaining` null). serveMatchAbsences(context,
 // plan): plan.answer → 200, 404 / 500 / "abort" as serveAbsences; each request logged in plan.requests.

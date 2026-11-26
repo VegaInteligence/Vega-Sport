@@ -1,0 +1,714 @@
+/* The home page's buttons and menus (« Vue d'ensemble », FAILURE_MODES § 77; mock-up
+   https://claude.ai/artifact/DPfYC6jW2ooKwPGzmaGsdD, hugo, 26 Nov 2026, 16 h 17: the week's results of piste A, the
+   settings bar of piste B without the country).
+   The rules of the match page (match-pills.css, § 72) and of the bar (navigation.css, § 76): a pill for whatever is
+   clicked, filled (--pill-fill) for the current choice and for a button whose panel is open, quiet (--pill-quiet)
+   for the rest; 22 px corners and no grey line for panels, windows and bubbles; a sheet from the bottom on a phone.
+   The page's rules start with `:root .home-page` so they do not depend on the order in which the sheets load. */
+
+/* ----------------------------------------------------------------- the settings bar (HomeSettings.jsx) */
+.home-settings-root {
+  position: relative;
+}
+.home-settings {
+  display: inline-flex;
+  gap: 2px;
+  height: 40px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+.home-settings-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pill-quiet-ink);
+  font: inherit;
+  font-size: var(--pill-text);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease;
+}
+.home-settings-segment:hover {
+  background: var(--pill-quiet);
+}
+.home-settings-segment:active {
+  transform: scale(0.97);
+}
+.home-settings-segment[aria-expanded="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+.home-settings-segment:focus-visible,
+.home-settings-panel button:focus-visible {
+  outline: 2px solid var(--pill-focus);
+  outline-offset: 2px;
+}
+.home-settings-segment > span {
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-settings-segment .icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+.home-settings-segment .home-settings-chevron {
+  width: 13px;
+  height: 13px;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+.home-settings-segment[aria-expanded="true"] .home-settings-chevron {
+  transform: rotate(180deg);
+}
+
+/* One panel under the track, its right edge on the track's; it takes its pane's height (set by the component) and
+   its width from the pane it shows, so moving from the season to the competitions glides. */
+.home-settings-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 60;
+  width: 360px;
+  max-width: calc(100vw - 2 * var(--page-gutter, 16px));
+  overflow: hidden;
+  border: 0;
+  border-radius: 22px;
+  background: var(--surface-raised);
+  box-shadow:
+    var(--shadow-pop),
+    0 0 0 1px var(--pill-quiet);
+  transition:
+    height 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: home-settings-in 0.16s ease;
+}
+.home-settings-panel[data-pane="competitions"] {
+  width: 640px;
+}
+.home-settings-pane {
+  padding: 16px;
+}
+.home-settings-pane.is-from-right {
+  animation: home-settings-from-right 0.24s ease;
+}
+.home-settings-pane.is-from-left {
+  animation: home-settings-from-left 0.24s ease;
+}
+.home-settings-veil {
+  display: none;
+}
+
+/* Saison: the seasons as pills, the current one filled. */
+.home-settings-seasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.home-settings-season,
+.home-settings-action,
+.home-settings-presets button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font: inherit;
+  font-size: var(--pill-text);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease;
+}
+.home-settings-season:hover,
+.home-settings-action:hover {
+  background: var(--pill-quiet-hover);
+}
+.home-settings-season:active,
+.home-settings-action:active,
+.home-settings-presets button:active,
+.home-settings-tile:active {
+  transform: scale(0.97);
+}
+.home-settings-season[aria-pressed="true"],
+.home-settings-action.is-filled {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+.home-settings-action.is-filled:hover {
+  background: var(--pill-fill);
+  opacity: 0.88;
+}
+
+/* Compétitions: the presets in a track, the search in a pill, the competitions as tiles. */
+.home-settings-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.home-settings-presets {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+.home-settings-presets button {
+  height: 28px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.home-settings-presets button:hover {
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+}
+.home-settings-presets button[aria-pressed="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+.home-settings-search {
+  display: flex;
+  flex: 1 1 200px;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--muted);
+}
+.home-settings-search:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--pill-focus);
+}
+.home-settings-search .icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+.home-settings-search input[type="search"] {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+}
+.home-settings-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  max-height: min(330px, 52vh);
+  margin-top: 12px;
+  padding-right: 2px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.home-settings-tile {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+  min-width: 0;
+  height: 88px;
+  padding: 8px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--pill-quiet);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease;
+}
+.home-settings-tile:hover {
+  background: var(--pill-quiet-hover);
+}
+.home-settings-tile[aria-pressed="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+/* The logo as it is, with no disc behind it (hugo: no background behind a logo, § 72). */
+.home-settings-tile > [data-page-media] {
+  width: 30px;
+  height: 30px;
+  border-radius: 0;
+  background: none;
+}
+.home-settings-tile > [data-page-media] img {
+  object-fit: contain;
+}
+/* The three logos drawn in black, light on a dark tile (as in the bar's panel, navigation.css). */
+html[data-theme="dark"]
+  .home-settings-tile:is(
+    [data-league="l_3FJFUl"],
+    [data-league="l_4WFCIZ"],
+    [data-league="l_0bfbkO"]
+  ):not([aria-pressed="true"])
+  > [data-page-media]
+  img {
+  filter: brightness(0) invert(0.92);
+}
+html[data-theme="light"]
+  .home-settings-tile:is(
+    [data-league="l_3FJFUl"],
+    [data-league="l_4WFCIZ"],
+    [data-league="l_0bfbkO"]
+  )[aria-pressed="true"]
+  > [data-page-media]
+  img {
+  filter: brightness(0) invert(0.92);
+}
+.home-settings-tile strong,
+.home-settings-tile small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-settings-tile strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.home-settings-tile small {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+.home-settings-tile[aria-pressed="true"] small {
+  color: inherit;
+  opacity: 0.65;
+}
+.home-settings-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 14px;
+  height: 14px;
+}
+.home-settings-empty {
+  grid-column: 1 / -1;
+  margin: 8px 2px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.home-settings-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.home-settings-count {
+  flex: 1;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@keyframes home-settings-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes home-settings-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes home-settings-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+@keyframes home-settings-sheet {
+  from {
+    opacity: 0.4;
+    transform: translateY(40px);
+  }
+}
+@keyframes home-settings-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ----------------------------------------------------------------- the week's results (piste A) */
+:root .home-page .home-ticker {
+  gap: 8px;
+  border: 0;
+  border-radius: 0;
+}
+:root .home-page .home-ticker-day {
+  padding: 10px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+}
+:root .home-page .home-tick {
+  padding: 10px 16px 9px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+:root .home-page .home-tick:hover {
+  background: var(--pill-quiet);
+}
+:root .home-page .home-tick-team {
+  margin: 0 -6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+/* ----------------------------------------------------------------- the page's pills */
+:root .home-page .inline-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  width: fit-content;
+  height: var(--pill-h);
+  padding: 0 12px 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.16s ease,
+    transform 0.12s ease;
+}
+:root .home-page .home-card-head .inline-link,
+:root .home-page .home-section-head .inline-link {
+  align-self: center;
+}
+:root .home-page .inline-link:hover {
+  background: var(--pill-quiet-hover);
+  color: var(--pill-quiet-ink);
+}
+:root
+  .home-page
+  :is(
+    .inline-link,
+    .button,
+    .segmented-control button,
+    .home-tabs button,
+    .phone-fold-toggle
+  ):active {
+  transform: scale(0.97);
+}
+:root .home-page .button-primary {
+  min-height: 0;
+  height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+  font-size: var(--pill-text);
+  font-weight: 600;
+}
+:root .home-page .button-primary:hover {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+  opacity: 0.88;
+}
+:root .home-page .home-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* « Efficaces / Maladroits », « Buteurs / Passeurs »: the match page's track. */
+:root .home-page .segmented-control {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+:root .home-page .segmented-control button {
+  height: 26px;
+  min-height: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+:root .home-page .segmented-control button:hover {
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+}
+:root .home-page .segmented-control button[aria-pressed="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+
+/* « Course au titre »: the leagues in a track, the chosen one filled. */
+:root .home-page .home-tabs {
+  gap: 2px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 12px;
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+:root .home-page .home-tabs button {
+  flex: none;
+  height: 30px;
+  min-height: 0;
+  padding: 0 12px 0 8px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+}
+:root .home-page .home-tabs button:hover {
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+}
+:root .home-page .home-tabs button[aria-pressed="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+
+/* The phone's folds (« Détail du match », « Ses chiffres du match »): quiet pills. */
+:root .home-page .phone-fold-toggle {
+  height: 40px;
+  min-height: 0;
+  padding: 0 10px 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+:root .home-page .phone-fold-toggle svg {
+  transition: transform 0.2s ease;
+}
+:root .home-page .phone-fold-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+:root
+  .home-page
+  :is(
+    .inline-link,
+    .button,
+    .segmented-control button,
+    .home-tabs button,
+    .phone-fold-toggle
+  ):focus-visible {
+  outline: 2px solid var(--pill-focus);
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------- the « i » and the windows */
+:root .home-page .hint.hint {
+  width: 15px;
+  height: 15px;
+  border: 0;
+  background: var(--pill-quiet);
+}
+:root .home-page .hint.hint:hover,
+:root .home-page .hint.hint:focus-visible {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+/* The bubble and the windows live outside the page's element (a portal, a dialog): read from the page. */
+html:has(.home-page) .hint-bubble {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 22px;
+  box-shadow:
+    var(--shadow-pop),
+    0 0 0 1px var(--pill-quiet);
+}
+html:has(.home-page) .modal {
+  border: 0;
+  border-radius: 22px;
+  box-shadow:
+    var(--shadow-overlay),
+    0 0 0 1px var(--pill-quiet);
+}
+html:has(.home-page) .modal-header {
+  border-bottom: 0;
+  padding: 18px 18px 8px 24px;
+}
+html:has(.home-page) .modal-close {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+}
+html:has(.home-page) .modal-close:hover {
+  background: var(--pill-quiet-hover);
+}
+
+/* ----------------------------------------------------------------- the account's country menu (§ 77, regression of § 76)
+   HomeCountryMenu draws the bar's old `.nav-menu-panel`, whose box went with f2d62a6: a floating menu again. */
+.home-country-menu.nav-menu-panel {
+  position: absolute;
+  z-index: 60;
+  min-width: 230px;
+  padding: 6px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--surface-raised);
+  box-shadow:
+    var(--shadow-pop),
+    0 0 0 1px var(--pill-quiet);
+  animation: home-settings-in 0.16s ease;
+}
+.home-country-menu .nav-menu-list {
+  gap: 2px;
+}
+.home-country-menu button.nav-menu-item {
+  background: none;
+}
+.home-country-menu button.nav-menu-item:hover {
+  background: var(--pill-quiet);
+}
+.home-country-menu .nav-menu-item[aria-checked="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+
+/* ----------------------------------------------------------------- phone */
+@media (max-width: 640px) {
+  :root .home-page .home-toolbar-filters {
+    width: 100%;
+    margin-left: 0;
+  }
+  .home-settings-root {
+    width: 100%;
+  }
+  .home-settings {
+    display: flex;
+    width: 100%;
+    height: 42px;
+  }
+  .home-settings-segment {
+    flex: 1 1 0;
+    justify-content: center;
+    height: 36px;
+    padding: 0 10px;
+  }
+  .home-settings-segment > span {
+    max-width: none;
+  }
+  .home-settings-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 1150;
+    display: block;
+    background: var(--backdrop, rgb(0 0 0 / 0.45));
+    animation: home-settings-fade 0.16s ease;
+  }
+  /* A sheet from the bottom. Its height follows its pane as on a wide screen (its first frame included). */
+  .home-settings-panel,
+  .home-settings-panel[data-pane="competitions"] {
+    position: fixed;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1200;
+    width: auto;
+    max-width: none;
+    max-height: 86dvh;
+    border-radius: 22px 22px 0 0;
+    overflow-y: auto;
+    animation: home-settings-sheet 0.24s ease;
+  }
+  .home-settings-pane {
+    padding: 22px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .home-settings-pane::before {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 38px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--pill-quiet-hover);
+    content: "";
+    translate: -50% 0;
+  }
+  .home-settings-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-height: 46dvh;
+  }
+  :root .home-page .inline-link {
+    height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-settings-panel,
+  .home-settings-pane,
+  .home-settings-veil,
+  .home-country-menu.nav-menu-panel {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* A phone keeps the names: the segments drop their symbol for the room. */
+@media (max-width: 640px) {
+  .home-settings-segment > .icon:first-child {
+    display: none;
+  }
+}
