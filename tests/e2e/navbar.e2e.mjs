@@ -24,6 +24,15 @@
 //      but keep their name for a screen reader; a tap on « Compétitions » opens a sheet with 22 px corners, the two
 //      pages and the six league tiles.
 //  N12 No sideways scroll at 393 and 1440 px.
+//  N13 (hugo, 26 Nov 2026, 15 h 13 « when i click on search icon the cors of the navabr disapear … make the corp of
+//      navbar slide a bit to the left ») At 641, 760, 900, 1000, 1120, 1280 and 1440 px, a click on the search icon
+//      opens the field and the track stays: fully opaque, its five sections drawn (30 px wide at least), right of the
+//      logo (8 px), the field right of the track (8 px), 220 px wide at least, inside the window, focused. Where the
+//      field needs the room the track slides left; where even that is not enough its sections show their symbol
+//      alone (their names kept for screen readers). Escape twice puts the track back where it was (±1 px).
+//  N14 (hugo, 15 h 14 « icon du user elle est carré c'est pas bon … enleve la ») The signed-in account button:
+//      no square monogram. From 1024 px a quiet pill « Mon compte », the monogram not drawn; under it a 34 px round
+//      (the initial, no square background).
 //  X1  No page error.
 //
 //   node tests/e2e/navbar.e2e.mjs <base url> <evidence dir>     (a `next build` + `next start`, not `next dev`)
@@ -173,6 +182,68 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
   check("N12a", "1440 px: no sideways scroll", b.sideways, b.sideways <= 0);
   await page.context().close();
+
+  // ------------------------------------------------------------------ the search opened beside the track (N13)
+  const roomAt = [];
+  for (const width of [641, 760, 900, 1000, 1120, 1280, 1440]) {
+    const p = await open({ viewport: { width, height: 800 } });
+    const place = () => p.evaluate(() => {
+      const nav = document.querySelector(".topbar .main-nav"), r = nav.getBoundingClientRect();
+      const f = document.querySelector(".topbar .global-search-field").getBoundingClientRect();
+      const buttons = [...nav.querySelectorAll(":scope > a, :scope > .nav-menu > button")].map((b) => Math.round(b.getBoundingClientRect().width));
+      return {
+        nav: [Math.round(r.left), Math.round(r.right)], opacity: Number(getComputedStyle(nav).opacity), visibility: getComputedStyle(nav).visibility,
+        buttons, names: [...nav.querySelectorAll(":scope > a, :scope > .nav-menu > button")].map((b) => b.textContent.trim().length > 2),
+        brand: Math.round(document.querySelector(".topbar .brand").getBoundingClientRect().right),
+        field: [Math.round(f.left), Math.round(f.right), Math.round(f.width)], window: innerWidth,
+        focused: document.activeElement === document.querySelector(".topbar .global-search input"),
+      };
+    });
+    const before = await place();
+    await p.locator(".topbar .global-search input").click();
+    await p.waitForTimeout(500);
+    const during = await place();
+    await p.locator(".topbar").screenshot({ path: join(out, `recherche-ouverte-${width}.png`) });
+    await p.keyboard.press("Escape");
+    await p.keyboard.press("Escape");
+    await p.waitForTimeout(500);
+    const after = await place();
+    const ok = during.opacity > 0.99 && during.visibility === "visible" && during.buttons.length === 5 && during.buttons.every((w) => w >= 30) && during.names.every(Boolean) &&
+      during.nav[0] >= during.brand + 8 && during.field[0] >= during.nav[1] + 8 && during.field[2] >= 220 && during.field[1] <= during.window && during.focused &&
+      Math.abs(after.nav[0] - before.nav[0]) <= 1 && Math.abs(after.nav[1] - before.nav[1]) <= 1 && after.field[2] === 34;
+    roomAt.push({ width, ok, before: before.nav, during: { nav: during.nav, field: during.field, buttons: during.buttons, opacity: during.opacity }, after: after.nav });
+    await p.context().close();
+  }
+  check("N13", "the search opened: the track stays whole and opaque, slides left (or shows its symbols) to leave the field 220 px at least; back in place after Escape",
+    roomAt.map(({ ok, ...rest }) => ({ ok, ...rest })), roomAt.every((r) => r.ok));
+
+  // ------------------------------------------------------------------ the signed-in account button (N14)
+  const signed = [];
+  for (const width of [1440, 900]) {
+    const p = await open({ viewport: { width, height: 800 } });
+    // A local server has no session: the signed-in button's markup (AccountEntry.jsx) is put in the header as is.
+    const look = await p.evaluate(() => {
+      const actions = document.querySelector(".topbar .topbar-actions");
+      const root = document.createElement("div");
+      root.className = "account-menu-root";
+      root.innerHTML = '<button type="button" class="account-entry account-entry-in" aria-label="Mon compte"><span class="account-entry-monogram" aria-hidden="true">H</span><span class="account-entry-label">Mon compte</span></button>';
+      (actions.querySelector(".account-entry")?.closest(".account-menu-root, .account-entry") || actions.lastElementChild).replaceWith(root);
+      const b = root.querySelector("button"), m = root.querySelector(".account-entry-monogram"), r = b.getBoundingClientRect(), cm = getComputedStyle(m), cb = getComputedStyle(b);
+      return {
+        width: Math.round(r.width), height: Math.round(r.height), radius: cb.borderTopLeftRadius, bg: cb.backgroundColor,
+        monogram: { display: cm.display, width: Math.round(m.getBoundingClientRect().width), bg: cm.backgroundColor, radius: cm.borderTopLeftRadius },
+        label: root.querySelector(".account-entry-label").getBoundingClientRect().width > 20,
+      };
+    });
+    await p.locator(".topbar").screenshot({ path: join(out, `compte-connecte-${width}.png`) });
+    signed.push({ width, ...look });
+    await p.context().close();
+  }
+  const [wideAccount, narrowAccount] = signed;
+  check("N14", "signed in: no square monogram; a pill « Mon compte » from 1024 px, a 34 px round with the initial under it", signed,
+    wideAccount.radius === "999px" && wideAccount.monogram.display === "none" && wideAccount.label &&
+      narrowAccount.width === 34 && parseFloat(narrowAccount.radius) >= 17 && narrowAccount.monogram.display !== "none" &&
+      (narrowAccount.monogram.bg === "rgba(0, 0, 0, 0)" || parseFloat(narrowAccount.monogram.radius) >= narrowAccount.monogram.width / 2 - 1));
 
   // ------------------------------------------------------------------ computer, light
   const light = await open({ viewport: { width: 1440, height: 900 } }, "light");

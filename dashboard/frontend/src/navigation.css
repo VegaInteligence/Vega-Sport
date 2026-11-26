@@ -121,9 +121,6 @@ button.nav-button {
     border-color: transparent;
     background: var(--pill-quiet-hover);
   }
-  .topbar .account-entry {
-    border-radius: 999px;
-  }
 
   /* The one panel. Its place and size come from what it holds (SiteNavigation.jsx); between two
      sections it slides there. */
@@ -189,6 +186,76 @@ button.nav-button {
     display: grid;
     grid-template-columns: repeat(3, 120px);
     gap: 8px;
+  }
+}
+/* The account (hugo, 26 Nov 2026, 15 h 14: no square, no icon): a pill at every width. Signed in, a quiet pill
+   « Mon compte » with no monogram; where the label does not fit (under 1024 px) a round holding the initial alone. */
+.topbar .account-entry {
+  border-radius: 999px;
+}
+.topbar .account-entry-in,
+.topbar .account-entry-in[data-current] {
+  justify-content: center;
+  padding: 0 16px;
+  border-color: transparent;
+  background: var(--pill-quiet);
+}
+.topbar .account-entry-in:hover {
+  border-color: transparent;
+  background: var(--pill-quiet-hover);
+}
+.topbar .account-entry-in[data-current] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+.topbar .account-entry-monogram {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .topbar .account-entry-in,
+  .topbar .account-entry-in[data-current] {
+    padding: 0;
+  }
+  .topbar .account-entry-monogram {
+    display: grid;
+    width: auto;
+    height: auto;
+    background: none;
+    color: inherit;
+    font-size: 17px;
+  }
+}
+
+/* The search opened beside the track (§ 76.1, SiteHeader.jsx): the track slides left by --track-shift and the field
+   takes --search-open; where even that is short, the sections show their symbol alone (named for screen readers). */
+@media (min-width: 641px) {
+  .topbar .main-nav {
+    transform: translateX(var(--track-shift, 0px));
+    transition: transform 0.28s cubic-bezier(0.3, 0.7, 0.2, 1);
+  }
+  .topbar .nav-button > .nav-icon {
+    display: none;
+  }
+  .topbar.is-track-compact .nav-button {
+    padding: 0 8px;
+  }
+  .topbar.is-track-compact .nav-button > .nav-icon {
+    display: block;
+  }
+  .topbar.is-track-compact .nav-button :is(.nav-label, .nav-caret) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .topbar .global-search .global-search-field {
+    transition:
+      width 0.28s cubic-bezier(0.3, 0.7, 0.2, 1),
+      border-color 0.15s,
+      background-color 0.15s;
   }
 }
 /* Where the bar has the room, the track sits in its exact middle: two equal sides around it. */
@@ -462,6 +529,8 @@ html[data-theme="dark"]
     animation: none;
   }
   .nav-glide,
+  .topbar .main-nav,
+  .topbar .global-search .global-search-field,
   .nav-panel,
   .nav-panel.is-open,
   .nav-panel.is-open.is-sliding,

@@ -15,9 +15,10 @@
 //     there before). From 1024 px the account button shows its label, under it the icon alone.
 //  H3 (icon) From 641 px the search is its icon: a 34 px round, no field text, no
 //     shortcut hint, still named « Rechercher un joueur, un club ou une compétition ».
-//     a. A click opens the field in the menus' place: at least 300 px wide, focused, inside
-//        the window, right of the logo; the menus are not visible meanwhile; the theme and the
-//        account still answer a pointer. Typed text gives the results panel, inside the window.
+//     a. A click opens the field beside the menus: at least 220 px wide, focused, inside
+//        the window, right of the logo; the menus stay, opaque, 8 px left of it at least (they
+//        slide left or show their symbols, § 76.1); the theme and the account still answer a
+//        pointer. Typed text gives the results panel, inside the window.
 //     b. The clear button empties the field and leaves it open and focused.
 //     c. Escape closes the results first (the field stays), then the field: the icon again,
 //        the menus back, the text gone.
@@ -208,7 +209,7 @@ const resize = async (page, width, height = 900) => {
 };
 // « Elsewhere » is the page's left gutter (3, 420): no link there.
 const closed = (h) => h.search && Math.abs(h.search.width - 34) <= 1 && Math.abs(h.search.height - 34) <= 1 && !h.search.text;
-const opened = (h) => h.search && h.search.width >= 300 && h.search.text && h.search.focused;
+const opened = (h) => h.search && h.search.width >= 220 && h.search.text && h.search.focused;
 
 try {
   const page = await open({ viewport: { width: 1365, height: 900 } }, "desktop");
@@ -264,7 +265,7 @@ try {
     await resize(page, width);
     const input = page.locator(".topbar .global-search input");
     await input.click();
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(450);
     const empty = await header(page);
     await page.locator(".topbar").screenshot({ path: path.join(out, `search-open-${width}.png`) });
     await page.keyboard.type(QUERY, { delay: 25 });
@@ -279,9 +280,9 @@ try {
     });
     const typed = await header(page);
     await page.screenshot({ path: path.join(out, `search-results-${width}.png`), clip: { x: 0, y: 0, width, height: 420 } });
-    check(`H3a-${width}`, `${width} px: a click opens the field in the menus' place (300 px at least, focused, inside the window, right of the logo), the menus are not visible, the theme and the account answer; « ${QUERY} » gives the results panel inside the window`,
-      { field: empty.search, brandRight: empty.brandRight, menusOpacity: empty.menusOpacity, theme: empty.themeReached, account: empty.accountReached, actionsOverlap: empty.actionsOverlap, sideways: typed.sideways, panel },
-      opened(empty) && empty.search.left >= empty.brandRight && empty.search.right <= empty.window && empty.menusOpacity === 0 && empty.themeReached && empty.accountReached && empty.actionsOverlap <= 0 && empty.height === 56 &&
+    check(`H3a-${width}`, `${width} px: a click opens the field beside the menus (220 px at least, focused, inside the window, right of the logo), the menus stay, 8 px left of it, the theme and the account answer; « ${QUERY} » gives the results panel inside the window`,
+      { field: empty.search, brandRight: empty.brandRight, menusOpacity: empty.menusOpacity, room: empty.room, menus: empty.menus.length, theme: empty.themeReached, account: empty.accountReached, actionsOverlap: empty.actionsOverlap, sideways: typed.sideways, panel },
+      opened(empty) && empty.search.left >= empty.brandRight && empty.search.right <= empty.window && empty.menusOpacity === 1 && empty.menus.length === 5 && empty.room >= 8 && empty.themeReached && empty.accountReached && empty.actionsOverlap <= 0 && empty.height === 56 &&
         typed.sideways <= 0 && panel && panel.left >= 0 && panel.right <= width && panel.top >= 34);
 
     // b. the clear button
@@ -297,7 +298,8 @@ try {
     await page.waitForTimeout(200);
     const once = { ...(await header(page)), panel: await page.locator(".topbar .global-search-panel").count() };
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(200);
+    // The field and the menus move for 0.28 s (§ 76.1).
+    await page.waitForTimeout(450);
     const twice = await header(page);
     check(`H3c-${width}`, `${width} px: Escape closes the results and keeps the field; Escape again closes the field: the icon, the menus back, the text gone`,
       { once: { panel: once.panel, field: once.search }, twice: { field: twice.search, menusOpacity: twice.menusOpacity, menus: twice.menus.length } },
@@ -307,10 +309,10 @@ try {
     await input.click();
     await page.keyboard.type("abc", { delay: 25 });
     await page.mouse.click(3, 420);
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(450);
     const away = await header(page);
     await input.click();
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(450);
     const again = await header(page);
     check(`H3d-${width}`, `${width} px: a click elsewhere closes it (the icon alone, no clear button, the menus back); the text is kept for the next opening`,
       { away: { field: away.search, menusOpacity: away.menusOpacity }, again: again.search },
@@ -328,7 +330,7 @@ try {
 
     // f. Tab leaves it
     await page.keyboard.press("Tab");
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(450);
     const tabbed = await header(page);
     check(`H3f-${width}`, `${width} px: Tab leaves the search for the theme button and the search closes`,
       { active: tabbed.active, field: tabbed.search, menusOpacity: tabbed.menusOpacity },

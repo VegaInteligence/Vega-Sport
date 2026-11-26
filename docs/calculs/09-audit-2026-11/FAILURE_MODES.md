@@ -6048,3 +6048,19 @@ https://claude.ai/artifact/GxP3vebwEg17Eo4Fk5wdFm (piste 1, the recommended one,
   `header.e2e.mjs`: H2a and H7b now expect the icon from 920 px and at 1365 px; H3 from 641 px; H5 a menu answers a
   finger 21 px above and below its middle (its pill is drawn 34 px tall, a 44 px target around it); the panel read is
   `.nav-panel.is-open`.
+
+### 76.1 The search opened beside the track, and the account without its square (hugo, 26 Nov 2026, 15 h 13 « when i click on search icon the cors of the navabr disapear … make the corp of navbar slide a bit to the left to leave place to search bar », 15 h 14 « icon du user elle est carré c'est pas bon et d'ailleurs enlève-la »; written before the tests)
+
+- **The search** no longer hides the track. Opened, its field takes 380 px from its icon leftwards; where that would
+  cover the track, the track slides left (`--track-shift`, 0.28 s), down to 16 px after the logo; then the field
+  narrows, to 220 px; under that the sections show their symbol alone (`.is-track-compact`, the names kept for screen
+  readers) and the field takes what it then has. Closed, the track goes back. `SiteHeader.jsx` measures it
+  (`useSearchRoom`: on the search's class, its focus, the window's size, and again once the symbols are drawn).
+  Measured: 1440 and 1280 px slide, field 380; 1120 and 1000 px slide, field 267 and 237; 900, 760 and 641 px
+  symbols, field 380, 369, 260.
+- **The account button**: no square monogram. Signed in, a quiet pill « Mon compte » from 1024 px; under it a round
+  holding the initial alone (no square background). Signed out unchanged (the ivory pill « Se connecter »).
+- **Tests**: `navbar.e2e.mjs` N13 (seven widths: track opaque and whole, 8 px from the logo and the field, field
+  220 px at least, back in place after Escape) and N14 (the signed-in markup in the header: pill without monogram at
+  1440 px, 34 px round at 900 px), red on f2d62a6, green after. `header.e2e.mjs` H3a: the menus stay, 8 px left of the
+  field (220 px at least); waits of 0.45 s after the search opens or closes.

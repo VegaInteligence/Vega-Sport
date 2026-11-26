@@ -271,7 +271,8 @@ export function HeaderMenus({ path, href }) {
               onKeyDown={onTriggerKey(section.key)}
               aria-controls="nav-panel"
             >
-              {section.label}
+              <NavIcon name={section.icon} size={17} />
+              <span className="nav-label">{section.label}</span>
               <ChevronDown className="nav-caret" size={13} strokeWidth={2} aria-hidden="true" />
             </button>
           </div>
@@ -290,15 +291,18 @@ export function HeaderMenus({ path, href }) {
               setOpen("");
             }}
           >
-            {section.short ? (
-              // One of the two is shown (styles.css), and only that one is read out.
-              <>
-                <span className="nav-long">{section.label}</span>
-                <span className="nav-short">{section.short}</span>
-              </>
-            ) : (
-              section.label
-            )}
+            <NavIcon name={section.icon} size={17} />
+            <span className="nav-label">
+              {section.short ? (
+                // One of the two is shown (styles.css), and only that one is read out.
+                <>
+                  <span className="nav-long">{section.label}</span>
+                  <span className="nav-short">{section.short}</span>
+                </>
+              ) : (
+                section.label
+              )}
+            </span>
           </Link>
         ),
       )}

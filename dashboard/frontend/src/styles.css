@@ -1974,8 +1974,8 @@ th[aria-sort="descending"] .sort-indicator {
 }
 /* The header from 641px (piste B, § 76; it was only under 920px before): the search is its
    icon, a round button like the theme's. Engaged (a click, a tap, « / », the Tab key) it opens
-   as a field in the menus' place, from the icon leftwards, and the menus come back when it
-   closes. */
+   as a field from the icon leftwards, beside the menus, which slide left to leave it the room
+   (§ 76.1, SiteHeader.jsx). */
 @media (min-width: 641px) {
   .topbar-actions > .global-search {
     flex: none;
@@ -2020,7 +2020,7 @@ th[aria-sort="descending"] .sort-indicator {
   /* Open: as wide as its results panel. */
   .topbar .global-search:is(.is-engaged, :focus-within) .global-search-field {
     z-index: 45;
-    width: 380px;
+    width: var(--search-open, 380px);
     border-color: var(--pill-quiet-hover);
     background: var(--surface-raised);
   }
@@ -2029,10 +2029,6 @@ th[aria-sort="descending"] .sort-indicator {
   }
   .topbar .global-search:is(.is-engaged, :focus-within) .global-search-field input[type="search"] {
     padding-left: 36px;
-  }
-  .topbar:has(.global-search:is(.is-engaged, :focus-within)) .main-nav {
-    opacity: 0;
-    pointer-events: none;
   }
 }
 /* Under 761px the five menus and the three icons need the gaps tightened and the first
