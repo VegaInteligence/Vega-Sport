@@ -9,7 +9,8 @@ SET LOCAL lock_timeout = '3s';
 
 -- A match's sides on its day (77.2, 77.3): one row per member. A club linked to Transfermarkt: its squad of the match's
 -- season when the base holds one, else the season before's (a calendar-year league is the provider's year before; the
--- reader queues both, vega/transfermarkt.py), its members not marked gone on or before the day. A national team not
+-- reader queues both, vega/transfermarkt.py), its members not marked gone on or before the day nor, by their dated
+-- moves, at another club that day (an arrival after the match, a move away before it). A national team not
 -- linked: the players its page shows (api.nation_players, 119), each by his usual Transfermarkt link (as 174). A member
 -- is read when his injuries' accepted read is no older than 45 days before the day. day: the match's date, else its
 -- kick-off's UTC day.
@@ -43,6 +44,23 @@ CROSS JOIN LATERAL (
   WHERE i.entity_type = 'team' AND i.provider = 'transfermarkt' AND i.is_current AND i.entity_id = s.team_key
     AND NOT EXISTS (SELECT 1 FROM ops.provider_links k WHERE k.entity_type = 'team' AND k.provider = 'transfermarkt'
                     AND k.provider_key = i.provider_key AND k.quarantined_at IS NOT NULL)
+    -- The season's squad is not membership on every day of it (77.2): by his dated moves (core.player_transfers, not
+    -- pending, still listed), a player whose last move on or before the day took him to another of our clubs, or who
+    -- moved to this club only after the day, was not one of its members that day. A move to a club the base does not
+    -- know (to_team_id empty) proves nothing; a player without a known move stays a member.
+    AND NOT EXISTS (
+      SELECT 1 FROM (SELECT x.to_team_id FROM core.player_transfers x
+                     WHERE x.player_id = l.player_key AND x.source = 'transfermarkt' AND NOT x.pending AND x.absent_since IS NULL
+                       AND x.transfer_date <= m.day
+                     ORDER BY x.transfer_date DESC, x.id DESC LIMIT 1) last
+      WHERE last.to_team_id IS NOT NULL AND last.to_team_id <> s.team_key)
+    AND NOT (
+      EXISTS (SELECT 1 FROM core.player_transfers x
+              WHERE x.player_id = l.player_key AND x.source = 'transfermarkt' AND NOT x.pending AND x.absent_since IS NULL
+                AND x.to_team_id = s.team_key AND x.transfer_date > m.day)
+      AND NOT EXISTS (SELECT 1 FROM core.player_transfers x
+                      WHERE x.player_id = l.player_key AND x.source = 'transfermarkt' AND NOT x.pending AND x.absent_since IS NULL
+                        AND x.to_team_id = s.team_key AND x.transfer_date <= m.day))
   UNION ALL
   SELECT true, k.provider_key, CASE WHEN k.provider_key IS NOT NULL THEN n.player_key END
   FROM core.teams t

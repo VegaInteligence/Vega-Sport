@@ -7,6 +7,7 @@
 - Route `GET /api/matches/{id}/absences` (`profiles.mjs`) : 404 pour un match inconnu ou pas commencé. Famille `matches.id.absences` ajoutée à la fonction CloudFront des journaux (`infra/aws/api.yaml`).
 - Site : la carte « Absents » de l'onglet Avant-match reste après le coup d'envoi, lue par cette route, sans « dans N j ». Avant le coup d'envoi rien ne change. Maquette : celle du 24 novembre (§ 59), la même carte.
 - Tests : `match-absences.test.mjs` 3/3 (rouges avant la migration), E2E K6/K6b (`match-page.e2e.mjs`) rouges avant, verts après ; site 1 119/1 119 ; build du site OK. Preuves : `/mnt/project-files/absents-apres-match/`.
+- Relecture Codex de #253 (deux P2, corrigées) : un match dont le coup d'envoi est passé compte comme commencé même si la base dit encore « not_started » ; l'effectif de la saison exclut un joueur arrivé après le match ou parti dans un autre de nos clubs avant (transferts datés). 77a et 77i rouges avant, verts après.
 - Reste : Deploy (migration 181 et route), à demander à hugo.
 
 ## Barre de navigation : piste B et panneau qui glisse en tuiles — FAILURE_MODES § 76 (26 novembre 2026, sur main depuis 6c75337)

@@ -6106,14 +6106,20 @@ from the kick-off the page lost who was out. The base keeps every episode it rea
 core.player_suspensions, 174: never deleted), so the absences of a match day can be read again.
 
 **77.1 The read.** `GET /api/matches/{id}/absences` (api.match_absence_players, api.match_absences, migration 181):
-404 for an unknown match, and for a match not started (its card keeps `/api/teams/{id}/absences`, nothing changes before
-the kick-off); otherwise `{ id, on, home, away }`, `on` the match day (its date, else its kick-off's UTC day), each side
+404 for an unknown match, and for a match not started: status `not_started` and its kick-off still to come (its card
+keeps `/api/teams/{id}/absences`, nothing changes before the kick-off). The base keeps `not_started` while a match is
+played (the live status lives elsewhere, `vega/live/store.py`) and the page switches at the kick-off: a passed kick-off
+counts as started (Codex's review of #253); otherwise `{ id, on, home, away }`, `on` the match day (its date, else its kick-off's UTC day), each side
 `{ team, asOf, squad: { players, read }, absences }` in the shape of `/api/teams/{id}/absences`. No query parameter.
 
 **77.2 Who belongs to a side on the match day.** A club linked to Transfermarkt: its Transfermarkt squad of the match's
 season when the base holds one, else of the season before (a calendar-year league is the provider's year before, the
 reader queues both: `transfermarkt.py`), its members not marked gone on or before the match day (`absent_since` empty
-or later). A national team not linked: the players its page shows (api.nation_players, as § 59ak). Neither: no member
+or later). The season's squad is not membership on every day of it (Codex's review of #253): by his dated moves
+(core.player_transfers, not pending, still listed), a player whose last move on or before the day took him to another of
+our clubs, or who moved to this club only after the day (and never on or before it), was not a member that day; a move
+to a club the base does not know proves nothing, and a player without a known move stays a member. A national team not
+linked: the players its page shows (api.nation_players, as § 59ak). Neither: no member
 (`squad` 0 / 0, no absence), never « nobody was out ».
 
 **77.3 Read.** A member counts as read when his injuries have an accepted read no older than 45 days before the match
@@ -6134,11 +6140,14 @@ in it is never out, whatever the episode says (he came back, or the dates are ap
 same rows); a return date shows no « dans N j » (the match is past). Before the kick-off: unchanged.
 
 Cases (`backend/api/test/match-absences.test.mjs`, red before the migration):
-- **77a** an unknown match 404; a match not started 404; a query parameter 400.
+- **77a** an unknown match 404; a match not started with its kick-off to come 404, the same match once its kick-off has
+  passed 200; a query parameter 400.
 - **77b** an injury over the match day shown; one ended the day before and one started the day after not.
 - **77c** an open injury shown; the same open injury of a player who played between its start and the match not.
 - **77d** a player on the match's sheet never shown, even with an injury over the day.
 - **77e** a suspension of the match's competition shown (`matchesRemaining` null); one of another competition not.
 - **77f** an episode marked `absent_since` not shown; a member gone before the match not counted.
+- **77i** a player of the season's squad who joined after the match, and one whose last move before it took him to
+  another of our clubs: neither counted nor shown.
 - **77g** a club without its season's squad: the season before's; a side with no link: 0 / 0 and no absence.
 - **77h** `squad` and `asOf` from the reads no older than 45 days before the match day.

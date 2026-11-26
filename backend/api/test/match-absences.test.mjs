@@ -17,25 +17,28 @@ before(async () => {
     ids[k] = (await q(`SELECT api.public_id('${type}', ${id}) AS id`)).rows[0].id;
   // m5: Union Sud (4, no Transfermarkt link) – Olympique Été (1), 5 Sep 2025, finished; 101 and 102 on its sheet.
   await q(`INSERT INTO core.players(id, name) VALUES (105, 'Absent Cinq'), (106, 'Absent Six'), (107, 'Absent Sept'), (108, 'Joueur Huit'),
-             (109, 'Parti Neuf')`);
+             (109, 'Parti Neuf'), (110, 'Recrue Dix'), (111, 'Ailleurs Onze')`);
   await q(`INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES
              ('team', 'transfermarkt', '583', 1), ('team', 'transfermarkt', '584', 2),
              ('player', 'transfermarkt', '9101', 101), ('player', 'transfermarkt', '9102', 102), ('player', 'transfermarkt', '9104', 104),
              ('player', 'transfermarkt', '9105', 105), ('player', 'transfermarkt', '9106', 106), ('player', 'transfermarkt', '9107', 107),
-             ('player', 'transfermarkt', '9108', 108), ('player', 'transfermarkt', '9109', 109)`);
+             ('player', 'transfermarkt', '9108', 108), ('player', 'transfermarkt', '9109', 109), ('player', 'transfermarkt', '9110', 110),
+             ('player', 'transfermarkt', '9111', 111)`);
   // Club 1's squad of the match's season (9199 not linked: unknown); 9109 gone on 2 Sep. Club 2: only the season before (77g).
   await q(`INSERT INTO core.provider_squads(provider, club_key, season_year, player_key, read_on, absent_since) VALUES
              ('transfermarkt', '583', 2025, '9101', current_date, NULL), ('transfermarkt', '583', 2025, '9102', current_date, NULL),
              ('transfermarkt', '583', 2025, '9105', current_date, NULL), ('transfermarkt', '583', 2025, '9106', current_date, NULL),
              ('transfermarkt', '583', 2025, '9107', current_date, NULL), ('transfermarkt', '583', 2025, '9108', current_date, NULL),
              ('transfermarkt', '583', 2025, '9199', current_date, NULL), ('transfermarkt', '583', 2025, '9109', current_date, '2025-09-02'),
+             ('transfermarkt', '583', 2025, '9110', current_date, NULL), ('transfermarkt', '583', 2025, '9111', current_date, NULL),
              ('transfermarkt', '584', 2024, '9104', current_date, NULL)`);
   // Reads: 9102's injuries read more than 45 days before the match day (77h); 9108's ten days before it (the oldest read).
   await q(`INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at, read_at) VALUES
              ('injuries', '9101', 1, now() + interval '1 day', now()), ('injuries', '9102', 1, now() + interval '1 day', '2025-06-01'),
              ('injuries', '9105', 1, now() + interval '1 day', now()), ('injuries', '9106', 1, now() + interval '1 day', now()),
              ('injuries', '9107', 1, now() + interval '1 day', now()), ('injuries', '9108', 1, now() + interval '1 day', '2025-08-26'),
-             ('injuries', '9109', 1, now() + interval '1 day', now()),
+             ('injuries', '9109', 1, now() + interval '1 day', now()), ('injuries', '9110', 1, now() + interval '1 day', now()),
+             ('injuries', '9111', 1, now() + interval '1 day', now()),
              ('suspensions', '9105', 1, now() + interval '1 day', now()), ('suspensions', '9106', 1, now() + interval '1 day', now())`);
   await q(`INSERT INTO core.player_injuries(player_id, kind, label, start_date, end_date, matches_missed, source, as_of, absent_since) VALUES
              (105, 'injury', 'Hamstring injury', '2025-08-20', '2025-09-10', 2, 'transfermarkt', current_date, NULL),
@@ -45,7 +48,15 @@ before(async () => {
              (107, 'illness', 'Flu', '2025-09-04', '2025-09-06', 1, 'transfermarkt', current_date, '2025-09-10'),
              (108, 'injury', 'Calf problems', '2025-08-01', NULL, NULL, 'transfermarkt', current_date, NULL),
              (101, 'injury', 'Back injury', '2025-09-01', '2025-09-20', 0, 'transfermarkt', current_date, NULL),
-             (109, 'injury', 'Groin strain', '2025-09-01', '2025-09-30', 1, 'transfermarkt', current_date, NULL)`);
+             (109, 'injury', 'Groin strain', '2025-09-01', '2025-09-30', 1, 'transfermarkt', current_date, NULL),
+             (110, 'injury', 'Thigh problems', '2025-09-01', '2025-09-30', 1, 'transfermarkt', current_date, NULL),
+             (111, 'injury', 'Shoulder injury', '2025-09-01', '2025-09-30', 1, 'transfermarkt', current_date, NULL)`);
+  // 77i: 110 joined club 1 on 20 Sep (after m5); 111's last move before m5 took him to club 2 (back to club 1 on 1 Oct).
+  await q(`INSERT INTO core.player_transfers(player_id, transfer_date, from_team_id, to_team_id, kind, source, as_of, source_key, pending) VALUES
+             (110, '2025-09-20', 3, 1, NULL, 'transfermarkt', current_date, '110-1', false),
+             (111, '2024-07-01', NULL, 1, NULL, 'transfermarkt', current_date, '111-1', false),
+             (111, '2025-08-15', 1, 2, 'loan', 'transfermarkt', current_date, '111-2', false),
+             (111, '2025-10-01', 2, 1, 'loan_return', 'transfermarkt', current_date, '111-3', false)`);
   // 108 played 30 minutes of m3 (3 Sep), after his open injury's start and before m5 (77c).
   await q(`INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played) VALUES (2025, 3, 1, 108, 30)`);
   await q(`INSERT INTO core.player_suspensions(player_id, label, start_date, end_date, matches_missed, matches_possible, competition_code,
@@ -57,7 +68,14 @@ after(() => owner?.end());
 
 test("77a: an unknown match and a match not started are 404, a parameter 400", { skip }, async () => {
   assert.equal((await get("/api/matches/m_zzzzz9/absences")).response.status, 404);
+  // m6 is « not_started »: 404 while its kick-off is to come; once passed, the base still says « not_started » while it
+  // is played, and the route answers (the page has switched at the kick-off).
+  await owner.query("UPDATE core.matches SET kickoff_at = now() + interval '1 day', match_date = current_date + 1 WHERE id = 6");
   assert.equal((await get(`/api/matches/${ids.m6}/absences`)).response.status, 404);
+  await owner.query("UPDATE core.matches SET kickoff_at = now() - interval '1 hour', match_date = (now() - interval '1 hour')::date WHERE id = 6");
+  const live = await get(`/api/matches/${ids.m6}/absences`);
+  assert.equal(live.response.status, 200);
+  assert.equal(live.body.data.on, (await owner.query("SELECT (now() - interval '1 hour')::date::text AS d")).rows[0].d);
   assert.equal((await get(`/api/matches/${ids.m5}/absences?season=2025/2026`)).response.status, 400);
 });
 
@@ -73,7 +91,8 @@ test("77b–77h: each side's absent players on the match day", { skip }, async (
     home: { team: ids.t4, asOf: null, squad: { players: 0, read: 0 }, absences: [] },
     away: {
       team: ids.t1,
-      // 77f, 77h: 9109 gone on 2 Sep is not a member; 9102 read too early and 9199 not linked are not read; 9108's read the oldest.
+      // 77f, 77h, 77i: 9109 gone on 2 Sep, 9110 arrived after the match and 9111 at club 2 that day are not members; 9102 read
+      // too early and 9199 not linked are not read; 9108's read the oldest.
       asOf: "2025-08-26",
       squad: { players: 7, read: 5 },
       absences: [
@@ -91,6 +110,8 @@ test("77b–77h: each side's absent players on the match day", { skip }, async (
   });
   // 77d: 101 is on m5's sheet: his back injury over the day is not shown.
   assert.ok(!body.data.away.absences.some((a) => a.player.id === ids.p101));
+  // 77i: neither 110 (arrived on 20 Sep) nor 111 (at club 2 on 5 Sep) is shown.
+  assert.deepEqual(body.data.away.absences.filter((a) => ["Recrue Dix", "Ailleurs Onze"].includes(a.player.name)), []);
   assert.match(response.headers.get("etag"), /^W\/"profile-v1-/);
   assert.equal((await get(`/api/matches/${ids.m5}/absences`, { "if-none-match": response.headers.get("etag") })).response.status, 304);
 });

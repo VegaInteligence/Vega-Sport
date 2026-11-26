@@ -63,7 +63,8 @@
  * GET /api/matches/{id}/absences — each side's injured and suspended players on the day of a match that has kicked off
  * (181, FAILURE_MODES.md § 77): `on` the match day, each side `{ team, asOf, squad, absences }` in the shape of
  * /api/teams/{id}/absences, read as of that day (the squad of the match's season, the episodes over it, never a player
- * on its sheet; `matchesRemaining` null). 404 for an unknown match and a match not started (its card reads the teams').
+ * on its sheet; `matchesRemaining` null). 404 for an unknown match and one not started (its status `not_started`
+ * and its kick-off to come: its card reads the teams').
  *
  * GET /api/players/{id}/transfers — the player's transfers once they were read, oldest first
  * (135): the date, the kind (transfer, free, loan, loan_return, internal; null when the
@@ -657,13 +658,15 @@ export function createProfileRoute(read) {
     if (matchAbsences) {
       validateParams(params, []);
       const [f] = await read(
-        `SELECT f.match_id, f.status, f.home_team_id, f.away_team_id,
-           coalesce(f.day, (f.kickoff_at AT TIME ZONE 'UTC')::date)::text AS day
+        // Started: the base's status says so, or its kick-off has passed (the base keeps « not_started » while the
+        // match is played; the live status lives elsewhere, and the page switches at the kick-off, § 77.1).
+        `SELECT f.match_id, f.home_team_id, f.away_team_id, coalesce(f.day, (f.kickoff_at AT TIME ZONE 'UTC')::date)::text AS day,
+           (f.status <> 'not_started' OR f.kickoff_at <= now()) IS TRUE AS started
          FROM api.fixtures f WHERE f.match_id=api.internal_id('match',$1)`,
         [matchAbsences[1]],
       );
       // Before the kick-off the card reads each team's absences of today (§ 59); an unknown match is 404 too.
-      if (!f || f.status === "not_started") reject(404, "Donnée indisponible.");
+      if (!f || !f.started) reject(404, "Donnée indisponible.");
       const [squads, rows] = await Promise.all([
         read(
           `SELECT side, count(*)::int AS players, count(*) FILTER (WHERE is_read)::int AS read,
