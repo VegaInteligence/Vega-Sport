@@ -175,3 +175,52 @@ test("seed reuses server data but cannot overwrite fresher or in-flight client w
   now = 1100;
   assert.equal(cache.value("home"), undefined);
 });
+
+// FAILURE_MODES_OPTIMISATIONS.md GH129-h (written before `keepError`): a read the player page starts early (its market
+// values, which a player without them answers 404) can fail before the blocks that show it mount. Their first reads
+// take that failure as their own read's, without a second request; for a bounded time only.
+test("GH129-h a failure of a read started early stands for its first readers, then is read again", async () => {
+  let now = 0,
+    reads = 0;
+  const cache = createResourceCache({ now: () => now });
+  const failing = () => {
+    reads++;
+    throw new Error("Données indisponibles (HTTP 404)");
+  };
+  await assert.rejects(cache.load("market", failing, { retain: true, keepError: 10_000 }), /HTTP 404/);
+  assert.equal(reads, 1);
+  // The page's two blocks mount once it has failed: each subscribes, then asks (useResource's first load).
+  const seen = [];
+  const stops = [cache.subscribe("market", (state) => seen.push(state)), cache.subscribe("market", () => {})];
+  assert.equal(seen[0].error, "Données indisponibles (HTTP 404)");
+  now = 9_999;
+  await assert.rejects(cache.load("market", failing), /HTTP 404/);
+  await assert.rejects(cache.load("market", failing), /HTTP 404/);
+  assert.equal(reads, 1, "never read twice by the page's first readers");
+  assert.equal(cache.peek("market").error, "Données indisponibles (HTTP 404)");
+  // « Réessayer »: a forced read reads again; its own failure is not kept.
+  await assert.rejects(cache.load("market", failing, { force: true }), /HTTP 404/);
+  assert.equal(reads, 2);
+  await assert.rejects(cache.load("market", failing), /HTTP 404/);
+  assert.equal(reads, 3, "a block's own failure is read again by the next one, as before");
+  stops.forEach((stop) => stop());
+
+  // A block asking once the time has passed reads again.
+  await assert.rejects(cache.load("late", failing, { retain: true, keepError: 10_000 }), /HTTP 404/);
+  now += 10_000;
+  await assert.rejects(cache.load("late", failing), /HTTP 404/);
+  assert.equal(reads, 5);
+
+  // A success afterwards is the value; nothing of the failure stays.
+  await assert.rejects(cache.load("then", failing, { retain: true, keepError: 10_000 }), /HTTP 404/);
+  assert.equal(await cache.load("then", () => "values", { force: true }), "values");
+  assert.equal(cache.peek("then").error, undefined);
+  assert.equal(await cache.load("then", failing), "values");
+
+  // An abort is no failure to keep.
+  const aborted = cache.load("abort", ({ signal }) => new Promise((_, fail) => signal.addEventListener("abort", () => fail(new DOMException("Aborted", "AbortError")))), { retain: true, keepError: 10_000 });
+  await Promise.resolve();
+  cache.forget("abort");
+  await assert.rejects(aborted, { name: "AbortError" });
+  assert.equal(await cache.load("abort", () => "read"), "read");
+});

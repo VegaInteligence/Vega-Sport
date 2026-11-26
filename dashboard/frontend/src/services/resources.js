@@ -25,9 +25,17 @@ export async function json(url, options) {
 export function cachedResource(key) {
   return cache.value(key);
 }
-/** Starts (or reuses) a resource outside a component, e.g. a background load. */
-export function primeResource(key, loader) {
-  return cache.load(key, loader, { retain: true });
+/** Starts (or reuses) a resource outside a component, e.g. a background load. `keepError` (ms): its failure stands
+ *  for the components that ask within that time (resource-cache.js). */
+export function primeResource(key, loader, { keepError = 0 } = {}) {
+  return cache.load(key, loader, { retain: true, keepError });
+}
+/** Holds a resource for its caller (a page's navigation) until the returned release: a read nobody else holds is
+ *  then cancelled (the cache's last leaver), one a component holds goes on. `keepError`: as primeResource. */
+export function holdResource(key, loader, { keepError = 0 } = {}) {
+  const release = cache.subscribe(key, () => {});
+  cache.load(key, loader, { keepError }).catch(() => {});
+  return release;
 }
 export function useResource(key, loader, enabled = true) {
   const bootstrap = useResourceBootstrap();

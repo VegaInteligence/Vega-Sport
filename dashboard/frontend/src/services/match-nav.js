@@ -1,6 +1,9 @@
 /* The match page's previous / next and its round picker: the competition season's fixtures,
- * grouped by round in kick-off order. One read of the season's fixtures (paged by 50); the
- * published round names only when a fixture row does not carry its own. */
+ * grouped by round in kick-off order. One read of the season's fixtures (/api/fixtures/season, shared with the
+ * « Classement »; its pages by 50 when the API does not serve it). A row of the native API carries its round
+ * (`round_name`, null without one): /api/matchdays, built from the same fixtures, names no round it lacks, and is not
+ * asked. A row without the field (the football client's snapshot, an older server's pages) takes its round from
+ * /api/matchdays as before (FAILURE_MODES_OPTIMISATIONS.md GH129-e, GH129-n). */
 import { completeFixtures } from "./fixture-pages.js";
 import { json } from "./resources.js";
 import { matchdayGroups } from "./competition-matchdays.js";
@@ -32,17 +35,19 @@ export function navMatch(row) {
 /** The season's fixtures with their rounds, or an empty list when there is none to read. */
 export async function loadMatchNav(f, { league, season }, { signal } = {}) {
   const cached = f.client.fixtures?.get(`${league}:${season}`);
-  const rows = Array.isArray(cached?.matches)
-    ? cached.matches
-    : await completeFixtures({ league, season }, { signal });
-  const matches = rows.filter((row) => row?.id).map(navMatch);
+  const rows = (
+    Array.isArray(cached?.matches)
+      ? cached.matches
+      : await completeFixtures({ league, season }, { signal, manifest: f.manifest })
+  ).filter((row) => row?.id);
+  const matches = rows.map(navMatch);
   const rounds = {
     ...(cached?.rounds || {}),
     ...Object.fromEntries(
       matches.filter((m) => m.round).map((m) => [m.id, m.round]),
     ),
   };
-  if (matches.some((m) => !rounds[m.id])) {
+  if (rows.some((row) => !rounds[row.id] && !Object.hasOwn(row, "round_name"))) {
     const published = await json(
       `/api/matchdays?competition=${encodeURIComponent(league)}&season=${encodeURIComponent(season)}`,
       { signal },

@@ -233,6 +233,13 @@ async function setup(label, device, plan = {}) {
     if (q.get("league") !== "l_3FJFUl" || q.get("status") !== "all") return route.fallback();
     return reply(route, { data: { matches: FIXTURES }, pagination: { generation: "e2e", nextCursor: null } });
   });
+  // The same season in one read, when the API's manifest offers it (FAILURE_MODES_OPTIMISATIONS.md GH129).
+  await context.route(/\/api\/fixtures\/season\?/, (route) => {
+    const q = new URL(route.request().url()).searchParams;
+    if (q.get("league") !== "l_3FJFUl") return route.fallback();
+    // Pinned to the manifest's publication (GH129-i): the API answers that generation.
+    return reply(route, { data: { matches: FIXTURES }, meta: { generation: q.get("generation") || "e2e", count: FIXTURES.length } });
+  });
   page.on("request", (request) => {
     const url = new URL(request.url());
     if (url.href.includes(id)) run.requests.push(url.pathname + url.search);

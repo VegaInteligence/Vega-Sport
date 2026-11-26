@@ -1,4 +1,5 @@
 "use client";
+import { playerRecordResource } from "../services/player-prefetch.js";
 import React, {
   lazy,
   useCallback,
@@ -299,16 +300,7 @@ export default function PlayerSeasonProfile({
       void primeResource(identityKey, () => knownIdentity);
   }, [identityKey, knownIdentity]);
   const publishedProfile = useResource(
-    `player-record:${id}`,
-    async () => {
-      try {
-        return (await f.client.request(`players/${encodeURIComponent(id)}`))
-          .data;
-      } catch (error) {
-        if (error.status === 404) return null;
-        throw error;
-      }
-    },
+    ...playerRecordResource(id),
     Boolean(f.client && /^p_[A-Za-z0-9]{6}$/.test(id)),
   );
   const record = publishedProfile.value;

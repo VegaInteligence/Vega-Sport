@@ -17,6 +17,7 @@ export function createResourceCache({
         pending: null,
         controller: null,
         retained: false,
+        failure: null,
       };
       entries.set(key, item);
     }
@@ -35,10 +36,13 @@ export function createResourceCache({
   function fresh(item, age) {
     return item.hasValue && now() - item.updatedAt < age;
   }
+  // keepError (ms): a failure of this read, the entry holding no value, stands for the non-forced loads that follow
+  // within that time, as their own read's would (a read started before its readers mount: FAILURE_MODES_OPTIMISATIONS.md
+  // GH129-h). Without it, as always, the next load reads again.
   function load(
     key,
     loader,
-    { force = false, age = maxAge, retain = false } = {},
+    { force = false, age = maxAge, retain = false, keepError = 0 } = {},
   ) {
     const item = entry(key);
     // Revalidation is also coalesced: focus, a timer and several components
@@ -52,6 +56,9 @@ export function createResourceCache({
       onRead?.("fresh");
       return Promise.resolve(item.snapshot.value);
     }
+    if (!force && item.failure && now() < item.failure.until)
+      return Promise.reject(item.failure.error);
+    item.failure = null;
     onRead?.("loader");
     const controller = new AbortController();
     item.controller = controller;
@@ -77,6 +84,8 @@ export function createResourceCache({
           if (item.pending === pending && entries.get(key) === item) {
             item.pending = null;
             item.controller = null;
+            if (keepError > 0 && !item.hasValue && error?.name !== "AbortError")
+              item.failure = { error, until: now() + keepError };
             publish(item, {
               key,
               ...(item.hasValue ? { value: item.snapshot.value } : {}),
