@@ -16,6 +16,33 @@ function place(box, width, point) {
     : { left, top: box.bottom + 8 };
 }
 
+/** The narrowest a fitted bubble's content reads in (FAILURE_MODES § 74). */
+const FIT_MIN = 260;
+/** The box a fitted bubble takes: its element's, or its row's (the element's parent) when the element is narrower
+ * than the content (a figure's tile on a phone, two to a row). */
+function fitFrame(target, box) {
+  if (box.width >= FIT_MIN || !target.parentElement) return { left: box.left, width: box.width };
+  const row = target.parentElement.getBoundingClientRect();
+  return row.width >= FIT_MIN ? { left: row.left, width: row.width } : { left: box.left + box.width / 2 - FIT_MIN / 2, width: FIT_MIN };
+}
+/** A fitted bubble on its frame's edges, under the element (over it near the foot of the window). */
+function framed(box, frame) {
+  const width = Math.min(frame.width, window.innerWidth - 16);
+  const left = Math.min(Math.max(8, frame.left), window.innerWidth - width - 8);
+  const { top, transform } = place(box, width, null);
+  return { left, top, width, ...(transform ? { transform } : {}) };
+}
+/** The teams' colours where the element is (the match page's crests, § 64): the bubble is drawn in document.body,
+ * outside the page, and takes them with it (§ 74). */
+function teamColours(target) {
+  const style = getComputedStyle(target), colours = {};
+  for (const name of ["--home", "--away"]) {
+    const value = style.getPropertyValue(name).trim();
+    if (value) colours[name] = value;
+  }
+  return colours;
+}
+
 /**
  * Handlers for an element of your own and its bubble: `bind` goes on the element, `bubble` is
  * rendered after it. `follow`: the bubble follows the pointer (charts) rather than the element.
@@ -23,7 +50,7 @@ function place(box, width, point) {
  * element hides it a moment later, and entering the bubble cancels that; `pin` keeps it open until Escape, a
  * click elsewhere or a scroll (a click or a tap on the element).
  */
-export function useHoverBubble({ width = 320, follow = false, interactive = false } = {}) {
+export function useHoverBubble({ width = 320, follow = false, interactive = false, fit = false } = {}) {
   const [state, setState] = useState(null);
   const id = useId();
   const timer = useRef(null);
@@ -63,18 +90,23 @@ export function useHoverBubble({ width = 320, follow = false, interactive = fals
     cancel();
     const box = target.getBoundingClientRect();
     setState((now) => ({
-      box, content, target,
+      box, content, target, frame: fit ? fitFrame(target, box) : null, colours: teamColours(target),
       // Hovering the pinned element again keeps it pinned.
       pinned: Boolean(now?.pinned && now.target === target),
       point: follow && event?.clientX != null ? { x: event.clientX, y: event.clientY } : null,
     }));
-  }, [follow, cancel]);
+  }, [follow, cancel, fit]);
   const pin = useCallback((target, content) => {
     cancel();
     setState((now) =>
-      now?.pinned && now.target === target ? null : { box: target.getBoundingClientRect(), content, target, pinned: true, point: null },
+      now?.pinned && now.target === target
+        ? null
+        : (() => {
+            const box = target.getBoundingClientRect();
+            return { box, content, target, pinned: true, point: null, frame: fit ? fitFrame(target, box) : null, colours: teamColours(target) };
+          })(),
     );
-  }, [cancel]);
+  }, [cancel, fit]);
   const hide = useCallback(() => {
     if (!interactive) return setState(null);
     cancel();
@@ -89,7 +121,12 @@ export function useHoverBubble({ width = 320, follow = false, interactive = fals
             ref={node}
             role={interactive ? "dialog" : "tooltip"}
             className={`${s.bubble} ${interactive ? s.bubbleInteractive : ""}`.trim()}
-            style={{ ...place(state.box, width, state.point), width }}
+            style={{
+              ...state.colours,
+              ...(state.frame
+                ? framed(state.box, state.frame)
+                : { ...place(state.box, width, state.point), width }),
+            }}
             data-pinned={state.pinned ? "" : undefined}
             onMouseEnter={interactive ? cancel : undefined}
             onMouseLeave={interactive ? hide : undefined}
@@ -104,11 +141,12 @@ export function useHoverBubble({ width = 320, follow = false, interactive = fals
 
 /**
  * An element that opens its bubble when hovered, focused or touched (a touch toggles it).
- * `content`: what the bubble says.
+ * `content`: what the bubble says. `fit` (§ 74): the bubble the width of the element, on its edges (the row's when the
+ * element is narrower than 260 px).
  */
-export default function HoverCard({ content, children, className = "", label, width = 320 }) {
+export default function HoverCard({ content, children, className = "", label, width = 320, fit = false }) {
   const ref = useRef(null);
-  const { show, hide, bubble, open, id } = useHoverBubble({ width });
+  const { show, hide, bubble, open, id } = useHoverBubble({ width, fit });
   if (!content) return <div className={className}>{children}</div>;
   // A touch toggles the bubble; a mouse already opened it by hovering.
   return (

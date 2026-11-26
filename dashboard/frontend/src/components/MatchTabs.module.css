@@ -84,7 +84,8 @@
   z-index: 1000;
   padding: 12px 14px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
+  /* 10 px, as the round picker's window (hugo, 26 Nov 11 h 23, § 74). */
+  border-radius: 10px;
   background: var(--surface-raised);
   box-shadow: var(--shadow-pop);
   color: var(--ink);

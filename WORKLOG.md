@@ -9,6 +9,13 @@
 - Tests (`test_ci_zones.py` i2 à i6) : les parts = la découverte entière, chaque test une fois (Counter), aucune part vide, unités jamais coupées, ordre de la découverte, équilibre à 25 % près, durations.json à jour pour 80 % des unités, erreur d'import, lecture d'un journal.
 - Avis d'Astra (xhigh, `/mnt/project-files/ci-selon-fichiers/reponse_astra_ci2_resume.md`) : 4 parts Deploy, 2 Python, 1 API ; caches pip/npm inutiles (4 s) ; accélérer `test_deploy_flow` lui-même plus tard, après mesure.
 
+## Infobulles des chiffres du match : largeur de la case et couleurs des équipes — FAILURE_MODES § 74 (26 novembre 2026)
+
+- Demandes de hugo (11 h 16 et 11 h 18, capture Lille – Bayern) : la bulle doit avoir la largeur de sa case, et les couleurs des équipes ne s'y appliquaient pas (bulle dessinée hors de la page, dans `body`).
+- `HoverCard` / `useHoverBubble` : option `fit` (largeur et bords de la case, de la bande sur téléphone sous 260 px), couleurs `--home` / `--away` de l'élément recopiées sur toutes les bulles. `MatchKpis` passe `fit`.
+- Arrondi choisi par hugo au curseur de la maquette (https://claude.ai/artifact/J4Cs93Cx1uYs1i2pqDjeNV) : 10 px pour toutes les bulles, et la fenêtre du choix de journée ramenée de 20 à 10 px pour harmoniser.
+- R51 et R52 (`match-tabs.e2e.mjs`) rouges sur 122022b, verts après ; site 1 118/1 118, match-tabs 38/38.
+
 ## CI selon les fichiers changés (26 novembre 2026, branche `claude/ci-selon-fichiers` depuis main 2b7cfb4)
 
 - Constat (demande de hugo, 10 h 18) : la CI attendait 19 à 27 min depuis #241-#244, contre 10 à 16 min la veille ; `test_deploy_flow.py` seul ≈ 9 min (vrai `deploy.sh`, BuildKit, migrations), `test_account_deploy` 21 s → 96 s ; une PR du site seul attendait tout.

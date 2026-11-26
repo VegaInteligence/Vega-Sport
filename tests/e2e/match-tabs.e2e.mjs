@@ -21,6 +21,8 @@
 // § 73 (hugo chose piste A « Les journées numérotées » of the round picker's mock-up, 26 Nov): R47 the rounds as numbered
 // pills, all in sight, the round's matches by day · § 73.3 (hugo, 11 h 04: « le truc rectangulaire droit ») R49 the
 // window rounded, R50 on a phone with a margin.
+// § 74 (hugo, 26 Nov 11 h 16 and 11 h 18): R51 a figure's bubble the width of its tile, in the teams' colours · R52 on a phone
+// the strip's width.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -193,6 +195,20 @@ async function check(name, expected, run) {
   process.stdout.write((result.passed ? "PASS " : "FAIL ") + name + (result.passed ? "" : " — " + result.actual.split("\n")[0]) + "\n");
 }
 
+/** § 74: a figure's bubble against its tile: their boxes and the teams' colours in each (the tile's first figure). */
+async function kpiBubble(page, index = 0) {
+  const tile = page.locator(".match-kpis > *").nth(index);
+  await tile.focus();
+  const bubble = page.locator('[role="tooltip"]');
+  await bubble.waitFor();
+  await page.waitForTimeout(200);
+  return page.evaluate((i) => {
+    const t = document.querySelectorAll(".match-kpis > *")[i], strip = document.querySelector(".match-kpis"), b = document.querySelector('[role="tooltip"]');
+    const box = (el) => { const r = el.getBoundingClientRect(); return { left: Math.round(r.left), width: Math.round(r.width) }; };
+    const colour = (el, side) => el.querySelector(`[class*="${side}Text"]`) && getComputedStyle(el.querySelector(`[class*="${side}Text"]`)).color;
+    return { tile: box(t), strip: box(strip), bubble: box(b), radius: getComputedStyle(b).borderTopLeftRadius, tileHome: colour(t, "home"), bubbleHome: colour(b, "home"), tileAway: colour(t, "away"), bubbleAway: colour(b, "away") };
+  }, index);
+}
 /** The round picker's window (§ 73.3): its corners, frame, header line, close button, logo, widest pill, margins. */
 async function pickerWindow(page) {
   await page.locator(".match-head button[data-match-picker]").click();
@@ -444,6 +460,17 @@ try {
         return got;
       });
 
+      await check("R51 a figure's bubble the width of its tile, on its edges, the teams in the tile's colours, 10 px corners", { width: "the tile's", left: "the tile's", colours: "the tile's", radius: "10px" }, async () => {
+        const got = await kpiBubble(page, 0);
+        await page.screenshot({ path: join(out, "infobulle-chiffres-bureau.png") });
+        await page.locator(".match-kpis > *").nth(0).blur();
+        assert.ok(Math.abs(got.bubble.width - got.tile.width) <= 1, `bubble ${got.bubble.width}px, tile ${got.tile.width}px`);
+        assert.ok(Math.abs(got.bubble.left - got.tile.left) <= 1, `bubble at ${got.bubble.left}px, tile at ${got.tile.left}px`);
+        assert.equal(got.radius, "10px", "the bubble's corners");
+        assert.deepEqual([got.bubbleHome, got.bubbleAway], [got.tileHome, got.tileAway], "the teams' colours");
+        return got;
+      });
+
       await check("R18 the competition's button opens the picker on round 14", { round: "regular:14", current: 1 }, async () => {
         await page.locator(".match-head button[data-match-picker]").click();
         const dialog = page.getByRole("dialog");
@@ -495,13 +522,13 @@ try {
         return got;
       });
 
-      await check("R49 the picker's window rounded (20 px), no frame nor line under the title, a round close button, the competition's logo, pills of 44 px at most",
-        { radius: "20px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widestMax: 44 }, async () => {
+      await check("R49 the picker's window rounded (10 px), no frame nor line under the title, a round close button, the competition's logo, pills of 44 px at most",
+        { radius: "10px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widestMax: 44 }, async () => {
         const { dialog, got } = await pickerWindow(page);
         await page.screenshot({ path: join(out, "choix-journee-fenetre-bureau.png") });
         await page.keyboard.press("Escape");
         await dialog.waitFor({ state: "detached" }).catch(() => {});
-        assert.deepEqual({ ...got, widest: undefined, margin: undefined }, { radius: "20px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widest: undefined, margin: undefined });
+        assert.deepEqual({ ...got, widest: undefined, margin: undefined }, { radius: "10px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widest: undefined, margin: undefined });
         assert.ok(got.widest <= 44, `widest pill ${got.widest}px`);
         return got;
       });
@@ -884,14 +911,25 @@ try {
         return { ...sizes, got };
       });
 
-      await check("R50 phone: the picker's window rounded (20 px) with a margin around it, not edge to edge", { radius: "20px", border: "0px", marginMin: 8 }, async () => {
+      await check("R50 phone: the picker's window rounded (10 px) with a margin around it, not edge to edge", { radius: "10px", border: "0px", marginMin: 8 }, async () => {
         const { dialog, got } = await pickerWindow(f.page);
         await f.page.screenshot({ path: join(out, "choix-journee-fenetre-telephone.png") });
         await f.page.keyboard.press("Escape");
         await dialog.waitFor({ state: "detached" }).catch(() => {});
-        assert.equal(got.radius, "20px");
+        assert.equal(got.radius, "10px");
         assert.equal(got.border, "0px");
         assert.ok(got.margin >= 8, `margin ${got.margin}px`);
+        return got;
+      });
+
+      await check("R52 phone: a tile narrower than its bubble's content, the bubble the width of the strip of figures", { width: "the strip's", left: "the strip's" }, async () => {
+        const got = await kpiBubble(f.page, 0);
+        await f.page.screenshot({ path: join(out, "infobulle-chiffres-telephone.png") });
+        await f.page.locator(".match-kpis > *").nth(0).blur();
+        assert.ok(got.tile.width < 260, `tile ${got.tile.width}px`);
+        assert.ok(Math.abs(got.bubble.width - got.strip.width) <= 1, `bubble ${got.bubble.width}px, strip ${got.strip.width}px`);
+        assert.ok(Math.abs(got.bubble.left - got.strip.left) <= 1, `bubble at ${got.bubble.left}px, strip at ${got.strip.left}px`);
+        assert.deepEqual([got.bubbleHome, got.bubbleAway], [got.tileHome, got.tileAway], "the teams' colours");
         return got;
       });
     } finally {

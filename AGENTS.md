@@ -108,3 +108,13 @@ Use the [Vega Inteligence workspace](https://linear.app/vegainteligence), team *
 - Inspect the working tree before editing. Preserve unrelated changes and other agents' work; use an isolated worktree when needed.
 - Keep commits focused and include bullet points describing the changes in each commit message. Follow any repository-specific commit naming rules above.
 - When a push is requested, verify that the remote branch contains the commit before reporting completion. State what was validated and any remaining limitations.
+
+## Branch cleanup
+
+When a branch was created for a piece of work, clean up once that work is finished and merged into `main`:
+
+- Delete the branch both locally and on GitHub (`git branch -d <branch>`, `git push origin --delete <branch>`).
+- Remove every duplicate or working copy that the work made obsolete: its worktree (`git worktree remove <path>`, then `git worktree prune`), extra clones or copies of the repository, and leftover patches or bundles made only to carry that branch.
+- Confirm the merge first: the pull request is merged, or `main` contains the commits. After a squash or rebase merge, `git branch --merged` does not list the branch, so check the pull request instead; use `git branch -D` only once the merge is confirmed.
+- Delete only what belongs to the finished work. Keep branches, worktrees and copies that hold unmerged commits or belong to another agent's active work.
+- If a deletion is refused (permissions, proxy, protected branch), report exactly what remains so the user can remove it. Do not report the cleanup as done.
