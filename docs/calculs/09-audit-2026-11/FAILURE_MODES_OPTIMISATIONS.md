@@ -604,7 +604,8 @@ which the next Deploy then keeps; `describe-images` failing for any reason (a re
   machine's run — of any name and identity, a clone, each with its own /tmp — or this one's before a restart or a
   cleaning of /tmp; only the owner's attestation with the maintenance entry `python3 infra/aws/deploy_state.py abandon
   --holder <name> --reason <why>` lets the next Deploy take it over, and that entry is refused for a GitHub run and for
-  a run whose lock is here (held, or free: the Deploy takes it over itself). A machine without an identity of its own,
+  a run whose lock is here (held, or free: the Deploy takes it over itself); and an attestation never stands over a
+  lock found held (one written on another machine, where that lock does not show). A machine without an identity of its own,
   or with a placeholder (`uninitialized`, 32 zeros, a null or malformed `IOPlatformUUID`), names no host: a
   workstation's Deploy stops there before anything (GH157-af). `DEPLOY_TAKEOVER` no longer exists: a flag
   cannot tell a live process. Otherwise the run stops before any change, saying what would prove the other dead.

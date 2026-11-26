@@ -15,6 +15,7 @@ Rerun: PYTHONPATH=backend:backend/tests VEGA_IMAGE_REFRESH_BUILDKIT=1 python3 -m
 import os
 from pathlib import Path
 import re
+import secrets
 import shutil
 import subprocess
 import tempfile
@@ -98,7 +99,9 @@ class WarmBuilderTest(unittest.TestCase):
         comment = variant("comment", text.replace("# Vega worker image.", "# Vega worker image (a comment changed).", 1))
         self.assertTrue(all(resolving(comment).values()), f"a comment: apt and pip still cached (the review's finding) {comment}")
         current = re.search(r"ARG VEGA_DEPS_REFRESH=(\S+)", text)[1]
-        refreshed = variant("refreshed", text.replace(f"ARG VEGA_DEPS_REFRESH={current}", "ARG VEGA_DEPS_REFRESH=2099-01-01", 1))
+        # A value this builder has never seen, one per run: a fixed one is in its cache once this test has run there.
+        fresh = f"2099-01-01-{secrets.token_hex(4)}"
+        refreshed = variant("refreshed", text.replace(f"ARG VEGA_DEPS_REFRESH={current}", f"ARG VEGA_DEPS_REFRESH={fresh}", 1))
         self.assertTrue(resolving(refreshed) and not any(resolving(refreshed).values()), f"refreshed: apt and pip ran again {refreshed}")
         before = [k for k in refreshed if k.startswith("WORKDIR")]
         self.assertTrue(before and all(refreshed[k] for k in before), "the steps before them still cached")
