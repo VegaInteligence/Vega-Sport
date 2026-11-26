@@ -6128,3 +6128,10 @@ whose menu is open, 22 px corners and no grey line for menus, windows and bubble
   menu of the account's settings (`HomeCountryMenu`) lost its box: the list was drawn in the flow, unframed, pushing
   what follows. It gets its own floating menu again (22 px, the bar's panel colours, above the page).
 - Unchanged: the blocks, their order and their data; the account page's competitions window; the logos.
+
+### 77.1 The competitions' search clicked (hugo, 26 Nov 2026, 17 h 02 « quand je clicke sur recherche dans competiton sur la page d'aceeuile j'ai cette horreur fix moi ca », with a capture; written before the tests)
+
+- What broke: clicked, the search pill of the competitions' panel showed in two halves, a blue ring around the icon's end and the far end, and the field between them painted in another grey over the ring.
+- Why: the site's generic rules for a focused field (`styles.css`, `input:not([type="checkbox"]):not([type="radio"]):focus-visible`, background `--surface-hover`) are more specific than `.home-settings-search input[type="search"]`, so the field took a background of its own over the pill's inset ring.
+- Rule: the field stays transparent, borderless and without outline in every state (`:hover`, `:focus`, `:focus-visible`); focused, the whole pill lights up (`--pill-quiet-hover`, ink colour), with no ring, as the bar's search does.
+- Test: `tests/e2e/home-buttons.e2e.mjs` H15 (field transparent, 0 px border, no outline, no ring on the pill). Red on 8a89ac9, green after.

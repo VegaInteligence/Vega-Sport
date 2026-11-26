@@ -31,6 +31,8 @@
 //      the menu floats (absolute), 22 px corners, and the picker's height does not grow when it opens.
 //  H14 Phone (390 × 844): the track spans the toolbar (±2 px); the competitions open a sheet (fixed, its bottom on
 //      the screen's, 22 px top corners) over a veil; the folds are 40 px pills; no sideways scroll.
+//  H15 The search clicked (§ 77.1, hugo's capture of 26 Nov): the field inside the pill stays transparent and without
+//      a border, and the pill has no ring, so the pill lights up whole rather than in two halves.
 //  X1  No page error.
 //
 //   node tests/e2e/home-buttons.e2e.mjs <base url> <evidence dir>
@@ -138,6 +140,21 @@ async function run(id, fn) {
     const shown = await page.locator(".home-settings-tile:visible").allTextContents();
     await panel(page).locator('input[type="search"]').fill("");
     check("H6 the search « liga »", "LaLiga among the tiles left, fewer than all", shown, shown.length > 0 && shown.length < 20 && shown.some((s) => /LaLiga/.test(s)));
+  });
+
+  await run("H15", async () => {
+    const field = panel(page).locator('input[type="search"]');
+    await field.click();
+    await page.waitForTimeout(250);
+    const d = await field.evaluate((n) => {
+      const pill = n.closest(".home-settings-search");
+      const a = getComputedStyle(n), b = getComputedStyle(pill);
+      return { field: a.backgroundColor, border: a.borderTopWidth, outline: a.outlineStyle, ring: b.boxShadow, pill: b.backgroundColor };
+    });
+    await shot(page, "h15-search-focused");
+    await field.blur();
+    check("H15 the search clicked: one pill, the field transparent, no ring", "transparent, 0 px, none, none", d,
+      d.field === "rgba(0, 0, 0, 0)" && d.border === "0px" && d.outline === "none" && d.ring === "none" && d.pill !== "rgba(0, 0, 0, 0)");
   });
 
   await run("H4", async () => {

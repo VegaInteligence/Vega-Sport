@@ -202,15 +202,19 @@
   background: var(--pill-quiet);
   color: var(--muted);
 }
+/* Focused, the whole pill lights up as the bar's search does, with no ring: the field inside stays transparent
+   (§ 77.1, hugo 26 Nov: the site's generic input rules painted it over half of the pill). */
 .home-settings-search:focus-within {
-  box-shadow: inset 0 0 0 1.5px var(--pill-focus);
+  background: var(--pill-quiet-hover);
+  color: var(--ink);
 }
 .home-settings-search .icon {
   flex: none;
   width: 15px;
   height: 15px;
 }
-.home-settings-search input[type="search"] {
+.home-settings-search input[type="search"],
+.home-settings-search.home-settings-search input[type="search"]:is(:hover, :focus, :focus-visible) {
   flex: 1;
   min-width: 0;
   height: 100%;
