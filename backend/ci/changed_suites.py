@@ -11,7 +11,8 @@ Reads the changed paths (one per line) on stdin and prints GitHub outputs (KEY=v
   python backend/ci/changed_suites.py --full     # everything (push to main, manual run, unknown change)
 
 A pull request or a branch push runs only what its files can break; main and a manual run run everything, so a
-zone a rule misses is still caught on main before a Deploy. A change to the CI itself (ci.yml, backend/ci/) runs
+zone a rule misses is still caught on main before a Deploy. A file of dashboard/ outside the site's own (SITE_ONLY)
+counts for the backend as well. A change to the CI itself (ci.yml, backend/ci/) runs
 everything. Documentation (*.md) runs nothing.
 """
 
@@ -24,6 +25,16 @@ import sys
 DEPLOY_MODULES = ("test_deploy_flow", "test_account_deploy", "test_deploy_grants")
 
 EVERYTHING = (r"\.github/workflows/ci\.yml", r"backend/ci/")
+
+# The site's own files: pages, components, views, texts, static files, stylesheets and the site's tests. Nothing under
+# them is imported by the backend's tests, copied into the worker image or packaged with the read API; every other
+# file of dashboard/ (src/services/, src/hooks/, shared/, manifest/, app/api/, package.json, bun.lock...) is, and
+# needs the backend's zones too (the read API imports src/services/ and shared/, its tests app/api/rapport/route.js).
+SITE_ONLY = (
+    r"dashboard/frontend/src/components/", r"dashboard/frontend/src/views/", r"dashboard/frontend/src/content/",
+    r"dashboard/frontend/app/(?!api/)", r"dashboard/frontend/public/", r"tests/", r"dashboard/.*\.css$",
+)
+SHARED_WITH_BACKEND = ("python", "deploy", "api", "image", "package")
 
 # Zone -> paths (regular expressions anchored at the start of the path) whose change needs it.
 ZONES = {
@@ -39,7 +50,7 @@ ZONES = {
     ),
     # The read API's and the account API's Node suites, and the SQL they read.
     "api": (r"backend/api/", r"backend/account/", r"backend/sql/"),
-    "image": (r"backend/", r"dashboard/"),
+    "image": (r"backend/",),
     "package": (r"backend/api/", r"backend/account/", r"infra/aws/package_api\.py$"),
 }
 SUITES = ("python", "deploy", "api")
@@ -55,6 +66,8 @@ def zones(paths, full=False):
         if path.endswith(".md"):
             continue
         needed.update(zone for zone, rules in ZONES.items() if any(re.match(rule, path) for rule in rules))
+        if path.startswith("dashboard/") and not any(re.match(rule, path) for rule in SITE_ONLY):
+            needed.update(SHARED_WITH_BACKEND)
     return needed
 
 

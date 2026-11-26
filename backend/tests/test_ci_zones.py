@@ -2,6 +2,7 @@
 
 Failure modes guarded here:
 - a site-only change still waits for the Python, Deploy and API suites (the 23 minutes of 26 Nov 2026);
+- a site file the backend imports (src/services/, shared/, app/api/, the manifest) skips the backend's suites;
 - a change to the read API or the SQL skips the API's own suites, or a Deploy file skips the Deploy's suites;
 - a change to the CI itself, a push to main or a manual run skips anything;
 - the two parts of the Python suites miss a test of the whole discovery, or run one twice;
@@ -28,9 +29,19 @@ def needed(*paths, full=False):
 
 class ZonesTest(unittest.TestCase):
     def test_a_site_only_change_runs_the_site_only(self):
-        self.assertEqual(needed("dashboard/frontend/src/components/MatchTabs.jsx", "tests/match-tabs.test.mjs"),
-                         {"site", "image"})
+        self.assertEqual(needed("dashboard/frontend/src/components/MatchTabs.jsx", "tests/match-tabs.test.mjs",
+                                "dashboard/frontend/app/match/[id]/page.jsx", "dashboard/frontend/src/styles.css",
+                                "dashboard/frontend/public/logo.svg", "dashboard/frontend/src/views/Home.jsx"),
+                         {"site"})
         self.assertIn('suites=[]', changed_suites.outputs(needed("dashboard/frontend/src/styles.css")))
+
+    def test_a2_a_site_file_the_backend_imports_runs_the_backend_s_zones(self):
+        backend = {"site", "python", "deploy", "api", "image", "package"}
+        for path in ("dashboard/frontend/src/services/match-tabs.js", "dashboard/shared/competition-scope.js",
+                     "dashboard/frontend/app/api/rapport/route.js", "dashboard/manifest/manifest.json",
+                     "dashboard/frontend/src/hooks/useSeason.js", "dashboard/package.json", "dashboard/bun.lock"):
+            with self.subTest(path):
+                self.assertEqual(needed(path), backend)
 
     def test_b_the_read_api_runs_its_suites_the_python_ones_and_the_deploy_s(self):
         self.assertEqual(needed("backend/api/src/routes/home.mjs"), {"python", "deploy", "api", "image", "package"})
