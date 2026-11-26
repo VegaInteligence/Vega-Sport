@@ -2,39 +2,27 @@
 -- proof of its inputs. Readers can only obtain the digest for the current version, in their own query snapshot.
 -- The new row triggers on the five sources require the writers to be stopped while this migration applies.
 
--- In addition to the whole-table mark (182), mark affected scopes. The local setting suppresses consecutive changes
--- to the same scope, with constant session state per table. Both sides of a move are marked. Direct leaf TRUNCATE and
--- changes to attachment are already included in the version's partition layout.
+-- In addition to the whole-table mark (182), mark affected scopes. The WHEN conditions claim the latest scope at row
+-- time, before queuing an AFTER trigger event. A bulk update of one season queues one such event, not one per row.
+-- Both sides of a move are marked. A leaf truncation or attachment is also covered by the partition layout.
 CREATE FUNCTION ops.mark_scoped_change() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $$
 DECLARE
   old_scope text;
   new_scope text;
-  seen text := nullif(current_setting(TG_ARGV[1], true), '');
 BEGIN
   IF TG_OP = 'TRUNCATE' THEN
     INSERT INTO ops.data_changes (relation, scope) VALUES (TG_ARGV[0], '*');
-    -- A subsequent scoped write can follow the truncation in the same transaction.
-    PERFORM set_config(TG_ARGV[1], '', true);
     RETURN NULL;
   END IF;
   IF TG_OP <> 'INSERT' THEN
-    old_scope := to_jsonb(OLD) ->> TG_ARGV[2];
+    old_scope := to_jsonb(OLD) ->> TG_ARGV[1];
   END IF;
   IF TG_OP <> 'DELETE' THEN
-    new_scope := to_jsonb(NEW) ->> TG_ARGV[2];
+    new_scope := to_jsonb(NEW) ->> TG_ARGV[1];
   END IF;
-  IF old_scope IS NOT NULL AND old_scope IS DISTINCT FROM seen THEN
-    INSERT INTO ops.data_changes (relation, scope) VALUES (TG_ARGV[0], old_scope);
-    seen := old_scope;
-  END IF;
-  IF new_scope IS NOT NULL AND new_scope IS DISTINCT FROM seen THEN
-    INSERT INTO ops.data_changes (relation, scope) VALUES (TG_ARGV[0], new_scope);
-    seen := new_scope;
-  END IF;
-  IF seen IS NOT NULL THEN
-    PERFORM set_config(TG_ARGV[1], seen, true);
-  END IF;
+  INSERT INTO ops.data_changes (relation, scope)
+    SELECT DISTINCT TG_ARGV[0], k FROM unnest(ARRAY[old_scope, new_scope]) k WHERE k IS NOT NULL;
   RETURN NULL;
 END
 $$;
@@ -44,6 +32,7 @@ DO $$
 DECLARE
   t record;
   setting text;
+  previous text;
   old_key text;
   new_key text;
 BEGIN
@@ -52,17 +41,23 @@ BEGIN
     ('ops.transfermarkt_reads', 'provider_key')) AS s(relation, key)
   LOOP
     setting := 'vega.scope_' || replace(t.relation, '.', '__');
-    old_key := format('OLD.%I::text IS DISTINCT FROM nullif(pg_catalog.current_setting(%L, true), %L)', t.key, setting, '');
-    new_key := format('NEW.%I::text IS DISTINCT FROM nullif(pg_catalog.current_setting(%L, true), %L)', t.key, setting, '');
-    EXECUTE format('CREATE TRIGGER vega_scope_insert AFTER INSERT ON %s FOR EACH ROW WHEN (%s)
-      EXECUTE FUNCTION ops.mark_scoped_change(%L,%L,%L)', t.relation, new_key, t.relation, setting, t.key);
+    previous := format('nullif(pg_catalog.current_setting(%L, true), %L)', setting, '');
+    old_key := format('OLD.%I::text', t.key);
+    new_key := format('NEW.%I::text', t.key);
+    EXECUTE format('CREATE TRIGGER vega_scope_insert AFTER INSERT ON %s FOR EACH ROW
+      WHEN (CASE WHEN %s IS DISTINCT FROM %s THEN pg_catalog.set_config(%L, %s, true) IS NOT NULL ELSE false END)
+      EXECUTE FUNCTION ops.mark_scoped_change(%L,%L)', t.relation, new_key, previous, setting, new_key, t.relation, t.key);
+    -- CASE keeps the claim after the comparison; a no-op must not consume it.
     EXECUTE format('CREATE TRIGGER vega_scope_update AFTER UPDATE ON %s FOR EACH ROW
-      WHEN ((%s OR %s) AND OLD.* *<> NEW.*)
-      EXECUTE FUNCTION ops.mark_scoped_change(%L,%L,%L)', t.relation, old_key, new_key, t.relation, setting, t.key);
-    EXECUTE format('CREATE TRIGGER vega_scope_delete AFTER DELETE ON %s FOR EACH ROW WHEN (%s)
-      EXECUTE FUNCTION ops.mark_scoped_change(%L,%L,%L)', t.relation, old_key, t.relation, setting, t.key);
+      WHEN (CASE WHEN (%s IS DISTINCT FROM %s OR %s IS DISTINCT FROM %s) AND OLD.* *<> NEW.*
+        THEN pg_catalog.set_config(%L, %s, true) IS NOT NULL ELSE false END)
+      EXECUTE FUNCTION ops.mark_scoped_change(%L,%L)',
+      t.relation, new_key, previous, old_key, new_key, setting, new_key, t.relation, t.key);
+    EXECUTE format('CREATE TRIGGER vega_scope_delete AFTER DELETE ON %s FOR EACH ROW
+      WHEN (CASE WHEN %s IS DISTINCT FROM %s THEN pg_catalog.set_config(%L, %s, true) IS NOT NULL ELSE false END)
+      EXECUTE FUNCTION ops.mark_scoped_change(%L,%L)', t.relation, old_key, previous, setting, old_key, t.relation, t.key);
     EXECUTE format('CREATE TRIGGER vega_scope_truncate AFTER TRUNCATE ON %s FOR EACH STATEMENT
-      EXECUTE FUNCTION ops.mark_scoped_change(%L,%L,%L)', t.relation, t.relation, setting, t.key);
+      EXECUTE FUNCTION ops.mark_scoped_change(%L,%L)', t.relation, t.relation, t.key);
   END LOOP;
 END
 $$;

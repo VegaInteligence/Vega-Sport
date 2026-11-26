@@ -230,6 +230,20 @@ class ReadReceiptsTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.cheap(path)
 
+    def test_GH137R_e2_noop_and_savepoint_do_not_consume_the_committed_scope_mark(self):
+        self.prepared()
+        match, home = self.archived_match()
+        self.addCleanup(self.score, match, home)
+        with self.db.transaction():
+            self.score(match, home)
+            with self.assertRaises(RuntimeError):
+                with self.db.transaction():
+                    self.score(match, home + 1)
+                    raise RuntimeError("savepoint rolled back")
+            self.score(match, home + 2)
+        r = self.base(LH, status=200)
+        self.assertNotEqual(r["body"], self.bodies[LH])
+
     def test_GH137R_f_a_shared_table_written(self):
         self.prepared()
         team = self.db.execute("SELECT id, name FROM core.teams WHERE id = 9701").fetchone()

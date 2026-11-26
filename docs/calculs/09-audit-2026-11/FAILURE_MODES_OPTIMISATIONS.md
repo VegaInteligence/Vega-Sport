@@ -465,20 +465,17 @@ prepares it.
 ### GH137R.1 Rules
 
 - **A receipt.** `ops.read_receipts` (migration 183), one row per route and selection: the content's digest (NULL when
-  the route answers no 200 for it), the code that computed it, and the version of what the selection reads, written
-  in one transaction from one snapshot (REPEATABLE READ): the version is read in the same snapshot as the reads that
-  made the digest. Selections: `league-history` a league and its start year (the 55 archived seasons the route serves);
+  the route answers a 404 for it), the code that computed it, and the version of what the selection reads. The worker
+  computes the digest, dependencies and version in one `REPEATABLE READ` transaction. Selectors for `league-history`
+  use the league and its start year (the 55 archived seasons the route serves).
   `matchdays` a league key and the season as the request writes it; `standings` a league key and a season, or the
   league alone; `cup-edition` a competition id and a season; `transfers` a player's public id. The selector is the
   request's own parameters: a request written otherwise has no receipt.
-- **The same code, the same bytes.** The worker computes a digest with the read API's own builders and serializers,
-  imported from `backend/api/src` (a Node process the worker starts, as it starts the archive and source scripts);
-  their statements run in the worker's transaction (the calc role, `SET LOCAL ROLE vega_read` for them: the public read
-  role, as the read API itself), and their rows reach the builders parsed as node-postgres parses them (dates kept as
-  text, as `db.mjs`). A receipt names its code: the SHA-256 of `backend/api/src`, its `package.json` and
-  `dashboard/shared` (the worker reads its copy in the image; the read API's release carries the same digest, set when
-  `package_api.py` bundles it). The read API uses a receipt only of its own code: after a release, every receipt is
-  prepared again.
+- **Shared handler and PostgreSQL parsers.** The worker sends a GET through the read API's handler in its Node 24
+  process. The role switches to `vega_read` during the reads, using `db.mjs`'s type parsers. The receipt names the
+  SHA-256 of `backend/api/src`, its package manifests and `dashboard/shared`, plus the major Node version. The worker
+  hashes the image's copy of these inputs. `package_api.py` embeds the same digest into the Lambda bundle. A changed
+  code digest or Node major makes an existing receipt ineligible until the worker prepares it again.
 - **The version: what can change the content, narrowed by season where the reads say so.** For each table the
   selection's api relations read (182's map), its committed changes; a table that carries a season, a player or a
   Transfermarkt key the selection names is counted for those values only (`core.matches`, `core.match_events`,
@@ -488,21 +485,27 @@ prepares it.
   are the reads' own: `league-history` its start and the next one (the functions' parameters), `matchdays` its
   editions' seasons (`api.matchday_editions`, the function `api.matchday_rounds` reads its editions from), `transfers`
   its player and his current Transfermarkt keys (`api.player_transfer_scope`, the join of `api.player_transfer_reads`).
-  The writers' marks carry the value for these five tables (one mark per table, value and transaction; a TRUNCATE
-  counts for every value). Plus 182's head, map, pending bound and partition trees.
+  The writer adds marks for the affected values on these five tables. The last marked key per table and transaction
+  suppresses consecutive duplicates. Updates moving a row mark both keys, and `TRUNCATE` marks all scopes. The fold
+  treats global and scoped marks alike. The receipt includes 182's schema head and partition layout checks. The worker
+  derives dependencies from executed statements and includes selection helpers. If a reader widens the seasons or
+  transfer keys it uses, its scope selection needs the same change.
 - **The check: one statement.** A conditional request holding a tag of the route's form asks `api.read_receipt` once
   (league-history and matchdays inside their own single statement, the reads skipped when it answers): the receipt
   of this route, selection and code whose version is the current one gives its digest. A held tag naming that digest is
   the tag the 200 would carry: 304 with it, no row of the selection read (index lookups on ops tables only). Anything
   else (no receipt, another code, another version, a version unknown, a digest the request does not hold) is the base
-  commit's path, unchanged: every read, the same body and tag.
-- **The worker keeps them.** Each planning round, after the fold: the receipts least recently checked (200) are
-  compared with the current versions, and up to 20 selections are prepared, stale ones first, then eligible ones
-  without a receipt (each route's list read from the base, at most every 10 rounds). Caps: league-history 100,
-  matchdays and standings 20 000, cup editions 5 000, transfers 50 000 (the oldest receipt of the route gives way).
-  A failure of one selection rolls back alone; a failure of the step never stops the round.
-- **Privileges.** vega_calc may act as vega_read (`SET`, not inherited) and run `ops.put_read_receipt` and
-  `ops.check_read_receipts`; vega_read runs `api.read_receipt`; nothing else writes or reads the receipts.
+  commit's reads, body and tag. The integrated queries for league-history and matchdays keep one statement on a miss.
+  A conditional miss on standings, cup edition or transfers adds the receipt probe to the original reads. A plain GET
+  goes straight to those reads.
+- **Bounded worker preparation.** A planning round checks up to 200 existing receipts by oldest check time and
+  prepares up to 20 candidates. It reserves part of the batch for new selections. Discovery pages edition ids and
+  provider keys with a persisted cursor. League history uses its fixed list. Each route has a storage cap (100 for
+  league history, 20 000 each for matchdays and standings, 5 000 for cup editions, 50 000 for transfers). The worker
+  evicts the oldest receipt in a full route. Preparation stops selecting after 4.5 seconds, with a 2-second statement
+  timeout and an overall 10-second worker timeout. Requests use ordinary reads until a current receipt is ready.
+- **Privileges.** `vega_calc` may use `SET ROLE vega_read` and run the refresh and discovery functions. `vega_read`
+  may execute `api.read_receipt`. Both roles access receipts through functions; the tables belong to the owner.
 
 ### GH137R.2 Failure modes and expected outcomes
 
@@ -513,6 +516,7 @@ prepares it.
 | GH137R-c | A write to another season's match (a live score), committed; folded | league-history and a past season's matchdays: still the cheap 304; the current season's matchdays: its base path (304, its reads) until the next round prepares it again |
 | GH137R-d | A write to the selection's own rows (a 2015 archive score), then the reversal | the old tag: a 200 with the corrected body and its new tag (base path); after the round, the new tag cheap; reversed: the original tag a 304 (base path), cheap again after the round |
 | GH137R-e | The same rows written again unchanged; a write rolled back; a fold | no change of version: the cheap 304 |
+| GH137R-e2 | A no-op and a rolled-back savepoint before a true update to the same scope, in one transaction | the true update adds a scope mark and the old receipt cannot answer 304 |
 | GH137R-f | A shared table written (a team's name, a provider id) | every receipt reading it falls back (the base path), then is prepared again |
 | GH137R-g | Another player's transfers read; this player's | the first: still cheap; the second: base path, then prepared again |
 | GH137R-h | The read API's code is another one than the receipt's | the base path, never a 304 from the receipt |
@@ -520,13 +524,14 @@ prepares it.
 | GH137R-j | A tag of another release (league-history's resource), of another content, forged, `*`, HEAD | as the base commit: 200 / 304 / tag without body; a receipt confirms only the digest it holds |
 | GH137R-k | More than 10 000 pending marks, a migration not tracked yet | the version unknown: no receipt used, none written |
 | GH137R-l | The worker's step: 200 checked, 20 prepared a round; a route's cap | bounded; the oldest receipt gives way |
-| GH137R-m | The digests the worker writes, and the read API's for the same rows | equal for every fixture selection (the cheap 304s prove it), the bridge's parsing equal to node-postgres' |
+| GH137R-m | The digests the worker writes, and the read API's for the same rows | equal for every fixture selection, using the same node-postgres type parsers |
 | GH137R-n | The image the worker runs; the bundle the read API runs | both hold the same code digest (`package_api.py`, the Dockerfile); a file of `backend/api/src` is an input of the worker image |
 | GH137R-o | Privileges | exactly the grants above |
 
-GH137R-a–l: `backend/tests/test_read_receipts.py` (the real worker round, then fresh read API processes,
-`backend/tests/read_conditional.mjs`); m: the same and `backend/api/test/receipts-bridge.test.mjs`; n:
-`test_image_identity.py`, `test_package_api_identity.py`; o: `test_read_receipts.py`. Measures: the evidence `gh137/receipts/`.
+`backend/tests/test_read_receipts.py` covers GH137R-a–m and o through the worker round and fresh read API processes.
+`backend/tests/packaged_read_receipts.py` and `test_image_identity.py` cover GH137R-n with the ARM64 worker image and
+the deployed Lambda entry point. The CI image job saves rerun instructions, the worker output and the responses.
+Local measurements and query plans are in the external evidence directory `gh137/receipts/`.
 
 ## GH137. `/api/league-history`: one statement for a validator and its answer, the reads made cheaper, an hour at the edge (GH #137 for this route, VI-77; with GH #145 for this route, VI-85)
 
