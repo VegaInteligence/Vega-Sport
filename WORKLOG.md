@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## CI selon les fichiers changés (26 novembre 2026, branche `claude/ci-selon-fichiers` depuis main 2b7cfb4)
+
+- Constat (demande de hugo, 10 h 18) : la CI attendait 19 à 27 min depuis #241-#244, contre 10 à 16 min la veille ; `test_deploy_flow.py` seul ≈ 9 min (vrai `deploy.sh`, BuildKit, migrations), `test_account_deploy` 21 s → 96 s ; une PR du site seul attendait tout.
+- Job « Changed zones » (`backend/ci/changed_suites.py`) : liste des fichiers de la PR ou de la poussée par l'API GitHub, zones site, python, deploy, api, image, package. Sur main, en lancement manuel, si ci.yml ou `backend/ci/` change, ou si la liste manque : tout.
+- Job « Suites » en matrice, côte à côte : python (backend/tests sauf le Deploy), deploy (`test_deploy_flow`, `test_account_deploy`, `test_deploy_grants`), api (suites Node de l'API et des comptes). `backend/ci/python_suites.py` découpe la même découverte que `unittest discover -s backend/tests -v`.
+- Tests : `backend/tests/test_ci_zones.py` (zones, les deux parties = toute la découverte, ci.yml) ; GH171-l suit la nouvelle commande.
+
 ## Favoris de l'accueil, « Vos joueurs » de la semaine — GH220.4 (26 novembre 2026, [#220](https://github.com/VegaInteligence/Vega-Sport/issues/220) rouverte, [VI-158](https://linear.app/vegainteligence/issue/VI-158), branche `claude/v2-favoris-vos-joueurs` depuis main e401480)
 
 - Alarme `vega-v2-api-5xx` du 25 nov. (20 h 50 UTC) : uniquement `/api/read/home-favourites`, 503 après 8 s (57014) ; 133 lectures sur 168 ce jour-là, après #230. Mesure en lecture seule sur la production (`EXPLAIN ANALYZE`, demandée par hugo) : clubs ~0,5 s, ~7 s par joueur suivi, presque tout dans `your_matches` (la vue `api.fixtures` de la saison reconstruite pour chaque apparition du joueur). Relu par Astra (gpt-6.2-astra, xhigh).
