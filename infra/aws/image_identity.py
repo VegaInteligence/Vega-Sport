@@ -10,7 +10,7 @@ mode, the SHA-256 of its contents (a link: its target) and its path. Printed: 64
 vega-v2-worker. `--manifest` writes the manifest (paths and digests only). Modification times are not in it: two exports
 of one commit give one identity.
 
-What a build resolves by itself (apt's nodejs, pip's unpinned dependencies) is not in the context: the Dockerfile's
+What a build resolves by itself (pip's unpinned dependencies) is not in the context: the Dockerfile's
 `ARG VEGA_DEPS_REFRESH` is how a newer one is asked for (backend/Dockerfile: apt's and pip's layers read it, GH158-g).
 """
 import argparse

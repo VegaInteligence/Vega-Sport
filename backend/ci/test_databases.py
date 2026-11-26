@@ -61,6 +61,7 @@ SUITES = {
     "VEGA_V2_DEPLOY_FLOW_TEST_DSN": "vega_v2_deploy_flow_test",
     # The writers' data versions (test_data_versions.py, FAILURE_MODES_OPTIMISATIONS.md GH137A).
     "VEGA_V2_DATA_VERSIONS_TEST_DSN": "vega_v2_data_versions_test",
+    "VEGA_V2_RECEIPTS_TEST_DSN": "vega_v2_receipts_test",
 }
 
 

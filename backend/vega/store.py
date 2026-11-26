@@ -166,7 +166,7 @@ def migrate(conn, *, vector=False):
                 "INSERT INTO ops.schema_migrations(version,checksum) VALUES(%s,%s)",
                 (name, checksum),
             )
-    # The tables the read API's views and functions read, tracked again when the map is older than the schema (181,
+    # The tables the read API's views and functions read, tracked again when the map is older than the schema (182,
     # FAILURE_MODES_OPTIMISATIONS.md GH137A): a table a later migration adds to a read gets its triggers, and a tracking
     # that failed is made again by the next run. A run that applied nothing to an up-to-date map tracks nothing (and
     # needs no privilege of the owner).

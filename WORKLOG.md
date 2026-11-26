@@ -38,9 +38,9 @@
 
 ## Validateurs des lectures publiques de l’API, 26 novembre 2026
 
-- Le lot couvre les lectures de l’API qui recalculaient toute la réponse pour valider un ETag. Les résultats, erreurs, plafonds de taille et durées de fraîcheur attendus sont documentés dans GH137A. [GitHub #137](https://github.com/VegaInteligence/Vega-Sport/issues/137) · [Linear VI-77](https://linear.app/vegainteligence/issue/VI-77).
-- Cadrage par Astra et Codex, implémentation et tests par Opus, revue technique indépendante par Codex. La migration ajoute des déclencheurs sur les sources et utilise le chemin de déploiement avec arrêt des écritures.
-- La première revue a identifié des écarts dans les réponses conditionnelles, le rattachement des partitions, les entrées invalides, le retard de consolidation et les changements de schéma. Les contrôles par sélection couvrent aussi les journées et les archives historiques. Clôture à la fusion de la livraison validée.
+- Le lot couvre les classements, pronostics, profils, coupes et archives dont le serveur recalculait la réponse pour valider un ETag. [GitHub #137](https://github.com/VegaInteligence/Vega-Sport/issues/137) · [Linear VI-77](https://linear.app/vegainteligence/issue/VI-77) · [PR #254](https://github.com/VegaInteligence/Vega-Sport/pull/254).
+- La migration 182 suit les écritures validées des sources. La migration 183 conserve dans PostgreSQL l’empreinte préparée par le worker pour l’historique, les journées, les classements, les éditions de coupe et les transferts. Le lecteur vérifie sa validité avant de répondre. Les combinaisons non préparées ou périmées passent par le calcul d’origine.
+- Les critères et les essais de référence sont décrits dans GH137A et GH137R. Un test de production local utilise l’image arm64 du worker et le paquet ZIP de la fonction. Les deux migrations passent par le chemin de déploiement qui arrête les écritures. La surveillance du coût de calcul et de la fréquence des revalidations en production suit le déploiement.
 
 ## Cases des chiffres pleines et cartes du fil à 10 px — FAILURE_MODES § 75 (26 novembre 2026, sur main depuis 5f63f03)
 

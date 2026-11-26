@@ -23,7 +23,7 @@ import { entityTags, send, tooLarge } from "./http.mjs";
 const sha = (text) => createHash("sha256").update(text).digest("hex");
 /**
  * The code that builds the answers when no release names it (a local run, the end-to-end suites that start one process
- * per request): the read API's sources, its package.json and the site's shared modules they import, file by file, in
+ * per request): the read API's sources, its package manifests and the site's shared modules they import, file by file, in
  * one order. Every process of one tree agrees; a change to any of these files is another release.
  */
 export function codeDigest(src = fileURLToPath(new URL(".", import.meta.url))) {
@@ -40,12 +40,16 @@ export function codeDigest(src = fileURLToPath(new URL(".", import.meta.url))) {
     }
     for (const entry of entries.map((e) => e.name).sort()) visit(join(path, entry));
   };
-  for (const root of [src, join(src, "..", "package.json"), join(src, "..", "..", "..", "dashboard", "shared")]) visit(root);
+  for (const root of [src, join(src, "..", "package.json"), join(src, "..", "package-lock.json"), join(src, "..", "..", "..", "dashboard", "shared")]) visit(root);
   return hash.digest("hex");
 }
+// The worker has this tree on disk; package_api.py binds its digest into the Lambda bundle.
+export const CODE_DIGEST = process.env.VEGA_CODE_DIGEST ||
+  (typeof VEGA_BUNDLED_CODE_DIGEST === "string" ? VEGA_BUNDLED_CODE_DIGEST : codeDigest());
+
 // What builds an answer: the read API's release (VEGA_RELEASE, api.yaml: its package's SHA-256), else the code itself
 // (codeDigest), and the runtime. Two processes of one release give the same checks; another release, other checks.
-export const REPRESENTATION = sha(JSON.stringify(["data-versions-v1", process.env.VEGA_RELEASE || codeDigest(), process.version]));
+export const REPRESENTATION = sha(JSON.stringify(["data-versions-v1", process.env.VEGA_RELEASE || CODE_DIGEST, process.version]));
 const NAMES = /\bapi\.([a-z_][a-z0-9_]*)/g;
 /** The api relations a statement names. */
 export const relationsOf = (sql) => [...new Set([...String(sql).matchAll(NAMES)].map((m) => `api.${m[1]}`))];

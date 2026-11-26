@@ -68,13 +68,15 @@ class ImageIdentityTest(unittest.TestCase):
         self.assertEqual(lines[:2], ["vega-v2-worker image identity 1", "platform linux/arm64"])
         paths = [line.split(" ", 3)[3] for line in lines if re.match(r"^[fld] ", line)]
         self.assertIn("backend/vega/migrate.py", paths)
+        self.assertIn("backend/api/src/receipt-worker.mjs", paths)
+        self.assertIn("backend/api/package-lock.json", paths)
         self.assertIn("dashboard/frontend/src/services/format.js", paths)
         self.assertIn("backend/account/sql/001_accounts.sql", paths)
         self.assertNotIn("dashboard/frontend/src/components/MatchNav.jsx", paths)
-        self.assertFalse([p for p in paths if p.startswith(("backend/api/", "backend/tests/", "infra/"))], "only what the image copies")
+        self.assertFalse([p for p in paths if p.startswith(("backend/api/test/", "backend/tests/", "infra/"))], "only what the image copies")
 
     def test_GH158_a_a_file_the_image_does_not_copy_changes_nothing(self):
-        for rel in ("dashboard/frontend/src/components/MatchNav.jsx", "backend/api/src/handler.mjs", "infra/aws/api.yaml",
+        for rel in ("dashboard/frontend/src/components/MatchNav.jsx", "backend/api/test/context.mjs", "infra/aws/api.yaml",
                     "backend/tests/test_roles.py"):
             with self.subTest(rel=rel):
                 self.assertEqual(self.variant("unchanged-" + rel.replace("/", "-"), lambda t, r=rel: (t / r).write_text((t / r).read_text() + "\n// edit\n")),
@@ -86,6 +88,7 @@ class ImageIdentityTest(unittest.TestCase):
         cases = {
             "a site file the image copies": append("dashboard/frontend/src/services/format.js"),
             "a shared file": append("dashboard/shared/archive.js"),
+            "the read handler that prepares the digest": append("backend/api/src/handler.mjs"),
             "an account SQL file": append("backend/account/sql/001_accounts.sql", "\n-- edit\n"),
             "the requirements": append("backend/requirements.txt", "\n"),
             "the Dockerfile's refresh argument": lambda t: (t / "backend/Dockerfile").write_text(

@@ -11,13 +11,16 @@
 
 CREATE TABLE ops.data_changes(
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  relation text NOT NULL
+  relation text NOT NULL,
+  scope text NOT NULL DEFAULT ''
 );
-CREATE INDEX data_changes_relation ON ops.data_changes(relation);
+CREATE INDEX data_changes_relation ON ops.data_changes(relation, scope);
 
 CREATE TABLE ops.data_versions(
-  relation text PRIMARY KEY,
-  version bigint NOT NULL CHECK (version >= 0)
+  relation text NOT NULL,
+  scope text NOT NULL DEFAULT '',
+  version bigint NOT NULL CHECK (version >= 0),
+  PRIMARY KEY (relation, scope)
 );
 
 -- The api relations that can be validated by versions, and what of the clock their answer reads: 'day' (current_date
@@ -80,11 +83,11 @@ REVOKE ALL ON FUNCTION ops.mark_data_change() FROM PUBLIC;
 CREATE FUNCTION ops.fold_data_changes() RETURNS bigint
 LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog AS $$
   WITH batch AS (SELECT c.id FROM ops.data_changes c ORDER BY c.id LIMIT 100000),
-  gone AS (DELETE FROM ops.data_changes c USING batch b WHERE c.id = b.id RETURNING c.relation),
-  counted AS (SELECT relation, count(*) AS n FROM gone GROUP BY relation),
+  gone AS (DELETE FROM ops.data_changes c USING batch b WHERE c.id = b.id RETURNING c.relation, c.scope),
+  counted AS (SELECT relation, scope, count(*) AS n FROM gone GROUP BY relation, scope),
   added AS (
-    INSERT INTO ops.data_versions AS v (relation, version) SELECT relation, n FROM counted
-    ON CONFLICT (relation) DO UPDATE SET version = v.version + EXCLUDED.version
+    INSERT INTO ops.data_versions AS v (relation, scope, version) SELECT relation, scope, n FROM counted
+    ON CONFLICT (relation, scope) DO UPDATE SET version = v.version + EXCLUDED.version
     RETURNING 1)
   SELECT coalesce(sum(n), 0)::bigint FROM counted
 $$;
@@ -102,7 +105,8 @@ DECLARE
   made integer := 0;
   t record;
   setting text;
-  own constant text[] := ARRAY['ops.data_changes', 'ops.data_versions', 'ops.data_relations', 'ops.data_sources', 'ops.data_tracking', 'ops.schema_migrations'];
+  own constant text[] := ARRAY['ops.data_changes', 'ops.data_versions', 'ops.data_relations', 'ops.data_sources',
+    'ops.data_tracking', 'ops.read_receipts', 'ops.read_receipt_discovery', 'ops.schema_migrations'];
   day constant text := '(?i)\m(current_date|age\s*\()';
   instant constant text := '(?i)(\mnow\s*\(|\mcurrent_timestamp\M|\mlocaltimestamp\M|\mlocaltime\M|\mcurrent_time\M|\mclock_timestamp\M|\mstatement_timestamp\M|\mtransaction_timestamp\M|\mtimeofday\M|''(now|today|tomorrow|yesterday)'')';
 BEGIN
@@ -136,7 +140,8 @@ BEGIN
     FROM pg_class c JOIN ours o ON o.oid = c.relnamespace AND o.nspname = 'api' WHERE c.relkind IN ('v', 'm', 'r', 'p', 'f')
     UNION
     SELECT 'p', p.oid, 'api.' || p.proname
-    FROM pg_proc p JOIN ours o ON o.oid = p.pronamespace AND o.nspname = 'api' WHERE p.proname <> 'data_version'
+    FROM pg_proc p JOIN ours o ON o.oid = p.pronamespace AND o.nspname = 'api'
+    WHERE p.proname NOT IN ('data_version', 'read_receipt')
   ), walk(relation, kind, oid) AS (
     SELECT relation, kind, oid FROM starts
     UNION
@@ -230,39 +235,60 @@ $$;
 -- transaction. `clock`: what the route's own statements read of the clock ('day': the base's current_date, 'time':
 -- never validated by versions). NULL when a relation is unknown, a relation or the route reads the time, a source is
 -- gone, more than 10 000 marks of a source wait for the fold (none is counted past 10 001: a stopped worker never
--- makes a read longer), or the map is older than the schema (ops.data_tracking). Index lookups only. vega_read runs it.
-CREATE FUNCTION api.data_version(relations text[], clock text DEFAULT NULL) RETURNS text
+-- makes a read longer), or the map is older than the schema (ops.data_tracking). An internal caller may use named
+-- scopes on sources with selective triggers (183): '' is the whole table, '*' is a change affecting all scopes.
+CREATE FUNCTION ops.scoped_data_version(relations text[], clock text, scopes text[][]) RETURNS text
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog AS $$
   WITH wanted AS (SELECT DISTINCT r.relation FROM unnest(relations) AS r(relation)),
   known AS (SELECT w.relation, d.relation IS NOT NULL AS tracked, d.clock FROM wanted w LEFT JOIN ops.data_relations d ON d.relation = w.relation),
   sources AS (
     SELECT s.source, bool_or(s.partitioned) AS partitioned, to_regclass(s.source) AS oid
     FROM ops.data_sources s JOIN wanted w ON w.relation = s.relation GROUP BY s.source),
-  -- Counted once per source (its value is used twice below).
+  scoped AS (
+    SELECT scopes[i][1] AS source, scopes[i][2] AS scope FROM generate_subscripts(scopes, 1) x(i)),
+  keys AS (
+    SELECT s.source, q.scope FROM sources s
+    CROSS JOIN LATERAL (
+      SELECT DISTINCT k.scope FROM scoped k WHERE k.source = s.source
+      UNION ALL
+      SELECT '' WHERE NOT EXISTS (SELECT 1 FROM scoped k WHERE k.source = s.source)) q),
+  -- Counted once per key (its value is used twice below).
   pending AS MATERIALIZED (
-    SELECT s.source, s.partitioned, s.oid,
-      (SELECT count(*) FROM (SELECT 1 FROM ops.data_changes c WHERE c.relation = s.source LIMIT 10001) w) AS waiting
-    FROM sources s WHERE s.oid IS NOT NULL),
+    SELECT k.source, k.scope,
+      (SELECT count(*) FROM (SELECT 1 FROM ops.data_changes c
+        WHERE c.relation = k.source AND c.scope = k.scope LIMIT 10001) w) AS waiting
+    FROM keys k),
   counted AS (
-    SELECT p.source, p.waiting,
-      (coalesce((SELECT v.version FROM ops.data_versions v WHERE v.relation = p.source), 0) + p.waiting)::text
-      || CASE WHEN p.partitioned THEN '/' || coalesce((
+    SELECT p.source, p.scope, p.waiting,
+      coalesce((SELECT v.version FROM ops.data_versions v WHERE v.relation = p.source AND v.scope = p.scope), 0) + p.waiting AS version
+    FROM pending p),
+  layouts AS (
+    SELECT s.source,
+      CASE WHEN s.partitioned THEN coalesce((
            SELECT string_agg(t.relid::oid::text || '.' || c.relfilenode::text || '.' || coalesce(i.xmin::text, '-'), ',' ORDER BY t.relid::oid)
-           FROM pg_partition_tree(p.oid) t JOIN pg_class c ON c.oid = t.relid LEFT JOIN pg_inherits i ON i.inhrelid = t.relid), '') ELSE '' END AS version
-    FROM pending p)
+           FROM pg_partition_tree(s.oid) t JOIN pg_class c ON c.oid = t.relid LEFT JOIN pg_inherits i ON i.inhrelid = t.relid), '') ELSE '' END AS layout
+    FROM sources s WHERE s.oid IS NOT NULL)
   SELECT CASE
     WHEN NOT EXISTS (SELECT 1 FROM known) OR EXISTS (SELECT 1 FROM known k WHERE NOT k.tracked OR k.clock = 'time')
-      OR EXISTS (SELECT 1 FROM sources WHERE oid IS NULL) OR data_version.clock IS DISTINCT FROM NULL AND data_version.clock <> 'day'
+      OR EXISTS (SELECT 1 FROM sources WHERE oid IS NULL)
+      OR scoped_data_version.clock IS NOT NULL AND scoped_data_version.clock <> 'day'
       OR EXISTS (SELECT 1 FROM counted WHERE waiting > 10000)
       OR NOT EXISTS (SELECT 1 FROM ops.data_tracking t
         WHERE t.head IS NOT DISTINCT FROM (SELECT max(m.version) FROM ops.schema_migrations m)
           AND t.migrations = (SELECT count(*) FROM ops.schema_migrations)) THEN NULL
-    ELSE encode(sha256(convert_to(concat_ws('|',
+    ELSE encode(sha256(convert_to(json_build_array(
       (SELECT max(m.version) FROM ops.schema_migrations m),
       (SELECT count(*) FROM ops.schema_migrations),
-      CASE WHEN data_version.clock = 'day' OR EXISTS (SELECT 1 FROM known k WHERE k.clock = 'day') THEN to_char(current_date, 'YYYY-MM-DD') ELSE '' END,
-      coalesce((SELECT string_agg(c.source || ':' || c.version, ',' ORDER BY c.source) FROM counted c), '')), 'UTF8')), 'hex')
+      CASE WHEN scoped_data_version.clock = 'day' OR EXISTS (SELECT 1 FROM known k WHERE k.clock = 'day') THEN to_char(current_date, 'YYYY-MM-DD') END,
+      (SELECT json_agg(json_build_array(c.source, c.scope, c.version) ORDER BY c.source, c.scope) FROM counted c),
+      (SELECT json_agg(json_build_array(l.source, l.layout) ORDER BY l.source) FROM layouts l))::text, 'UTF8')), 'hex')
   END
+$$;
+REVOKE ALL ON FUNCTION ops.scoped_data_version(text[], text, text[]) FROM PUBLIC;
+
+CREATE FUNCTION api.data_version(relations text[], clock text DEFAULT NULL) RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog AS $$
+  SELECT ops.scoped_data_version($1, $2, ARRAY[]::text[])
 $$;
 REVOKE ALL ON FUNCTION api.data_version(text[], text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION api.data_version(text[], text) TO vega_read;

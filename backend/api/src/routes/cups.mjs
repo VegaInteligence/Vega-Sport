@@ -23,6 +23,7 @@
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { createDataVersions } from "../data-versions.mjs";
+import { contentTag, editionSelector, readReceipt } from "../read-receipts.mjs";
 import { fixture, forecastOf } from "./matches.mjs";
 import { standingsBody } from "./reference.mjs";
 import { editionArtworkFields } from "../edition-artwork.mjs";
@@ -97,7 +98,7 @@ function validate(p, spec) {
 // its written contract keeping a client's tag through an import that leaves the edition's bytes (test_snapshot_roles.py
 // 35m–35o, test_dfb_periods.py).
 function respond(req, body, family) {
-  const etag = `W/"${family}-v1-${createHash("sha256").update(JSON.stringify(body)).digest("hex")}"`;
+  const etag = contentTag(family, createHash("sha256").update(JSON.stringify(body)).digest("hex"));
   if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 60 });
   return send(req, body, 200, { etag, ttl: 60 });
 }
@@ -245,7 +246,15 @@ async function nativeSnapshot(read, competition, season) {
 
 export function createCupRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
-    if (path === "/api/cups/edition") return respond(req, await cupAnswer(read, path, params), "support");
+    if (path === "/api/cups/edition") {
+      const { competition, season } = validate(params, { competition: LEAGUE, season: YEAR });
+      if (!competition || !season) reject(400, "Paramètre manquant.");
+      const receipt = await readReceipt(req, read, "cup-edition", editionSelector(competition, season), "support", 60);
+      if (receipt) return receipt;
+      const found = await cupBody(read, competition, season);
+      if (!found) reject(404, "Compétition ou édition indisponible.");
+      return respond(req, found.body, "support");
+    }
     const spec = cupSpec(path, params);
     return spec ? versioned(req, params, spec, (guarded) => cupAnswer(guarded, path, params)) : null;
   };
@@ -303,13 +312,6 @@ async function cupAnswer(read, path, params) {
       const kept = rows.filter((r) => (p.kind === "results") === (r.status === "finished"));
       const forecasts = p.kind === "fixtures" ? await forecastsOf(read, kept.filter((r) => r.match_id != null).map((r) => r.match_id)) : new Map();
       return kept.map((r) => tableRow(r, forecasts.get(Number(r.match_id))));
-    }
-    if (path === "/api/cups/edition") {
-      const p = validate(params, { competition: LEAGUE, season: YEAR });
-      if (!p.competition || !p.season) reject(400, "Paramètre manquant.");
-      const found = await cupBody(read, p.competition, p.season);
-      if (!found) reject(404, "Compétition ou édition indisponible.");
-      return found.body;
     }
     if (path === "/api/cup-snapshot") {
       const p = validate(params, { competition: LEAGUE, season: YEAR, kind: /^(native|standings|edition)$/ });

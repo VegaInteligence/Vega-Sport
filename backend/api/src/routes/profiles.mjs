@@ -80,6 +80,7 @@
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { createDataVersions } from "../data-versions.mjs";
+import { contentTag, readReceipt } from "../read-receipts.mjs";
 import { ROLE_LABEL } from "./rankings.mjs";
 
 const PLAYER = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))$/,
@@ -547,14 +548,20 @@ const SEASON_KEY = "(SELECT season_id FROM api.season_keys WHERE season=$2)";
 // GH137A-o), its written contract keeping a client's tag through a reader's pass that leaves the list as it was
 // (test_transfermarkt_history.py 35w–35z: a refused refresh records its attempt in the tables the list reads).
 function respond(req, data) {
-  const etag = `W/"profile-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
+  const etag = contentTag("profile", createHash("sha256").update(JSON.stringify(data)).digest("hex"));
   if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 300 });
   return send(req, { data }, 200, { etag, ttl: 300, maxBytes: 2 * 1024 * 1024 });
 }
 
 export function createProfileRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
-    if (TRANSFERS.test(path) || MATCH_ABSENCES.test(path)) return respond(req, await profileAnswer(read, path, params));
+    const transfers = path.match(TRANSFERS);
+    if (transfers) {
+      validateParams(params, []);
+      const receipt = await readReceipt(req, read, "transfers", transfers[1], "profile", 300);
+      return receipt ?? respond(req, await transferHistory(read, transfers[1]));
+    }
+    if (MATCH_ABSENCES.test(path)) return respond(req, await profileAnswer(read, path, params));
     const spec = profileSpec(path, params);
     return spec ? versioned(req, params, spec, (guarded) => profileAnswer(guarded, path, params)) : null;
   };
@@ -747,30 +754,6 @@ async function profileAnswer(read, path, params) {
         };
       };
       return { id: matchAbsences[1], on: f.day, home: side("home", f.home_team_id), away: side("away", f.away_team_id) };
-    }
-    const transfers = path.match(TRANSFERS);
-    if (transfers) {
-      validateParams(params, []);
-      const [rows, [known]] = await Promise.all([
-        // Two moves of one day in the provider's order: its key is a number written as text.
-        read(
-          `SELECT transfer_date::text AS date, kind, fee_eur, from_id, from_name, from_image_url, to_id, to_name, to_image_url,
-             absent_since::text AS absent_since
-           FROM api.player_transfers WHERE player_key=api.internal_id('player',$1)
-           ORDER BY transfer_date, length(source_key), source_key`,
-          [transfers[1]],
-        ),
-        read(`SELECT read_at FROM api.player_transfer_reads WHERE player_key=api.internal_id('player',$1) LIMIT 1`, [transfers[1]]),
-      ]);
-      // A player whose transfers were never read is not known: no list, rather than an empty one.
-      if (!known) reject(404, "Donnée indisponible.");
-      return ({
-        id: transfers[1],
-        // absentSince: the first day the provider's accepted history no longer listed the move (153); omitted otherwise.
-        transfers: rows.map((r) => ({ date: r.date, kind: r.kind ?? null, feeEur: r.fee_eur ?? null,
-          from: namedClub(r.from_id, r.from_name, r.from_image_url), to: namedClub(r.to_id, r.to_name, r.to_image_url),
-          ...(r.absent_since && { absentSince: r.absent_since }) })),
-      });
     }
     const partners = path.match(PARTNERS);
     if (partners) {
@@ -1095,4 +1078,26 @@ async function profileAnswer(read, path, params) {
     }
     return null;
   }
+}
+
+async function transferHistory(read, player) {
+  const [rows, [known]] = await Promise.all([
+    // Two moves of one day in the provider's order: its key is a number written as text.
+    read(
+      `SELECT transfer_date::text AS date, kind, fee_eur, from_id, from_name, from_image_url, to_id, to_name, to_image_url,
+         absent_since::text AS absent_since
+       FROM api.player_transfers WHERE player_key=api.internal_id('player',$1)
+       ORDER BY transfer_date, length(source_key), source_key`,
+      [player],
+    ),
+    read("SELECT read_at FROM api.player_transfer_reads WHERE player_key=api.internal_id('player',$1) LIMIT 1", [player]),
+  ]);
+  if (!known) reject(404, "Donnée indisponible.");
+  return {
+    id: player,
+    // absentSince: the first day the provider's accepted history no longer listed the move (153); omitted otherwise.
+    transfers: rows.map((r) => ({ date: r.date, kind: r.kind ?? null, feeEur: r.fee_eur ?? null,
+      from: namedClub(r.from_id, r.from_name, r.from_image_url), to: namedClub(r.to_id, r.to_name, r.to_image_url),
+      ...(r.absent_since && { absentSince: r.absent_since }) })),
+  };
 }
