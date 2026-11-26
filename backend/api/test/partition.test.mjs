@@ -38,11 +38,12 @@ test("the packed columns decode to the same season", { skip }, async () => {
 test("versions, validation and unknown partitions", { skip }, async () => {
   const manifest = (await get("/api/dashboard/manifest")).body;
   // The site turns its compact reads, its search, its ordered fixtures and its versioned
-  // partitions on from these values (it loads whole seasons for any other storage).
+  // partitions on from these values (it loads whole seasons for any other storage); a season's
+  // fixtures in one read and the match families' own routes (FAILURE_MODES_OPTIMISATIONS.md GH129-c, GH129-g).
   assert.equal(manifest.storage, "aws-relational");
   assert.deepEqual(
     Object.fromEntries(Object.entries(manifest.capabilities).filter(([, value]) => typeof value === "boolean")),
-    { boundedSearch: true, fixturePaginationOrder: true, versionedPartitions: true, playerGradeRanking: true, actorSummary: true, wholeSelection: true, roleGroups: true, playerProfiles: true, marketValues: true, playedLeague: true, resolvedMedia: false, boundedArchive: true },
+    { boundedSearch: true, fixturePaginationOrder: true, seasonFixtures: true, matchFamilyRoutes: true, versionedPartitions: true, playerGradeRanking: true, actorSummary: true, wholeSelection: true, roleGroups: true, playerProfiles: true, marketValues: true, playedLeague: true, resolvedMedia: false, boundedArchive: true },
   );
   const chunk = manifest.seasons.find((s) => s.id === "2025/2026").chunks.find((c) => c.leagueId === "l_3FJFUl");
   assert.match(chunk.sourceDigest, /^[a-f0-9]{16}$/);

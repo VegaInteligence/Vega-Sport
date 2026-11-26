@@ -197,6 +197,51 @@ export async function fixturePage(req, p, read) {
   });
 }
 
+/**
+ * GET /api/fixtures/season?league=l_…&season=…: every fixture of one competition's season in one read (FAILURE_MODES_
+ * OPTIMISATIONS.md GH129): the rows of /api/fixtures (status all, its columns and forecast, its order: day, then id) and
+ * the publication's generation, in one statement. 1 000 fixtures at most: a longer season is a 413 SEASON_TOO_LARGE and
+ * the site reads /api/fixtures' pages, never a season cut short. Its validator and edge time are /api/fixtures'.
+ */
+export const SEASON_FIXTURES_MAX = 1000;
+// Pinned to a publication (`generation`, the site's manifest's): another than the current one is refused (409), never
+// answered with the current one's rows under its URL, so that no cache keeps one publication's season as another's
+// (GH129-i, GH129-k).
+const SEASON_FIXTURES_MAX_BYTES = 4 * 1024 * 1024;
+const changed = () => reject(409, "La publication a changé. Rechargez la saison.");
+const tooLarge = () => reject(413, `Plus de ${SEASON_FIXTURES_MAX} rencontres : lisez /api/fixtures par pages.`, "SEASON_TOO_LARGE");
+// The refusal send() gives a GET whose answer passes its bytes (http.mjs), word for word.
+const tooHeavy = (req) => send(req, { error: { code: "PAGE_TOO_LARGE", message: "Réduisez la taille de page.", retry: false } }, 413);
+// The season's fixtures, as /api/fixtures selects them for one league and season.
+const SEASON_SELECTION = `f.competition_season_id=ANY(ARRAY(SELECT e.competition_season_id FROM api.edition_keys e WHERE e.league_id=$1)) AND f.league_id=$1
+ AND (f.season=$2 OR f.native_season=$2)`;
+export async function seasonFixtures(req, p, read) {
+  validateParams(p, ["league", "season", "generation"]);
+  const league = p.get("league"),
+    season = p.get("season"),
+    pinned = p.get("generation");
+  if (!LEAGUE.test(league || "") || !SEASON.test(season || "")) reject(400, "Filtres invalides.");
+  if (pinned !== null && !/^\d{1,18}$/.test(pinned)) reject(400, "Filtres invalides.");
+  // A HEAD and a conditional GET answer as the GET (GH129-l, GH129-o): its two limits, the fixtures (more than 1 000)
+  // and the answer's bytes (more than 4 MiB), are the same 413 no-store for them, never a 200 an edge would keep nor a
+  // 304. The bytes are known only from the answer: they read the season, rows included, as the GET does (a
+  // revalidation costs the GET's statement).
+  const rows = `SELECT ${FIXTURE_COLUMNS},(SELECT json_build_object('home_win',mf.home_win,'draw',mf.draw,'away_win',mf.away_win) FROM api.match_forecasts mf
+ WHERE f.status='not_started' AND mf.match_key=f.match_id) AS forecast FROM api.fixtures f
+ WHERE ${SEASON_SELECTION}
+ ORDER BY f.day ASC NULLS LAST,f.id ASC LIMIT ${SEASON_FIXTURES_MAX + 1}`;
+  const [r] = await read(`SELECT g.*,(SELECT coalesce(json_agg(r),'[]'::json) FROM (${rows}) r) AS rows FROM (${publication}) g`, [league, season]);
+  if (!r) reject(503, "Publication indisponible.");
+  if (pinned !== null && r.version !== pinned) changed();
+  if (r.rows.length > SEASON_FIXTURES_MAX) tooLarge();
+  const answer = { data: { matches: r.rows.map(fixture) }, meta: { generation: r.version, count: r.rows.length } };
+  // send() answers a HEAD or a validator it matches before it measures a body: measured here for them. A GET is
+  // measured by send() itself, once.
+  if ((req.method === "HEAD" || req.headers.has("if-none-match")) && Buffer.byteLength(JSON.stringify(answer)) > SEASON_FIXTURES_MAX_BYTES)
+    return tooHeavy(req);
+  return send(req, answer, 200, { etag: tag(req, r.version), ttl: PAGE_TTL, maxBytes: SEASON_FIXTURES_MAX_BYTES });
+}
+
 // The overview statistics of a summary (legacy keys of team_statistics) and their columns.
 // Labels are null as in team-stats.mjs: the provider's titles are not stored.
 const SUMMARY_STATS = [
@@ -353,6 +398,7 @@ export async function summary(req, mid, read) {
 export function createMatchRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/fixtures") return fixturePage(req, params, read);
+    if (path === "/api/fixtures/season") return seasonFixtures(req, params, read);
     const id = path.match(/^\/api\/matches\/(m_[A-Za-z0-9_]{6,9})\/summary$/);
     if (id) {
       if (!MATCH.test(id[1])) reject(404, "Match introuvable.");
