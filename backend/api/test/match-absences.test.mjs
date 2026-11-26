@@ -17,13 +17,14 @@ before(async () => {
     ids[k] = (await q(`SELECT api.public_id('${type}', ${id}) AS id`)).rows[0].id;
   // m5: Union Sud (4, no Transfermarkt link) – Olympique Été (1), 5 Sep 2025, finished; 101 and 102 on its sheet.
   await q(`INSERT INTO core.players(id, name) VALUES (105, 'Absent Cinq'), (106, 'Absent Six'), (107, 'Absent Sept'), (108, 'Joueur Huit'),
-             (109, 'Parti Neuf'), (110, 'Recrue Dix'), (111, 'Ailleurs Onze')`);
+             (109, 'Parti Neuf'), (110, 'Recrue Dix'), (111, 'Ailleurs Onze'),
+             (112, 'Ancien Douze')`);
   await q(`INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES
              ('team', 'transfermarkt', '583', 1), ('team', 'transfermarkt', '584', 2),
              ('player', 'transfermarkt', '9101', 101), ('player', 'transfermarkt', '9102', 102), ('player', 'transfermarkt', '9104', 104),
              ('player', 'transfermarkt', '9105', 105), ('player', 'transfermarkt', '9106', 106), ('player', 'transfermarkt', '9107', 107),
              ('player', 'transfermarkt', '9108', 108), ('player', 'transfermarkt', '9109', 109), ('player', 'transfermarkt', '9110', 110),
-             ('player', 'transfermarkt', '9111', 111)`);
+             ('player', 'transfermarkt', '9111', 111), ('player', 'transfermarkt', '9112', 112)`);
   // Club 1's squad of the match's season (9199 not linked: unknown); 9109 gone on 2 Sep. Club 2: only the season before (78g).
   await q(`INSERT INTO core.provider_squads(provider, club_key, season_year, player_key, read_on, absent_since) VALUES
              ('transfermarkt', '583', 2025, '9101', current_date, NULL), ('transfermarkt', '583', 2025, '9102', current_date, NULL),
@@ -31,6 +32,7 @@ before(async () => {
              ('transfermarkt', '583', 2025, '9107', current_date, NULL), ('transfermarkt', '583', 2025, '9108', current_date, NULL),
              ('transfermarkt', '583', 2025, '9199', current_date, NULL), ('transfermarkt', '583', 2025, '9109', current_date, '2025-09-02'),
              ('transfermarkt', '583', 2025, '9110', current_date, NULL), ('transfermarkt', '583', 2025, '9111', current_date, NULL),
+             ('transfermarkt', '583', 2025, '9112', current_date, NULL),
              ('transfermarkt', '584', 2024, '9104', current_date, NULL)`);
   // Reads: 9102's injuries read more than 45 days before the match day (78h); 9108's ten days before it (the oldest read).
   await q(`INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at, read_at) VALUES
@@ -38,7 +40,7 @@ before(async () => {
              ('injuries', '9105', 1, now() + interval '1 day', now()), ('injuries', '9106', 1, now() + interval '1 day', now()),
              ('injuries', '9107', 1, now() + interval '1 day', now()), ('injuries', '9108', 1, now() + interval '1 day', '2025-08-26'),
              ('injuries', '9109', 1, now() + interval '1 day', now()), ('injuries', '9110', 1, now() + interval '1 day', now()),
-             ('injuries', '9111', 1, now() + interval '1 day', now()),
+             ('injuries', '9111', 1, now() + interval '1 day', now()), ('injuries', '9112', 1, now() + interval '1 day', '2025-07-01'),
              ('suspensions', '9105', 1, now() + interval '1 day', now()), ('suspensions', '9106', 1, now() + interval '1 day', now())`);
   await q(`INSERT INTO core.player_injuries(player_id, kind, label, start_date, end_date, matches_missed, source, as_of, absent_since) VALUES
              (105, 'injury', 'Hamstring injury', '2025-08-20', '2025-09-10', 2, 'transfermarkt', current_date, NULL),
@@ -50,7 +52,8 @@ before(async () => {
              (101, 'injury', 'Back injury', '2025-09-01', '2025-09-20', 0, 'transfermarkt', current_date, NULL),
              (109, 'injury', 'Groin strain', '2025-09-01', '2025-09-30', 1, 'transfermarkt', current_date, NULL),
              (110, 'injury', 'Thigh problems', '2025-09-01', '2025-09-30', 1, 'transfermarkt', current_date, NULL),
-             (111, 'injury', 'Shoulder injury', '2025-09-01', '2025-09-30', 1, 'transfermarkt', current_date, NULL)`);
+             (111, 'injury', 'Shoulder injury', '2025-09-01', '2025-09-30', 1, 'transfermarkt', current_date, NULL),
+             (112, 'injury', 'Cruciate ligament tear', '2025-06-20', NULL, NULL, 'transfermarkt', current_date, NULL)`);
   // 78i: 110 joined club 1 on 20 Sep (after m5); 111's last move before m5 took him to club 2 (back to club 1 on 1 Oct).
   await q(`INSERT INTO core.player_transfers(player_id, transfer_date, from_team_id, to_team_id, kind, source, as_of, source_key, pending) VALUES
              (110, '2025-09-20', 3, 1, NULL, 'transfermarkt', current_date, '110-1', false),
@@ -91,10 +94,10 @@ test("78b–78h: each side's absent players on the match day", { skip }, async (
     home: { team: ids.t4, asOf: null, squad: { players: 0, read: 0 }, absences: [] },
     away: {
       team: ids.t1,
-      // 78f, 78h, 78i: 9109 gone on 2 Sep, 9110 arrived after the match and 9111 at club 2 that day are not members; 9102 read
+      // 78f, 78h, 78i: 9109 gone on 2 Sep, 9110 arrived after the match and 9111 at club 2 that day are not members; 9102 and 9112 read
       // too early and 9199 not linked are not read; 9108's read the oldest.
       asOf: "2025-08-26",
-      squad: { players: 7, read: 5 },
+      squad: { players: 8, read: 5 },
       absences: [
         // 78e: the suspension of the match's competition, its remaining count unknown on the match day.
         { player: who(ids.p106, "Absent Six"), kind: "suspension", label: "Red card suspension", start: "2025-09-01", expectedReturn: "2025-09-08",
@@ -102,7 +105,8 @@ test("78b–78h: each side's absent players on the match day", { skip }, async (
         // 78b: over the match day (not the one ended the day before, nor 106's started the day after).
         { player: who(ids.p105, "Absent Cinq"), kind: "injury", label: "Hamstring injury", start: "2025-08-20", expectedReturn: "2025-09-10",
           matchesMissed: 2, matchesRemaining: null, competition: null, readAt: today },
-        // 78c: open and he has not played since (not 108's, who played on 3 Sep); 78f: not 107's flu marked absent_since.
+        // 78c: open and he has not played since (not 108's, who played on 3 Sep, nor 112's, read more than 45 days before
+        // the day); 78f: not 107's flu marked absent_since.
         { player: who(ids.p107, "Absent Sept"), kind: "injury", label: "Knee surgery", start: "2025-08-01", expectedReturn: null,
           matchesMissed: null, matchesRemaining: null, competition: null, readAt: today },
       ],
@@ -110,6 +114,8 @@ test("78b–78h: each side's absent players on the match day", { skip }, async (
   });
   // 78d: 101 is on m5's sheet: his back injury over the day is not shown.
   assert.ok(!body.data.away.absences.some((a) => a.player.id === ids.p101));
+  // 78c: 112's open injury, read on 1 Jul (more than 45 days before the day), is not shown, as before the kick-off.
+  assert.ok(!body.data.away.absences.some((a) => a.player.name === "Ancien Douze"));
   // 78i: neither 110 (arrived on 20 Sep) nor 111 (at club 2 on 5 Sep) is shown.
   assert.deepEqual(body.data.away.absences.filter((a) => ["Recrue Dix", "Ailleurs Onze"].includes(a.player.name)), []);
   assert.match(response.headers.get("etag"), /^W\/"profile-v1-/);

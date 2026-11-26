@@ -86,7 +86,8 @@ LEFT JOIN ops.transfermarkt_reads rs ON q.player_key IS NOT NULL AND rs.kind = '
 
 -- The episodes that kept a member out on the match day (78.4, 78.5), one row per episode:
 -- - an injury, an illness or an unclassified one: started on the day or before, not marked absent_since, its end on the
---   day or later; with no end, only while he played no match after its start and before the day;
+--   day or later; with no end, only while his injuries were read no more than 45 days before the day (as 174 before
+--   the kick-off) and he played no match after its start and before the day;
 -- - a suspension (clubs only, as 174): of the match's own competition, started on the day or before, its end on the day
 --   or later, or with no end while his suspensions were read no more than 45 days before the day;
 -- - never a player named on the match's sheet or who played in it.
@@ -105,7 +106,7 @@ CROSS JOIN LATERAL (
   WHERE i.player_id = s.player_key AND i.source = 'transfermarkt' AND s.injuries_read_at IS NOT NULL
     AND i.absent_since IS NULL AND i.start_date <= s.day
     AND (i.end_date >= s.day
-         OR (i.end_date IS NULL
+         OR (i.end_date IS NULL AND s.injuries_read_at::date >= s.day - st.fresh_days
              AND NOT EXISTS (SELECT 1 FROM core.player_match_stats ms
                              JOIN core.matches mm ON mm.id = ms.match_id AND mm.season_id = ms.season_id
                              WHERE ms.player_id = s.player_key AND ms.season_id >= extract(year FROM i.start_date)::int - 1

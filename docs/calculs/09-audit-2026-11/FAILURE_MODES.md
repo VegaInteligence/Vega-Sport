@@ -6159,7 +6159,9 @@ one.
 
 **78.4 Out on the match day** (`D`):
 - an injury, an illness or an unclassified episode: started on `D` or before, not marked `absent_since`, and its end on
-  `D` or later; with no end, only while the player played no match (minutes > 0) after its start and before `D`;
+  `D` or later; with no end, only while his injuries were read no more than 45 days before `D` (as 174 before the
+  kick-off: an open injury read long before is not known to last; Codex on #253) and he played no match (minutes > 0)
+  after its start and before `D`;
 - a suspension (clubs only, as § 59ak): of the match's own competition (its competition id), started on `D` or before,
   ended on `D` or later, or with no end while his suspensions were read no more than 45 days before `D`;
 - `matchesRemaining` is null: the count read today says nothing of the match day. `readAt` as in § 59.
@@ -6174,7 +6176,8 @@ Cases (`backend/api/test/match-absences.test.mjs`, red before the migration):
 - **78a** an unknown match 404; a match not started with its kick-off to come 404, the same match once its kick-off has
   passed 200; a query parameter 400.
 - **78b** an injury over the match day shown; one ended the day before and one started the day after not.
-- **78c** an open injury shown; the same open injury of a player who played between its start and the match not.
+- **78c** an open injury shown; the same open injury of a player who played between its start and the match not, nor
+  one whose injuries were read more than 45 days before the match day.
 - **78d** a player on the match's sheet never shown, even with an injury over the day.
 - **78e** a suspension of the match's competition shown (`matchesRemaining` null); one of another competition not.
 - **78f** an episode marked `absent_since` not shown; a member gone before the match not counted.
