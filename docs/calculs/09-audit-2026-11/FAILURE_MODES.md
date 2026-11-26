@@ -5950,3 +5950,67 @@ yet, read as « 02:00 ».
   next, 14 pressed and dotted, a 3-column grid with no scroll, 32 px, « 2 journées jouées sur 3 », « 14ᵉ journée »,
   two arrows, the matches under their days, the open match filled ivory; « Journée suivante » goes to 15. Red on main.
 
+## 74. A season replayed 10,000 times, each number tied to its match or its club (Romain, 26 Nov 2026: « On replay les saisons 1000 fois en faisant un monte carlo, mais on ne peut pas améliorer cela ? », then « Oui, 10 000 »; written before the tests)
+
+Measured on the Premier League of 26 Nov 2026 (table, 270 matches left, Elo and model read from the public API, the
+league replayed locally with `forecast.simulate`): with 1,000 replays Arsenal's title, published at 78.2 %, went from
+74.6 to 81.3 % over 60 runs (standard deviation 1.4 point). After a draw between two other clubs its title moved from
+79.1 to 76.7 % with the same seed, where 300,000 replays say 78.3 → 78.3: the seed is one stream, and a match leaving
+the list shifts every draw after it. The top-4 shares of the 18 clubs that had not played moved by 0.8 point on
+average (2.5 at most), for a true 0.09.
+
+### 74.1 Rules
+
+- **10,000 replays** for every projection (`SIMULATIONS`): the leagues, the UEFA cups, the domestic cups, the Nations
+  League. One number, the one `agg.forecast_models.simulations` keeps and the site prints.
+- **A league's numbers are tied** (`simulate`): each club has its own stream (the shift of its strength, then its
+  tie-break), each match its own (one uniform number a side and a replay), named by the edition (`seed`), the club or
+  the two clubs, never by a rank in a shared stream. A match played, postponed or added leaves every other match's
+  numbers as they were.
+- **Goals by inversion**: a side's goals are the first count whose cumulative Poisson probability reaches its uniform
+  number, so a rate that moves a little keeps the score or moves it by one. The law is the one of the replays before
+  (two independent Poisson laws, no low-score correction: measured, the correction moves no share by more than 0.2
+  point).
+- **The same two clubs met twice more** (leagues of three or four rounds): each meeting has its own stream, counted from
+  the last one, so the meetings left keep theirs when an earlier one is played.
+- **The cups keep their code** (`simulate_cup`, `simulate_knockout`, `simulate_nations`, `simulate_nations_season`): one
+  stream each, ten times the replays. Their numbers are not tied.
+- **numpy** (pinned in `backend/requirements.txt`) does the league's replays: the worker's first numerical library.
+
+### 74.2 Failure modes and expected outcomes
+
+Tests: `backend/tests/test_forecast.py` (`LeagueReplaysTest`), `backend/tests/test_models.py` (the database pass),
+`tests/report-data.test.mjs`.
+
+- **S1** a match between two clubs with nothing else left to play is played: every other club's mean final points are
+  exactly what they were. Red before (the stream shifts).
+- **S2** a mid-table match of a 20-club league is played, 1,000 replays: the top-4 shares of the clubs that did not
+  play move by less than 0.3 point on average (0.8 before). Red before.
+- **S3** the law is unchanged: one match between two clubs, the home side first in P(win) + P(draw) / 2 of the replays
+  and 3 P(win) + P(draw) points on average, as the score grid without correction gives them (within 0.02 and 0.05).
+- **S4** nothing systematic differs from the replays before: a six-club league by a reference written in the test
+  (one stream, Knuth's Poisson draw, the strengths shifted the same way) and by `simulate`, every share within 0.03.
+- **S5** the same two clubs meet twice more: the two matches are not one. The home side's first place is the one two
+  independent matches give (computed from the score grid), not the single match's P(win) + P(draw) / 2.
+- **S6** another process gives the same answer: Python salts `hash()` at each start, so a stream is named by a digest
+  of its key. Two processes with different `PYTHONHASHSEED`, clubs named by text: the same projection.
+- **S7** two editions with the same clubs and matches (`seed`) are not copies of each other.
+- **S8** a match of a club without a strength is left out, as before: the other club keeps its points.
+- **S9** clubs level on everything share the places evenly; a season over leaves every club where it is.
+- **S10** 10,000 by default: every share is a multiple of 1/10,000, and at least one is no multiple of 1/1,000.
+- **S11** a rate far above football's (a strength gap of 2,000 points) ends, with finite points for every club.
+- **S12** `numpy` is pinned in `backend/requirements.txt` (the image installs that file; an unpinned one would change
+  the replays from one build to the next).
+- **S13** (`test_models.py`) the database pass writes 10,000 beside the model, and the league's places still hold one
+  club each.
+- **S14** (`tests/report-data.test.mjs`) the club report's projection carries the replays the API gives, and its card
+  prints that number instead of « 1 000 »; without it (a report built before) the card prints no number.
+
+### 74.3 Not covered
+
+- The worker's time: measured on a developer's machine only (a 20-club league, 10,000 replays; the cups at 10,000),
+  not on the 0.5 vCPU task.
+- The database pass on PostgreSQL 16: the suite needs 17 (`ANALYZE ONLY`); it runs in CI on 18.
+- The cups' and the Nations League's day-to-day moves: ten times the replays, numbers not tied.
+- The strength's spread (90 Elo points × √(share left)): 30 gives Arsenal 93 %, 90 gives 78 %. Its backtest (55
+  seasons from their half-way) is the next thing to widen; nothing here changes it.

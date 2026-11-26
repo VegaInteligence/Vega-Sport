@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildClubReport, buildMatchReport, buildPlayerReport, currentSeason, gradeOf, reportKind } from "../dashboard/frontend/src/server/report-data.js";
-import { reportImageUrl, reportSlug, reportThread } from "../dashboard/frontend/src/services/reports.js";
+import { outlookNote, reportImageUrl, reportSlug, reportThread } from "../dashboard/frontend/src/services/reports.js";
 
 const today = new Date("2026-11-16T10:00:00Z");
 const side = (id, name, score, xg) => ({ id, name, score, xg, imageUrl: null });
@@ -94,6 +94,12 @@ test("a club's season: record, top players, projection and coming matches", () =
   // A regular plays 270 minutes or more: none here, so nobody is ranked; the list holds them all.
   assert.deepEqual([r.top.length, r.players.map((p) => p.name)], [0, ["Güler", "Mbappé", "Rarely"]]);
   assert.deepEqual([r.outlook.position, r.outlook.title, r.outlook.top4, r.club.league], [2, 32.2, 100, "LaLiga"]);
+  // § 74 (S14): the projection says how many times the season was replayed, and the card prints that number.
+  assert.equal(r.outlook.replays, null);
+  const replayed = buildClubReport({ id: "t1", season: "2026/2027", read, clubs: { rows: [] }, projection: { ...projection, model: { replays: 10000 } } }, today);
+  assert.equal(replayed.outlook.replays, 10000);
+  assert.equal(outlookNote(replayed.outlook).replace(/\s/g, " "), "10 000 fins de saison simulées après 12 journées");
+  assert.equal(outlookNote(r.outlook), "Fins de saison simulées après 12 journées");
   assert.deepEqual(r.upcoming.map((m) => [m.opponent, m.win, m.draw, m.loss]), [["Celta Vigo", 85, 11, 5]]);
   assert.match(reportThread(r), /Score Vega 93,4\/100|Score Vega 93\/100/);
 });

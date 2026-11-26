@@ -15,6 +15,13 @@ will move before the season ends: each replay shifts every strength by a draw of
 law of STRENGTH_SPREAD points × √(share of the club's matches still to play). Held at
 their present value, the strengths made a leader in November a champion at 99.9 %.
 
+A league's random numbers are tied to what they are drawn for: each club has its own stream
+(its strength's shift, its tie-break), each match its own (its two scores), named by the
+edition and the clubs. A match played leaves every other match's numbers as they were: what
+moves from one day to the next is what the results changed. With 1,000 replays on one
+stream, a draw between two other clubs moved a leader's title by 2 points
+(docs/calculs/09-audit-2026-11/FAILURE_MODES.md § 74). The cups keep one stream each.
+
 Version 2 adds a club's recent form to its strength for the matches about to be played:
   Δ' = Δ + F_xG × (x_home − x_away) + F_luck × (l_home − l_away)
 x is a club's mean xG difference over its last FORM_MATCHES matches, l the mean of its
@@ -37,8 +44,11 @@ the Elo.
 
 from collections import defaultdict, deque
 from datetime import date, timedelta
+import hashlib
 from math import exp, log, sqrt
 import random
+
+import numpy as np
 
 from .power import ELO_HOME, fit_poisson
 
@@ -48,7 +58,8 @@ FORM_MIN = 5  # of them with an xG for both sides, below which a club has no for
 FORM_HORIZON = timedelta(days=14)  # a match further ahead is forecast from the strengths alone
 MAX_GOALS = 10  # the score grid: 0..MAX_GOALS for each side
 MIN_FIT = 500  # finished matches below which no model is fitted
-SIMULATIONS = 1000
+SIMULATIONS = 10_000  # replays of every projection: the replays alone then move a share by 0.5 point or less (one standard deviation)
+REPLAYED_GOALS = 60  # the most goals a side scores in a league's replayed match (never reached by a football rate)
 STRENGTH_SPREAD = 90.0  # Elo points over a whole season, backtested (docs/calculs/06-accueil-et-matchs/03-pronostics-et-projections.md)
 RHO_GRID = [x / 100 for x in range(-20, 21)]
 
@@ -217,51 +228,73 @@ def _goals(rng, lam):
     return k
 
 
+def _stream(seed, *key):
+    """The random numbers of one club or one match of a projection: a generator named by the edition's seed and the
+    key, the same in every process (Python salts hash(), a digest does not move) and whatever else is replayed."""
+    return np.random.default_rng([seed, int.from_bytes(hashlib.blake2b(repr(key).encode(), digest_size=8).digest(), "big")])
+
+
+def _inverse_goals(u, rates):
+    """Poisson draws by inversion, one replay each: the first number of goals whose cumulative probability reaches
+    `u`. A rate that moves a little keeps the score or moves it by one, which a draw by rejection would not."""
+    goals = np.zeros(u.shape, dtype=np.int64)
+    p = np.exp(-rates)
+    reached = p.copy()
+    for k in range(1, REPLAYED_GOALS + 1):
+        above = u > reached
+        if not above.any():
+            break
+        goals += above
+        p = p * rates / k
+        reached += p
+    return goals
+
+
 def simulate(table, fixtures, model, strengths, *, simulations=SIMULATIONS, spread=STRENGTH_SPREAD, seed=0):
     """Project a league. `table`: {team: (points, goals for, goals against, played)} so far;
     `fixtures`: [(home, away)] still to play; `strengths`: {team: Elo}. Returns
     {team: {"positions": [share of replays at 1st, 2nd, …], "points": mean final points}}.
-    A fixture of a club without a strength is left out of the replays."""
+    A fixture of a club without a strength is left out of the replays. `seed` names the edition:
+    with it, a club's and a match's numbers are the same from one pass to the next."""
     teams = sorted(set(table) | {t for f in fixtures for t in f})
+    if not teams:
+        return {}
     index = {team: i for i, team in enumerate(teams)}
-    games = [(index[h], index[a]) for h, a in fixtures if h in strengths and a in strengths]
+    games = [(h, a) for h, a in fixtures if h in strengths and a in strengths]
     left = [0] * len(teams)
     for h, a in games:
-        left[h] += 1
-        left[a] += 1
+        left[index[h]] += 1
+        left[index[a]] += 1
     base = [tuple(table.get(team, (0, 0, 0, 0)))[:4] + (0,) * (4 - len(tuple(table.get(team, (0, 0, 0, 0)))[:4])) for team in teams]
     # The share of each club's season still to play scales how far its strength may move.
     reach = [spread * (left[i] / (left[i] + base[i][3])) ** 0.5 if left[i] + base[i][3] else 0.0 for i in range(len(teams))]
-    elo = [strengths.get(team, 0.0) for team in teams]
     (ah, bh), (aa, ba) = model["home"], model["away"]
-    rng = random.Random(seed)
-    counts = [[0] * len(teams) for _ in teams]
-    points_sum = [0.0] * len(teams)
-    for _ in range(simulations):
-        now = [elo[i] + (rng.gauss(0.0, reach[i]) if reach[i] else 0.0) for i in range(len(teams))]
-        points = [b[0] for b in base]
-        scored = [b[1] for b in base]
-        conceded = [b[2] for b in base]
-        for h, a in games:
-            d = (now[h] + ELO_HOME - now[a]) / 400
-            hs, as_ = _goals(rng, exp(ah + bh * d)), _goals(rng, exp(aa - ba * d))
-            scored[h] += hs
-            conceded[h] += as_
-            scored[a] += as_
-            conceded[a] += hs
-            if hs > as_:
-                points[h] += 3
-            elif hs < as_:
-                points[a] += 3
-            else:
-                points[h] += 1
-                points[a] += 1
-        # Ties beyond goals scored are split at random, as a replay cannot know the rest.
-        order = sorted(range(len(teams)), key=lambda i: (-points[i], -(scored[i] - conceded[i]), -scored[i], rng.random()))
-        for position, i in enumerate(order):
-            counts[i][position] += 1
-            points_sum[i] += points[i]
-    return {team: {"positions": [c / simulations for c in counts[i]], "points": points_sum[i] / simulations} for team, i in index.items()}
+    # Each club's stream: the shift of its strength, then what splits a tie beyond goals scored.
+    streams = [_stream(seed, "club", team) for team in teams]
+    shifts = np.column_stack([stream.standard_normal(simulations) for stream in streams])
+    splits = np.column_stack([stream.random(simulations) for stream in streams])
+    now = np.array([strengths.get(team, 0.0) for team in teams], dtype=float) + shifts * np.array(reach)
+    points, scored, conceded = (np.tile(np.array([b[k] for b in base], dtype=np.int64), (simulations, 1)) for k in range(3))
+    # Two clubs that meet again at the same ground: each meeting has its stream, counted from the last one, so that
+    # the meetings left keep theirs once an earlier one is played.
+    meetings = defaultdict(int)
+    for home, away in reversed(games):
+        h, a = index[home], index[away]
+        u = _stream(seed, "match", home, away, meetings[home, away]).random((2, simulations))
+        meetings[home, away] += 1
+        d = (now[:, h] + ELO_HOME - now[:, a]) / 400
+        hs, as_ = _inverse_goals(u[0], np.exp(ah + bh * d)), _inverse_goals(u[1], np.exp(aa - ba * d))
+        scored[:, h] += hs
+        conceded[:, h] += as_
+        scored[:, a] += as_
+        conceded[:, a] += hs
+        points[:, h] += 3 * (hs > as_) + (hs == as_)
+        points[:, a] += 3 * (as_ > hs) + (hs == as_)
+    # Ties beyond goals scored are split at random, as a replay cannot know the rest.
+    order = np.lexsort((splits, -scored, conceded - scored, -points), axis=1)
+    shares = np.column_stack([np.bincount(order[:, place], minlength=len(teams)) for place in range(len(teams))]) / simulations
+    mean = points.mean(axis=0)
+    return {team: {"positions": shares[i].tolist(), "points": float(mean[i])} for team, i in index.items()}
 
 
 # A UEFA cup's knockout rounds, by the names the sources give them (the qualifying rounds

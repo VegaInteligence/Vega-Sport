@@ -6,7 +6,7 @@
  */
 import React from "react";
 import { badgeOverflow, placeBadges } from "../services/curve-badges.js";
-import { REPORT_TITLES } from "../services/reports.js";
+import { REPORT_TITLES, outlookNote } from "../services/reports.js";
 import { BRAND_IVORY, WORDMARK } from "../brand-mark.js";
 
 export const WIDTH = 1080, HEIGHT = 1350;
@@ -368,7 +368,7 @@ function clubCard(r, n, images) {
     const o = r.outlook;
     if (!o) return <Frame report={r} n={n}><Empty text="Pas de projection pour ce championnat." /></Frame>;
     return (
-      <Frame report={r} n={n} subtitle={`${c.league} · 1 000 fins de saison simulées après ${o.played} journées`}>
+      <Frame report={r} n={n} subtitle={`${c.league} · ${outlookNote(o)}`}>
         <Tiles width={452} items={[
           { label: "Points projetés", value: fr(o.projectedPoints, 0), sub: `${o.points} pts aujourd'hui, ${o.position}${o.position === 1 ? "er" : "e"}` },
           { label: "Champion", value: chance(o.title), color: ACCENT },

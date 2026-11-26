@@ -1,5 +1,16 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Projection : 10 000 tirages liés à leur match — FAILURE_MODES § 74 (26 novembre 2026, branche `claude/replays-10000` depuis main 5a4476bd46, main dadd055d71 fusionné, worktree `~/Agents/worktrees/vega-replays-10000-20261126`)
+
+- Demande de Romain : « On replay les saisons 1000 fois en faisant un monte carlo, mais on ne peut pas améliorer cela ? », puis « Oui, 10 000 » (10 000 tirages liés au match pour les championnats).
+- Mesuré avant (Premier League du 26 nov., API publique, code du worker en local) : titre d'Arsenal de 74,6 à 81,3 % sur 60 calculs à 1 000 tirages ; après un nul entre deux autres clubs, 79,1 → 76,7 % pour un effet réel nul (une seule série de nombres : un match qui sort décale tous les suivants).
+- Fait : `SIMULATIONS = 10_000` pour toutes les projections ; `simulate` (championnats) réécrit avec numpy, une série par club et par match (digest de la clé, pas `hash()`), buts par inversion ; `numpy==2.5.5` dans `backend/requirements.txt` (roue cp314 aarch64 vérifiée sur PyPI). Les coupes et la Ligue des nations gardent leur code (une série, dix fois plus de tirages). Carte « projection » du rapport de club : le nombre lu dans la projection (`outlookNote`) au lieu de « 1 000 » en dur ; pas de maquette (un nombre dans une ligne existante).
+- Décision (la mienne, à confirmer par Romain s'il préfère autrement) : les coupes passent aussi à 10 000 plutôt qu'un nombre par projection, parce que la base et le site n'ont qu'un nombre (`agg.forecast_models.simulations`) ; mesuré en local à 1 000 : coupe UEFA 0,20 s, coupe nationale de 64 clubs 0,16 s, Ligue des nations 0,34 à 0,45 s, donc dix fois cela.
+- Tests écrits d'abord : S1 à S12 (`test_forecast.py`, `LeagueReplaysTest` ; S1, S2, S10, S12 rouges avant), S13 (`test_models.py`), S14 (`tests/report-data.test.mjs`, rouge avant). Local : `test_forecast.py` 37/37 ; suite Python 1 224 OK, 700 sautés (pas de PostgreSQL 17+ ici : `ANALYZE ONLY`), 1 erreur d'import déjà sur main (`test_account_capacity`, sans `PYTHONPATH`) ; tests du site 1 074 OK, 9 échecs identiques sur main.
+- Preuve : `backend/verification/league-replays-20261126/` (`inputs.json`, `run.py`, `output.txt`) : 6 contrôles sur 6 ; Arsenal 77,3 à 79,2 % sur 60 calculs (écart-type 0,42) ; après le nul, 78,2 → 78,2 % ; les 18 clubs qui n'ont pas joué bougent de 0,09 point en moyenne (0,81 avant) ; 0,55 s pour 20 clubs.
+- Pas vérifié : la passe en base (S13, CI sur PostgreSQL 18) ; le temps sur le worker (0,5 vCPU) ; la production. Linear : non consulté ni mis à jour (règle de Romain : jamais Linear depuis `~/Perso/Vega`).
+- Poussé sur le mot de Romain (« Oui, pousse ») ; § 73 renuméroté § 74 (main a pris § 73 entre-temps). Reste : le film dit encore « Season replayed 1,000 times » ; élargir le backtest du décalage des forces (30 points donnent Arsenal à 93 %, 90 à 78 %), non commencé.
+
 ## Choix de la journée : les 34 journées numérotées — FAILURE_MODES § 73 (26 novembre 2026, branche `claude/choix-journee` depuis main 287c5ac)
 
 - hugo trouvait la fenêtre du choix de journée mauvaise. Maquette à trois pistes (https://claude.ai/artifact/UEAvpQrYfJ5VqQafWT9jJC) : il a pris la piste A en demandant des numéros 1, 2, 3…, puis a validé la version 2 (« ok super envoie en main »).

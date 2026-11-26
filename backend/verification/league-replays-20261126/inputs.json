@@ -1,0 +1,1427 @@
+{
+ "read": {
+  "api": "https://dngp6kh9jx2bl.cloudfront.net",
+  "competition": "l_4WFCIZ",
+  "season": "2026/2027",
+  "standingsFetchedAt": "2026-11-26T07:33:21.389Z",
+  "projectionFittedAt": "2026-11-26T05:50:34.488Z",
+  "eloComputedAt": "2026-11-26T05:45:22.160Z"
+ },
+ "model": {
+  "home": [
+   0.27554,
+   0.879228
+  ],
+  "away": [
+   0.314831,
+   0.866616
+  ],
+  "rho": -0.03
+ },
+ "clubs": {
+  "t_1gkhxH": {
+   "name": "Arsenal",
+   "table": [
+    28,
+    17,
+    7,
+    11
+   ],
+   "elo": 2043.4
+  },
+  "t_3eV7Ev": {
+   "name": "Brighton & Hove Albion",
+   "table": [
+    22,
+    26,
+    9,
+    11
+   ],
+   "elo": 1880.8
+  },
+  "t_0UCNPX": {
+   "name": "Manchester City",
+   "table": [
+    22,
+    22,
+    14,
+    11
+   ],
+   "elo": 1942.1
+  },
+  "t_0BrMnM": {
+   "name": "Liverpool",
+   "table": [
+    21,
+    18,
+    10,
+    11
+   ],
+   "elo": 1910.7
+  },
+  "t_1iaglr": {
+   "name": "AFC Bournemouth",
+   "table": [
+    18,
+    18,
+    14,
+    11
+   ],
+   "elo": 1900.2
+  },
+  "t_2ihyjC": {
+   "name": "Brentford",
+   "table": [
+    17,
+    20,
+    11,
+    11
+   ],
+   "elo": 1828.3
+  },
+  "t_19Nr9K": {
+   "name": "Leeds United",
+   "table": [
+    17,
+    14,
+    9,
+    11
+   ],
+   "elo": 1823.6
+  },
+  "t_4R934X": {
+   "name": "Chelsea",
+   "table": [
+    16,
+    20,
+    20,
+    11
+   ],
+   "elo": 1827.6
+  },
+  "t_21IR9d": {
+   "name": "Everton",
+   "table": [
+    16,
+    12,
+    14,
+    11
+   ],
+   "elo": 1817.7
+  },
+  "t_4A7FfD": {
+   "name": "Tottenham Hotspur",
+   "table": [
+    15,
+    12,
+    11,
+    11
+   ],
+   "elo": 1782.9
+  },
+  "t_0HV3k6": {
+   "name": "Hull City",
+   "table": [
+    14,
+    13,
+    11,
+    11
+   ],
+   "elo": 1676
+  },
+  "t_4RqKpo": {
+   "name": "Aston Villa",
+   "table": [
+    14,
+    14,
+    17,
+    11
+   ],
+   "elo": 1885.2
+  },
+  "t_2eQl9k": {
+   "name": "Newcastle United",
+   "table": [
+    13,
+    15,
+    18,
+    11
+   ],
+   "elo": 1815.6
+  },
+  "t_0C4xyR": {
+   "name": "Coventry City",
+   "table": [
+    12,
+    13,
+    21,
+    11
+   ],
+   "elo": 1716.2
+  },
+  "t_1c1ZPD": {
+   "name": "Fulham",
+   "table": [
+    11,
+    11,
+    13,
+    11
+   ],
+   "elo": 1787.2
+  },
+  "t_2C9laO": {
+   "name": "Ipswich Town",
+   "table": [
+    11,
+    15,
+    22,
+    11
+   ],
+   "elo": 1704.2
+  },
+  "t_0msSwp": {
+   "name": "Nottingham Forest",
+   "table": [
+    9,
+    9,
+    15,
+    11
+   ],
+   "elo": 1779.7
+  },
+  "t_2xPV6y": {
+   "name": "Sunderland",
+   "table": [
+    9,
+    8,
+    17,
+    11
+   ],
+   "elo": 1757.7
+  },
+  "t_2I313i": {
+   "name": "Manchester United",
+   "table": [
+    8,
+    14,
+    23,
+    11
+   ],
+   "elo": 1829.7
+  },
+  "t_4bz4EP": {
+   "name": "Crystal Palace",
+   "table": [
+    7,
+    12,
+    27,
+    11
+   ],
+   "elo": 1747.2
+  }
+ },
+ "fixtures": [
+  [
+   "t_0msSwp",
+   "t_4R934X"
+  ],
+  [
+   "t_2C9laO",
+   "t_4RqKpo"
+  ],
+  [
+   "t_19Nr9K",
+   "t_0C4xyR"
+  ],
+  [
+   "t_2I313i",
+   "t_2ihyjC"
+  ],
+  [
+   "t_1gkhxH",
+   "t_0UCNPX"
+  ],
+  [
+   "t_4bz4EP",
+   "t_0HV3k6"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_2eQl9k"
+  ],
+  [
+   "t_21IR9d",
+   "t_0BrMnM"
+  ],
+  [
+   "t_2xPV6y",
+   "t_4A7FfD"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_1iaglr"
+  ],
+  [
+   "t_0C4xyR",
+   "t_2C9laO"
+  ],
+  [
+   "t_4RqKpo",
+   "t_21IR9d"
+  ],
+  [
+   "t_4R934X",
+   "t_4bz4EP"
+  ],
+  [
+   "t_2eQl9k",
+   "t_2I313i"
+  ],
+  [
+   "t_0HV3k6",
+   "t_0msSwp"
+  ],
+  [
+   "t_0BrMnM",
+   "t_2xPV6y"
+  ],
+  [
+   "t_1iaglr",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_2ihyjC",
+   "t_1gkhxH"
+  ],
+  [
+   "t_0UCNPX",
+   "t_19Nr9K"
+  ],
+  [
+   "t_4A7FfD",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_19Nr9K",
+   "t_2C9laO"
+  ],
+  [
+   "t_4RqKpo",
+   "t_4bz4EP"
+  ],
+  [
+   "t_2I313i",
+   "t_0C4xyR"
+  ],
+  [
+   "t_0msSwp",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_1iaglr",
+   "t_0HV3k6"
+  ],
+  [
+   "t_4R934X",
+   "t_0BrMnM"
+  ],
+  [
+   "t_2ihyjC",
+   "t_0UCNPX"
+  ],
+  [
+   "t_2eQl9k",
+   "t_2xPV6y"
+  ],
+  [
+   "t_21IR9d",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_4A7FfD",
+   "t_1gkhxH"
+  ],
+  [
+   "t_0UCNPX",
+   "t_4R934X"
+  ],
+  [
+   "t_0BrMnM",
+   "t_19Nr9K"
+  ],
+  [
+   "t_2C9laO",
+   "t_2eQl9k"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_2ihyjC"
+  ],
+  [
+   "t_2xPV6y",
+   "t_0msSwp"
+  ],
+  [
+   "t_4bz4EP",
+   "t_2I313i"
+  ],
+  [
+   "t_1gkhxH",
+   "t_1iaglr"
+  ],
+  [
+   "t_0C4xyR",
+   "t_4RqKpo"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_21IR9d"
+  ],
+  [
+   "t_0HV3k6",
+   "t_4A7FfD"
+  ],
+  [
+   "t_0UCNPX",
+   "t_0HV3k6"
+  ],
+  [
+   "t_2ihyjC",
+   "t_2eQl9k"
+  ],
+  [
+   "t_1iaglr",
+   "t_0C4xyR"
+  ],
+  [
+   "t_0BrMnM",
+   "t_4A7FfD"
+  ],
+  [
+   "t_19Nr9K",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_0msSwp",
+   "t_21IR9d"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_2C9laO"
+  ],
+  [
+   "t_1gkhxH",
+   "t_2I313i"
+  ],
+  [
+   "t_2xPV6y",
+   "t_4bz4EP"
+  ],
+  [
+   "t_4R934X",
+   "t_4RqKpo"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_2C9laO",
+   "t_2ihyjC"
+  ],
+  [
+   "t_4A7FfD",
+   "t_1iaglr"
+  ],
+  [
+   "t_21IR9d",
+   "t_2xPV6y"
+  ],
+  [
+   "t_4RqKpo",
+   "t_19Nr9K"
+  ],
+  [
+   "t_2eQl9k",
+   "t_0UCNPX"
+  ],
+  [
+   "t_0HV3k6",
+   "t_0BrMnM"
+  ],
+  [
+   "t_4bz4EP",
+   "t_1gkhxH"
+  ],
+  [
+   "t_2I313i",
+   "t_0msSwp"
+  ],
+  [
+   "t_0C4xyR",
+   "t_4R934X"
+  ],
+  [
+   "t_0HV3k6",
+   "t_19Nr9K"
+  ],
+  [
+   "t_21IR9d",
+   "t_0UCNPX"
+  ],
+  [
+   "t_4A7FfD",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_0C4xyR",
+   "t_2ihyjC"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_1gkhxH"
+  ],
+  [
+   "t_4bz4EP",
+   "t_1iaglr"
+  ],
+  [
+   "t_2I313i",
+   "t_2xPV6y"
+  ],
+  [
+   "t_2eQl9k",
+   "t_0msSwp"
+  ],
+  [
+   "t_4RqKpo",
+   "t_0BrMnM"
+  ],
+  [
+   "t_2C9laO",
+   "t_4R934X"
+  ],
+  [
+   "t_19Nr9K",
+   "t_21IR9d"
+  ],
+  [
+   "t_0BrMnM",
+   "t_0C4xyR"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_2I313i"
+  ],
+  [
+   "t_1iaglr",
+   "t_4RqKpo"
+  ],
+  [
+   "t_0msSwp",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_2xPV6y",
+   "t_0HV3k6"
+  ],
+  [
+   "t_1gkhxH",
+   "t_2C9laO"
+  ],
+  [
+   "t_2ihyjC",
+   "t_4bz4EP"
+  ],
+  [
+   "t_0UCNPX",
+   "t_4A7FfD"
+  ],
+  [
+   "t_4R934X",
+   "t_2eQl9k"
+  ],
+  [
+   "t_0msSwp",
+   "t_0HV3k6"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_1iaglr"
+  ],
+  [
+   "t_2xPV6y",
+   "t_0BrMnM"
+  ],
+  [
+   "t_21IR9d",
+   "t_4RqKpo"
+  ],
+  [
+   "t_1gkhxH",
+   "t_2ihyjC"
+  ],
+  [
+   "t_4bz4EP",
+   "t_4R934X"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_4A7FfD"
+  ],
+  [
+   "t_2C9laO",
+   "t_0C4xyR"
+  ],
+  [
+   "t_19Nr9K",
+   "t_0UCNPX"
+  ],
+  [
+   "t_2I313i",
+   "t_2eQl9k"
+  ],
+  [
+   "t_0C4xyR",
+   "t_21IR9d"
+  ],
+  [
+   "t_4RqKpo",
+   "t_2I313i"
+  ],
+  [
+   "t_0UCNPX",
+   "t_0msSwp"
+  ],
+  [
+   "t_2eQl9k",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_0HV3k6",
+   "t_1gkhxH"
+  ],
+  [
+   "t_0BrMnM",
+   "t_4bz4EP"
+  ],
+  [
+   "t_4R934X",
+   "t_2xPV6y"
+  ],
+  [
+   "t_4A7FfD",
+   "t_19Nr9K"
+  ],
+  [
+   "t_1iaglr",
+   "t_2C9laO"
+  ],
+  [
+   "t_2ihyjC",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_1gkhxH",
+   "t_2eQl9k"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_4RqKpo"
+  ],
+  [
+   "t_2C9laO",
+   "t_0HV3k6"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_0UCNPX"
+  ],
+  [
+   "t_2xPV6y",
+   "t_0C4xyR"
+  ],
+  [
+   "t_0msSwp",
+   "t_1iaglr"
+  ],
+  [
+   "t_4bz4EP",
+   "t_4A7FfD"
+  ],
+  [
+   "t_21IR9d",
+   "t_2ihyjC"
+  ],
+  [
+   "t_2I313i",
+   "t_0BrMnM"
+  ],
+  [
+   "t_19Nr9K",
+   "t_4R934X"
+  ],
+  [
+   "t_4RqKpo",
+   "t_2C9laO"
+  ],
+  [
+   "t_4R934X",
+   "t_0msSwp"
+  ],
+  [
+   "t_0BrMnM",
+   "t_21IR9d"
+  ],
+  [
+   "t_2eQl9k",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_0C4xyR",
+   "t_19Nr9K"
+  ],
+  [
+   "t_0UCNPX",
+   "t_1gkhxH"
+  ],
+  [
+   "t_0HV3k6",
+   "t_4bz4EP"
+  ],
+  [
+   "t_1iaglr",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_4A7FfD",
+   "t_2xPV6y"
+  ],
+  [
+   "t_2ihyjC",
+   "t_2I313i"
+  ],
+  [
+   "t_21IR9d",
+   "t_2eQl9k"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_0HV3k6"
+  ],
+  [
+   "t_2C9laO",
+   "t_4A7FfD"
+  ],
+  [
+   "t_1gkhxH",
+   "t_0BrMnM"
+  ],
+  [
+   "t_2I313i",
+   "t_4R934X"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_0UCNPX"
+  ],
+  [
+   "t_0msSwp",
+   "t_2ihyjC"
+  ],
+  [
+   "t_19Nr9K",
+   "t_1iaglr"
+  ],
+  [
+   "t_4bz4EP",
+   "t_0C4xyR"
+  ],
+  [
+   "t_2xPV6y",
+   "t_4RqKpo"
+  ],
+  [
+   "t_4RqKpo",
+   "t_1iaglr"
+  ],
+  [
+   "t_4bz4EP",
+   "t_2ihyjC"
+  ],
+  [
+   "t_2C9laO",
+   "t_1gkhxH"
+  ],
+  [
+   "t_2eQl9k",
+   "t_4R934X"
+  ],
+  [
+   "t_0HV3k6",
+   "t_2xPV6y"
+  ],
+  [
+   "t_0C4xyR",
+   "t_0BrMnM"
+  ],
+  [
+   "t_2I313i",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_0msSwp"
+  ],
+  [
+   "t_21IR9d",
+   "t_19Nr9K"
+  ],
+  [
+   "t_4A7FfD",
+   "t_0UCNPX"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_4A7FfD"
+  ],
+  [
+   "t_1iaglr",
+   "t_4bz4EP"
+  ],
+  [
+   "t_1gkhxH",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_2xPV6y",
+   "t_21IR9d"
+  ],
+  [
+   "t_0BrMnM",
+   "t_0HV3k6"
+  ],
+  [
+   "t_19Nr9K",
+   "t_4RqKpo"
+  ],
+  [
+   "t_0msSwp",
+   "t_2I313i"
+  ],
+  [
+   "t_2ihyjC",
+   "t_0C4xyR"
+  ],
+  [
+   "t_0UCNPX",
+   "t_2eQl9k"
+  ],
+  [
+   "t_4R934X",
+   "t_2C9laO"
+  ],
+  [
+   "t_2C9laO",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_4bz4EP",
+   "t_2xPV6y"
+  ],
+  [
+   "t_0C4xyR",
+   "t_1iaglr"
+  ],
+  [
+   "t_4RqKpo",
+   "t_4R934X"
+  ],
+  [
+   "t_0HV3k6",
+   "t_0UCNPX"
+  ],
+  [
+   "t_2I313i",
+   "t_1gkhxH"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_19Nr9K"
+  ],
+  [
+   "t_2eQl9k",
+   "t_2ihyjC"
+  ],
+  [
+   "t_4A7FfD",
+   "t_0BrMnM"
+  ],
+  [
+   "t_21IR9d",
+   "t_0msSwp"
+  ],
+  [
+   "t_2xPV6y",
+   "t_2I313i"
+  ],
+  [
+   "t_4R934X",
+   "t_0C4xyR"
+  ],
+  [
+   "t_1iaglr",
+   "t_4A7FfD"
+  ],
+  [
+   "t_19Nr9K",
+   "t_0HV3k6"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_0UCNPX",
+   "t_21IR9d"
+  ],
+  [
+   "t_0msSwp",
+   "t_2eQl9k"
+  ],
+  [
+   "t_0BrMnM",
+   "t_4RqKpo"
+  ],
+  [
+   "t_2ihyjC",
+   "t_2C9laO"
+  ],
+  [
+   "t_1gkhxH",
+   "t_4bz4EP"
+  ],
+  [
+   "t_2xPV6y",
+   "t_2ihyjC"
+  ],
+  [
+   "t_4A7FfD",
+   "t_0msSwp"
+  ],
+  [
+   "t_0BrMnM",
+   "t_2C9laO"
+  ],
+  [
+   "t_2I313i",
+   "t_21IR9d"
+  ],
+  [
+   "t_4R934X",
+   "t_1gkhxH"
+  ],
+  [
+   "t_0C4xyR",
+   "t_0UCNPX"
+  ],
+  [
+   "t_4RqKpo",
+   "t_0HV3k6"
+  ],
+  [
+   "t_19Nr9K",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_4bz4EP",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_1iaglr",
+   "t_2eQl9k"
+  ],
+  [
+   "t_2ihyjC",
+   "t_1iaglr"
+  ],
+  [
+   "t_0UCNPX",
+   "t_2I313i"
+  ],
+  [
+   "t_21IR9d",
+   "t_4A7FfD"
+  ],
+  [
+   "t_2C9laO",
+   "t_4bz4EP"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_0C4xyR"
+  ],
+  [
+   "t_2eQl9k",
+   "t_19Nr9K"
+  ],
+  [
+   "t_0msSwp",
+   "t_4RqKpo"
+  ],
+  [
+   "t_0HV3k6",
+   "t_4R934X"
+  ],
+  [
+   "t_1gkhxH",
+   "t_2xPV6y"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_0BrMnM"
+  ],
+  [
+   "t_2xPV6y",
+   "t_2C9laO"
+  ],
+  [
+   "t_4A7FfD",
+   "t_2ihyjC"
+  ],
+  [
+   "t_4R934X",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_4bz4EP",
+   "t_21IR9d"
+  ],
+  [
+   "t_19Nr9K",
+   "t_0msSwp"
+  ],
+  [
+   "t_0C4xyR",
+   "t_1gkhxH"
+  ],
+  [
+   "t_0BrMnM",
+   "t_2eQl9k"
+  ],
+  [
+   "t_4RqKpo",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_1iaglr",
+   "t_0UCNPX"
+  ],
+  [
+   "t_2I313i",
+   "t_0HV3k6"
+  ],
+  [
+   "t_2ihyjC",
+   "t_19Nr9K"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_4R934X"
+  ],
+  [
+   "t_2C9laO",
+   "t_2I313i"
+  ],
+  [
+   "t_21IR9d",
+   "t_1iaglr"
+  ],
+  [
+   "t_1gkhxH",
+   "t_4RqKpo"
+  ],
+  [
+   "t_0msSwp",
+   "t_0BrMnM"
+  ],
+  [
+   "t_0HV3k6",
+   "t_0C4xyR"
+  ],
+  [
+   "t_2eQl9k",
+   "t_4A7FfD"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_2xPV6y"
+  ],
+  [
+   "t_0UCNPX",
+   "t_4bz4EP"
+  ],
+  [
+   "t_2ihyjC",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_4A7FfD",
+   "t_0HV3k6"
+  ],
+  [
+   "t_21IR9d",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_4RqKpo",
+   "t_0C4xyR"
+  ],
+  [
+   "t_2eQl9k",
+   "t_2C9laO"
+  ],
+  [
+   "t_19Nr9K",
+   "t_0BrMnM"
+  ],
+  [
+   "t_0msSwp",
+   "t_2xPV6y"
+  ],
+  [
+   "t_4R934X",
+   "t_0UCNPX"
+  ],
+  [
+   "t_1iaglr",
+   "t_1gkhxH"
+  ],
+  [
+   "t_2I313i",
+   "t_4bz4EP"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_21IR9d"
+  ],
+  [
+   "t_0HV3k6",
+   "t_1iaglr"
+  ],
+  [
+   "t_0C4xyR",
+   "t_2I313i"
+  ],
+  [
+   "t_1gkhxH",
+   "t_4A7FfD"
+  ],
+  [
+   "t_2xPV6y",
+   "t_2eQl9k"
+  ],
+  [
+   "t_2C9laO",
+   "t_19Nr9K"
+  ],
+  [
+   "t_0UCNPX",
+   "t_2ihyjC"
+  ],
+  [
+   "t_4bz4EP",
+   "t_4RqKpo"
+  ],
+  [
+   "t_0BrMnM",
+   "t_4R934X"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_0msSwp"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_2xPV6y"
+  ],
+  [
+   "t_4A7FfD",
+   "t_4R934X"
+  ],
+  [
+   "t_21IR9d",
+   "t_0HV3k6"
+  ],
+  [
+   "t_0UCNPX",
+   "t_0BrMnM"
+  ],
+  [
+   "t_1iaglr",
+   "t_2I313i"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_2C9laO"
+  ],
+  [
+   "t_19Nr9K",
+   "t_1gkhxH"
+  ],
+  [
+   "t_2eQl9k",
+   "t_0C4xyR"
+  ],
+  [
+   "t_2ihyjC",
+   "t_4RqKpo"
+  ],
+  [
+   "t_0msSwp",
+   "t_4bz4EP"
+  ],
+  [
+   "t_2C9laO",
+   "t_0UCNPX"
+  ],
+  [
+   "t_2I313i",
+   "t_19Nr9K"
+  ],
+  [
+   "t_2xPV6y",
+   "t_1iaglr"
+  ],
+  [
+   "t_4bz4EP",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_0HV3k6",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_0C4xyR",
+   "t_4A7FfD"
+  ],
+  [
+   "t_0BrMnM",
+   "t_2ihyjC"
+  ],
+  [
+   "t_1gkhxH",
+   "t_0msSwp"
+  ],
+  [
+   "t_4RqKpo",
+   "t_2eQl9k"
+  ],
+  [
+   "t_4R934X",
+   "t_21IR9d"
+  ],
+  [
+   "t_2eQl9k",
+   "t_4bz4EP"
+  ],
+  [
+   "t_21IR9d",
+   "t_1gkhxH"
+  ],
+  [
+   "t_4A7FfD",
+   "t_2I313i"
+  ],
+  [
+   "t_1c1ZPD",
+   "t_0C4xyR"
+  ],
+  [
+   "t_1iaglr",
+   "t_4R934X"
+  ],
+  [
+   "t_3eV7Ev",
+   "t_0BrMnM"
+  ],
+  [
+   "t_2ihyjC",
+   "t_0HV3k6"
+  ],
+  [
+   "t_0msSwp",
+   "t_2C9laO"
+  ],
+  [
+   "t_0UCNPX",
+   "t_4RqKpo"
+  ],
+  [
+   "t_19Nr9K",
+   "t_2xPV6y"
+  ],
+  [
+   "t_4bz4EP",
+   "t_19Nr9K"
+  ],
+  [
+   "t_1gkhxH",
+   "t_3eV7Ev"
+  ],
+  [
+   "t_4RqKpo",
+   "t_4A7FfD"
+  ],
+  [
+   "t_2xPV6y",
+   "t_0UCNPX"
+  ],
+  [
+   "t_2I313i",
+   "t_1c1ZPD"
+  ],
+  [
+   "t_0BrMnM",
+   "t_1iaglr"
+  ],
+  [
+   "t_4R934X",
+   "t_2ihyjC"
+  ],
+  [
+   "t_0HV3k6",
+   "t_2eQl9k"
+  ],
+  [
+   "t_0C4xyR",
+   "t_0msSwp"
+  ],
+  [
+   "t_2C9laO",
+   "t_21IR9d"
+  ]
+ ],
+ "published": {
+  "t_1gkhxH": {
+   "title": 0.782,
+   "top4": 0.984,
+   "bottom3": 0,
+   "points": 87.8
+  },
+  "t_0UCNPX": {
+   "title": 0.104,
+   "top4": 0.699,
+   "bottom3": 0,
+   "points": 71.4
+  },
+  "t_0BrMnM": {
+   "title": 0.038,
+   "top4": 0.571,
+   "bottom3": 0,
+   "points": 68
+  },
+  "t_3eV7Ev": {
+   "title": 0.033,
+   "top4": 0.509,
+   "bottom3": 0.001,
+   "points": 66.7
+  },
+  "t_1iaglr": {
+   "title": 0.02,
+   "top4": 0.394,
+   "bottom3": 0.001,
+   "points": 63.7
+  },
+  "t_4RqKpo": {
+   "title": 0.002,
+   "top4": 0.229,
+   "bottom3": 0.014,
+   "points": 58.5
+  },
+  "t_19Nr9K": {
+   "title": 0.003,
+   "top4": 0.127,
+   "bottom3": 0.02,
+   "points": 55.3
+  },
+  "t_2ihyjC": {
+   "title": 0.01,
+   "top4": 0.143,
+   "bottom3": 0.024,
+   "points": 55.2
+  },
+  "t_4R934X": {
+   "title": 0.002,
+   "top4": 0.116,
+   "bottom3": 0.037,
+   "points": 54
+  },
+  "t_21IR9d": {
+   "title": 0.004,
+   "top4": 0.084,
+   "bottom3": 0.044,
+   "points": 52
+  },
+  "t_2eQl9k": {
+   "title": 0,
+   "top4": 0.041,
+   "bottom3": 0.078,
+   "points": 49.6
+  },
+  "t_4A7FfD": {
+   "title": 0,
+   "top4": 0.03,
+   "bottom3": 0.113,
+   "points": 47
+  },
+  "t_2I313i": {
+   "title": 0.002,
+   "top4": 0.018,
+   "bottom3": 0.127,
+   "points": 46.7
+  },
+  "t_1c1ZPD": {
+   "title": 0,
+   "top4": 0.021,
+   "bottom3": 0.177,
+   "points": 44.3
+  },
+  "t_0msSwp": {
+   "title": 0,
+   "top4": 0.015,
+   "bottom3": 0.243,
+   "points": 42.5
+  },
+  "t_2xPV6y": {
+   "title": 0,
+   "top4": 0.009,
+   "bottom3": 0.294,
+   "points": 40.8
+  },
+  "t_0C4xyR": {
+   "title": 0,
+   "top4": 0.007,
+   "bottom3": 0.393,
+   "points": 38.1
+  },
+  "t_4bz4EP": {
+   "title": 0,
+   "top4": 0.001,
+   "bottom3": 0.469,
+   "points": 36.5
+  },
+  "t_0HV3k6": {
+   "title": 0,
+   "top4": 0.001,
+   "bottom3": 0.461,
+   "points": 36.5
+  },
+  "t_2C9laO": {
+   "title": 0,
+   "top4": 0.001,
+   "bottom3": 0.504,
+   "points": 36
+  }
+ }
+}
