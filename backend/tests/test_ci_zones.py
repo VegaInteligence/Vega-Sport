@@ -44,14 +44,18 @@ class ZonesTest(unittest.TestCase):
                 self.assertEqual(needed(path), backend)
 
     def test_b_the_read_api_runs_its_suites_the_python_ones_and_the_deploy_s(self):
-        self.assertEqual(needed("backend/api/src/routes/home.mjs"), {"python", "deploy", "api", "image", "package"})
+        self.assertEqual(needed("backend/api/src/routes/home.mjs"), {"site", "python", "deploy", "api", "image", "package"})
 
     def test_c_the_api_s_own_tests_run_the_api_suites_only(self):
-        self.assertEqual(needed("backend/api/test/home-favourites.test.mjs"), {"deploy", "api", "image", "package"})
+        self.assertEqual(needed("backend/api/test/home-favourites.test.mjs"), {"site", "deploy", "api", "image", "package"})
         self.assertEqual(needed("backend/account/test/schema.test.mjs") & {"python"}, set())
 
     def test_d_the_worker_runs_the_python_suites_not_the_api_s_nor_the_deploy_s(self):
-        self.assertEqual(needed("backend/vega/worker.py"), {"python", "image"})
+        self.assertEqual(needed("backend/vega/worker.py"), {"site", "python", "image"})
+
+    def test_d2_a_backend_module_the_site_s_tests_import_runs_them(self):
+        # Codex's review of #247: tests/cup-sources.test.mjs imports backend/sources/projections/open-cups.mjs.
+        self.assertIn("site", needed("backend/sources/projections/open-cups.mjs"))
 
     def test_e_the_sql_runs_every_suite(self):
         self.assertTrue({"python", "deploy", "api"} <= needed("backend/sql/180_matchdays.sql"))

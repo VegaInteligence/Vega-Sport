@@ -38,7 +38,9 @@ SHARED_WITH_BACKEND = ("python", "deploy", "api", "image", "package")
 
 # Zone -> paths (regular expressions anchored at the start of the path) whose change needs it.
 ZONES = {
-    "site": (r"dashboard/", r"tests/"),
+    # The site's tests (tests/*.test.mjs) also import backend/sources/, backend/api/ and backend/tests/ fixtures: any
+    # backend file runs them (about a minute).
+    "site": (r"dashboard/", r"tests/", r"backend/"),
     # The Python suites read through the real read API (read_http.mjs), apply the SQL and read the stacks' templates
     # and scripts (test_alerts, test_edge_logs...): any backend file but the Node suites' own tests, and infra/aws/.
     "python": (r"backend/(?!api/test/|account/test/)", r"infra/aws/"),
