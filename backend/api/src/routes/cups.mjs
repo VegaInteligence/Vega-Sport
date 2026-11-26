@@ -22,6 +22,8 @@
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { createDataVersions } from "../data-versions.mjs";
+import { contentTag, editionSelector, readReceipt } from "../read-receipts.mjs";
 import { fixture, forecastOf } from "./matches.mjs";
 import { standingsBody } from "./reference.mjs";
 import { editionArtworkFields } from "../edition-artwork.mjs";
@@ -92,10 +94,27 @@ function validate(p, spec) {
   return Object.fromEntries(p);
 }
 
+// The base commit's validator, the hash of the body: /api/cups/edition keeps it (FAILURE_MODES_OPTIMISATIONS.md GH137A-o),
+// its written contract keeping a client's tag through an import that leaves the edition's bytes (test_snapshot_roles.py
+// 35m–35o, test_dfb_periods.py).
 function respond(req, body, family) {
-  const etag = `W/"${family}-v1-${createHash("sha256").update(JSON.stringify(body)).digest("hex")}"`;
+  const etag = contentTag(family, createHash("sha256").update(JSON.stringify(body)).digest("hex"));
   if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 60 });
   return send(req, body, 200, { etag, ttl: 60 });
+}
+
+// Each other path's statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A); the bodies and former tags are unchanged.
+const CUP_BODY = ["api.cup_editions", "api.cup_table_rows", "api.match_forecasts", "api.cup_matches", "api.international_goals"];
+const STANDINGS = ["api.edition_keys", "api.standing_rows", "api.standings_withheld"];
+const SNAPSHOT = { native: ["api.fixtures", "api.match_rounds", "api.publication"], standings: [...STANDINGS, "api.publication"], edition: CUP_BODY };
+const cup = (family, reads) => ({ family, reads, ttl: 60 });
+/** The declaration of a path of this route; null for a path it does not serve. */
+export function cupSpec(path, params) {
+  if (path === "/api/cups/index") return cup("catalog", ["api.cup_editions"]);
+  if (path === "/api/cup-index") return cup("catalog", ["api.source_revisions", "api.cup_editions", "api.cup_table_rows"]);
+  if (path === "/api/cup-table") return cup("catalog", ["api.cup_table_rows", "api.match_forecasts"]);
+  if (path === "/api/cup-snapshot") return cup("catalog", SNAPSHOT[params.get("kind")] ?? [...new Set(Object.values(SNAPSHOT).flat())]);
+  return null;
 }
 
 const periodsOf = (m) => {
@@ -225,8 +244,25 @@ async function nativeSnapshot(read, competition, season) {
   return { matches, rounds, ...editionArtworkFields(selected.edition_emblem_url), worker: { checkedAt: at, updatedAt: at } };
 }
 
-export function createCupRoute(read) {
+export function createCupRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
+    if (path === "/api/cups/edition") {
+      const { competition, season } = validate(params, { competition: LEAGUE, season: YEAR });
+      if (!competition || !season) reject(400, "Paramètre manquant.");
+      const receipt = await readReceipt(req, read, "cup-edition", editionSelector(competition, season), "support", 60);
+      if (receipt) return receipt;
+      const found = await cupBody(read, competition, season);
+      if (!found) reject(404, "Compétition ou édition indisponible.");
+      return respond(req, found.body, "support");
+    }
+    const spec = cupSpec(path, params);
+    return spec ? versioned(req, params, spec, (guarded) => cupAnswer(guarded, path, params)) : null;
+  };
+}
+
+/** The answer of a path of this route, read with `read`. */
+async function cupAnswer(read, path, params) {
+  {
     if (path === "/api/cups/index") {
       validate(params, {});
       const rows = await read("SELECT competition_id,competition,name,season,format,kind,source_url,data_url,logo_url FROM api.cup_editions ORDER BY competition_id,season");
@@ -237,7 +273,7 @@ export function createCupRoute(read) {
         cups.set(e.competition_id, { ...cup, name: e.name ?? e.competition, format: e.format, source: SOURCES[e.kind](e), seasons: [...cup.seasons, e.season],
           ...(e.logo_url && { imageUrl: e.logo_url }) });
       }
-      return respond(req, { cups: [...cups.values()] }, "catalog");
+      return { cups: [...cups.values()] };
     }
     if (path === "/api/cup-index") {
       // main's catalogue of complementary competitions; the cup worker's own index is retired.
@@ -250,7 +286,7 @@ export function createCupRoute(read) {
          FROM api.cup_editions e WHERE e.kind='open-matchday' ORDER BY e.competition,e.season`,
       );
       if (!revision && !editions.length) reject(404, "Donnée indisponible.");
-      return respond(req, {
+      return {
         meta: {
           terms: "https://github.com/oladeeayo/open-matchday/blob/master/DISCLAIMER.md",
           usage: revision?.license ?? "informational, non-commercial use with attribution",
@@ -266,7 +302,7 @@ export function createCupRoute(read) {
           // The edition's competition, by the id /api/cups/index gives it (its FK): the site opens either id (VI-30).
           competition_id: e.competition_id,
         })),
-      }, "catalog");
+      };
     }
     if (path === "/api/cup-table") {
       const p = validate(params, { competition: FOLDER, season: YEAR, kind: /^(results|fixtures)$/ });
@@ -275,14 +311,7 @@ export function createCupRoute(read) {
       if (!rows.length) reject(404, "Donnée indisponible.");
       const kept = rows.filter((r) => (p.kind === "results") === (r.status === "finished"));
       const forecasts = p.kind === "fixtures" ? await forecastsOf(read, kept.filter((r) => r.match_id != null).map((r) => r.match_id)) : new Map();
-      return respond(req, kept.map((r) => tableRow(r, forecasts.get(Number(r.match_id)))), "catalog");
-    }
-    if (path === "/api/cups/edition") {
-      const p = validate(params, { competition: LEAGUE, season: YEAR });
-      if (!p.competition || !p.season) reject(400, "Paramètre manquant.");
-      const found = await cupBody(read, p.competition, p.season);
-      if (!found) reject(404, "Compétition ou édition indisponible.");
-      return respond(req, found.body, "support");
+      return kept.map((r) => tableRow(r, forecasts.get(Number(r.match_id))));
     }
     if (path === "/api/cup-snapshot") {
       const p = validate(params, { competition: LEAGUE, season: YEAR, kind: /^(native|standings|edition)$/ });
@@ -301,8 +330,8 @@ export function createCupRoute(read) {
         if (found) body = { ...found.body, worker: found.worker };
       }
       if (!body) reject(404, "Donnée indisponible.");
-      return respond(req, body, "catalog");
+      return body;
     }
     return null;
-  };
+  }
 }

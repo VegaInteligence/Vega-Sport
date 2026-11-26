@@ -36,6 +36,12 @@
 - Retours de 15 h 29 (§ 76.2, maquette https://claude.ai/artifact/HWrnX3K1t1JY5asLRUqW7j, A choisie) : recherche et compte à 40 px comme la piste ; bouton du thème retiré ; thème Système / Clair / Sombre dans Paramètres, sans compte toujours celui de l'ordinateur ; menu « Mon compte » en pilules ; sous-menus plus petits. N8, N15 à N18 rouges sur 09c982d, verts après ; barre 21/21, en-tête 36/37 (X1 : rejeu), match-tabs 40/40, site 1 119/1 119.
 - Retour de 15 h 50 (§ 76.3) : bouton « Mon compte » rempli en blanc comme « Se connecter » (sombre en thème clair). N14 rouge sur 60d8a81, vert après ; barre 21/21.
 
+## Validateurs des lectures publiques de l’API, 26 novembre 2026
+
+- Le lot couvre les classements, pronostics, profils, coupes et archives dont le serveur recalculait la réponse pour valider un ETag. [GitHub #137](https://github.com/VegaInteligence/Vega-Sport/issues/137) · [Linear VI-77](https://linear.app/vegainteligence/issue/VI-77) · [PR #254](https://github.com/VegaInteligence/Vega-Sport/pull/254).
+- La migration 182 suit les écritures validées des sources. La migration 183 conserve dans PostgreSQL l’empreinte préparée par le worker pour l’historique, les journées, les classements, les éditions de coupe et les transferts. Le lecteur vérifie sa validité avant de répondre. Les combinaisons non préparées ou périmées passent par le calcul d’origine.
+- Les critères et les essais de référence sont décrits dans GH137A et GH137R. Un test de production local utilise l’image arm64 du worker et le paquet ZIP de la fonction. Les deux migrations passent par le chemin de déploiement qui arrête les écritures. La surveillance du coût de calcul et de la fréquence des revalidations en production suit le déploiement.
+
 ## Cases des chiffres pleines et cartes du fil à 10 px — FAILURE_MODES § 75 (26 novembre 2026, sur main depuis 5f63f03)
 
 - Demande de hugo (11 h 28, captures Possession et fil de la Ligue des champions) : ces deux endroits à 10 px. Maquette https://claude.ai/artifact/Sf5wRw5NTSV8wrNr4jzhQL ; hugo a pris la piste B (cinq cases pleines sans traits gris) et les cartes du fil à 10 px, « tu peux tout push dans main » (11 h 31).

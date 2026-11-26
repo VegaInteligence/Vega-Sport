@@ -175,8 +175,11 @@ test("the route reads the asked player's season only, in one statement (FM-HC.8)
   });
   const response = await handle(new Request("https://api.test/api/players/p_aaab30/halves?season=2025/2026"));
   assert.equal(response.status, 200);
-  assert.equal(statements.length, 1);
-  const [{ "QUERY PLAN": [plan] }] = (await owner.query(`EXPLAIN (FORMAT JSON) ${statements[0].sql}`, statements[0].values)).rows;
+  // GH137A (FAILURE_MODES_OPTIMISATIONS.md): the data version is read first, then the halves in one statement.
+  const own = statements.filter((s) => !/api\.data_version\(/.test(s.sql));
+  assert.equal(statements.length - own.length, 1, "the version, once");
+  assert.equal(own.length, 1);
+  const [{ "QUERY PLAN": [plan] }] = (await owner.query(`EXPLAIN (FORMAT JSON) ${own[0].sql}`, own[0].values)).rows;
   // Every scan of the half statistics is filtered by the player below the views' aggregates.
   const scans = [];
   (function walk(node) {

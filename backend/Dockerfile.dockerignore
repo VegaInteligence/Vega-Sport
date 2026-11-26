@@ -7,11 +7,12 @@
 !backend/sql/**
 !backend/account/sql
 !backend/account/sql/**
-!dashboard/shared/archive.js
-!dashboard/shared/archive-text.js
-!dashboard/shared/openfootball-history.js
-!dashboard/shared/legacy-8018e08
-!dashboard/shared/legacy-8018e08/**
+!backend/api/package.json
+!backend/api/package-lock.json
+!backend/api/src
+!backend/api/src/**
+!dashboard/shared
+!dashboard/shared/**
 !backend/archives
 !backend/archives/**
 !backend/sources
@@ -24,7 +25,6 @@
 !dashboard/frontend/src/services/openligadb.js
 !dashboard/frontend/src/services/competition-selector.js
 !dashboard/frontend/src/services/nations-results.js
-!dashboard/shared/competition-scope.js
 !dashboard/frontend/src/services/wikidata-club.js
 !dashboard/frontend/src/services/wikidata-club-identity.js
 !dashboard/frontend/src/services/wikidata-stadium.js
@@ -35,7 +35,4 @@
 !dashboard/frontend/src/data-url.js
 !dashboard/frontend/src/services/api-routes.js
 !dashboard/frontend/src/model.js
-!dashboard/shared/player-aliases.js
-!dashboard/shared/league-rules.json
-!dashboard/shared/cup-logos.json
 **/__pycache__

@@ -57,7 +57,8 @@ test("the current squad's absences, in the contract's shape, cached as /injuries
   });
   // The family of /injuries: the same validators and the same cache.
   const injuries = await get(`/api/players/${player}/injuries`);
-  assert.match(response.headers.get("etag"), /^W\/"profile-v1-/);
+  // The profiles' family and freshness (GH137A: the tag's new form, read from the data versions).
+  assert.match(response.headers.get("etag"), /^W\/"profile-v2-[a-f0-9]{16}-[a-f0-9]{64}"$/);
   assert.equal(response.headers.get("cache-control"), injuries.response.headers.get("cache-control"));
   assert.equal((await get(`/api/teams/${team}/absences`, { "if-none-match": response.headers.get("etag") })).response.status, 304);
   // /injuries carries the suspension with the injuries' keys.

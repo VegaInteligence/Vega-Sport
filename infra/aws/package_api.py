@@ -8,6 +8,7 @@ API's two functions (backend/account/lambda, after `npm ci --prefix backend/acco
     python3 infra/aws/package_api.py <dir> account-store   # vega-v2-account-store
 """
 import hashlib
+import json
 import os
 from pathlib import Path
 import shutil
@@ -44,6 +45,14 @@ KINDS = {
 
 def build(output, kind="api"):
     entry, files, flags, offline = KINDS[kind]
+    node = os.environ.get("BUILD_NODE", "node")
+    if kind == "api":
+        digest = subprocess.run(
+            [node, "--input-type=module", "-e",
+             "import { codeDigest } from './backend/api/src/data-versions.mjs'; console.log(codeDigest())"],
+            cwd=ROOT, check=True, text=True, capture_output=True,
+        ).stdout.strip()
+        flags = [*flags, "--define", "VEGA_BUNDLED_CODE_DIGEST=" + json.dumps(digest)]
     with tempfile.TemporaryDirectory(prefix=f"vega-v2-{kind}-") as staging:
         stage = Path(staging)
         subprocess.run(
@@ -56,7 +65,7 @@ def build(output, kind="api"):
         # Offline: the bundled file answers predictably without touching the database or AWS.
         check = "import {handler} from './index.mjs';\n" + offline
         subprocess.run(
-            [os.environ.get("BUILD_NODE", "node"), "--input-type=module", "-e", check],
+            [node, "--input-type=module", "-e", check],
             cwd=stage,
             env={"PATH": os.environ["PATH"], "LAMBDA_TASK_ROOT": str(stage)},
             check=True,

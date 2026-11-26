@@ -79,6 +79,8 @@
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { createDataVersions } from "../data-versions.mjs";
+import { contentTag, readReceipt } from "../read-receipts.mjs";
 import { ROLE_LABEL } from "./rankings.mjs";
 
 const PLAYER = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))$/,
@@ -405,10 +407,38 @@ async function replacements(read, id, params) {
   };
 }
 
-function respond(req, data) {
-  const etag = `W/"profile-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
-  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 300 });
-  return send(req, { data }, 200, { etag, ttl: 300, maxBytes: 2 * 1024 * 1024 });
+// Each other path's statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A): its validator is their data version, read
+// before the answer. The body ({ data }) and its former tag (W/"profile-v1-<SHA-256 of data>") are unchanged.
+const SEASON = "api.season_keys", ID = "api.internal_id", PUBLIC = "api.public_id";
+const profile = (reads, extra = {}) => ({ family: "profile", data: true, ttl: 300, maxBytes: 2 * 1024 * 1024, reads, ...extra });
+const PEOPLE = ["api.player_embedding_vectors", "api.player_embedding_people", SEASON, ID];
+/** The declaration of a path of this route, in the order the route reads them; null for a path it does not serve. */
+export function profileSpec(path, params) {
+  if (SQUAD.test(path)) return profile(["api.club_squad", SEASON, ID]);
+  if (PHYSICAL.test(path)) return profile(["api.player_physical_matches", "api.competition_physical_peers", SEASON, ID]);
+  if (STYLE.test(path)) return profile(["api.player_zones", "api.player_shot_profile", "api.player_pass_share", SEASON, ID]);
+  if (INJURIES.test(path)) return profile(["api.player_injuries", "api.player_suspensions", "api.player_injury_reads", ID]);
+  // Its own statement reads current_date (a member's injuries read 45 days ago at most).
+  if (TEAM_ABSENCES.test(path)) return profile(["api.team_keys", "api.team_absence_players", "api.team_absences", ID], { clock: "day" });
+  if (PARTNERS.test(path)) return profile(["api.player_pass_partners", SEASON, ID]);
+  if (RETURN.test(path)) return profile(["api.player_returns", "api.return_curves", ID]);
+  if (HALVES.test(path)) return profile(["api.player_half_coverage", "api.player_half_totals", SEASON, ID]);
+  if (FACED.test(path)) return profile(["api.keeper_shot_totals", SEASON, ID]);
+  if (ACTIONS.test(path)) return profile(["api.player_action_values", SEASON, ID]);
+  if (AGE_PROFILE.test(path)) return profile(["api.club_age_minutes", SEASON, ID]);
+  if (PASSING.test(path)) return profile(["api.team_pass_edges", "api.player_profiles", SEASON, ID]);
+  if (CHANGES.test(path)) return profile(["api.team_change_matches", "api.team_substitute_matches", "api.player_profiles", PUBLIC, SEASON, ID]);
+  if (CLUB_SIMILAR.test(path)) return profile(["api.team_style_centiles", "api.team_profiles", "api.team_season", PUBLIC, SEASON, ID]);
+  if (SIMILAR.test(path) && REPLACEMENT_PARAMS.some((key) => params.has(key)))
+    return profile([...PEOPLE, "api.player_replacement_facts", "api.player_profile_axes", "api.player_team_fit", "api.team_style_centiles",
+      "api.team_identities", PUBLIC]);
+  if (SIMILAR.test(path)) return profile(PEOPLE);
+  if (path === "/api/player-market-values") return profile(["api.player_market_values", ID]);
+  if (path === "/api/players/facts-coverage") return profile(["api.player_fact_coverage"]);
+  if (PLAYER.test(path)) return profile(["api.player_profiles", ID]);
+  if (TEAM.test(path)) return profile(["api.team_profiles", ID]);
+  if (path === "/api/competitions") return profile(["api.competitions"]);
+  return null;
 }
 
 // A role's players, and its line where the role has too few to place anyone (fewer than
@@ -514,8 +544,32 @@ const seasonParam = (params) => {
 };
 const SEASON_KEY = "(SELECT season_id FROM api.season_keys WHERE season=$2)";
 
-export function createProfileRoute(read) {
+// The base commit's validator, the hash of the data: /api/players/{id}/transfers keeps it (FAILURE_MODES_OPTIMISATIONS.md
+// GH137A-o), its written contract keeping a client's tag through a reader's pass that leaves the list as it was
+// (test_transfermarkt_history.py 35w–35z: a refused refresh records its attempt in the tables the list reads).
+function respond(req, data) {
+  const etag = contentTag("profile", createHash("sha256").update(JSON.stringify(data)).digest("hex"));
+  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 300 });
+  return send(req, { data }, 200, { etag, ttl: 300, maxBytes: 2 * 1024 * 1024 });
+}
+
+export function createProfileRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
+    const transfers = path.match(TRANSFERS);
+    if (transfers) {
+      validateParams(params, []);
+      const receipt = await readReceipt(req, read, "transfers", transfers[1], "profile", 300);
+      return receipt ?? respond(req, await transferHistory(read, transfers[1]));
+    }
+    if (MATCH_ABSENCES.test(path)) return respond(req, await profileAnswer(read, path, params));
+    const spec = profileSpec(path, params);
+    return spec ? versioned(req, params, spec, (guarded) => profileAnswer(guarded, path, params)) : null;
+  };
+}
+
+/** The answer of a path of this route (its data), read with `read`. */
+async function profileAnswer(read, path, params) {
+  {
     const squad = path.match(SQUAD);
     if (squad) {
       const season = seasonParam(params);
@@ -533,7 +587,7 @@ export function createProfileRoute(read) {
       // the page says how many were valued.
       if (r.league_clubs > 1 && r.league_valued >= SQUAD_RANKED * r.league_clubs)
         data.league = { rank: r.league_rank, valued: r.league_valued, clubs: r.league_clubs };
-      return respond(req, data);
+      return (data);
     }
     const physical = path.match(PHYSICAL);
     if (physical) {
@@ -560,7 +614,7 @@ export function createProfileRoute(read) {
         return physicalBlock({ name, games, peers, role: rows[0].role });
       }));
       blocks.sort((a, b) => b.minutes - a.minutes);
-      return respond(req, { id: physical[1], season, competitions: blocks });
+      return ({ id: physical[1], season, competitions: blocks });
     }
     const style = path.match(STYLE);
     if (style) {
@@ -583,7 +637,7 @@ export function createProfileRoute(read) {
       } : null);
       put(data, "passes", me ? passShare(passes, me.player_id) : null);
       if (!data.zones && !data.shots && !data.passes) reject(404, "Donnée indisponible.");
-      return respond(req, data);
+      return (data);
     }
     const injuries = path.match(INJURIES);
     if (injuries) {
@@ -605,7 +659,7 @@ export function createProfileRoute(read) {
       ]);
       // A player whose injuries were never read is not known: no list, rather than an empty one.
       if (!known) reject(404, "Donnée indisponible.");
-      return respond(req, {
+      return ({
         id: injuries[1],
         // absentSince: the first day the provider's accepted list no longer named the episode (160); omitted otherwise.
         injuries: rows.map((r) => ({ kind: r.kind ?? null, label: r.label ?? null, start: r.start_date, end: r.end_date ?? null,
@@ -639,7 +693,7 @@ export function createProfileRoute(read) {
       ]);
       // 404 only for a team the base does not know; a known one without a read squad has an empty list.
       if (!team) reject(404, "Donnée indisponible.");
-      return respond(req, {
+      return ({
         id: absences[1],
         // The oldest injuries read of the squad's read players; a member never read (or read too long ago) is unknown, not available.
         asOf: squad.as_of ?? null,
@@ -699,31 +753,7 @@ export function createProfileRoute(read) {
           })),
         };
       };
-      return respond(req, { id: matchAbsences[1], on: f.day, home: side("home", f.home_team_id), away: side("away", f.away_team_id) });
-    }
-    const transfers = path.match(TRANSFERS);
-    if (transfers) {
-      validateParams(params, []);
-      const [rows, [known]] = await Promise.all([
-        // Two moves of one day in the provider's order: its key is a number written as text.
-        read(
-          `SELECT transfer_date::text AS date, kind, fee_eur, from_id, from_name, from_image_url, to_id, to_name, to_image_url,
-             absent_since::text AS absent_since
-           FROM api.player_transfers WHERE player_key=api.internal_id('player',$1)
-           ORDER BY transfer_date, length(source_key), source_key`,
-          [transfers[1]],
-        ),
-        read(`SELECT read_at FROM api.player_transfer_reads WHERE player_key=api.internal_id('player',$1) LIMIT 1`, [transfers[1]]),
-      ]);
-      // A player whose transfers were never read is not known: no list, rather than an empty one.
-      if (!known) reject(404, "Donnée indisponible.");
-      return respond(req, {
-        id: transfers[1],
-        // absentSince: the first day the provider's accepted history no longer listed the move (153); omitted otherwise.
-        transfers: rows.map((r) => ({ date: r.date, kind: r.kind ?? null, feeEur: r.fee_eur ?? null,
-          from: namedClub(r.from_id, r.from_name, r.from_image_url), to: namedClub(r.to_id, r.to_name, r.to_image_url),
-          ...(r.absent_since && { absentSince: r.absent_since }) })),
-      });
+      return { id: matchAbsences[1], on: f.day, home: side("home", f.home_team_id), away: side("away", f.away_team_id) };
     }
     const partners = path.match(PARTNERS);
     if (partners) {
@@ -737,7 +767,7 @@ export function createProfileRoute(read) {
         [partners[1], season],
       );
       if (!rows.length) reject(404, "Donnée indisponible.");
-      return respond(req, {
+      return ({
         id: partners[1], season,
         partners: rows.map((r) => put({ id: r.partner_id, name: r.partner_name, given: r.given, received: r.received, matches: r.matches }, "image_url", r.partner_image_url)),
       });
@@ -748,7 +778,7 @@ export function createProfileRoute(read) {
       const [r] = await read("SELECT * FROM api.player_returns WHERE player_key=api.internal_id('player',$1)", [back[1]]);
       if (!r) reject(404, "Donnée indisponible.");
       const curve = await read("SELECT match_no, returns, minutes, usual_minutes FROM api.return_curves WHERE bucket=$1 ORDER BY match_no", [r.bucket]);
-      return respond(req, {
+      return ({
         id: back[1],
         team: { id: r.team_id, name: r.team },
         absence: { from: r.absent_from, returnedOn: r.returned_on, days: r.days, matchesMissed: r.matches_missed },
@@ -786,7 +816,7 @@ export function createProfileRoute(read) {
         stats: Object.fromEntries(HALF_METRICS.map((k) => [k, { sum: sum(k, r[`${k}_sum`]), count: r[`${k}_count`], minutes: r[`${k}_minutes`] }])),
       } : null;
       const first = of("first_half"), second = of("second_half");
-      return respond(req, { id: halves[1], season, first: half(first), second: half(second), coverage: { first: coverage(first), second: coverage(second) } });
+      return ({ id: halves[1], season, first: half(first), second: half(second), coverage: { first: coverage(first), second: coverage(second) } });
     }
     const faced = path.match(FACED);
     if (faced) {
@@ -800,7 +830,7 @@ export function createProfileRoute(read) {
       );
       const standing = keeperStanding(rows);
       if (!standing) reject(404, "Donnée indisponible.");
-      return respond(req, { id: faced[1], season, ...standing, minShots: FACED_MIN_SHOTS });
+      return ({ id: faced[1], season, ...standing, minShots: FACED_MIN_SHOTS });
     }
     const actions = path.match(ACTIONS);
     if (actions) {
@@ -814,7 +844,7 @@ export function createProfileRoute(read) {
       );
       if (!r) reject(404, "Donnée indisponible.");
       const rounded = (v, d) => (v === null || v === undefined ? null : Math.round(v * 10 ** d) / 10 ** d);
-      return respond(req, {
+      return ({
         id: actions[1], season,
         competition: { id: r.competition_id, name: r.competition },
         role: r.role, position: ROLE_LABEL[r.role] ?? r.role, minutes: r.minutes, peers: r.peers,
@@ -845,7 +875,7 @@ export function createProfileRoute(read) {
          ORDER BY age`,
         [ageProfile[1], season],
       );
-      return respond(req, { id: ageProfile[1], season, minutesByAge });
+      return ({ id: ageProfile[1], season, minutesByAge });
     }
     const passing = path.match(PASSING);
     if (passing) {
@@ -866,7 +896,7 @@ export function createProfileRoute(read) {
       const people = new Map((await read("SELECT player_id, public_id, name, image_url FROM api.player_profiles WHERE player_id = ANY($1::int[])", [wanted]))
         .map((r) => [r.player_id, put({ id: r.public_id, name: r.name }, "image_url", r.image_url)]));
       const named = (group) => (group ? { passes: group.passes, players: group.players.map((key) => people.get(key)).filter(Boolean) } : null);
-      return respond(req, { id: passing[1], season, triangle: named(triangle), pair: named(pair) });
+      return ({ id: passing[1], season, triangle: named(triangle), pair: named(pair) });
     }
     const changes = path.match(CHANGES);
     if (changes) {
@@ -889,7 +919,7 @@ export function createProfileRoute(read) {
       ]);
       const impact = changeImpact(matches);
       if (!impact.matches) reject(404, "Donnée indisponible.");
-      return respond(req, {
+      return ({
         id: changes[1], season, ...impact,
         substitutes: substitutes.map((r) => put({ id: r.id, name: r.name, entries: r.entries, minutes: r.minutes, goals: r.goals, assists: r.assists }, "image_url", r.image_url)),
       });
@@ -954,10 +984,10 @@ export function createProfileRoute(read) {
           }
           return row;
         });
-      return respond(req, data);
+      return (data);
     }
     const similar = path.match(SIMILAR);
-    if (similar && REPLACEMENT_PARAMS.some((key) => params.has(key))) return respond(req, await replacements(read, similar[1], params));
+    if (similar && REPLACEMENT_PARAMS.some((key) => params.has(key))) return (await replacements(read, similar[1], params));
     if (similar) {
       validateParams(params, ["season"]);
       const season = params.get("season");
@@ -976,7 +1006,7 @@ export function createProfileRoute(read) {
         [similar[1], season],
       );
       if (!rows.length) reject(404, "Donnée indisponible.");
-      return respond(req, {
+      return ({
         id: similar[1], season, compared: rows[0].players,
         similar: rows.map((r) => {
           const row = { id: r.player_id, name: r.name, similarity: similarity(r.distance, r.median), minutes: r.minutes };
@@ -1001,7 +1031,7 @@ export function createProfileRoute(read) {
         [id],
       );
       if (!rows.length) reject(404, "Donnée indisponible.");
-      return respond(req, {
+      return ({
         currency: "EUR", source: "Transfermarkt",
         // absentSince: the first day the provider's accepted history no longer listed the point (160); omitted otherwise.
         history: rows.map((r) => put(put({ date: r.date, valueEur: r.valueEur }, "club", namedClub(r.club_id, r.club_name, r.club_image_url)),
@@ -1011,7 +1041,7 @@ export function createProfileRoute(read) {
     if (path === "/api/players/facts-coverage") {
       validateParams(params, []);
       const [coverage] = await read("SELECT * FROM api.player_fact_coverage");
-      return respond(req, coverage);
+      return (coverage);
     }
     const player = path.match(PLAYER), team = path.match(TEAM);
     if (player || team) {
@@ -1037,15 +1067,37 @@ export function createProfileRoute(read) {
         put(data, "market_value_eur", r.market_value_eur);
         put(data, "market_value_updated_at", r.market_value_updated_at);
       }
-      return respond(req, data);
+      return (data);
     }
     if (path === "/api/competitions") {
       validateParams(params, []);
       const rows = await read("SELECT * FROM api.competitions ORDER BY name, id");
-      return respond(req, {
+      return ({
         leagues: rows.map((c) => put(put({ id: c.id, name: c.name, seasons: [...(c.seasons || [])].sort() }, "image_url", c.image_url), "country_code", c.country)),
       });
     }
     return null;
+  }
+}
+
+async function transferHistory(read, player) {
+  const [rows, [known]] = await Promise.all([
+    // Two moves of one day in the provider's order: its key is a number written as text.
+    read(
+      `SELECT transfer_date::text AS date, kind, fee_eur, from_id, from_name, from_image_url, to_id, to_name, to_image_url,
+         absent_since::text AS absent_since
+       FROM api.player_transfers WHERE player_key=api.internal_id('player',$1)
+       ORDER BY transfer_date, length(source_key), source_key`,
+      [player],
+    ),
+    read("SELECT read_at FROM api.player_transfer_reads WHERE player_key=api.internal_id('player',$1) LIMIT 1", [player]),
+  ]);
+  if (!known) reject(404, "Donnée indisponible.");
+  return {
+    id: player,
+    // absentSince: the first day the provider's accepted history no longer listed the move (153); omitted otherwise.
+    transfers: rows.map((r) => ({ date: r.date, kind: r.kind ?? null, feeEur: r.fee_eur ?? null,
+      from: namedClub(r.from_id, r.from_name, r.from_image_url), to: namedClub(r.to_id, r.to_name, r.to_image_url),
+      ...(r.absent_since && { absentSince: r.absent_since }) })),
   };
 }

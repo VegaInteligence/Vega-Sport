@@ -8,7 +8,7 @@ import pg from "pg";
 const DATE_OID = 1082;
 // A calendar date stays the text PostgreSQL sends: parsed as a Date it would be local
 // midnight, one day off once serialised in UTC from a server east of Greenwich.
-const types = {
+export const types = {
   getTypeParser: (oid, format) => (oid === DATE_OID ? (value) => value : pg.types.getTypeParser(oid, format)),
 };
 

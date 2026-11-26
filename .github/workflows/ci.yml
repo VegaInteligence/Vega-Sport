@@ -178,6 +178,13 @@ jobs:
     if: needs.changes.outputs.image == 'true'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: v2-ci-only, POSTGRES_DB: vega_v2_receipts_test}
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - name: Build
@@ -191,6 +198,21 @@ jobs:
           docker run --rm --entrypoint python vega-worker:${{ github.sha }} -c "from vega.sources import curated, honours, wikidata; from vega import archives; import sys; missing = [str(p) for p in (curated.SHARED / 'league-rules.json', curated.SHARED / 'cup-logos.json', honours.SCRIPTS / 'player_honours.py', wikidata.BRIDGE, archives.EDITION, archives.TWINS) if not p.exists()]; sys.exit('missing: ' + ', '.join(missing) if missing else 0)"
           # The account's SQL files, where the migration task reads them (vega/migrate.py ACCOUNT_SQL).
           docker run --rm --entrypoint python vega-worker:${{ github.sha }} -c "from vega import migrate; import sys; names = sorted(p.name for p in migrate.ACCOUNT_SQL.glob('*.sql')); sys.exit(0 if names[:2] == ['001_accounts.sql', '002_account_api.sql'] else 'account SQL missing: ' + str(names))"
+      - uses: actions/setup-python@v7
+        with: {python-version: '3.14'}
+      - uses: actions/setup-node@v7
+        with: {node-version: '24', package-manager-cache: false}
+      - uses: oven-sh/setup-bun@v2
+        with: {bun-version: '1.4.4'}
+      - run: pip install -r backend/requirements.txt && npm ci --prefix backend/api
+      - name: Image prepares content receipts for the packaged Lambda
+        env:
+          PYTHONPATH: backend
+          VEGA_V2_RECEIPTS_TEST_DSN: postgresql://postgres:v2-ci-only@127.0.0.1:5432/vega_v2_receipts_test
+        run: python backend/tests/packaged_read_receipts.py 'vega-worker:${{ github.sha }}' '${{ job.services.postgres.id }}' "$RUNNER_TEMP/packaged-receipts"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: {name: packaged-read-receipts, path: '${{ runner.temp }}/packaged-receipts/', retention-days: 14}
   api-package:
     name: Read API package
     needs: changes

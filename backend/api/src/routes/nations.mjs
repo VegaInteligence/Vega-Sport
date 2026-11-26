@@ -12,10 +12,10 @@
  * played for; a match International Results gives the scorers of carries them (`scorers`, §57). A team that is no
  * national team is not served.
  */
-import { createHash } from "node:crypto";
 import { stageKind, UNKNOWN_STAGE_LABEL } from "../../../../dashboard/shared/tournament-stages.js";
 import { finalPoolPosition1950, WORLD_CUP_1950_EDITION } from "../../../../dashboard/shared/world-cup-1950.js";
-import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { reject, validateParams } from "../http.mjs";
+import { createDataVersions } from "../data-versions.mjs";
 import { scorersBy, withScorers } from "../international-goals.mjs";
 
 const NATION = /^\/api\/nations\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))$/;
@@ -136,11 +136,11 @@ export function seasonRecord(matches, teamId, season) {
 const num = (v) => (v == null ? null : Number(v));
 const put = (o, k, v) => (v === null || v === undefined ? o : ((o[k] = v), o));
 
-function respond(req, data) {
-  const etag = `W/"nations-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
-  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 300 });
-  return send(req, { data }, 200, { etag, ttl: 300, maxBytes: 2 * 1024 * 1024 });
-}
+// Each path's statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A); the bodies ({ data }) and former tags unchanged.
+const NATIONS = ["api.nation_list", "api.season_keys", "api.power_clubs"];
+const nations = (reads) => ({ family: "nations", data: true, ttl: 300, maxBytes: 2 * 1024 * 1024, reads });
+export const NATIONS_SPEC = nations(NATIONS);
+export const NATION_SPEC = nations([...NATIONS, "api.internal_id", "api.nation_matches", "api.nation_elo", "api.nation_players", "api.international_goals"]);
 
 function seasonParam(params) {
   validateParams(params, ["season"]);
@@ -188,14 +188,22 @@ async function provisionalOf(read, season) {
   return new Set(rows.map((r) => r.team_key));
 }
 
-export function createNationRoute(read) {
+export function createNationRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
+    if (path === "/api/nations") return versioned(req, params, NATIONS_SPEC, (guarded) => nationAnswer(guarded, path, params));
+    return NATION.test(path) ? versioned(req, params, NATION_SPEC, (guarded) => nationAnswer(guarded, path, params)) : null;
+  };
+}
+
+/** The answer of a path of this route, read with `read`. */
+async function nationAnswer(read, path, params) {
+  {
     if (path === "/api/nations") {
       const season = seasonParam(params);
       const [listed, flags] = await Promise.all([read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season]), provisionalOf(read, season)]);
       const rows = listed.filter((r) => !placeholderTeam(r.name)).map((r) => ({ ...r, provisional: flags.has(r.team_key) }));
       const nations = rows.map(nationOf).sort((a, b) => (a.ranking?.rank ?? Infinity) - (b.ranking?.rank ?? Infinity) || (b.elo ?? -Infinity) - (a.elo ?? -Infinity) || a.name.localeCompare(b.name));
-      return respond(req, { season, ranked: nations.filter((n) => n.ranking).length, nations });
+      return { season, ranked: nations.filter((n) => n.ranking).length, nations };
     }
     const nation = path.match(NATION);
     if (!nation) return null;
@@ -239,6 +247,6 @@ export function createNationRoute(read) {
         }),
       };
     }
-    return respond(req, data);
-  };
+    return data;
+  }
 }

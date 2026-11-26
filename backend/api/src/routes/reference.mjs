@@ -12,6 +12,8 @@
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { versionsMissing } from "../data-versions.mjs";
+import { contentTag, editionSelector, readReceipt, receiptRequest, RECEIPT_CODE } from "../read-receipts.mjs";
 
 const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/,
   YEAR = /^\d{4}(?:\/\d{4})?$/;
@@ -28,7 +30,7 @@ function validate(p, spec, required = false) {
 const missing = () => reject(404, "Donnée indisponible.");
 
 function respond(req, body, family) {
-  const etag = `W/"${family}-v1-${createHash("sha256").update(JSON.stringify(body)).digest("hex")}"`;
+  const etag = contentTag(family, createHash("sha256").update(JSON.stringify(body)).digest("hex"));
   if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: SHARE_TTL });
   return send(req, body, 200, { etag, ttl: SHARE_TTL });
 }
@@ -38,6 +40,8 @@ const iso = (value) => (value instanceof Date ? value.toISOString() : value ?? n
 export async function standings(req, p, read) {
   const { competition, season } = validate(p, { competition: LEAGUE, season: YEAR });
   if (!competition) reject(400, "Paramètre manquant.");
+  const receipt = await readReceipt(req, read, "standings", editionSelector(competition, season), "support", SHARE_TTL);
+  if (receipt) return receipt;
   return respond(req, await standingsBody(read, competition, season), "support");
 }
 
@@ -87,13 +91,34 @@ export async function standingsBody(read, competition, season) {
   };
 }
 
+const MATCHDAYS_SQL = "SELECT id,name,playoff FROM api.matchday_rounds($1,$2) ORDER BY id";
+const MATCHDAYS_CONDITIONAL_SQL = `WITH receipt AS MATERIALIZED (
+  SELECT api.read_receipt('matchdays', $1 || '|' || $2, $3) AS digest
+), hit AS MATERIALIZED (
+  SELECT digest FROM receipt WHERE digest IS NOT NULL AND ($4::boolean OR digest = ANY($5::text[]))
+)
+SELECT id,name,playoff,NULL::text AS digest FROM api.matchday_rounds($1,$2)
+WHERE NOT EXISTS (SELECT 1 FROM hit)
+UNION ALL SELECT NULL,NULL,NULL,digest FROM hit
+ORDER BY id`;
+
 export async function matchdays(req, p, read) {
   const { competition, season } = validate(p, { competition: LEAGUE, season: YEAR }, true);
   // The league's editions of that season first, then their matches by index (FAILURE_MODES_OPTIMISATIONS.md GH137M):
   // api.match_rounds' rows and order, without building every match of the base. One statement: the answer and its
   // validator (the hash of every field) come from one snapshot.
-  const rows = await read("SELECT id,name,playoff FROM api.matchday_rounds($1,$2) ORDER BY id", [competition, season]);
+  const { metadataOnly, digests } = receiptRequest(req, "catalog");
+  let rows;
+  if (metadataOnly || digests.length) {
+    try {
+      rows = await read(MATCHDAYS_CONDITIONAL_SQL, [competition, season, RECEIPT_CODE, metadataOnly, digests]);
+    } catch (error) {
+      if (!versionsMissing(error)) throw error;
+    }
+  }
+  rows ??= await read(MATCHDAYS_SQL, [competition, season]);
   if (!rows.length) missing();
+  if (rows[0].digest) return send(req, null, 200, { etag: contentTag("catalog", rows[0].digest), ttl: SHARE_TTL });
   return respond(req, { matches: Object.fromEntries(rows.map((r) => [r.id, { name: r.name, playoff: r.playoff }])) }, "catalog");
 }
 

@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createReader } from "../src/db.mjs";
 import { createHandler } from "../src/handler.mjs";
+import { entityTags } from "../src/http.mjs";
 
 const DSN = process.env.VEGA_V2_API_NODE_TEST_DSN;
 export const skip = !DSN && "requires VEGA_V2_API_NODE_TEST_DSN (local vega_v2_api_node_test)";
@@ -22,12 +23,46 @@ before(() => {
   context.reader = createReader(DSN, { role: "vega_read" });
   // The home page reads "now": Saturday 6 September 2025, 14:00 in Paris (seed week).
   context.now = Date.parse("2025-09-06T12:00:00Z");
-  context.handle = createHandler({ read: context.reader.read, mediaBase: "https://media.test/", clock: () => context.now });
+  // Strict (FAILURE_MODES_OPTIMISATIONS.md GH137A-k): a route of the manifest that reads an api relation it does not
+  // declare fails the test that asked it.
+  context.handle = createHandler({ read: context.reader.read, mediaBase: "https://media.test/", clock: () => context.now, versions: { strict: true } });
 });
 after(() => context.reader?.end());
 
+// A tag read from the data versions (GH137A): every 200 that carries one is asked again with it, on a handler of its own
+// (nothing kept from the first request), and must be a 304 with the same tag and freshness, in one statement.
+// league-history's own tag (GH137: league-history-v2-<resource>-<digest>) has the same shape and is not one.
+const VERSIONED = /^W\/"(?!league-history-)[a-z][a-z-]*-v2-[a-f0-9]{16}-[a-f0-9]{64}"$/;
+/** GH137A-v (RFC 9110 § 13.1.2, RFC 9111 § 4.3.4): a 304 to a request that names tags carries one of them. */
+export function heldTag(requestHeaders, response) {
+  if (response.status !== 304) return;
+  const name = Object.keys(requestHeaders).find((key) => key.toLowerCase() === "if-none-match");
+  const held = entityTags(name ? requestHeaders[name] : null);
+  if (!held || held.any) return;
+  const sent = (response.headers.get("etag") || "").replace(/^W\//, "");
+  assert.ok(held.tags.includes(sent), `a 304 whose tag ${response.headers.get("etag")} the request did not hold (${requestHeaders[name]})`);
+}
+async function revalidated(path, headers, first) {
+  const statements = [];
+  const handle = createHandler({
+    read: (sql, ...rest) => (statements.push(sql), context.reader.read(sql, ...rest)), mediaBase: "https://media.test/", clock: () => context.now,
+    versions: { strict: true },
+  });
+  const asked = { ...headers, "if-none-match": first.headers.get("etag") };
+  const again = await handle(new Request("https://api.test" + path, { headers: asked }));
+  heldTag(asked, again);
+  assert.equal(again.status, 304, `${path}: its own tag, asked again, gave ${again.status}`);
+  assert.equal(again.headers.get("etag"), first.headers.get("etag"), `${path}: the 304's tag`);
+  assert.equal(again.headers.get("cache-control"), first.headers.get("cache-control"), `${path}: the 304's freshness`);
+  assert.equal(statements.length, 1, `${path}: the 304 ran ${statements.length} statements`);
+  assert.match(statements[0], /api\.data_version\(/, `${path}: the 304's statement is the version`);
+}
+
 export async function get(path, headers = {}) {
   const response = await context.handle(new Request("https://api.test" + path, { headers }));
+  heldTag(headers, response);
   const text = response.status === 304 ? "" : await response.text();
+  const conditional = Object.keys(headers).some((name) => name.toLowerCase() === "if-none-match");
+  if (response.status === 200 && VERSIONED.test(response.headers.get("etag") || "") && !conditional) await revalidated(path, headers, response);
   return { response, body: text ? JSON.parse(text) : null };
 }

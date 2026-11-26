@@ -76,8 +76,8 @@
  * GET /api/rankings/award/player?season=&player= — one player's race: his parts and their z, his
  * card points and covered minutes, his rank or the reason he is out of the race, and his honours.
  */
-import { createHash } from "node:crypto";
-import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { reject, validateParams } from "../http.mjs";
+import { createDataVersions } from "../data-versions.mjs";
 import { rates as inplayRates, timeline as inplayTimeline } from "../../../../dashboard/shared/inplay.js";
 import { ownRate, replace as replacePlayer } from "../lineup.mjs";
 
@@ -92,11 +92,39 @@ function validate(p, spec) {
   return Object.fromEntries(p);
 }
 
-function respond(req, body) {
-  const etag = `W/"catalog-v1-${createHash("sha256").update(JSON.stringify(body)).digest("hex")}"`;
-  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 60 });
-  return send(req, body, 200, { etag, ttl: 60 });
-}
+// Each path's statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A): its validator is their data version,
+// read before the answer. The body and its former tag (W/"catalog-v1-<SHA-256 of the body>") are unchanged.
+const SEASON = "api.season_keys", ID = "api.internal_id";
+const POWER = ["api.power_players", "api.power_player_roles", SEASON, ID];
+const READS = {
+  "/api/rankings/power": [...POWER, "api.power_clubs", "api.league_levels"],
+  "/api/rankings/power/player": [...POWER, "api.player_breakouts", "api.breakout_runs", "api.power_role_counts"],
+  "/api/rankings/power/history": ["api.power_players", ID],
+  "/api/rankings/level": ["api.player_levels", SEASON],
+  "/api/rankings/level/player": ["api.player_levels", "api.player_level_positions", SEASON, ID],
+  "/api/rankings/award": ["api.award_race", SEASON],
+  "/api/rankings/award/player": ["api.award_race", "api.award_honours", SEASON, ID],
+  "/api/rankings/leagues": ["api.league_levels", "api.league_level_seasons"],
+  "/api/rankings/breakouts": ["api.breakout_runs", "api.player_breakouts", SEASON],
+  "/api/rankings/match": ["api.fixtures", "api.match_grades", "api.player_appearances", ID],
+  "/api/rankings/rounds": ["api.edition_keys", "api.league_rounds"],
+  "/api/rankings/round": ["api.edition_keys", "api.league_rounds", "api.round_teams", "api.round_season_race"],
+  "/api/rankings/fates": ["api.edition_keys", "api.league_team_fates"],
+  "/api/forecasts/match": ["api.match_forecasts", "api.match_lineup_forecasts", ID],
+  "/api/forecasts/odds": ["api.match_odds", "api.match_forecasts", ID],
+  "/api/forecasts/season": ["api.edition_keys", "api.season_projections", "api.season_projection_places", "api.schedule_forecasts",
+    "api.cup_stage_odds", "api.cup_round_opponents", "api.power_clubs", "api.cup_team_groups"],
+  "/api/forecasts/live": ["api.match_strengths", "api.forecast_models", "api.inplay_models", "api.match_inplay_events", "api.match_clocks",
+    "api.match_lineup_forecasts", ID],
+  "/api/forecasts/swap": ["api.forecast_models", "api.lineup_models", "api.player_own_totals", "api.power_clubs", "api.team_league_matches",
+    "api.league_level_seasons", "api.league_levels", SEASON, ID],
+  "/api/rankings/index": ["api.ranking_editions", "api.club_links"],
+  "/api/rankings/edition": ["api.ranking_editions", "api.ranking_entries", "api.ranking_season_points"],
+  "/api/rankings/associations": ["api.ranking_editions", "api.ranking_entries", "api.ranking_season_points"],
+  "/api/rankings/club": ["api.club_links", "api.ranking_editions", "api.ranking_entries"],
+  "/api/club-links": ["api.club_links"],
+};
+export const RANKING_SPECS = Object.fromEntries(Object.entries(READS).map(([path, reads]) => [path, { family: "catalog", reads, ttl: 60 }]));
 
 export const indexEdition = (e) => ({
   edition: e.edition,
@@ -960,11 +988,13 @@ export function roundRace(rows, mode) {
  */
 async function leagueRound(read, params) {
   validateParams(params, ["competition", "season", "round", "race"]);
-  const { competition, season, edition } = await editionOf(read, params);
+  // The parameters' own form before any statement (FAILURE_MODES_OPTIMISATIONS.md GH137A-y): a malformed round or race
+  // is a 400 without the base, even for an edition the base does not hold.
   const key = params.get("round");
   if (key !== null && !/^(r\d{1,9}|w\d{4}-\d{2}-\d{2})$/.test(key)) reject(400, "Paramètre invalide.");
   const mode = params.get("race");
   roundRace([], mode);
+  const { competition, season, edition } = await editionOf(read, params);
   const [current] = await read(
     key
       ? "SELECT * FROM api.league_rounds WHERE competition_season_id=$1 AND round_key=$2 AND status<>'open'"
@@ -1002,83 +1032,89 @@ async function teamFates(read, params) {
   return { competition, season, teams: Object.fromEntries(rows.map((r) => [r.team_id, r.fate])) };
 }
 
-export function createRankingRoute(read) {
+/** The catalogue's index: every edition, and how many clubs are linked to a ranking. */
+async function rankingIndex(read, params) {
+  validate(params, {});
+  const [editions, [mapping]] = await Promise.all([
+    read("SELECT * FROM api.ranking_editions ORDER BY kind DESC,edition DESC"),
+    read("SELECT count(*)::int AS linked FROM api.club_links"),
+  ]);
+  const retrieved = editions.map((e) => iso(e.retrieved_at)).filter(Boolean).sort();
+  return {
+    schemaVersion: 1,
+    retrievedAt: retrieved.at(-1) ?? null,
+    editions: editions.map(indexEdition),
+    errors: [],
+    notes: {
+      "uefa-associations": "Association club coefficients, not national-team strength.",
+      historicalDates: "UEFA period is a season ending year, not a known publication date. SportsAPI updatedAt is a source refresh timestamp, not an official edition date.",
+    },
+    clubMapping: { linked: mapping.linked },
+  };
+}
+
+async function clubRanking(read, params) {
+  const p = validate(params, { club: TEAM });
+  const [link] = await read("SELECT * FROM api.club_links WHERE team_id=$1", [p.club]);
+  if (!link) return { rows: null };
+  const editions = await read("SELECT * FROM api.ranking_editions WHERE kind='uefa-clubs' AND provider='UEFA' ORDER BY edition DESC");
+  const rows = await read(
+    `SELECT r.* FROM api.ranking_entries r JOIN api.ranking_editions e ON e.edition_id=r.edition_id
+     WHERE e.kind='uefa-clubs' AND r.internal_team_id=$1`,
+    [link.internal_team_id],
+  );
+  const byEdition = new Map(rows.map((r) => [r.edition_id, r]));
+  return {
+    rows: editions.map((e) => {
+      const row = byEdition.get(e.edition_id);
+      return { edition: indexEdition(e), row: row ? rankingRow("uefa-clubs", row) : null };
+    }),
+  };
+}
+
+async function clubLinks(read, params) {
+  const p = validate(params, { club: TEAM });
+  const [link] = await read("SELECT * FROM api.club_links WHERE team_id=$1", [p.club]);
+  return {
+    links: link
+      ? { [p.club]: { clubName: link.club_name, countryCode: link.country_code, entityId: link.entity_id, method: link.method, rankingName: link.ranking_name } }
+      : {},
+  };
+}
+
+async function edition(read, params) {
+  const p = validate(params, { kind: /^(uefa-clubs|uefa-associations|fifa-men)$/, edition: /^\d{4}(?:-\d{2}-\d{2})?$/ });
+  return editionBody(read, p.kind, p.edition);
+}
+
+const associations = (read, params) => editionBody(read, "uefa-associations", validate(params, { year: /^\d{4}$/ }).year);
+
+export function createRankingRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
-    if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
-    if (path === "/api/rankings/power/player") return respond(req, await powerPlayer(read, params));
-    if (path === "/api/rankings/power/history") return respond(req, await powerHistory(read, params));
-    if (path === "/api/rankings/level") return respond(req, await levelRanking(read, params));
-    if (path === "/api/rankings/level/player") return respond(req, await levelPlayer(read, params));
-    if (path === "/api/rankings/award") return respond(req, await awardRanking(read, params));
-    if (path === "/api/rankings/award/player") return respond(req, await awardPlayer(read, params));
-    if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
-    if (path === "/api/rankings/breakouts") return respond(req, await breakouts(read, params));
-    if (path === "/api/rankings/match") return respond(req, await matchGrades(read, params));
-    if (path === "/api/rankings/rounds") return respond(req, await leagueRounds(read, params));
-    if (path === "/api/rankings/round") return respond(req, await leagueRound(read, params));
-    if (path === "/api/rankings/fates") return respond(req, await teamFates(read, params));
-    if (path === "/api/forecasts/match") return respond(req, await matchForecast(read, params));
-    if (path === "/api/forecasts/odds") return respond(req, await matchOdds(read, params));
-    if (path === "/api/forecasts/season") return respond(req, await seasonProjection(read, params));
-    if (path === "/api/forecasts/live") return respond(req, await liveProbability(read, params));
-    if (path === "/api/forecasts/swap") return respond(req, await swap(read, params));
-    if (path === "/api/rankings/index") {
-      validate(params, {});
-      const [editions, [mapping]] = await Promise.all([
-        read("SELECT * FROM api.ranking_editions ORDER BY kind DESC,edition DESC"),
-        read("SELECT count(*)::int AS linked FROM api.club_links"),
-      ]);
-      const retrieved = editions.map((e) => iso(e.retrieved_at)).filter(Boolean).sort();
-      return respond(req, {
-        schemaVersion: 1,
-        retrievedAt: retrieved.at(-1) ?? null,
-        editions: editions.map(indexEdition),
-        errors: [],
-        notes: {
-          "uefa-associations": "Association club coefficients, not national-team strength.",
-          historicalDates: "UEFA period is a season ending year, not a known publication date. SportsAPI updatedAt is a source refresh timestamp, not an official edition date.",
-        },
-        clubMapping: { linked: mapping.linked },
-      });
-    }
-    if (path === "/api/rankings/edition") {
-      const p = validate(params, {
-        kind: /^(uefa-clubs|uefa-associations|fifa-men)$/,
-        edition: /^\d{4}(?:-\d{2}-\d{2})?$/,
-      });
-      return respond(req, await editionBody(read, p.kind, p.edition));
-    }
-    if (path === "/api/rankings/associations") {
-      const p = validate(params, { year: /^\d{4}$/ });
-      return respond(req, await editionBody(read, "uefa-associations", p.year));
-    }
-    if (path === "/api/rankings/club") {
-      const p = validate(params, { club: TEAM });
-      const [link] = await read("SELECT * FROM api.club_links WHERE team_id=$1", [p.club]);
-      if (!link) return respond(req, { rows: null });
-      const editions = await read("SELECT * FROM api.ranking_editions WHERE kind='uefa-clubs' AND provider='UEFA' ORDER BY edition DESC");
-      const rows = await read(
-        `SELECT r.* FROM api.ranking_entries r JOIN api.ranking_editions e ON e.edition_id=r.edition_id
-         WHERE e.kind='uefa-clubs' AND r.internal_team_id=$1`,
-        [link.internal_team_id],
-      );
-      const byEdition = new Map(rows.map((r) => [r.edition_id, r]));
-      return respond(req, {
-        rows: editions.map((e) => {
-          const row = byEdition.get(e.edition_id);
-          return { edition: indexEdition(e), row: row ? rankingRow("uefa-clubs", row) : null };
-        }),
-      });
-    }
-    if (path === "/api/club-links") {
-      const p = validate(params, { club: TEAM });
-      const [link] = await read("SELECT * FROM api.club_links WHERE team_id=$1", [p.club]);
-      return respond(req, {
-        links: link
-          ? { [p.club]: { clubName: link.club_name, countryCode: link.country_code, entityId: link.entity_id, method: link.method, rankingName: link.ranking_name } }
-          : {},
-      });
-    }
+    const serve = (build) => versioned(req, params, RANKING_SPECS[path], (guarded) => build(guarded, params));
+    if (path === "/api/rankings/power") return serve(powerRanking);
+    if (path === "/api/rankings/power/player") return serve(powerPlayer);
+    if (path === "/api/rankings/power/history") return serve(powerHistory);
+    if (path === "/api/rankings/level") return serve(levelRanking);
+    if (path === "/api/rankings/level/player") return serve(levelPlayer);
+    if (path === "/api/rankings/award") return serve(awardRanking);
+    if (path === "/api/rankings/award/player") return serve(awardPlayer);
+    if (path === "/api/rankings/leagues") return serve(leagueLevels);
+    if (path === "/api/rankings/breakouts") return serve(breakouts);
+    if (path === "/api/rankings/match") return serve(matchGrades);
+    if (path === "/api/rankings/rounds") return serve(leagueRounds);
+    if (path === "/api/rankings/round") return serve(leagueRound);
+    if (path === "/api/rankings/fates") return serve(teamFates);
+    if (path === "/api/forecasts/match") return serve(matchForecast);
+    if (path === "/api/forecasts/odds") return serve(matchOdds);
+    if (path === "/api/forecasts/season") return serve(seasonProjection);
+    if (path === "/api/forecasts/live") return serve(liveProbability);
+    if (path === "/api/forecasts/swap") return serve(swap);
+    if (path === "/api/rankings/index") return serve(rankingIndex);
+    if (path === "/api/rankings/edition") return serve(edition);
+    if (path === "/api/rankings/associations") return serve(associations);
+    if (path === "/api/rankings/club") return serve(clubRanking);
+    if (path === "/api/club-links") return serve(clubLinks);
     return null;
   };
 }

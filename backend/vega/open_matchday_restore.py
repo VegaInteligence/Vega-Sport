@@ -95,8 +95,13 @@ REFS = {
 # (no column). 179 (GH171) creates the extension pg_stat_statements and the view ops.statement_stats over it: no table,
 # no column of core, agg or ops, nothing naming a match. 180 (GH137M) creates the function api.matchday_rounds, which
 # reads matches and writes nothing: no table, no column. 181 (§79) creates two api views over core, agg and ops
-# (api.match_absence_players, api.match_absences) and their read grant: no table, no column, nothing written. A later one
-# needs its own review here.
+# (api.match_absence_players, api.match_absences) and their read grant: no table, no column, nothing written.
+# 182 (GH137A) adds ops.data_changes, ops.data_versions, ops.data_relations, ops.data_sources and ops.data_tracking
+# (no match dependency), functions and four triggers on every table the api reads, including core.matches. An applied
+# restore marks the tables it writes in ops.data_changes; a read-only dry run creates no marks.
+# 183 (GH137R) records additional season marks for the restored matches and events. It adds no match FK or column;
+# its receipt tables and the functions reading/writing them are independent of the restore. A later migration needs
+# its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
                     "168_nation_world_ranking.sql", "169_player_level_measured.sql",
@@ -104,7 +109,7 @@ REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_season
                     "173_nation_last_played.sql", "174_absences_suspensions.sql",
                     "175_player_award.sql", "176_match_probable_lineups.sql", "177_league_history_lean_reads.sql",
                     "178_match_grades_on_arrival.sql", "179_statement_statistics.sql", "180_matchday_rounds.sql",
-                    "181_match_absences.sql")
+                    "181_match_absences.sql", "182_data_versions.sql", "183_read_receipts.sql")
 
 
 class Refusal(RuntimeError):

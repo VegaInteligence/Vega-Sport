@@ -25,6 +25,7 @@
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { createDataVersions } from "../data-versions.mjs";
 import * as F from "../match-families.mjs";
 
 const ROUTE = /^\/api\/matches\/(m_(?:[A-Za-z0-9]{6}|v\d{7}))(\/(?:lineups\/probable|lineups|events|shots|stats|players|players\/(?:halves|display)|momentum|advanced|advanced\/players|advanced\/network|heatmaps|h2h))?$/;
@@ -205,7 +206,19 @@ async function probable(read, req, id, params) {
   return send(req, { data: F.probableLineupsBody(f, sides, players) }, 200, { etag, ttl: 15 });
 }
 
-export function createMatchDetailRoute(read) {
+// GET /api/matches/{id}/players/display (FAILURE_MODES_OPTIMISATIONS.md GH137A): its published zeros change without a new
+// match revision, so it is validated by the data versions of what it reads; 60 s once the match is finished, 15 s before.
+// Its body ({ data }) and the content of its former tag (W/"match-display-<SHA-256 of data>") are unchanged.
+const FIXTURE_SQL = `SELECT f.*,c.* FROM api.fixtures f LEFT JOIN api.match_family_coverage c ON c.season_id=f.season_id AND c.match_id=f.match_id
+       WHERE f.match_id=api.internal_id('match',$1)`;
+export const DISPLAY_SPEC = {
+  family: "match-display", data: true, ttl: [60, 15], maxBytes: 2 * 1024 * 1024,
+  reads: ["api.fixtures", "api.match_family_coverage", "api.internal_id", "api.match_player_stat_rows", "api.match_grades",
+    "api.match_lineup_player_rows", "api.player_appearances", "api.match_player_advanced_rows"],
+  former: (content) => `W/"match-display-${content}"`,
+};
+
+export function createMatchDetailRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
     const m = path.match(ROUTE);
     if (!m) return null;
@@ -214,21 +227,17 @@ export function createMatchDetailRoute(read) {
     if (suffix === "/lineups/probable") return probable(read, req, id, params);
     if (params.has("frame") && !/^(acting_ltr|home_ltr)$/.test(params.get("frame"))) reject(400, "Paramètre invalide.");
     if (params.has("v") && !/^[\w.-]{1,200}$/.test(params.get("v"))) reject(400, "Paramètre invalide.");
-    const [f] = await read(
-      `SELECT f.*,c.* FROM api.fixtures f LEFT JOIN api.match_family_coverage c ON c.season_id=f.season_id AND c.match_id=f.match_id
-       WHERE f.match_id=api.internal_id('match',$1)`,
-      [id],
-    );
+    // Published zeros can change after recalculation without a new raw match revision.
+    if (suffix === "/players/display")
+      return versioned(req, params, DISPLAY_SPEC, async (guarded) => {
+        const [f] = await guarded(FIXTURE_SQL, [id]);
+        if (!f) reject(404, "Match introuvable.");
+        if (f[FAMILY[suffix]] !== "ok") missing();
+        return { value: await body(guarded, f, suffix, params), ttl: f.status === "finished" ? 60 : 15 };
+      });
+    const [f] = await read(FIXTURE_SQL, [id]);
     if (!f) reject(404, "Match introuvable.");
     if (suffix && f[FAMILY[suffix]] !== "ok") missing();
-    // Published zeros can change after recalculation without a new raw match revision.
-    if (suffix === "/players/display") {
-      const data = await body(read, f, suffix, params);
-      const etag = `W/"match-display-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
-      const ttl = f.status === "finished" ? 60 : 15;
-      if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl });
-      return send(req, { data }, 200, { etag, ttl, maxBytes: 2 * 1024 * 1024 });
-    }
     const url = new URL(req.url);
     const shape = SHAPE[suffix] ? `|${SHAPE[suffix]}` : "";
     const etag = `W/"match-v1-${createHash("sha256").update(`${url.pathname}|${params.get("frame") ?? ""}|${f.revision}${shape}`).digest("hex")}"`;

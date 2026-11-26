@@ -71,7 +71,11 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # GH137M (#137): /api/matchdays read from the editions asked (a function, api.matchday_rounds; no table).
          "180_matchday_rounds.sql",
          # §79 (#252): a match's absent players on its day, for the card kept after the kick-off (two views; no table).
-         "181_match_absences.sql"]
+         "181_match_absences.sql",
+         # GH137A (#137): the writers' data versions (five ops tables, functions, four triggers per table the api reads).
+         "182_data_versions.sql",
+         # GH137R (#137): scoped markers and content receipts prepared by the worker.
+         "183_read_receipts.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -196,15 +200,16 @@ class DeploymentMigrationsTest(unittest.TestCase):
     def reads(cls):
         return {(k, key): read_at for k, key, read_at in cls.db.execute("SELECT kind, provider_key, read_at FROM ops.transfermarkt_reads").fetchall()}
 
-    def test_48j_production_s_schema_then_the_five_migrations_once(self):
+    def test_48j_production_s_schema_then_the_reviewed_migrations_once(self):
         # Production's files: 160 of them (154 the last), as its migration task counted.
         self.assertEqual(self.production_files[-1], "154_home_internationals.sql")
         applied = [n for n in self.production_files if "vector_optional" not in n]  # V2_VECTOR is not set in production
         self.assertEqual(len(applied), 160)
         self.assertEqual(self.at_production, "migrations applied=160 total=160 logins=unchanged")
         self.assertEqual(self.merged_added, ADDED)
-        self.assertEqual(self.deployed, "migrations applied=26 total=186 logins=unchanged")
-        self.assertEqual(self.again, "migrations applied=0 total=186 logins=unchanged")
+        total = len(applied) + len(ADDED)
+        self.assertEqual(self.deployed, f"migrations applied={len(ADDED)} total={total} logins=unchanged")
+        self.assertEqual(self.again, f"migrations applied=0 total={total} logins=unchanged")
         self.assertEqual([v for v, *_ in self.migrations_after if v not in {w for w, *_ in self.migrations_before}], ADDED)
         self.assertEqual([r for r in self.migrations_after if r[0] < "155"], self.migrations_before)
         self.assertEqual(self.migrations_again, self.migrations_after)
@@ -219,7 +224,9 @@ class DeploymentMigrationsTest(unittest.TestCase):
                     "SELECT count(*) FROM api.home_importance_v2(2026::smallint, ARRAY[]::integer[])",
                     "SELECT count(*) FROM api.player_suspensions", "SELECT count(*) FROM api.player_suspension_reads",
                     "SELECT count(*) FROM api.team_absence_players", "SELECT count(*) FROM api.team_absences",
-                    "SELECT count(*) FROM api.match_probable_lineups", "SELECT count(*) FROM api.match_probable_lineup_players"):
+                    "SELECT count(*) FROM api.match_probable_lineups", "SELECT count(*) FROM api.match_probable_lineup_players",
+                    "SELECT count(*) FROM api.match_absence_players", "SELECT count(*) FROM api.match_absences",
+                    "SELECT api.read_receipt('standings', 'l_v0009601|2026', '') IS NULL"):
             self.assertIsNotNone(self.read.execute(sql).fetchone()[0], sql)
         friendly = self.read.execute("SELECT match_id, tournament, home_name, away_name FROM api.home_internationals('2026-10-05', '2026-10-11')").fetchall()
         self.assertEqual([r[1:] for r in friendly], [("Friendly", "Brazil", "Japan")])

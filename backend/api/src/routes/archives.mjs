@@ -17,6 +17,7 @@
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { createDataVersions } from "../data-versions.mjs";
 import { readPageArgs } from "../publication.mjs";
 import { editionArtworkFields } from "../edition-artwork.mjs";
 
@@ -158,7 +159,10 @@ export async function archiveRead(req, params, read) {
 const SOURCE_FIELDS = ["name", "url", "license", "revision"];
 const source = (s) => Object.fromEntries(SOURCE_FIELDS.filter((k) => s[k] != null).map((k) => [k, s[k]]));
 
-export async function archiveIndex(req, params, read) {
+// GET /api/archives/index's statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A); its body and former tag unchanged.
+export const INDEX_SPEC = { family: "catalog", ttl: 60, reads: ["api.source_revisions", "api.archive_result_seasons", "api.archive_goal_seasons"] };
+
+export async function archiveIndex(params, read) {
   validateParams(params, ["kind"]);
   const kind = params.get("kind");
   if (!["results", "goals"].includes(kind || "")) reject(400, "Paramètre invalide.");
@@ -189,15 +193,13 @@ export async function archiveIndex(req, params, read) {
       latest_event::text AS "latestEvent" FROM api.archive_goal_seasons ORDER BY season DESC`);
     body = { schemaVersion: 1, source: { ...source(main), ...(main.coverage && { coverage: main.coverage }) }, seasons };
   }
-  const etag = `W/"catalog-v1-${hash(body)}"`;
-  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 60 });
-  return send(req, body, 200, { etag, ttl: 60 });
+  return body;
 }
 
-export function createArchiveRoute(read) {
+export function createArchiveRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
     if (path === "/api/read/archive") return archiveRead(req, params, read);
-    if (path === "/api/archives/index") return archiveIndex(req, params, read);
+    if (path === "/api/archives/index") return versioned(req, params, INDEX_SPEC, (guarded) => archiveIndex(params, guarded));
     return null;
   };
 }
