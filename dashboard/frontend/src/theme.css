@@ -36,6 +36,7 @@
   --header-h: 56px;
   --page-gutter: 24px;
   --section-gap: 20px;
+  --match-carousel-gap: 6px;
 }
 /* Phones: the desktop scale (10 to 13px) is too small to read at arm's length,
    and a 34px control is too small for a thumb. Text steps up two pixels, to a

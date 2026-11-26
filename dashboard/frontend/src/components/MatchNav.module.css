@@ -88,7 +88,7 @@ a.step:focus-visible,
 }
 .strip {
   display: flex;
-  gap: 4px;
+  gap: var(--match-carousel-gap);
   min-width: 0;
   margin: 0;
   padding: 0;

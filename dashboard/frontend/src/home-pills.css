@@ -374,7 +374,7 @@ html[data-theme="light"]
 
 /* ----------------------------------------------------------------- the week's results (piste A) */
 :root .home-page .home-ticker {
-  gap: 8px;
+  gap: var(--match-carousel-gap);
   border: 0;
   border-radius: 0;
 }
