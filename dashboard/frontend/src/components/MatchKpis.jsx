@@ -148,6 +148,7 @@ export default function MatchKpis({ match }) {
         <HoverCard
           key={stat.key}
           className={s.kpi}
+          fit
           label={`${stat.label} : détail`}
           content={<Detail statKey={stat.key} label={stat.label} match={match} periods={periods} cards={cards} />}
         >
@@ -162,6 +163,7 @@ export default function MatchKpis({ match }) {
       {discipline && (
         <HoverCard
           className={s.kpi}
+          fit
           label="Discipline : détail"
           content={<Detail statKey="discipline" label="Discipline" match={match} periods={periods} cards={cards} />}
         >

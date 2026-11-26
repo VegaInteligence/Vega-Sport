@@ -5963,3 +5963,21 @@ yet, read as « 02:00 ».
   pills stretched to the width).
 - **R50** (phone) radius 20 px, border 0, at least 8 px between the window and the screen's edges. Red on dadd055.
 
+## 74. The figures' bubbles: the width of their tile, in the teams' colours (hugo, 26 Nov 2026, 11 h 16 « je veux que le hoover est la meme largeur que la case », 11 h 18 « pq les couleurs des equipes ne s'applique pas au hoover change cela »; written before the tests)
+
+The bubble of a figure under the score (Buts attendus · xG, Tirs, Tirs cadrés, Possession, Discipline) was 320 px wide,
+centred under a tile of 278 px (1440 px wide). It is drawn in `document.body` (HoverCard.jsx), outside `.match-detail`
+where the crests' colours are set (§ 64): its teams stayed in the default blue and violet while the tile showed them in
+their colours (Lille red, Bayern blue in hugo's screenshot).
+
+- **`fit`** (`HoverCard`, used by `MatchKpis`): the bubble takes its tile's width and edges; on a tile narrower than
+  260 px (a phone, two tiles a row) it takes its row's (the strip of figures), within the screen.
+- **The teams' colours go with every bubble:** `useHoverBubble` copies the element's `--home` / `--away` onto the bubble
+  when it opens; outside the match page (no colours) nothing changes.
+- Rounded corners: shown in the mock-up https://claude.ai/artifact/J4Cs93Cx1uYs1i2pqDjeNV (a slider), not changed
+  until hugo chooses.
+- **R51** (`match-tabs.e2e.mjs`, computer) the xG bubble's width and left edge those of its tile (±1 px), its teams'
+  colours those of the tile. Red on 122022b (320 px for 278 px).
+- **R52** (phone) a tile under 260 px: the bubble the strip's width and left edge, the teams' colours the tile's. Red on
+  122022b (320 px for a 365 px strip).
+

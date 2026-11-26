@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Infobulles des chiffres du match : largeur de la case et couleurs des équipes — FAILURE_MODES § 74 (26 novembre 2026)
+
+- Demandes de hugo (11 h 16 et 11 h 18, capture Lille – Bayern) : la bulle doit avoir la largeur de sa case, et les couleurs des équipes ne s'y appliquaient pas (bulle dessinée hors de la page, dans `body`).
+- `HoverCard` / `useHoverBubble` : option `fit` (largeur et bords de la case, de la bande sur téléphone sous 260 px), couleurs `--home` / `--away` de l'élément recopiées sur toutes les bulles. `MatchKpis` passe `fit`.
+- Arrondi : maquette avec curseur https://claude.ai/artifact/J4Cs93Cx1uYs1i2pqDjeNV, rien changé en attendant le choix de hugo.
+- R51 et R52 (`match-tabs.e2e.mjs`) rouges sur 122022b, verts après ; site 1 118/1 118, match-tabs 38/38.
+
 ## CI selon les fichiers changés (26 novembre 2026, branche `claude/ci-selon-fichiers` depuis main 2b7cfb4)
 
 - Constat (demande de hugo, 10 h 18) : la CI attendait 19 à 27 min depuis #241-#244, contre 10 à 16 min la veille ; `test_deploy_flow.py` seul ≈ 9 min (vrai `deploy.sh`, BuildKit, migrations), `test_account_deploy` 21 s → 96 s ; une PR du site seul attendait tout.
