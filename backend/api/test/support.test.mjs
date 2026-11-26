@@ -11,7 +11,8 @@ const PHOTO = {
 test("club facts by the club's Vega id", { skip }, async () => {
   const { response, body } = await get("/api/club-facts?club=t_aaaaa1");
   assert.equal(response.status, 200);
-  assert.match(response.headers.get("etag"), /^W\/"support-v1-/);
+  // The support family; the tag's form since GH137A (FAILURE_MODES_OPTIMISATIONS.md): its check, then its content.
+  assert.match(response.headers.get("etag"), /^W\/"support-v2-[a-f0-9]{16}-[a-f0-9]{64}"$/);
   assert.deepEqual(body, {
     sourceUrl: "https://www.wikidata.org/entity/Q704", fetchedAt: "2025-09-20T09:00:00.000Z", stadium: "Stade Été",
     stadiumId: "Q1150", stadiumAlias: null, coach: { name: "Coach Un", photo: PHOTO }, founded: "1950",

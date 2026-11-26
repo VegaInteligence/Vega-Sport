@@ -32,6 +32,7 @@ import { createLeagueHistoryRoute } from "./routes/league-history.mjs";
 import { createWorldCupRoute } from "./routes/worldcup.mjs";
 import { createArchiveDetailRoute } from "./routes/archive-details.mjs";
 import { compactHomePresentation } from "./home-presentation.mjs";
+import { createDataVersions } from "./data-versions.mjs";
 
 /** The compact home cards (media=1), plus what the choice of « Prochains matchs »
  * reads (home-upcoming.js on the site): each offered match's editorial weight, its
@@ -60,8 +61,9 @@ function pathOf(req) {
  * `log`: where the line of each request goes; none, no line. The function gives its log
  * (infra/aws/api-index.mjs); a script that reads the handler's answers on its standard
  * output gets nothing else there.
+ * `versions`: the data versions' options (data-versions.mjs: `strict`, `observe`, `warn`); the tests make them strict.
  */
-export function createHandler({ read: query, mediaBase = null, clock = Date.now, opsKey = null, log = null }) {
+export function createHandler({ read: query, mediaBase = null, clock = Date.now, opsKey = null, log = null, versions = {} }) {
   // What each request spent, in its answer (Server-Timing): the whole of it, and its
   // queries (their sum: queries run together count each for its own time). It tells a
   // slow read from a far one without the function's logs.
@@ -78,7 +80,10 @@ export function createHandler({ read: query, mediaBase = null, clock = Date.now,
       }
     }
   };
-  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read, { clock }), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPlayerFormRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read, { clock }), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createHomeLocalRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createArchiveDetailRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read, { clock }), createNationRoute(read), createWorldCupRoute(read), createLeagueHistoryRoute(read)];
+  // The routes validated by data versions read before their answer (FAILURE_MODES_OPTIMISATIONS.md GH137A); league-history
+  // and matchdays keep their own one-statement validators (GH137, GH137M).
+  const versioned = createDataVersions(read, { ...versions, mediaBase });
+  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read, { clock }), createMatchRoute(read), createMatchDetailRoute(read, { versioned }), createProfileRoute(read, { versioned }), createPlayerFormRoute(read, { versioned }), createPartitionRoute(read), createReferenceRoute(read, { versioned }), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read, { clock }), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createHomeLocalRoute(read, clock), createSearchRoute(read), createArchiveRoute(read, { versioned }), createArchiveDetailRoute(read, { versioned }), createRankingRoute(read, { versioned }), createSupportRoute(read, { mediaBase, versioned }), createCupRoute(read, { versioned }), createEuropeRoute(read, { clock }), createNationRoute(read, { versioned }), createWorldCupRoute(read, { versioned }), createLeagueHistoryRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;

@@ -9,8 +9,8 @@
  * score, the half-time score, kick-off, referee and attendance when given, each side's statistics (null when the
  * file gives none) and the 1X2 prices the file gives.
  */
-import { createHash } from "node:crypto";
-import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { reject, validateParams } from "../http.mjs";
+import { createDataVersions } from "../data-versions.mjs";
 
 const SOURCE = "football-data-co-uk";
 // An archive key: "r:2015-16/fr.1:370", "engsoccerdata/…": letters, digits and . : / _ + -.
@@ -27,11 +27,10 @@ const ODDS = [["bet365", false, "b365"], ["bet365", true, "b365_closing"], ["pin
 const day = (value) => (value ? String(value instanceof Date ? value.toISOString() : value).slice(0, 10) : null);
 const pair = (a, b) => (a == null || b == null ? null : [a, b]);
 
-function respond(req, data) {
-  const etag = `W/"archive-details-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
-  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 3600 });
-  return send(req, { data }, 200, { etag, ttl: 3600 });
-}
+// The statements' relations of each form of the path (FAILURE_MODES_OPTIMISATIONS.md GH137A); bodies and former tags unchanged.
+const details = (reads) => ({ family: "archive-details", data: true, ttl: 3600, reads });
+export const DETAILS_LIST_SPEC = details(["api.archive_detail_coverage", "api.source_revisions"]);
+export const DETAILS_MATCH_SPEC = details(["api.archive_match_details", "api.source_revisions"]);
 
 async function credit(read) {
   const [row] = await read("SELECT name, url, license FROM api.source_revisions WHERE source = $1", [SOURCE]);
@@ -40,16 +39,16 @@ async function credit(read) {
 
 const side = (row, prefix) => Object.fromEntries(STATS.map(([name, column]) => [name, row[`${prefix}_${column}`] ?? null]));
 
-async function details(req, params, read) {
+async function detailsOf(params, read) {
   validateParams(params, ["match"]);
   if (!params.has("match")) {
     const rows = await read(`SELECT division, country, level, season_id, matches, paired, with_stats, with_odds
       FROM api.archive_detail_coverage ORDER BY country, level, season_id`);
-    return respond(req, {
+    return {
       coverage: rows.map((r) => ({ division: r.division, country: r.country, level: r.level, season: `${r.season_id}/${r.season_id + 1}`,
         matches: r.matches, paired: r.paired, withStats: r.with_stats, withOdds: r.with_odds })),
       credit: await credit(read),
-    });
+    };
   }
   const key = params.get("match");
   if (!KEY.test(key || "")) reject(400, "Paramètre invalide.");
@@ -57,16 +56,19 @@ async function details(req, params, read) {
   if (!row) reject(404, "Ressource introuvable.");
   const home = side(row, "home"), away = side(row, "away");
   const given = [...Object.values(home), ...Object.values(away)].some((v) => v != null);
-  return respond(req, {
+  return {
     match: key, date: day(row.date), score: pair(row.home_score, row.away_score), sourceScore: [row.home_goals, row.away_goals],
     halfTime: pair(row.ht_home_goals, row.ht_away_goals),
     kickoff: row.kickoff_time ? String(row.kickoff_time).slice(0, 5) : null, referee: row.referee ?? null, attendance: row.attendance ?? null,
     stats: given ? { home, away } : null,
     odds: ODDS.filter(([, , c]) => row[`${c}_home`] != null).map(([bookmaker, closing, c]) => ({ bookmaker, closing, home: row[`${c}_home`], draw: row[`${c}_draw`], away: row[`${c}_away`] })),
     credit: await credit(read),
-  });
+  };
 }
 
-export function createArchiveDetailRoute(read) {
-  return async (req, path, params) => (path === "/api/archives/details" ? details(req, params, read) : null);
+export function createArchiveDetailRoute(read, { versioned = createDataVersions(read) } = {}) {
+  return async (req, path, params) =>
+    path === "/api/archives/details"
+      ? versioned(req, params, params.has("match") ? DETAILS_MATCH_SPEC : DETAILS_LIST_SPEC, (guarded) => detailsOf(params, guarded))
+      : null;
 }

@@ -14,8 +14,8 @@
  *   played for another club within those ten matches' span (a transfer is no rise).
  * Only matches within FORM_SPAN_DAYS of `as_of` are read.
  */
-import { createHash } from "node:crypto";
-import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { reject, validateParams } from "../http.mjs";
+import { createDataVersions } from "../data-versions.mjs";
 import { bindValue, idScopeWhere, parseReadScope, resolveEditions } from "../publication.mjs";
 import { ROLE_LABEL } from "./rankings.mjs";
 
@@ -34,9 +34,18 @@ function identity(r) {
   return row;
 }
 
-export function createPlayerFormRoute(read) {
-  return async (req, path, params) => {
-    if (path !== "/api/player-form") return undefined;
+// The statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A); the body ({ data }) and former tag unchanged.
+export const FORM_SPEC = { family: "player-form", data: true, ttl: 300, maxBytes: 512 * 1024,
+  reads: ["api.season_keys", "api.edition_keys", "api.team_finished_matches", "api.player_identities", "api.player_season_roles",
+    "api.team_identities", "api.player_form_grades", "api.player_form_minutes"] };
+
+export function createPlayerFormRoute(read, { versioned = createDataVersions(read) } = {}) {
+  return async (req, path, params) => (path === "/api/player-form" ? versioned(req, params, FORM_SPEC, (guarded) => form(guarded, params)) : undefined);
+}
+
+/** The « En forme » answer, read with `read`. */
+async function form(read, params) {
+  {
     validateParams(params, ["season", "leagues", "limit"]);
     const scope = parseReadScope(params);
     const rawLimit = params.get("limit");
@@ -44,7 +53,7 @@ export function createPlayerFormRoute(read) {
     const limit = rawLimit === null ? FORM_DEFAULT : Number(rawLimit);
     const editions = await resolveEditions(read, scope);
     const empty = { season: scope.season, up: [], down: [], minutes: [] };
-    if (editions.seasonId === null || (scope.leagueIds !== null && !editions.ids.length)) return respond(req, empty);
+    if (editions.seasonId === null || (scope.leagueIds !== null && !editions.ids.length)) return empty;
 
     // Each statement binds its own values: a value one of them leaves unread has no type.
     const statement = (build) => {
@@ -119,12 +128,6 @@ export function createPlayerFormRoute(read) {
     data.up = trend("up");
     data.down = trend("down");
     data.minutes = minutes.map((r) => ({ ...identity(r), minutes_last: r.m_last, minutes_before: r.m_before, delta: r.m_last - r.m_before, minutes: r.ms }));
-    return respond(req, data);
-  };
-}
-
-function respond(req, data) {
-  const etag = `W/"player-form-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
-  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 300 });
-  return send(req, { data }, 200, { etag, ttl: 300, maxBytes: 512 * 1024 });
+    return data;
+  }
 }

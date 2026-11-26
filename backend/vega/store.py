@@ -166,6 +166,12 @@ def migrate(conn, *, vector=False):
                 "INSERT INTO ops.schema_migrations(version,checksum) VALUES(%s,%s)",
                 (name, checksum),
             )
+    # The tables the read API's views and functions read, tracked again after every run (181,
+    # FAILURE_MODES_OPTIMISATIONS.md GH137A): a table a later migration adds to a read gets its triggers.
+    with conn.transaction():
+        conn.execute(lock)
+        if conn.execute("SELECT to_regprocedure('ops.track_data_changes()')").fetchone()[0]:
+            conn.execute("SELECT ops.track_data_changes()")
 
 
 def digest(batch):

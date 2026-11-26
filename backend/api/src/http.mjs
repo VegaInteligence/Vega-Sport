@@ -73,7 +73,11 @@ export function matchesEtag(value, etag) {
   return Boolean(held) && (held.any || held.tags.includes(etag.replace(/^W\//, "")));
 }
 
-export function send(req, value, status = 200, { etag, ttl = 0, maxBytes = 0, headers = {}, stale = null, personal = false } = {}) {
+/** An answer over its size limit (send's maxBytes, the data versions' spec). */
+export const tooLarge = (req) => send(req, { error: { code: "PAGE_TOO_LARGE", message: "Réduisez la taille de page.", retry: false } }, 413);
+
+/** `serialized`: the body, already its JSON. A 304 only for a tag the request holds (weak comparison) or '*'. */
+export function send(req, value, status = 200, { etag, ttl = 0, maxBytes = 0, headers = {}, stale = null, personal = false, serialized = null } = {}) {
   const cached = status === 200 && (ttl > 0 || personal);
   const h = {
     "Content-Type": "application/json; charset=utf-8",
@@ -88,10 +92,9 @@ export function send(req, value, status = 200, { etag, ttl = 0, maxBytes = 0, he
     if (matchesEtag(req.headers.get("if-none-match"), etag)) return new Response(null, { status: 304, headers: h });
   }
   if (req.method === "HEAD") return new Response(null, { status, headers: h });
-  const body = JSON.stringify(value),
+  const body = serialized ?? JSON.stringify(value),
     bytes = Buffer.byteLength(body);
-  if (maxBytes && bytes > maxBytes)
-    return send(req, { error: { code: "PAGE_TOO_LARGE", message: "Réduisez la taille de page.", retry: false } }, 413);
+  if (maxBytes && bytes > maxBytes) return tooLarge(req);
   return new Response(body, { status, headers: { ...h, "Content-Length": String(bytes) } });
 }
 

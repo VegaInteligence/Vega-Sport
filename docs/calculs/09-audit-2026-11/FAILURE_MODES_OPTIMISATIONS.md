@@ -240,6 +240,168 @@ the role's new trust and policy take effect only when the owner deploys `vega-v2
 workflow cannot change that stack): until then the deployed role still trusts `claude/v2-*` and reads the production
 key, though no workflow of this repository asks for it.
 
+## GH137A. Every body-hash validator read before the answer, from versions the writers keep (GH #137, VI-77; 26 Nov 2026, base `6c753375`)
+
+Seen before this change (`6c753375`): the routes of the manifest below answer a conditional request (`If-None-Match`,
+CloudFront's revalidations included) as a plain one, then compare: they run every statement of the answer (2 to 6;
+`/api/forecasts/live` 6), build its JSON and hash it, and send a 304 only after that. `ops.resource_versions` is
+advanced by the collector and the calculator for matches, editions, teams and players; its kinds `ranking` and
+`catalog` exist but no writer advances them, and the models, rankings, levels, award, forecasts, odds, archives,
+Wikidata facts, images and identities are written without any version. The publication (five minutes) is not a
+version of these answers: it lags their writes and moves with every unrelated one.
+
+Manifest (each route module holds its paths' declarations, beside its code):
+- `catalog`: `/api/rankings/*` (power, power/player, power/history, level, level/player, award, award/player, leagues,
+  breakouts, match, rounds, round, fates, index, edition, associations, club), `/api/club-links`,
+  `/api/forecasts/{match,odds,season,live,swap}`, `/api/archives/index`, `/api/cups/index`, `/api/cup-index`,
+  `/api/cup-table`, `/api/cup-snapshot`;
+- `support`: `/api/standings`, `/api/cups/edition`, `/api/player-honours`, `/api/club-facts`, `/api/coach-portrait`,
+  `/api/stadium`;
+- `profile`: `/api/players/{id}` and its `partners`, `similar`, `return`, `halves`, `actions`, `faced`, `injuries`,
+  `transfers`, `physical`, `style`; `/api/teams/{id}` and its `similar`, `substitutions`, `age-profile`, `passing`,
+  `squad`, `absences`; `/api/competitions`, `/api/player-market-values`, `/api/players/facts-coverage`;
+- `nations` (`/api/nations`, `/api/nations/{id}`), `worldcup` (`/api/worldcup/matches`, `/api/worldcup/matches/{key}`),
+  `archive-details` (`/api/archives/details`), `player-form` (`/api/player-form`), `match-display`
+  (`/api/matches/{id}/players/display`).
+- **Kept as GH137 and GH137M left them**: `/api/league-history` and `/api/matchdays` (one statement per request, the
+  reads bounded to the selection by index, no answer built for a 304, the tag the content's own: `league-history-v2-…`
+  and `catalog-v1-…`). Their written contracts are content-stable tags: a write outside the selection keeps the tag
+  (GH137-d, GH137M-d), a correction reversed gives the original tag again, two corrections in either order one tag
+  (GH137-e). A tag that carries a version changes with every write of the tables they share with the whole base
+  (`core.matches`, `core.rounds`, `core.provider_ids`), which would cost each holder a 200 after any such write and break
+  those contracts. Keeping a content tag and a read-free 304 together needs a signature per selection kept by a writer
+  (the read API writes nothing): with versions per table, every write of those tables makes every selection's
+  signature stale, so the worker would rebuild all of them (each a read of the selection, the work a revalidation does
+  today) after each write: more work than the revalidations it would save. Measured locally in the evidence `gh137/`.
+- Not in it, and why: the compact reads `/api/read/*` (validated by the publication or their own versions), the match
+  families on the match's revision, `/api/fixtures*`, `/api/matches/{id}/summary`, search, partition, Europe, the home,
+  `/api/ops/*`, health, status and the manifest (their own validators); the media wrapper (`media=1`) fronts only
+  `/api/read/*`; `/api/assets` is a 307 without a tag.
+
+### GH137A.1 Rules
+
+**The writers (migration 181, not `-- vega:online`: it adds triggers to every table the reads see).**
+- **What is a table a read sees.** `ops.track_data_changes()` walks the catalog from every `api` view and function:
+  a view's dependencies (`pg_depend` of its rule), a function's schema-qualified names (`api.`, `core.`, `agg.`,
+  `ops.`) and its dependencies, transitively; a partition counts as its root. Every base table reached carries four
+  triggers (`vega_change_insert`, `_update`, `_delete`: AFTER … FOR EACH ROW; `_truncate`: AFTER TRUNCATE FOR EACH
+  STATEMENT); `ops.data_sources` holds each relation's tables and whether each is partitioned. A relation that
+  reaches a materialized view, a foreign table, a table outside core, agg and ops, or a function running dynamic SQL
+  (`EXECUTE`) is unknown, never validated by versions. The machinery's own tables and `api.data_version` are left out.
+- **A change, and only a change.** A row trigger queues an event only for the first row of a transaction that changes
+  its table: an UPDATE whose new row is the old one, byte for byte (`OLD.* *<> NEW.*` false: the collector's upserts
+  of unchanged values), an INSERT … ON CONFLICT DO NOTHING that conflicts and a DELETE of nothing are not changes.
+  That row claims the table for the transaction (a transaction-local setting per table, read first in the trigger's
+  condition, so the later rows pay one lookup); the event inserts one mark (the table) into `ops.data_changes` at the
+  end of its statement. A TRUNCATE marks the table. The commit makes the mark visible with the data; a rollback, or a
+  savepoint rolled back, takes both away.
+- **No lock shared by writers.** A mark is a row of its own (an identity key): no counter row is updated in a
+  writer's transaction, so two transactions writing one table never wait on each other for it, and no lock order
+  changes (no new deadlock).
+- **Versions.** `ops.fold_data_changes()` (the worker, each planning round, about every 60 s) deletes up to 100 000
+  committed marks, oldest first, and adds their count per table to `ops.data_versions`, in one statement. A table's
+  version is its folded count plus its marks still present: one more for each committed transaction that changed it,
+  never less (a reader sees the count before or after a fold, never both or neither). Marks of transactions still
+  running are invisible to the fold and counted later.
+- **Partitions: what no row trigger sees.** A row written into a leaf directly marks its root (PostgreSQL clones the
+  parent's row triggers to every leaf, a later one or an attached one included). What no trigger sees: a leaf
+  truncated directly (review of 26 Nov 2026: `TRUNCATE core.player_match_stats_s2025` emptied nine rows of
+  `api.player_form_minutes` and left the draft's version as it was), a partition attached or detached, and rows
+  changed while a leaf was detached, then attached again (second review: DETACH, UPDATE, ATTACH of the same leaf gave
+  score 1 → 8 under the same version; detaching drops the cloned triggers, attaching clones them again). So a
+  partitioned source's version also names its partition tree as the catalog holds it: for each member, its oid, its
+  file (`relfilenode`, which a TRUNCATE replaces in its transaction) and its attachment's incarnation (the
+  transaction that wrote its `pg_inherits` row: an ATTACH, the first step of a concurrent DETACH, a leaf created
+  later each write one). Index lookups in `pg_inherits` and `pg_class`, a few rows each, for the partitioned sources
+  alone. Maintenance that rewrites a leaf's file (VACUUM FULL, CLUSTER, a rewriting ALTER) changes it too: a 200 once,
+  never a wrong 304. No event trigger (RDS would need its superuser).
+- **New tables.** `store.migrate` calls `ops.track_data_changes()` after every run: a migration that adds a table to
+  a read is followed by its triggers and its source rows.
+- **Privileges.** Only the trigger function (SECURITY DEFINER) writes marks; `vega_collect` and `vega_calc` hold no
+  privilege on the four tables nor the sequence (the default privileges of `ops` revoked for them); the fold may be run
+  by the worker's two roles; `vega_read` runs `api.data_version` and reads nothing else of it; `PUBLIC` keeps only the
+  claim, which every writing role runs and which sets a setting of its own transaction.
+
+**The read API.**
+- **Validation first, then the version.** A route's own checks of its parameters (unknown, repeated, malformed,
+  missing) run before any statement: an intrinsically invalid request is its 400 (or 404) and no-store after zero
+  statements, the base reachable or not. The data validator runs each builder once against a reader that refuses
+  every statement: an error the builder raises before its first statement is the answer; once a statement is
+  asked, validation is over and the version is read.
+- **The version, read before the answer.** `api.data_version(relations text[], clock text)` (SECURITY DEFINER):
+  for the relations a route declares, the SHA-256 of the base's head (the last applied migration and how many),
+  `current_date` of the base when a relation or the route's own statements read it (`clock` `day`: player profiles,
+  squads, absences, facts coverage, replacement facts), and each source table's version; NULL when a relation is
+  unknown, reads the time, a source is gone, or a source holds more than 10 000 marks not yet folded (a worker
+  stopped: the reads stay bounded, and the routes answer as without versions). Index lookups only.
+- **Declared reads.** Each route of the manifest declares the `api` relations its statements name, and the clock its
+  own statements read. While it builds an answer every statement is checked against them: an undeclared name or
+  clock is, in tests, an error naming it; in production, a log line `undeclared read` and the former tag form.
+- **The tag.** `W/"<family>-v2-<check>-<content>"`: `content` the SHA-256 the route's former tag hashed (the same
+  JSON); `check` 16 hexadecimal characters of the SHA-256 of the resource (the read API's release `VEGA_RELEASE`, else
+  a value drawn per process, the Node.js version, the media base, the family, the path, the sorted parameters), the
+  version, the answer's freshness and its content. Two processes of one release give the same tag for the same
+  version and content; another release, another tag.
+- **A 304 only for the tag the 200 would carry (RFC 9110 § 13.1.2, RFC 9111 § 4.3.4).** Every 304, `*` aside, carries
+  a tag the request holds, compared weakly as a whole, and that tag is the one a 200 to the same request would carry
+  now: a cache can always tell which stored answer it freshens. So:
+  - a held tag whose check is right for the current version, its content and a freshness of the route: that is the
+    current tag (the content was read after that version, and no table changed since); 304 with it, after the version
+    statement alone, no answer built;
+  - otherwise the answer is built; 304 only when a held tag weakly equals the tag built (or for `*`, the answer
+    existing); else 200 with it. A tag of the base commit's form (`<family>-v1-…`), a tag of another release, of a
+    version since passed or of another resource is never the current tag: one 200 with the current tag, then 304s in
+    one statement. A write that leaves an answer's bytes as they were thus costs its holders one 200 each, not every
+    later revalidation.
+  - Without versions (an older base, an unknown relation, an undeclared read): the base commit's tag form and rule.
+- **A positive tag only for an answer that is one.** A tag is made, and compared, only once the answer is built and
+  fits its route's size limit: an answer over it is a 413 for GET and HEAD alike, whatever is held (`*` included),
+  and carries no tag. Before, a HEAD of such an answer said 200 with a tag, and a GET holding that tag got a 304
+  although its GET was a 413.
+- **Variable freshness** (`/api/matches/{id}/players/display`: 60 s finished, 15 s before): the check binds it; a held
+  tag is the current one only at the freshness its answer has, which the 304 says.
+- **One snapshot, or a safe bracket.** The version is read before the answer's statements: a write committed in
+  between makes the answer newer than its check, never older, and the next revalidation builds again.
+- **What stays.** Statuses, bodies byte for byte, headers, errors, HEAD (but 413 over the size limit, above); no
+  parameter added (no generation, no pin).
+
+### GH137A.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| GH137A-a | Each path of the manifest, plain GET, on the seed | status, body and Cache-Control of the base commit; its tag of the new form |
+| GH137A-b | The same with its tag, nothing written, on a fresh handler | 304 with that tag and the freshness, one statement (the version), no other statement |
+| GH137A-c | HEAD; HEAD with the tag | 200 with the tag, no body; 304 in one statement |
+| GH137A-d | The base commit's tag of the same content; a tag of the new form with another content or check; malformed; another family's; `*`; a list holding the tag | 200 with the current tag (once); 200; 200; 200; 304 with the current tag (built); 304 with the tag held, in one statement |
+| GH137A-e | 400 and 404 of the manifest's routes, with a held tag or `*` | 400 / 404, never 304 |
+| GH137A-f | A committed change to a table of a route's closure (a row of the answer, a row elsewhere in the same table) | another check: built again; 200 with the current tag, the new answer if it changed, the same bytes if not; then 304 in one statement for that tag |
+| GH137A-g | The same change rolled back; in a rolled-back savepoint | no mark: 304 in one statement |
+| GH137A-h | An upsert of unchanged values (a `jsonb` column included); INSERT … ON CONFLICT DO NOTHING conflicting; DELETE of nothing | no mark; 304 in one statement |
+| GH137A-i | Another release (a held tag of it, same bytes); another migration applied | 200 with the current tag, then 304s in one statement; the same release and base: the same tag |
+| GH137A-j | A route reading `current_date`, its base's day changed | another check |
+| GH137A-k | An undeclared `api` relation read while building | strict: error naming it; otherwise the former tag form |
+| GH137A-l | A base without `api.data_version` | the base commit's tags and outcomes |
+| GH137A-m | Two transactions writing one table at once; the fold during writes; TRUNCATE; a row moved across partitions; a partition created later | neither waits; two versions more; the fold changes no version; a mark each |
+| GH137A-n | Every request of the manifest, its base tables as PostgreSQL counts them (`pg_stat_xact_user_tables`, partitions to their root) | within its declared relations' closure; every table of every closure carries the four triggers |
+| GH137A-o | `/api/league-history`, `/api/matchdays` | GH137-a–n and GH137M-a–f as written, unchanged |
+| GH137A-p | `/api/matches/{id}/players/display` of a finished match and of a match in play | each 304's freshness that of its answer (60, 15) |
+| GH137A-q | Writers' cost: 200 000-row insert, update, no-op update, delete; a transaction of many single-row upserts; two writers at once | within the bounds measured (evidence `gh137/`) |
+| GH137A-r | Readers' cost: the version statement on the seed, with marks pending and folded | index lookups only, milliseconds; more than 10 000 pending marks on a source: NULL, the reads bounded |
+| GH137A-s | A leaf truncated directly (the review's nine rows); a leaf created later then truncated; a row written into a leaf directly; a partition detached, attached with rows, detached concurrently; a detached table truncated; the second review's sequence: DETACH, UPDATE the detached leaf, ATTACH it again | the version changes for each, the detached table excepted; rolled back, it does not; at the route, the tag held before the sequence is a 200 with the corrected bytes |
+| GH137A-t | A check right for the resource and version with another content; a tag of the same family from another route, or the same path with other parameters; the same release in two processes; another release | 200; 200; a fresh process of the same release answers the tag in one statement; 200 with its own tag |
+| GH137A-u | An answer over its size limit, GET and HEAD, with its content's tag, `*`, nothing | 413, no tag, never 304 |
+| GH137A-v | Every 304 of every test, `*` aside | its tag weakly equals a tag the request held |
+| GH137A-w | A day changes without any write (the base's `current_date`, read in another time zone) for a route that reads it, and for one that does not | another check for the first (built again, 200), the same for the second |
+| GH137A-x | 181 on a base already populated at 180 (the API seed) and on an empty one; the locks it takes | applies on both; each table it adds triggers to is locked SHARE ROW EXCLUSIVE until its commit (not online: the services are stopped); the same answers from both |
+| GH137A-y | An intrinsically invalid request of every family (unknown, repeated, malformed or missing parameter), the base reachable and not | 400 (or the route's 404), no-store, zero statements; never 503 |
+
+GH137A-a–e, k, p, s (route), t–w, y: `backend/api/test/data-versions.test.mjs` with the existing route tests run strict
+(`context.mjs` asks every 200 again with its tag and requires a 304 in one statement whose tag the request held); f–j,
+l, n: the same file (writes through the owner role, the reader as `vega_read`); m, q, r, s: `backend/tests/
+test_data_versions.py` and the evidence's `gh137/`; o: `league-history-validator.test.mjs`, `matchdays-lean.test.mjs`
+as written for GH137 and GH137M; x: the evidence. Not verifiable here: production's write rate per table, hence the
+share of revalidations a check answers there (the access logs after a Deploy, GH149).
+
 ## GH137. `/api/league-history`: one statement for a validator and its answer, the reads made cheaper, an hour at the edge (GH #137 for this route, VI-77; with GH #145 for this route, VI-85)
 
 Seen before this change: the route ran its four reads (`api.league_history_edition`, `_matches`, `_next`, `_players` or

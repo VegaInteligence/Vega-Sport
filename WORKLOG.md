@@ -9,6 +9,12 @@
 - Retours de hugo à 15 h 13 et 15 h 14 (§ 76.1) : la recherche ouverte ne cache plus la piste, qui glisse à gauche (puis passe en symboles si la place manque) ; bouton du compte connecté sans monogramme carré (pilule « Mon compte », rond avec l'initiale sous 1 024 px). N13 et N14 rouges sur f2d62a6, verts après ; barre 17/17, en-tête 36/37 (X1 : 404 du rejeu), match-tabs 40/40, site 1 118/1 118.
 - Retours de 15 h 29 (§ 76.2, maquette https://claude.ai/artifact/HWrnX3K1t1JY5asLRUqW7j, A choisie) : recherche et compte à 40 px comme la piste ; bouton du thème retiré ; thème Système / Clair / Sombre dans Paramètres, sans compte toujours celui de l'ordinateur ; menu « Mon compte » en pilules ; sous-menus plus petits. N8, N15 à N18 rouges sur 09c982d, verts après ; barre 21/21, en-tête 36/37 (X1 : rejeu), match-tabs 40/40, site 1 119/1 119.
 
+## Validateurs des lectures publiques de l’API, 26 novembre 2026
+
+- Le lot couvre les lectures de l’API qui recalculaient toute la réponse pour valider un ETag. Les résultats, erreurs, plafonds de taille et durées de fraîcheur attendus sont documentés dans GH137A. [GitHub #137](https://github.com/VegaInteligence/Vega-Sport/issues/137) · [Linear VI-77](https://linear.app/vegainteligence/issue/VI-77).
+- Cadrage par Astra et Codex, implémentation et tests par Opus, revue technique indépendante par Codex. La migration ajoute des déclencheurs sur les sources et utilise le chemin de déploiement avec arrêt des écritures.
+- La première revue a identifié des écarts dans les réponses conditionnelles, le rattachement des partitions, les entrées invalides, le retard de consolidation et les changements de schéma. Les contrôles par sélection couvrent aussi les journées et les archives historiques. Clôture à la fusion de la livraison validée.
+
 ## Cases des chiffres pleines et cartes du fil à 10 px — FAILURE_MODES § 75 (26 novembre 2026, sur main depuis 5f63f03)
 
 - Demande de hugo (11 h 28, captures Possession et fil de la Ligue des champions) : ces deux endroits à 10 px. Maquette https://claude.ai/artifact/Sf5wRw5NTSV8wrNr4jzhQL ; hugo a pris la piste B (cinq cases pleines sans traits gris) et les cartes du fil à 10 px, « tu peux tout push dans main » (11 h 31).

@@ -10,8 +10,8 @@
  * referee, managers, the base's score, the line-ups by side (from 1970: before, empty lists), its events by time and
  * the kicks of its shoot-out in the order taken.
  */
-import { createHash } from "node:crypto";
-import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { reject, validateParams } from "../http.mjs";
+import { createDataVersions } from "../data-versions.mjs";
 
 const MATCH = /^\/api\/worldcup\/matches\/([^/]+)$/;
 const KEY = /^M-\d{4}-\d{2,3}$/;
@@ -21,24 +21,24 @@ const LINE = { GK: 0, DF: 1, CB: 1, RB: 1, LB: 1, SW: 1, RWB: 1, LWB: 1, WB: 1, 
 // Two halves of one substitution: the player going off first.
 const AFTER = { off: 1, on: 2 };
 
-function respond(req, data) {
-  const etag = `W/"worldcup-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
-  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 3600 });
-  return send(req, { data }, 200, { etag, ttl: 3600 });
-}
+// Each path's statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A); the bodies ({ data }) and former tags unchanged.
+const worldcup = (reads) => ({ family: "worldcup", data: true, ttl: 3600, reads });
+export const WORLDCUP_INDEX_SPEC = worldcup(["api.worldcup_match_index"]);
+export const WORLDCUP_MATCH_SPEC = worldcup(["api.worldcup_match_heads", "api.worldcup_match_people", "api.worldcup_match_events",
+  "api.worldcup_match_kicks", "api.source_revisions"]);
 
 const day = (value) => (value ? String(value instanceof Date ? value.toISOString() : value).slice(0, 10) : null);
 
-async function index(req, params, read) {
+async function index(params, read) {
   validateParams(params, ["edition"]);
   const edition = params.get("edition");
   if (!/^\d{4}$/.test(edition || "")) reject(400, "Paramètre invalide.");
   const rows = await read("SELECT key, date, home, away FROM api.worldcup_match_index WHERE edition = $1 ORDER BY date, key", [Number(edition)]);
   if (!rows.length) reject(404, "Ressource introuvable.");
-  return respond(req, { edition: Number(edition), matches: rows.map((r) => ({ key: r.key, date: day(r.date), home: r.home, away: r.away })) });
+  return { edition: Number(edition), matches: rows.map((r) => ({ key: r.key, date: day(r.date), home: r.home, away: r.away })) };
 }
 
-async function match(req, key, params, read) {
+async function match(key, params, read) {
   validateParams(params, []);
   if (!KEY.test(key)) reject(400, "Paramètre invalide.");
   const [head] = await read("SELECT * FROM api.worldcup_match_heads WHERE key = $1", [key]);
@@ -58,7 +58,7 @@ async function match(req, key, params, read) {
       .sort((a, b) => Number(b.starter) - Number(a.starter) || (LINE[a.position] ?? 2) - (LINE[b.position] ?? 2) || (a.number ?? 99) - (b.number ?? 99) || a.name.localeCompare(b.name))
       .map((p) => ({ person: p.person, name: p.name, number: p.number ?? null, position: p.position ?? null, starter: p.starter }));
   const penalties = head.home_penalty_score == null || head.away_penalty_score == null ? null : [head.home_penalty_score, head.away_penalty_score];
-  return respond(req, {
+  return {
     key, edition: head.edition, stage: head.stage, group: head.group_name ?? null, date: day(head.date), time: head.time ?? null,
     stadium: { name: head.stadium, city: head.city ?? null, country: head.country ?? null },
     referee: referee ? { name: referee.name, country: referee.country ?? null } : null,
@@ -72,13 +72,13 @@ async function match(req, key, params, read) {
       .map((e) => ({ minute: e.minute, stoppage: e.stoppage, side: side(e.team_key), kind: e.kind, person: e.person, name: e.name })),
     kicks: kicks.map((k) => ({ side: side(k.team_key), person: k.person, name: k.name, converted: k.converted })),
     credit: credit ? { name: credit.name, url: credit.url, license: credit.license } : null,
-  });
+  };
 }
 
-export function createWorldCupRoute(read) {
+export function createWorldCupRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
-    if (path === "/api/worldcup/matches") return index(req, params, read);
+    if (path === "/api/worldcup/matches") return versioned(req, params, WORLDCUP_INDEX_SPEC, (guarded) => index(params, guarded));
     const found = path.match(MATCH);
-    return found ? match(req, decodeURIComponent(found[1]), params, read) : null;
+    return found ? versioned(req, params, WORLDCUP_MATCH_SPEC, (guarded) => match(decodeURIComponent(found[1]), params, guarded)) : null;
   };
 }

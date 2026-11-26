@@ -729,6 +729,13 @@ class Worker:
                 print(f"publication generation={generation}", flush=True)
         except Exception as error:
             print(f"publication error={error_code(error)}", flush=True)
+        # The read API's data versions (181, FAILURE_MODES_OPTIMISATIONS.md GH137A): the committed writes' marks,
+        # folded each round so that reading a version stays a few index lookups.
+        try:
+            with self.conn.transaction():
+                self.conn.execute("SELECT ops.fold_data_changes()")
+        except Exception as error:
+            print(f"data versions error={error_code(error)}", flush=True)
 
     # Handlers ------------------------------------------------------------
 

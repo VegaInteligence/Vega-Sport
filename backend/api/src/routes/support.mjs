@@ -11,8 +11,8 @@
  * (legacy: a UEFA id, or a name and country; a stadium's Wikidata id); a coach's photo may
  * come from the portrait search as well as from Wikidata.
  */
-import { createHash } from "node:crypto";
-import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { reject, validateParams } from "../http.mjs";
+import { createDataVersions } from "../data-versions.mjs";
 import { cloudFrontObjectUrl, immutableFile } from "../media.mjs";
 import { MESSI_ID, mergeMessiHonours } from "../curated-honours.mjs";
 import { projectionGroups } from "../../../../dashboard/shared/honour-display.js";
@@ -33,11 +33,15 @@ function validate(p, spec) {
 }
 const missing = () => reject(404, "Donnée indisponible.");
 
-function respond(req, body) {
-  const etag = `W/"support-v1-${createHash("sha256").update(JSON.stringify(body)).digest("hex")}"`;
-  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 60 });
-  return send(req, body, 200, { etag, ttl: 60 });
-}
+// Each path's statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A); the bodies and former tags are unchanged.
+// /api/assets is a redirection without a tag, not one of them.
+const SUPPORT_READS = {
+  "/api/player-honours": ["api.player_honours"],
+  "/api/club-facts": ["api.club_facts", "api.internal_id"],
+  "/api/coach-portrait": ["api.coach_portraits"],
+  "/api/stadium": ["api.club_facts", "api.stadiums", "api.stadium_plans", "api.internal_id"],
+};
+export const SUPPORT_SPECS = Object.fromEntries(Object.entries(SUPPORT_READS).map(([path, reads]) => [path, { family: "support", reads, ttl: 60 }]));
 
 const photo = (url, author, license, sourceUrl) => (url ? { url, sourceUrl, author: author ?? "", license: license ?? "" } : null);
 
@@ -70,14 +74,23 @@ export function honoursBody(r) {
 
 const IMAGE_TYPES = { webp: "image/webp", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg" };
 
-export function createSupportRoute(read, { mediaBase = null } = {}) {
+export function createSupportRoute(read, { mediaBase = null, versioned = createDataVersions(read) } = {}) {
+  const route = supportRoute(mediaBase);
   return async (req, path, params) => {
+    const spec = SUPPORT_SPECS[path];
+    return spec ? versioned(req, params, spec, (guarded) => route(guarded, req, path, params)) : route(read, req, path, params);
+  };
+}
+
+/** The answers of this route: a body, or a Response (the asset redirection), read with `read`. */
+function supportRoute(mediaBase) {
+  return async (read, req, path, params) => {
     if (path === "/api/player-honours") {
       const p = validate(params, SPEC["player-honours"]);
       if (!p.id) reject(400, "Paramètre manquant.");
       const [r] = await read("SELECT * FROM api.player_honours WHERE public_id=$1", [p.id]);
       if (!r) missing();
-      return respond(req, honoursBody(r));
+      return honoursBody(r);
     }
     if (path === "/api/assets") {
       // An image URL of a response -> its copy behind CloudFront (main: the same 307).
@@ -103,7 +116,7 @@ export function createSupportRoute(read, { mediaBase = null } = {}) {
       if (!p.club) reject(400, "Paramètre manquant.");
       const [r] = await read("SELECT * FROM api.club_facts WHERE team_id=api.internal_id('team',$1)", [p.club]);
       if (!r) missing();
-      return respond(req, clubFacts(r));
+      return clubFacts(r);
     }
     if (path === "/api/coach-portrait") {
       const p = validate(params, SPEC["coach-portrait"]);
@@ -111,7 +124,7 @@ export function createSupportRoute(read, { mediaBase = null } = {}) {
       const rows = await read("SELECT * FROM api.coach_portraits WHERE lowered=lower($1) ORDER BY photo_url IS NULL, name LIMIT 1", [p.name]);
       if (!rows.length) missing();
       const r = rows[0];
-      return respond(req, { name: r.name, lookupVersion: r.lookup_version, photo: photo(r.photo_url, r.author, r.license, r.source_page_url) });
+      return { name: r.name, lookupVersion: r.lookup_version, photo: photo(r.photo_url, r.author, r.license, r.source_page_url) };
     }
     if (path === "/api/stadium") {
       const p = validate(params, SPEC.stadium);
@@ -122,7 +135,7 @@ export function createSupportRoute(read, { mediaBase = null } = {}) {
       );
       if (!s) missing();
       const plans = await read("SELECT * FROM api.stadium_plans WHERE venue_id=$1 ORDER BY seq", [s.venue_id]);
-      return respond(req, {
+      return {
         id: s.id,
         sourceUrl: `https://www.wikidata.org/wiki/${s.id}`,
         fetchedAt: iso(s.fetched_at),
@@ -141,7 +154,7 @@ export function createSupportRoute(read, { mediaBase = null } = {}) {
           ...(plan.allow_geolocation && { allowGeolocation: true }),
           ...(plan.format != null && { format: plan.format }),
         })),
-      });
+      };
     }
     return null;
   };
