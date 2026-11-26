@@ -23,8 +23,8 @@
 // window rounded, R50 on a phone with a margin.
 // § 74 (hugo, 26 Nov 11 h 16 and 11 h 18): R51 a figure's bubble the width of its tile, in the teams' colours · R52 on a phone
 // the strip's width.
-// § 75 (hugo, 26 Nov 11 h 31 and 11 h 36): R42 the thread's cards at 10 px · R53 the strip of figures as before, its two
-// ends rounded 10 px · R54 on a phone, its corners.
+// § 75 (hugo, 26 Nov 11 h 31, 11 h 36, 12 h 05): one rounding, 22 px: R42 the thread's cards, R49 to R51 the window and
+// the bubbles · R53 the strip of figures as before, its line all round bending at the corners · R54 on a phone.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -198,16 +198,16 @@ async function check(name, expected, run) {
 }
 
 /** § 74: a figure's bubble against its tile: their boxes and the teams' colours in each (the tile's first figure). */
-// § 75: the strip of figures keeps its look (lines between the tiles), only its two ends rounded.
+// § 75: the strip of figures keeps its look (lines between the tiles), its line all round with the page's rounding.
 async function kpiTiles(page) {
   await page.locator(".match-kpis > *").first().waitFor();
   return page.evaluate(() => {
     const strip = document.querySelector(".match-kpis"), cs = getComputedStyle(strip);
-    const tiles = [...strip.children].map((t) => {
-      const c = getComputedStyle(t);
-      return { radius: [c.borderTopLeftRadius, c.borderTopRightRadius, c.borderBottomRightRadius, c.borderBottomLeftRadius].join(" "), right: c.borderRightWidth, bg: c.backgroundColor };
-    });
-    return { tiles, gap: cs.columnGap, line: cs.borderTopWidth };
+    const tiles = [...strip.children].map((t) => getComputedStyle(t).borderRightWidth);
+    return {
+      tiles, radius: cs.borderRadius, overflow: cs.overflow, gap: cs.columnGap,
+      border: [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth, cs.borderLeftWidth].join(" "),
+    };
   });
 }
 
@@ -434,8 +434,8 @@ try {
           assert.deepEqual([got.report.bg, got.report.color, got.report.h], [fill, ink, 32], "report filled");
           assert.deepEqual([got.back.bg, got.bookmark.bg, got.competition.bg], [quiet, quiet, quiet], "quiet pills");
           assert.deepEqual([got.step.radius, got.step.border, got.step.w, got.step.h], ["50%", "0px", 44, 44], "round steps");
-          assert.deepEqual([got.current.bg, got.current.color, got.current.radius, got.current.border], [fill, ink, "10px", "0px"], "current tile");
-          assert.deepEqual([got.other.bg, got.other.radius], [quiet, "10px"], "other tile");
+          assert.deepEqual([got.current.bg, got.current.color, got.current.radius, got.current.border], [fill, ink, "22px", "0px"], "current tile");
+          assert.deepEqual([got.other.bg, got.other.radius], [quiet, "22px"], "other tile");
           assert.deepEqual(got.crests, ["0px rgba(0, 0, 0, 0)", "0px rgba(0, 0, 0, 0)"], "crests without frame or fill");
           assert.equal(got.segments.radius, "999px", "choices' track");
           assert.deepEqual([got.pressed.bg, got.pressed.color, got.pressed.radius, got.pressed.h], [fill, ink, "999px", 32], "the current choice");
@@ -475,28 +475,24 @@ try {
         return got;
       });
 
-      await check("R51 a figure's bubble the width of its tile, on its edges, the teams in the tile's colours, 10 px corners", { width: "the tile's", left: "the tile's", colours: "the tile's", radius: "10px" }, async () => {
+      await check("R51 a figure's bubble the width of its tile, on its edges, the teams in the tile's colours, 22 px corners", { width: "the tile's", left: "the tile's", colours: "the tile's", radius: "22px" }, async () => {
         const got = await kpiBubble(page, 0);
         await page.screenshot({ path: join(out, "infobulle-chiffres-bureau.png") });
         await page.locator(".match-kpis > *").nth(0).blur();
         assert.ok(Math.abs(got.bubble.width - got.tile.width) <= 1, `bubble ${got.bubble.width}px, tile ${got.tile.width}px`);
         assert.ok(Math.abs(got.bubble.left - got.tile.left) <= 1, `bubble at ${got.bubble.left}px, tile at ${got.tile.left}px`);
-        assert.equal(got.radius, "10px", "the bubble's corners");
+        assert.equal(got.radius, "22px", "the bubble's corners");
         assert.deepEqual([got.bubbleHome, got.bubbleAway], [got.tileHome, got.tileAway], "the teams' colours");
         return got;
       });
 
-      await check("R53 the strip of figures as before (its line, the lines between the tiles), its two ends rounded 10 px", { ends: "10 px", middle: "0", lines: "1 px" }, async () => {
+      await check("R53 the strip of figures as before (the lines between the tiles), its line all round and bending at 22 px corners", { radius: "22px", border: "1px all round", clipped: true }, async () => {
         const got = await kpiTiles(page);
-        await page.locator(".match-kpis > *").nth(0).hover();
+        await page.locator(".match-kpis > *").nth(4).hover();
         await page.locator(".match-kpis").screenshot({ path: join(out, "cases-chiffres-bureau.png") });
         await page.mouse.move(0, 0);
-        const r = got.tiles.map((t) => t.radius);
-        assert.equal(r.length, 5, "five tiles");
-        assert.deepEqual([r[0], r[4]], ["10px 0px 0px 10px", "0px 10px 10px 0px"], "the two ends");
-        assert.deepEqual(r.slice(1, 4), Array(3).fill("0px 0px 0px 0px"), "the middle tiles square");
-        assert.deepEqual(got.tiles.slice(0, 4).map((t) => t.right), Array(4).fill("1px"), "the lines between the tiles");
-        assert.deepEqual([got.gap, got.line], ["normal", "1px"], "no gap, the line above kept");
+        assert.deepEqual([got.radius, got.border, got.overflow, got.gap], ["22px", "1px 1px 1px 1px", "hidden", "normal"], "the strip");
+        assert.deepEqual(got.tiles.slice(0, 4), Array(4).fill("1px"), "the lines between the tiles");
         return got;
       });
 
@@ -551,13 +547,13 @@ try {
         return got;
       });
 
-      await check("R49 the picker's window rounded (10 px), no frame nor line under the title, a round close button, the competition's logo, pills of 44 px at most",
-        { radius: "10px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widestMax: 44 }, async () => {
+      await check("R49 the picker's window rounded (22 px), no frame nor line under the title, a round close button, the competition's logo, pills of 44 px at most",
+        { radius: "22px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widestMax: 44 }, async () => {
         const { dialog, got } = await pickerWindow(page);
         await page.screenshot({ path: join(out, "choix-journee-fenetre-bureau.png") });
         await page.keyboard.press("Escape");
         await dialog.waitFor({ state: "detached" }).catch(() => {});
-        assert.deepEqual({ ...got, widest: undefined, margin: undefined }, { radius: "10px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widest: undefined, margin: undefined });
+        assert.deepEqual({ ...got, widest: undefined, margin: undefined }, { radius: "22px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widest: undefined, margin: undefined });
         assert.ok(got.widest <= 44, `widest pill ${got.widest}px`);
         return got;
       });
@@ -940,12 +936,12 @@ try {
         return { ...sizes, got };
       });
 
-      await check("R50 phone: the picker's window rounded (10 px) with a margin around it, not edge to edge", { radius: "10px", border: "0px", marginMin: 8 }, async () => {
+      await check("R50 phone: the picker's window rounded (22 px) with a margin around it, not edge to edge", { radius: "22px", border: "0px", marginMin: 8 }, async () => {
         const { dialog, got } = await pickerWindow(f.page);
         await f.page.screenshot({ path: join(out, "choix-journee-fenetre-telephone.png") });
         await f.page.keyboard.press("Escape");
         await dialog.waitFor({ state: "detached" }).catch(() => {});
-        assert.equal(got.radius, "10px");
+        assert.equal(got.radius, "22px");
         assert.equal(got.border, "0px");
         assert.ok(got.margin >= 8, `margin ${got.margin}px`);
         return got;
@@ -962,13 +958,10 @@ try {
         return got;
       });
 
-      await check("R54 phone: the strip on three rows, its corners rounded (first tile top left, last tile across the bottom)", { first: "top left", last: "bottom" }, async () => {
+      await check("R54 phone: the strip on three rows, its line all round with 22 px corners", { radius: "22px", border: "1px all round" }, async () => {
         const got = await kpiTiles(f.page);
         await f.page.locator(".match-kpis").screenshot({ path: join(out, "cases-chiffres-telephone.png") });
-        const r = got.tiles.map((t) => t.radius);
-        assert.deepEqual([r[0], r[4]], ["10px 0px 0px 0px", "0px 0px 10px 10px"], "the strip's corners");
-        assert.deepEqual(r.slice(1, 4), Array(3).fill("0px 0px 0px 0px"), "the others square");
-        assert.equal(got.line, "1px", "the line above kept");
+        assert.deepEqual([got.radius, got.border, got.overflow], ["22px", "1px 1px 1px 1px", "hidden"], "the strip");
         return got;
       });
     } finally {

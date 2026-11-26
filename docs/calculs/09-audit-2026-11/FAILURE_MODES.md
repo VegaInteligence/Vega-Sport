@@ -6001,3 +6001,18 @@ traits gris » chosen with the thread's cards at 10 px.
 - **R53** (computer) the ends 10 px, the three middle tiles square, the lines between the tiles and above the strip
   kept (1 px). **R54** (phone) the first tile's top left and the fifth's bottom corners, the others square.
   **R42** the thread's cards now expect 10 px. Red on 5f63f03 (R42, R53, R54) and R53 red on 8ce15ca.
+
+### 75.1 One rounding, 22 px, and the strip's line bending at its corners (hugo, 26 Nov 2026, 12 h 02 with a screenshot of the strip's right end: « la ligne ne se bend pas », 12 h 05 « ok passe tout en 22 »)
+
+Before 26 Nov the thread's cards were square (0, a grey frame); 22 px came with the pills (§ 72). Mock-up
+https://claude.ai/artifact/M4ofm6jgSEFuCUhWkW58oJ (one slider for every rounding; strip: A the line all round, B no
+line above). hugo chose 22 px; piste A, the recommended one, taken for the line.
+
+- **`--match-radius: 22px`** (`match-pills.css`, on `html` so the bubbles drawn in `document.body` get it): the
+  thread's cards and their placeholder, the round picker's window (computer and phone), every bubble.
+- **The strip of figures**: its line no longer stops straight above rounded ends. It goes all round (1 px, `--border`)
+  with the page's rounding and clips the tiles, so whichever tile sits in a corner (one row, three a row, two a row)
+  is rounded with it; the lines between the tiles and the lit tile are unchanged. The per-tile corners of 87ee215 go.
+- **R42, R49, R50, R51** now expect 22 px. **R53** the strip: 22 px, 1 px all round, clipped, the lines between the tiles
+  kept. **R54** the same on a phone. Red on 87ee215.
+

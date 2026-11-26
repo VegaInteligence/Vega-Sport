@@ -84,8 +84,8 @@
   z-index: 1000;
   padding: 12px 14px;
   border: 1px solid var(--border-strong);
-  /* 10 px, as the round picker's window (hugo, 26 Nov 11 h 23, § 74). */
-  border-radius: 10px;
+  /* The match page's rounding, as the round picker's window (hugo, 26 Nov: 10 px at 11 h 23, § 74; 22 px at 12 h 05, § 75). */
+  border-radius: var(--match-radius, 22px);
   background: var(--surface-raised);
   box-shadow: var(--shadow-pop);
   color: var(--ink);

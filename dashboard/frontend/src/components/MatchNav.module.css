@@ -44,7 +44,7 @@
 .threadLoading {
   height: 76px;
   margin: 14px 0 16px;
-  border-radius: 10px;
+  border-radius: var(--match-radius, 22px);
   background: var(--pill-quiet);
 }
 .step {
@@ -120,7 +120,7 @@ a.step:focus-visible,
   box-sizing: border-box;
   padding: 10px 16px 11px;
   border: 0;
-  border-radius: 10px; /* 10 px like the window and the bubbles (hugo, 26 Nov 11 h 31, § 75). */
+  border-radius: var(--match-radius, 22px); /* § 75: the match page's rounding (match-pills.css). */
   background: var(--pill-quiet);
   color: var(--ink);
   text-decoration: none;
@@ -248,7 +248,7 @@ button.center:active {
   /* The same height whichever round is shown: the window does not jump between a round of three days and one of one. */
   height: min(800px, calc(100dvh - 48px));
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--match-radius, 22px);
   box-shadow:
     0 30px 80px rgb(0 0 0 / 0.35),
     0 0 0 1px var(--pill-quiet);
@@ -599,7 +599,7 @@ button.center:active {
     height: calc(100dvh - 20px);
     max-height: calc(100dvh - 20px);
     margin: 10px;
-    border-radius: 10px;
+    border-radius: var(--match-radius, 22px);
   }
   :root dialog.picker[open] {
     max-height: calc(100dvh - 20px);

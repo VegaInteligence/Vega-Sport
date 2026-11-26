@@ -22,6 +22,9 @@ html {
   --pill-pad: 14px;
   --pill-text: 13px;
   --pill-text-sm: 13px;
+  /* One rounding for the match page's cards, its strip of figures, its bubbles and the round picker's window: 22 px, the
+     thread's cards' rounding in the first release (hugo, 26 Nov 2026, 12 h 05 « ok passe tout en 22 »; § 75). */
+  --match-radius: 22px;
 }
 html[data-theme="light"] {
   --pill-fill: #0b0d0f;
@@ -253,29 +256,14 @@ html[data-theme="light"] {
 }
 
 /* ------------------------------------------------------------ figures strip */
-/* The strip keeps its look (lines, lit tile); only its two ends are rounded, 10 px (hugo, 26 Nov 2026, 11 h 36, after
-   trying filled tiles: « tout la ligne garde le design d'avant juste ajoute des arrondis sur les 2 extrémités »;
-   FAILURE_MODES § 75). */
-:root .match-detail .match-kpis > div:first-child {
-  border-radius: 10px 0 0 10px;
-}
-:root .match-detail .match-kpis > div:last-child {
-  border-radius: 0 10px 10px 0;
-}
-/* On several rows the strip's corners are the first tile's top left and the last tile's bottom right (both bottom
-   corners on a phone, where the last tile spans the row). */
-@media (max-width: 900px) {
-  :root .match-detail .match-kpis > div:first-child {
-    border-radius: 10px 0 0 0;
-  }
-  :root .match-detail .match-kpis > div:last-child {
-    border-radius: 0 0 10px 0;
-  }
-}
-@media (max-width: 480px) {
-  :root .match-detail .match-kpis > div:nth-child(5):last-child {
-    border-radius: 0 0 10px 10px;
-  }
+/* The strip keeps its look (lines between the tiles, the lit tile on hover); its line goes all round and bends at the
+   corners, the match page's rounding (hugo, 26 Nov 2026: 11 h 36 « garde le design d'avant juste ajoute des arrondis sur
+   les 2 extrémités », 12 h 02 « la ligne ne se bend pas », piste A of https://claude.ai/artifact/M4ofm6jgSEFuCUhWkW58oJ;
+   FAILURE_MODES § 75). Clipping the strip rounds whichever tile sits in a corner, on one row or several. */
+:root .match-detail .match-kpis {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--match-radius);
 }
 
 @media (max-width: 640px) {

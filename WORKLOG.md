@@ -6,6 +6,7 @@
 - `MatchNav.module.css` : cartes du fil et leur attente 22 → 10 px (8ce15ca).
 - Cases pleines d'abord poussées (8ce15ca), puis refusées par hugo à 11 h 36 (« c'est horrible ») : la bande reprend son allure d'avant (traits, case allumée) et seuls ses deux bouts sont arrondis à 10 px (`match-pills.css`), coins de la bande sur plusieurs lignes.
 - R53 et R54 (`match-tabs.e2e.mjs`) et R42 mis à 10 px, rouges sur 5f63f03, verts après.
+- Puis (12 h 02, 12 h 05, § 75.1) : un seul arrondi de 22 px (`--match-radius`) pour les cartes du fil, la fenêtre des journées et toutes les bulles ; le trait de la bande des chiffres fait le tour et suit les coins (piste A de https://claude.ai/artifact/M4ofm6jgSEFuCUhWkW58oJ). R42, R49 à R51, R53, R54 rouges sur 87ee215, verts après.
 
 ## CI plus rapide : sept parts équilibrées, main jamais annulée (26 novembre 2026, branche `claude/ci-plus-rapide` depuis main 122022b)
 
