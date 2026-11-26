@@ -448,3 +448,16 @@ test("GH149-j: two adjacent windows, a bound inside a second: the same records b
   assert.equal(second, 3, "t1, t1 + 1 ms and t2 − 1 ms: the record at t1 here only");
   assert.equal(first + second, whole);
 });
+
+test("GH204-b: the read API's request line names the route as the edge function does", async () => {
+  const exact = await exactRoutes();
+  const NEEDS = { "/api/cup-index": "?kind=supplemental", "/api/league-history": "?league=l_3FJFUl&season=2019/2020" };
+  const lines = [];
+  const handle = createHandler({ read: async () => [], log: (line) => lines.push(JSON.parse(line)), opsKey: "k".repeat(40) });
+  for (const path of [...exact, ...PATTERNS, "/api/read/nothing-here", "/api/x/../../etc"]) {
+    lines.length = 0;
+    await handle(new Request("https://api.test" + path + (NEEDS[path] || ""), { headers: { "X-Vega-Ops-Key": "k".repeat(40) } }));
+    assert.equal(lines.length, 1, path);
+    assert.equal(lines[0].route, family(event(path)).logged, path);
+  }
+});

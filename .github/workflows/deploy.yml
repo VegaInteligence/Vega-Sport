@@ -6,11 +6,13 @@ name: Deploy
 on:
   workflow_dispatch:
     inputs:
+      # keep: the count a Deploy saved when it stopped the worker, else the stack's own (a worker stopped on purpose
+      # stays so); 1 or 0 sets it (FAILURE_MODES_OPTIMISATIONS.md GH157-y).
       worker_desired_count:
-        description: Worker tasks after the migrations (0 keeps the worker stopped)
+        description: Worker tasks after the migrations (keep the current count, 1, or 0 to keep the worker stopped)
         type: choice
-        options: ['1', '0']
-        default: '1'
+        options: ['keep', '1', '0']
+        default: 'keep'
       import_archives:
         description: Run the historical archive import (sources in the release bucket, data/sources/)
         type: boolean
@@ -18,6 +20,8 @@ on:
 permissions:
   contents: read
   id-token: write
+  # A Deploy whose state another run holds asks GitHub whether that run has ended (GH157.3): gh api …/attempts/<n>.
+  actions: read
 concurrency:
   group: vega-v2-deploy
   cancel-in-progress: false
@@ -51,5 +55,7 @@ jobs:
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
           # The live provider's adapter (backend/vega/live/adapters.py); unset, the live ingestor stays off.
           LIVE_PROVIDER: ${{ vars.V2_LIVE_PROVIDER }}
+          # gh's token (actions: read only), to ask whether the run holding the Deploy's state has ended.
+          GH_TOKEN: ${{ github.token }}
         # pipefail: the step fails when the script does, not when tee does (it never does).
         run: set -o pipefail; bash infra/aws/deploy.sh | tee -a "$GITHUB_STEP_SUMMARY"

@@ -57,6 +57,8 @@ SUITES = {
     "VEGA_V2_ACCOUNT_MIGRATE_TEST_DSN": "vega_v2_account_migrate_test",
     # The statements' statistics (test_statement_statistics.py, FAILURE_MODES_OPTIMISATIONS.md GH171).
     "VEGA_V2_STATEMENTS_TEST_DSN": "vega_v2_statements_test",
+    # A Deploy's migrate task run for real by the deploy's stand-ins (test_deploy_flow.py, GH157).
+    "VEGA_V2_DEPLOY_FLOW_TEST_DSN": "vega_v2_deploy_flow_test",
 }
 
 

@@ -66,11 +66,12 @@ test("each request leaves one line: its path without its question, its status, i
   await handle(new Request("https://api.test/api/unknown?player=p_secret", { headers: { "If-None-Match": 'W/"x"' } }));
   assert.equal(lines.length, 2);
   const [health, unknown] = lines.map((line) => JSON.parse(line));
-  assert.deepEqual(Object.keys(health).sort(), ["conditional", "db", "ms", "path", "queries", "request", "status"]);
-  assert.deepEqual([health.request, health.path, health.status, health.queries, health.conditional], ["read", "/api/health", 200, 1, false]);
+  // GH204 (FAILURE_MODES_OPTIMISATIONS.md): its route too, `other` for a path no route serves.
+  assert.deepEqual(Object.keys(health).sort(), ["conditional", "db", "ms", "path", "queries", "request", "route", "status"]);
+  assert.deepEqual([health.request, health.path, health.route, health.status, health.queries, health.conditional], ["read", "/api/health", "health", 200, 1, false]);
   assert.equal(typeof health.ms, "number");
   assert.equal(typeof health.db, "number");
-  assert.deepEqual([unknown.path, unknown.status, unknown.conditional], ["/api/unknown", 404, true]);
+  assert.deepEqual([unknown.path, unknown.route, unknown.status, unknown.conditional], ["/api/unknown", "other", 404, true]);
   assert.ok(!lines[1].includes("p_secret"));
 });
 
@@ -85,8 +86,9 @@ test("only the function logs: a handler made without a log writes nothing (scrip
     console.log = original;
   }
   assert.deepEqual(written, []);
+  // The function's line goes to stdout as a JSON line of its own (GH204: no runtime prefix, for alerts.yaml's rule).
   const entry = readFileSync(new URL("../../../infra/aws/api-index.mjs", import.meta.url), "utf8");
-  assert.match(entry, /createHandler\(\{[^}]*\blog: console\.log\b[^}]*\}\)/s);
+  assert.match(entry, /createHandler\(\{[^}]*\blog: \(line\) => process\.stdout\.write\(line \+ "\\n"\)[^}]*\}\)/s);
 });
 
 test("a log that fails takes no answer with it", async () => {

@@ -2,6 +2,7 @@
  * Read API: Fetch-API handler (`handleRequest(Request) -> Response`). Routes are
  * tried in order; a path no route claims is a 404.
  */
+import { routeFamily } from "./route-family.mjs";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { errorResponse, reject } from "./http.mjs";
 import { withResolvedMedia } from "./media.mjs";
@@ -83,12 +84,17 @@ export function createHandler({ read: query, mediaBase = null, clock = Date.now,
       path = url.pathname;
     if (!["GET", "HEAD"].includes(req.method)) reject(405, "Méthode non autorisée.");
     if (!path.startsWith("/") || /[\u0000-\u001f\u007f\\]/.test(path)) reject(400, "Chemin invalide.");
-    if (path.split("/").some((part) => part.startsWith("."))) reject(404, "Ressource introuvable.");
+    const unclaimed = () => {
+      const store = spent.getStore();
+      if (store) store.unclaimed = true;
+      reject(404, "Ressource introuvable.");
+    };
+    if (path.split("/").some((part) => part.startsWith("."))) unclaimed();
     for (const handle of routes) {
       const response = await handle(req, path, url.searchParams);
       if (response) return response;
     }
-    reject(404, "Ressource introuvable.");
+    unclaimed();
   }
   async function answer(req) {
     try {
@@ -112,9 +118,11 @@ export function createHandler({ read: query, mediaBase = null, clock = Date.now,
     }
     // One line per request that reached the function: which reads the distribution does
     // not answer by itself, what they cost, and how many only ask "unchanged?"
-    // (`conditional`). The path alone, never the query.
+    // (`conditional`). The path alone, never the query; its route (`other` for a path no
+    // route serves), which alerts.yaml's rule counts the 5xx answers by (GH204).
     try {
-      log?.(JSON.stringify({ request: "read", path: pathOf(req), status: response.status, ms: Number(ms(total)), db: Number(ms(request.db)), queries: request.queries, conditional: req.headers.has("if-none-match") }));
+      const path = pathOf(req);
+      log?.(JSON.stringify({ request: "read", path, route: request.unclaimed ? "other" : routeFamily(path), status: response.status, ms: Number(ms(total)), db: Number(ms(request.db)), queries: request.queries, conditional: req.headers.has("if-none-match") }));
     } catch {
       /* a log that fails takes no answer with it */
     }

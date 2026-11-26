@@ -82,7 +82,10 @@ export function createSystemRoute(read) {
       const [r] = await read(
         "SELECT generation::text AS revision, EXISTS(SELECT 1 FROM api.editions) AS ready FROM api.publication",
       );
-      return send(req, { source: "AWS", status: r?.ready ? "ok" : "pending", revision: r?.revision ?? null }, r?.ready ? 200 : 503);
+      // The package it runs (api.yaml: VEGA_RELEASE, releases/v2-api/<sha256>.zip): the end of a Deploy checks the
+      // distribution serves the one it uploaded (infra/aws/verify-deploy.mjs, GH202); null outside a package.
+      const release = /^releases\/v2-api\/([a-f0-9]{64})\.zip$/.exec(process.env.VEGA_RELEASE || "")?.[1] ?? null;
+      return send(req, { source: "AWS", status: r?.ready ? "ok" : "pending", revision: r?.revision ?? null, release }, r?.ready ? 200 : 503);
     }
     if (path === "/api/status") {
       validateParams(params, []);

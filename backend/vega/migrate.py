@@ -196,7 +196,40 @@ def ensure_logins(conn, env):
     return [login for _, login, _ in rows]
 
 
-def main(env=os.environ):
+SQL = Path(__file__).resolve().parents[1] / "sql"
+# A migration that keeps the previous Deploy's code working while and after it applies (additive only: new objects,
+# functions or views redefined with the same columns) says so on a line of its own. Unmarked, the services are stopped
+# before it applies (FAILURE_MODES_OPTIMISATIONS.md GH157).
+ONLINE = re.compile(r"^-- vega:online[ \t]*$", re.M)
+# Exit codes the Deploy reads (infra/aws/deploy.sh): a pending migration needs the services stopped; the base holds a
+# migration this image does not know.
+STOP_REQUIRED, UNKNOWN = 3, 4
+
+
+def plan(conn, directory=SQL, vector=False):
+    """What applying this image's files would do, before anything changes: (the versions the base records that no file
+    of this image names, the applied files whose bytes changed, the files not applied yet). Every file of the directory
+    names a version, the optional vector file included; it is pending only with `vector`, as store.migrate applies it."""
+    files = sorted(Path(directory).glob("*.sql"))
+    present = conn.execute("SELECT to_regclass('ops.schema_migrations') IS NOT NULL").fetchone()[0]
+    applied = dict(conn.execute("SELECT version, checksum FROM ops.schema_migrations").fetchall()) if present else {}
+    names = {p.name for p in files}
+    unknown = sorted(set(applied) - names)
+    changed = [p.name for p in files if p.name in applied
+               and bytes(applied[p.name]) != hashlib.sha256(p.read_text(encoding="utf-8").encode()).digest()]
+    pending = [p for p in files if p.name not in applied and (vector or "vector_optional" not in p.name)]
+    return unknown, changed, pending
+
+
+def online(path):
+    return bool(ONLINE.search(Path(path).read_text(encoding="utf-8")))
+
+
+def main(env=os.environ, argv=()):
+    argv = list(argv)
+    if argv not in ([], ["--online"]):
+        print("usage: python -m vega.migrate [--online]", file=sys.stderr)
+        return 2
     url = owner_url(env)
     if not url:
         print("V2_MIGRATION_DATABASE_URL or V2_DB_HOST/NAME/USER/PASSWORD is required", file=sys.stderr)
@@ -205,6 +238,19 @@ def main(env=os.environ):
     if account:
         account_files()  # before anything changes: an image without the account's files stops here
     with connect(url) as conn:
+        unknown, changed, pending = plan(conn, vector=env.get("V2_VECTOR") == "1")
+        if unknown:
+            # An older image never migrates, nor runs, on a newer base.
+            print(f"MIGRATIONS_UNKNOWN the base holds {len(unknown)} migration(s) this image does not know: {', '.join(unknown)}", file=sys.stderr)
+            return UNKNOWN
+        if changed:
+            print(f"MIGRATION_CHECKSUM_CHANGED {', '.join(changed)}: applied with other bytes", file=sys.stderr)
+            return 1
+        if argv == ["--online"]:
+            blocking = [p.name for p in pending if not online(p)]
+            if blocking:
+                print(f"STOP_REQUIRED {len(blocking)} pending migration(s) not marked '-- vega:online': {', '.join(blocking)}", file=sys.stderr)
+                return STOP_REQUIRED
         present = conn.execute("SELECT to_regclass('ops.schema_migrations') IS NOT NULL").fetchone()[0]
         count = conn.execute("SELECT count(*) FROM ops.schema_migrations").fetchone()[0] if present else 0
         migrate(conn, vector=env.get("V2_VECTOR") == "1")
@@ -213,10 +259,18 @@ def main(env=os.environ):
         if account:
             done, total = migrate_account(conn)
             line += f" account applied={len(done)} total={total}"
-        logins = ensure_logins(conn, env)
+        try:
+            logins = ensure_logins(conn, env)
+        except LoginsRefused as refused:
+            print(f"{line} {refused}", file=sys.stderr, flush=True)
+            return 1
+        except psycopg.Error as failed:
+            # The rotation's own messages name a login and a SQLSTATE, never a statement.
+            print(f"{line} LOGINS_FAILED {failed.diag.message_primary or type(failed).__name__}", file=sys.stderr, flush=True)
+            return 1
     print(f"{line} logins={','.join(logins) or 'unchanged'}", flush=True)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(argv=sys.argv[1:]))

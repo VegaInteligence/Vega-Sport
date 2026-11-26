@@ -2,12 +2,13 @@
 W1 to W12, written before these tests).
 
 The real infra/aws/deploy.sh and infra/aws/ci/secrets.sh run from the repository root, offline: `aws`, `npm`,
-`python3`, `docker` and `node` are stand-ins on PATH (`node` runs the real probe of step 12 with the real Node.js when
-a test asks it: FAILURE_MODES_OPTIMISATIONS.md, GH220-s). The stand-in `aws` answers from a JSON state (SSM parameters, stacks
-with their outputs, parameters and status), records every call, and keeps what a call writes (put-parameter,
-deploy). `python3` stands in for infra/aws/package_api.py only (the packages are built for real in CI, job « Read
-API package »). A run is judged on the calls it made: the stacks deployed with their overrides, the parameters
-written, the uploads, the tasks, and on its log.
+`python3`, `docker` and `node` are the stateful stand-ins of deploy_fakes.py on PATH (`node` runs the real probe of step
+12 with the real Node.js when a test asks it: FAILURE_MODES_OPTIMISATIONS.md, GH220-s). The stand-in `aws` answers
+from a JSON state (SSM parameters, stacks with their outputs, parameters and status, ECR, the Deploy's state in S3),
+records every call, and keeps what a call writes. `python3` stands in for infra/aws/package_api.py (the packages are
+built for real in CI, job « Read API package ») and runs the other infra scripts for real; the migrate task's exit
+codes are scripted here (test_deploy_flow.py runs the real one). A run is judged on the calls it made: the stacks
+deployed with their overrides, the parameters written, the uploads, the tasks, and on its log.
 
 Evidence: one JSON file per Deploy run (the state given, the environment, the exit code, the log, every call, the
 state after; the secrets in it are the run's own random ones) in VEGA_ACCOUNT_DEPLOY_EVIDENCE, or by default
@@ -28,11 +29,14 @@ import time
 import unittest
 import urllib.parse
 
+import deploy_fakes
 from prerequisites import require
 
 ROOT = Path(__file__).resolve().parents[2]
 ACCOUNT = "361769570630"
 RELEASES = f"vega-v2-releases-{ACCOUNT}-us-east-2"
+# The Deploy's state lives in the roles stack's bucket (FAILURE_MODES_OPTIMISATIONS.md GH157.3).
+STATE_BUCKET = f"vega-v2-deploy-state-{ACCOUNT}-us-east-2"
 TAG = "0123456789abcdef0123456789abcdef01234567"
 ENDPOINT = "vega-football-db-postgres.cabcdefghijk.us-east-2.rds.amazonaws.com"
 FRONT_URL = "https://abcdefghijklmnopqrstuvwxyz012345.lambda-url.us-east-2.on.aws/"
@@ -46,136 +50,34 @@ SWITCH = "/vega/v2/account-deploy"
 TEMPLATE = (ROOT / "infra/aws/account.yaml").read_text()
 EVIDENCE = Path(os.environ.get("VEGA_ACCOUNT_DEPLOY_EVIDENCE") or Path(tempfile.gettempdir()) / "vega-account-deploy" / time.strftime("%Y%m%dT%H%M%S"))
 
-FAKE_AWS = r'''
-import json, os, re, sys
-state_path, log_path = os.environ["FAKE_STATE"], os.environ["FAKE_LOG"]
-state = json.load(open(state_path))
-argv = sys.argv[1:]
-with open(log_path, "a") as log:
-    log.write(json.dumps({"tool": "aws", "argv": argv}) + "\n")
-words, opts, key = [], {}, None
-for token in argv:
-    if token.startswith("--"):
-        key = token[2:]
-        opts[key] = []
-    elif key is None:
-        words.append(token)
-    else:
-        opts[key].append(token)
-def value(name):
-    return (opts.get(name) or [""])[0]
-def save():
-    json.dump(state, open(state_path, "w"))
-def fail(message, code=254):
-    print(message, file=sys.stderr)
-    sys.exit(code)
-service, op = (words + ["", ""])[:2]
-query = value("query")
-if (service, op) == ("sts", "get-caller-identity"):
-    print(state["account"])
-elif (service, op) == ("cloudformation", "describe-stacks"):
-    name = value("stack-name")
-    stack = state["stacks"].get(name)
-    if stack is None:
-        fail(f"An error occurred (ValidationError) when calling the DescribeStacks operation: Stack with id {name} does not exist")
-    if query == "Stacks[0].StackStatus":
-        print(stack["status"])
-    elif m := re.fullmatch(r"Stacks\[0\]\.Outputs\[\?OutputKey=='(\w+)'\]\.OutputValue", query):
-        print(stack.get("outputs", {}).get(m[1], ""))
-    elif m := re.fullmatch(r"Stacks\[0\]\.Parameters\[\?ParameterKey=='(\w+)'\]\.ParameterValue", query):
-        print(stack.get("parameters", {}).get(m[1], ""))
-    else:
-        fail("fake aws: unknown query " + query, 99)
-elif (service, op) == ("cloudformation", "deploy"):
-    name = value("stack-name")
-    if name in state.get("fail_deploy", []):
-        fail(f"Failed to create/update the stack {name}", 255)
-    stack = state["stacks"].setdefault(name, {"status": "CREATE_COMPLETE", "outputs": {}, "parameters": {}})
-    for pair in opts.get("parameter-overrides", []):
-        k, _, v = pair.partition("=")
-        stack["parameters"][k] = v
-    if name == "vega-v2-account":
-        stack["outputs"]["FrontUrl"] = state["front_url"]
-    save()
-elif (service, op) == ("ssm", "get-parameter"):
-    name = value("name")
-    param = state["params"].get(name)
-    if param is None:
-        fail(f"An error occurred (ParameterNotFound) when calling the GetParameter operation: Parameter {name} not found.")
-    if query == "Parameter.Value":
-        secure = param["Type"] == "SecureString" and "with-decryption" not in opts
-        print("AQICAHhCiphertextOfASecureString==" if secure else param["Value"])
-    elif query == "Parameter.Name":
-        print(name)
-    elif query == "Parameter.Type":
-        print(param["Type"])
-    elif query == "":
-        print(json.dumps({"Parameter": {"Name": name, "Type": param["Type"]}}))
-    else:
-        fail("fake aws: unknown query " + query, 99)
-elif (service, op) == ("ssm", "put-parameter"):
-    name, given = value("name"), value("value")
-    if name in state["params"] and "overwrite" not in opts:
-        fail("An error occurred (ParameterAlreadyExists)")
-    if given.startswith("file://"):
-        given = open(given[len("file://"):]).read()
-    state["params"][name] = {"Type": value("type"), "Value": given}
-    save()
-elif (service, op) == ("ecr", "describe-images"):
-    print("{}")
-elif (service, op) == ("ecs", "run-task"):
-    print("arn:aws:ecs:us-east-2:%s:task/vega-v2/0123" % state["account"])
-elif (service, op) == ("ecs", "wait"):
-    pass
-elif (service, op) == ("ecs", "describe-tasks"):
-    print(state.get("migrate_exit", 0))
-elif (service, op) == ("s3", "cp"):
-    if not os.path.isfile(words[2]):
-        fail("fake aws: no file " + words[2], 1)
-else:
-    fail("fake aws: unexpected call " + " ".join(argv), 99)
-'''
-
-FAKE_TOOL = r'''
-import hashlib, json, os, sys
-argv = sys.argv[1:]
-tool = os.path.basename(sys.argv[0])
-with open(os.environ["FAKE_LOG"], "a") as log:
-    log.write(json.dumps({"tool": tool, "argv": argv}) + "\n")
-if tool == "docker":
-    sys.exit(99)
-if tool == "node":
-    # GH220-s: the real probe, run by the real Node.js, when the test names it; else a probe that passed.
-    real = os.environ.get("FAKE_NODE_REAL")
-    if real and argv[:1] == ["infra/aws/smoke-favourites.mjs"]:
-        os.execv(real, [real, *argv])
-    sys.exit(0)
-if tool == "python3":
-    if argv[:1] != ["infra/aws/package_api.py"]:
-        sys.exit(99)
-    kind = argv[2] if len(argv) > 2 else "api"
-    os.makedirs(argv[1], exist_ok=True)
-    path = os.path.join(argv[1], hashlib.sha256(kind.encode()).hexdigest() + ".zip")
-    open(path, "w").write(kind)
-    print(path)
-'''
-
-
 def base_state():
     """Production as it is before the account: the secrets of the base, the stacks deploy.sh reads."""
     secure = {f"/vega/v2/password-{r}": f"pw{r}" * 6 for r in ("collect", "calc", "read")}
     secure.update({f"/vega/v2/{r}-database-url": f"postgresql://vega_v2_{r}:pw{r}@{ENDPOINT}:5432/vega_v2" for r in ("collect", "calc", "read")})
     secure.update({"/vega/v2/pitchapi-key": "pitch-key", "/vega/v2/ops-key": "o" * 64, "/vega/v2/edge-key": "e" * 64})
     stack = lambda outputs=None, parameters=None: {"status": "UPDATE_COMPLETE", "outputs": outputs or {}, "parameters": parameters or {}}  # noqa: E731
+    keys = deploy_fakes.template_keys(ROOT / "infra/aws/worker.yaml")
+    worker = {k: "" for k in keys}
+    worker.update(ImageTag="ab" * 20, DesiredCount="1", BackfillDesiredCount="0")
     return {
         "account": ACCOUNT,
+        "region": "us-east-2",
         "front_url": FRONT_URL,
+        "python": sys.executable,
+        "images_dir": str(Path(tempfile.gettempdir()) / "vega-account-deploy-images"),
         "params": {k: {"Type": "SecureString", "Value": v} for k, v in secure.items()},
+        "ecr": {"repository": True, "images": []},
+        "s3": {"buckets": {RELEASES: {}, STATE_BUCKET: {}}},
+        "migrate": {"default": 0},
+        # The worker stack's migrate task definition (its output MigrationTaskDefinition), by revision.
+        "taskdefs": {f"arn:aws:ecs:us-east-2:{ACCOUNT}:task-definition/vega-v2-migrate:1": "ab" * 20},
+        "faults": {},
         "stacks": {
-            "vega-v2-deploy-roles": stack({"DeployRoleArn": f"arn:aws:iam::{ACCOUNT}:role/vega-v2-deploy"}),
+            "vega-v2-deploy-roles": stack({"DeployRoleArn": f"arn:aws:iam::{ACCOUNT}:role/vega-v2-deploy", "DeployGrants": "1"}),
             "vega-v2-database": stack({"DatabaseEndpoint": ENDPOINT, "WorkerSecurityGroup": "sg-0worker", "ApiSecurityGroup": "sg-0api"},
                                       {"InstanceClass": "db.t4g.medium"}),
-            "vega-v2-worker": stack(parameters={"BackfillDesiredCount": "0"}),
+            "vega-v2-worker": {**stack({"MigrationTaskDefinition": f"arn:aws:ecs:us-east-2:{ACCOUNT}:task-definition/vega-v2-migrate:1"}, worker),
+                               "keys": keys, "template_sha": "0" * 64},
             "vega-v2-live": stack(),
             "vega-v2-waf": stack({"WebAclArn": f"arn:aws:wafv2:us-east-1:{ACCOUNT}:global/webacl/vega-v2-api/abc"}),
             "vega-v2-api": stack({"ApiOrigin": "https://d111111abcdef8.cloudfront.net", "DistributionId": "E2NNDNWK491L8W"}),
@@ -277,8 +179,26 @@ class Run:
         out = []
         for c in self.calls:
             a = c["argv"]
+            if c["tool"] not in ("aws", "docker", "python3", "node", "npm"):
+                continue  # the stand-ins' own records (what a task did, a status read, a wait, a state written), gh's reads
+            if c["tool"] == "python3" and a[:1] in (["infra/aws/image_identity.py"], ["infra/aws/deploy_state.py"], ["infra/aws/run_lock.py"]):
+                continue  # the Deploy's own computations and its local lock: they change nothing (the state's writes are aws s3api calls)
+            if c["tool"] == "docker":
+                if a[:1] == ["build"] and "--target" not in a:
+                    out.append(("docker build", a[a.index("-t") + 1].rsplit(":", 1)[0]))
+                elif a[:1] == ["push"]:
+                    out.append(("docker push", a[1].rsplit(":", 1)[0]))
+                continue
+            if c["tool"] == "node" and a[:1] == ["infra/aws/verify-deploy.mjs"]:
+                # GH202: the task definitions' revisions are the stand-in's; checked in test_GH202_e.
+                out.append(("node", re.sub(r"@arn:aws:ecs:[^,\s]+", "@<task definition>", " ".join(a))))
+                continue
             if c["tool"] != "aws":
                 out.append((c["tool"], " ".join(a)))
+            elif a[:2] == ["cloudformation", "update-stack"]:
+                stack = a[a.index("--stack-name") + 1]
+                keys = [pair.split(",")[0].split("=", 1)[1] for pair in a[a.index("--parameters") + 1:] if "ParameterValue=" in pair]
+                out.append(("update-stack", stack, *keys))
             elif a[:2] == ["cloudformation", "deploy"]:
                 stack = a[a.index("--stack-name") + 1]
                 keys = []
@@ -293,7 +213,10 @@ class Run:
             elif a[:2] == ["s3", "cp"]:
                 out.append(("s3 cp", a[-1]))
             elif a[:2] == ["ecs", "run-task"]:
-                out.append(("ecs run-task", a[a.index("--task-definition") + 1]))
+                online = ["--online"] if "--overrides" in a and "--online" in a[a.index("--overrides") + 1] else []
+                # By its family: the task definition is the worker stack's exact revision (GH157.3), checked in test_deploy_flow.py.
+                family = a[a.index("--task-definition") + 1].rsplit("/", 1)[-1].split(":")[0]
+                out.append(("ecs run-task", family, *online))
         return out
 
     def overrides(self, stack):
@@ -309,13 +232,21 @@ class Run:
         return out, a
 
 
-# What a Deploy did before the account (deploy.sh of 12e645e, run the same way): the shape every run keeps while the
-# account is off.
+# What a Deploy does while the account is off, from production as it is (no Deploy state, the worker stack's template not
+# known: FAILURE_MODES_OPTIMISATIONS.md GH157): the image built and pushed before anything stops; the counts saved, then
+# both services stopped by the previous template; the candidate's template and image at 0; the migrations; the services
+# started; then the rest as before (the edge logs since GH149). A second run of the same commit is online
+# (test_deploy_flow.py).
+WORKER = ("ImageTag", "TaskImageTag", "DesiredCount", "BackfillDesiredCount", "ArchiveSourcesBucket", "OddsApiKeyParameter", "SecretsRevision",
+          "TemplateDigest")
 TODAY = [
     ("deploy", "vega-v2-database"),
-    ("deploy", "vega-v2-worker", "ImageTag", "DesiredCount", "BackfillDesiredCount", "ArchiveSourcesBucket", "OddsApiKeyParameter"),
+    ("docker build", f"{ACCOUNT}.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker"),
+    ("docker push", f"{ACCOUNT}.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker"),
+    ("update-stack", "vega-v2-worker", "DesiredCount", "BackfillDesiredCount"),
+    ("deploy", "vega-v2-worker", *WORKER),
     ("ecs run-task", "vega-v2-migrate"),
-    ("deploy", "vega-v2-worker", "ImageTag", "DesiredCount", "BackfillDesiredCount", "ArchiveSourcesBucket", "OddsApiKeyParameter"),
+    ("deploy", "vega-v2-worker", *WORKER),
     ("python3", "infra/aws/package_api.py <tmp>/live-package live"),
     ("s3 cp", f"s3://{RELEASES}/releases/v2-live/{hashlib.sha256(b'live').hexdigest()}.zip"),
     ("deploy", "vega-v2-live", "ImageTag", "ReleaseKey", "ApiKeyExpires", "LiveProvider"),
@@ -325,26 +256,35 @@ TODAY = [
     ("deploy", "vega-v2-waf", "SiteKey"),
     ("deploy", "vega-v2-api", "ReleaseKey", "ReadDatabaseUrl", "OpsKey", "MediaBaseUrl", "ReservedConcurrency", "WebAclArn"),
     ("deploy", "vega-v2-edge-logs", "DistributionId"),
-    ("deploy", "vega-v2-alerts", "AlertEmail", "AlertEmail2", "WatchWorker", "WatchLive"),
+    ("deploy", "vega-v2-alerts", "AlertEmail", "AlertEmail2", "WatchWorker", "WatchBackfill", "WatchLive"),
     ("deploy", "vega-v2-alerts-edge", "AlertEmail", "AlertEmail2", "DistributionId", "ApiDomain"),
+    # GH202: the deployment as served (the release /api/health names, the services), before step 12.
+    ("node", f"infra/aws/verify-deploy.mjs https://d111111abcdef8.cloudfront.net --release {hashlib.sha256(b'api').hexdigest()} "
+             "--services vega-v2-worker=1@<task definition>,vega-v2-backfill=0@<task definition>"),
     # FAILURE_MODES_OPTIMISATIONS.md, GH220-s: the check of the home's personal read, through the distribution, last.
     ("node", "infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"),
 ]
 
+# A second Deploy of the same commit: online (GH157): the tasks' image by the previous template, the online migrate,
+# one final update that changes nothing of the services; no build, no stop.
+TODAY_AGAIN = [
+    ("deploy", "vega-v2-database"),
+    ("update-stack", "vega-v2-worker", "TaskImageTag"),
+    ("ecs run-task", "vega-v2-migrate", "--online"),
+    ("deploy", "vega-v2-worker", *WORKER),
+    *TODAY[TODAY.index(("python3", "infra/aws/package_api.py <tmp>/live-package live")):],
+]
 
 @unittest.skipUnless(shutil.which("bash") and shutil.which("openssl"), "requires bash and openssl")
 class AccountDeployTest(unittest.TestCase):
     def deploy(self, state, actions=False, script=ROOT / "infra/aws/deploy.sh", extra=None):
         tmp = Path(tempfile.mkdtemp(prefix="vega-account-deploy-"))
         self.addCleanup(shutil.rmtree, tmp, True)
-        bin_dir = tmp / "bin"
-        bin_dir.mkdir()
-        for name, source in (("aws", FAKE_AWS), ("npm", FAKE_TOOL), ("python3", FAKE_TOOL), ("docker", FAKE_TOOL), ("node", FAKE_TOOL)):
-            (bin_dir / name).write_text(f"#!{sys.executable}\n{source}")
-            (bin_dir / name).chmod(0o755)
+        bin_dir = deploy_fakes.install(tmp / "bin")
+        state = {**state, "images_dir": str(tmp / "images")}
         (tmp / "state.json").write_text(json.dumps(state))
         env = {"PATH": f"{bin_dir}:/usr/bin:/bin", "HOME": str(tmp), "FAKE_STATE": str(tmp / "state.json"), "FAKE_LOG": str(tmp / "calls.log"),
-               "VEGA_V2_DEPLOY_EXPORT": "1", "IMAGE_TAG": TAG, "RUNNER_TEMP": str(tmp / "runner"),
+               "FAKE_PYTHON_REAL": sys.executable, "VEGA_V2_DEPLOY_EXPORT": "1", "IMAGE_TAG": TAG, "RUNNER_TEMP": str(tmp / "runner"),
                "CFN_ROLE": f"arn:aws:iam::{ACCOUNT}:role/vega-v2-cloudformation", "WORKER_DESIRED_COUNT": "1"}
         if actions:
             env["GITHUB_ACTIONS"] = "true"
@@ -363,9 +303,9 @@ class AccountDeployTest(unittest.TestCase):
             "state_after": after}, indent=1))
         return Run(done, calls, after)
 
-    def assert_today(self, run, line):
+    def assert_today(self, run, line, today=TODAY):
         self.assertEqual(run.code, 0, run.log)
-        self.assertEqual(run.writes(), TODAY)
+        self.assertEqual(run.writes(), today)
         self.assertTrue(run.out.rstrip().endswith("done"), run.out)
         account_lines = [entry for entry in run.out.splitlines() if entry.startswith("account")]
         self.assertEqual(account_lines, [line])
@@ -463,6 +403,23 @@ class AccountDeployTest(unittest.TestCase):
                 self.assert_refused(run, "/vega/v2/neon-api-key")
                 self.assertNotIn(value, run.log)
 
+    def test_w6_the_neon_api_key_is_16_to_512_printable_bytes(self):
+        """The preflight's own rule for the Neon key (account.yaml has no pattern for it, NoEcho): 16 to 512 bytes, each a
+        printable ASCII character but the space, under LC_ALL=C; checked as a length and a class, which macOS's bash 3.2
+        compiles (its regular expressions repeat at most 255 times: {16,512} does not compile there, review of 07 h 09)."""
+        for value, accepted in (("k" * 16, True), ("k" * 512, True), ("napi_" + "K9~!" * 70, True),
+                                ("k" * 15, False), ("k" * 513, False), ("\u00e9" * 8, False)):
+            with self.subTest(bytes=len(value.encode()), accepted=accepted):
+                state = prepared(base_state())
+                state["params"]["/vega/v2/neon-api-key"] = {"Type": "SecureString", "Value": value}
+                run = self.deploy(state)
+                if accepted:
+                    self.assertEqual(run.code, 0, run.log)
+                    self.assertEqual(run.overrides("vega-v2-account")[0]["NeonApiKey"], value)
+                else:
+                    self.assert_refused(run, "/vega/v2/neon-api-key")
+                    self.assertNotIn(value, run.log)
+
     def test_w7_a_malformed_generated_secret_is_refused(self):
         cases = {"/vega/v2/account-database-url": f"postgresql://vega_v2_account:pw@{ENDPOINT}:5432/vega_v2?sslmode=require",
                  "/vega/v2/pass-key/k1": "A" * 42}
@@ -511,7 +468,8 @@ class AccountDeployTest(unittest.TestCase):
         self.assertLess(index("ssm put-parameter /vega/v2/account-database-url"), index("vega-v2-worker"))
         self.assertLess(index("vega-v2-worker"), index("ecs run-task vega-v2-migrate"))
         # The account is the last stack; the check of the home's personal read (GH220-s) follows it.
-        self.assertEqual(order[-2:], ["vega-v2-account", "node infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"])
+        self.assertEqual(order[-3], "vega-v2-account")
+        self.assertEqual(order[-1], "node infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net")
         self.assertLess(index("vega-v2-alerts-edge"), index("vega-v2-account"))
         # The packages, built after `npm ci` of backend/account and uploaded under releases/v2-account/.
         front, store = (hashlib.sha256(k.encode()).hexdigest() for k in ("account-front", "account-store"))
@@ -524,7 +482,8 @@ class AccountDeployTest(unittest.TestCase):
             ("s3 cp", f"s3://{RELEASES}/releases/v2-account/{store}.zip"),
             ("deploy", "vega-v2-account", "FrontReleaseKey", "StoreReleaseKey", "AccountDatabaseUrl", "NeonAuthUrl", "SiteOrigins", "PassKeys",
              "PassKeyCurrent", "NeonApiKey", "NeonProjectId", "NeonBranchId"),
-            # FAILURE_MODES_OPTIMISATIONS.md, GH220-s: the check of the home's personal read, after the last stack.
+            # GH202 then GH220-s: the deployment as served, then the home's personal read, after the last stack.
+            TODAY[-2],
             ("node", "infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"),
         ])
         given, argv = run.overrides("vega-v2-account")
@@ -571,7 +530,7 @@ class AccountDeployTest(unittest.TestCase):
     def test_GH220_s_the_last_step_checks_the_home_s_personal_read_through_the_distribution(self):
         run = self.deploy(base_state())
         self.assertEqual(run.code, 0, run.log)
-        probes = [c["argv"] for c in run.calls if c["tool"] == "node"]
+        probes = [c["argv"] for c in run.calls if c["tool"] == "node" and c["argv"][:1] == ["infra/aws/smoke-favourites.mjs"]]
         self.assertEqual(probes, [["infra/aws/smoke-favourites.mjs", "https://d111111abcdef8.cloudfront.net"]])
         self.assertEqual(run.writes()[-1], ("node", "infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"))
         self.assertEqual(run.out.splitlines()[-2:], ["== 12. The home's personal read (a club, a player, both)", "done"])
@@ -579,7 +538,7 @@ class AccountDeployTest(unittest.TestCase):
     def test_GH220_s_the_operator_s_pair_reaches_the_probe(self):
         run = self.deploy(base_state(), extra={"SMOKE_TEAM": "t_aaaaa1", "SMOKE_PLAYER": "p_aaaab1"})
         self.assertEqual(run.code, 0, run.log)
-        self.assertEqual([c["argv"] for c in run.calls if c["tool"] == "node"], [[
+        self.assertEqual([c["argv"] for c in run.calls if c["tool"] == "node" and c["argv"][:1] == ["infra/aws/smoke-favourites.mjs"]], [[
             "infra/aws/smoke-favourites.mjs", "https://d111111abcdef8.cloudfront.net", "--team", "t_aaaaa1", "--player", "p_aaaab1"]])
 
     def test_GH220_s_the_real_probe_ends_the_deploy(self):
@@ -602,7 +561,8 @@ class AccountDeployTest(unittest.TestCase):
                 state = base_state()
                 state["stacks"]["vega-v2-api"]["outputs"]["ApiOrigin"] = origin
                 run = self.deploy(state, extra={"FAKE_NODE_REAL": NODE})
-                self.assertEqual(run.writes()[:-1], TODAY[:-1], "every stack above the check deployed")
+                self.assertEqual(run.writes()[:-2], TODAY[:-2], "every stack above the check deployed")
+                self.assertTrue(run.writes()[-2][1].startswith(f"infra/aws/verify-deploy.mjs {origin} "), "GH202's checks, before step 12")
                 self.assertEqual(run.writes()[-1], ("node", f"infra/aws/smoke-favourites.mjs {origin}"))
                 lines = run.out.splitlines()
                 step = lines.index("== 12. The home's personal read (a club, a player, both)")
@@ -619,9 +579,37 @@ class AccountDeployTest(unittest.TestCase):
                 for secret in (SMOKE["team"], SMOKE["player"], SMOKE["match"]):
                     self.assertNotIn(secret, run.log)
 
+    # --- the deployment as served (FAILURE_MODES_OPTIMISATIONS.md, GH202-e) ----------------------------------------------
+
+    def test_GH202_e_the_checks_run_before_step_12_and_a_failure_ends_without_done(self):
+        run = self.deploy(base_state())
+        self.assertEqual(run.code, 0, run.log)
+        checks = [c["argv"] for c in run.calls if c["tool"] == "node" and c["argv"][:1] == ["infra/aws/verify-deploy.mjs"]]
+        self.assertEqual(len(checks), 1)
+        argv = checks[0]
+        outputs = run.state["stacks"]["vega-v2-worker"]["outputs"]
+        self.assertEqual(argv[argv.index("--services") + 1],
+                         f"vega-v2-worker=1@{outputs['WorkerTaskDefinition']},vega-v2-backfill=0@{outputs['BackfillTaskDefinition']}")
+        self.assertRegex(outputs["WorkerTaskDefinition"], r"^arn:aws:ecs:us-east-2:\d{12}:task-definition/vega-v2-worker:\d+$")
+        lines = run.out.splitlines()
+        self.assertLess(lines.index(next(l for l in lines if l.startswith("== 11b."))), lines.index("== 12. The home's personal read (a club, a player, both)"))
+        failed = self.deploy(base_state(), extra={"FAKE_NODE_FAIL": "infra/aws/verify-deploy.mjs"})
+        self.assertEqual(failed.code, 1, failed.log)
+        self.assertNotIn("done", failed.out.splitlines())
+        self.assertEqual(failed.writes()[-1], ("node", "infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"), "step 12 still ran")
+        self.assertIn("FAILED the checks of step 11b", failed.log)
+        # No list of step 11b's own (the visitor's list is the probe's, PR #240): an earlier draft's settings reach nothing.
+        mixed = self.deploy(base_state(), extra={"SMOKE_MIX_TEAMS": "t_aaaaa1,t_aaaaa2", "SMOKE_MIX_PLAYERS": "p_aaaab1"})
+        self.assertEqual(mixed.code, 0, mixed.log)
+        argv = next(c["argv"] for c in mixed.calls if c["tool"] == "node" and c["argv"][:1] == ["infra/aws/verify-deploy.mjs"])
+        self.assertEqual(argv[:-1], checks[0][:-1])
+        self.assertFalse({"--mix", "--teams", "--players"} & set(argv), argv)
+        self.assertEqual([c["argv"] for c in mixed.calls if c["tool"] == "node" and c["argv"][:1] == ["infra/aws/smoke-favourites.mjs"]],
+                         [["infra/aws/smoke-favourites.mjs", "https://d111111abcdef8.cloudfront.net"]])
+
     def test_w10_a_failed_migration_stops_before_the_account_stack(self):
         state = prepared(base_state())
-        state["migrate_exit"] = 1
+        state["migrate"] = {"default": 1}
         run = self.deploy(state)
         self.assertNotEqual(run.code, 0)
         self.assertNotIn("vega-v2-account", [w[1] for w in run.writes()])
@@ -633,7 +621,7 @@ class AccountDeployTest(unittest.TestCase):
         state = first.state
         state["params"][SWITCH]["Value"] = "off"
         run = self.deploy(state)
-        self.assert_today(run, f"account: off ({SWITCH} is off): the account API is not deployed (backend/account/DEPLOYMENT.md, section 3)")
+        self.assert_today(run, f"account: off ({SWITCH} is off): the account API is not deployed (backend/account/DEPLOYMENT.md, section 3)", TODAY_AGAIN)
         # No Account override: each stack keeps its previous value (true), so nothing is removed.
         for stack in ("vega-v2-database", "vega-v2-worker", "vega-v2-alerts"):
             self.assertEqual(run.state["stacks"][stack]["parameters"].get("Account"), "true", stack)

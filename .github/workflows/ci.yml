@@ -18,7 +18,9 @@ jobs:
   tests:
     name: Python and API suites
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The Deploy's end-to-end runs (test_deploy_flow.py: the real deploy.sh, BuildKit, the real migrations) add a quarter
+    # of an hour or so to the suites' 17 minutes (PR #241).
+    timeout-minutes: 60
     services:
       postgres:
         # The base's engine (database.yaml: PostgreSQL 18), with pgvector for the optional migration.
@@ -31,6 +33,9 @@ jobs:
       PYTHONPATH: backend
     steps:
       - uses: actions/checkout@v7
+      # test_deploy_flow.py starts from production's tree, e4014803 (git archive): that commit alone, not the history.
+      - name: Production's commit for the Deploy's end-to-end runs
+        run: git fetch --no-tags --depth=1 origin e40148035927db988d854b0971856f1187fa09b4
       - uses: actions/setup-python@v7
         with: {python-version: '3.14'}
       - uses: actions/setup-node@v7
