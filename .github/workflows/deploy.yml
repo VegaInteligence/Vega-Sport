@@ -57,5 +57,7 @@ jobs:
           LIVE_PROVIDER: ${{ vars.V2_LIVE_PROVIDER }}
           # gh's token (actions: read only), to ask whether the run holding the Deploy's state has ended.
           GH_TOKEN: ${{ github.token }}
+          SMOKE_PUBLIC_SEASON: ${{ vars.V2_PUBLIC_SMOKE_SEASON }}
+          SMOKE_PUBLIC_TEAMS: ${{ vars.V2_PUBLIC_SMOKE_TEAMS }}
         # pipefail: the step fails when the script does, not when tee does (it never does).
         run: set -o pipefail; bash infra/aws/deploy.sh | tee -a "$GITHUB_STEP_SUMMARY"

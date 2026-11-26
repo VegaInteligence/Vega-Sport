@@ -355,6 +355,10 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-api/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-live/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-account/*'
+              - Sid: ReadApiOriginProbe
+                Effect: Allow
+                Action: 'lambda:InvokeFunction'
+                Resource: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-api'
               # GH157.3: the Deploy's own state, read and written with conditional requests (infra/aws/deploy_state.py):
               # the one object of the bucket this stack creates (DeployStateBucket), nothing else of it.
               - Sid: DeployState
@@ -446,7 +450,7 @@ Outputs:
   # the release bucket's existence, the tasks a run settles, the buckets' and the alerts' handlers). The owner deploys it
   # from the Mac before the next Deploy.
   DeployStateBucket: {Value: !Ref DeployStateBucket}
-  DeployGrants: {Value: '1'}
+  DeployGrants: {Value: '2'}
   PilotRoleArn: {Value: !GetAtt PilotRole.Arn}
   DeployRoleArn: {Value: !GetAtt DeployRole.Arn}
   CloudFormationRoleArn: {Value: !GetAtt CloudFormationRole.Arn}
