@@ -324,6 +324,7 @@ TODAY = [
     ("s3 cp", f"s3://{RELEASES}/releases/v2-api/{hashlib.sha256(b'api').hexdigest()}.zip"),
     ("deploy", "vega-v2-waf", "SiteKey"),
     ("deploy", "vega-v2-api", "ReleaseKey", "ReadDatabaseUrl", "OpsKey", "MediaBaseUrl", "ReservedConcurrency", "WebAclArn"),
+    ("deploy", "vega-v2-edge-logs", "DistributionId"),
     ("deploy", "vega-v2-alerts", "AlertEmail", "AlertEmail2", "WatchWorker", "WatchLive"),
     ("deploy", "vega-v2-alerts-edge", "AlertEmail", "AlertEmail2", "DistributionId", "ApiDomain"),
     # FAILURE_MODES_OPTIMISATIONS.md, GH220-s: the check of the home's personal read, through the distribution, last.

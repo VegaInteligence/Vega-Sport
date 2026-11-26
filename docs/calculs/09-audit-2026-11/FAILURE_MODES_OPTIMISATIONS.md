@@ -404,6 +404,88 @@ RDS itself is not verified here. GH171-i, j:
 the group (dynamic parameters apply at once; checked after a Deploy with the commands of `infra/aws/README.md`),
 Performance Insights' screens, the export's first lines.
 
+## GH149. The distribution's access logs and the cache by family (GH #149, VI-89)
+
+Seen before this change (`e4014803`): the distribution has no log (`api.yaml`, no `Logging`, no delivery); the function's
+request lines (`/aws/lambda/vega-v2-api`) are the calls that reached it, so the share of each route the edge answers
+(hits), revalidates (refresh hits) or passes on (misses) is unknown, and #137 / #145 cannot choose their next route from
+counts. AWS's documentation (read on 26 Nov 2026, `standard-logging.html`, `general-helper-methods.html`): standard
+logging v2 is set up with CloudWatch Logs' delivery API in us-east-1 (`DeliverySource` of the distribution, log type
+`ACCESS_LOGS`, `DeliveryDestination`, `Delivery` naming its `RecordFields`); a CloudWatch Logs destination is a log
+group whose name matches `[\w-]`; a viewer-request function of the `cloudfront-js-2.0` runtime writes the field
+`viewer-request-log-data` with `cf.logCustomData(<string>)` (the `cloudfront` module; URL-encoded, 800 bytes at most,
+the last call kept; `-` without a function or without a call).
+
+### GH149.1 Rules
+
+- **What a record holds, and nothing else.** `timestamp(ms)`, `cache-behavior-path-pattern`,
+  `viewer-request-log-data`, `cs-method`, `sc-status`, `x-edge-result-type`, `x-edge-response-result-type`,
+  `x-edge-detailed-result-type`, `time-taken`, `time-to-first-byte`, `origin-fbl`, `origin-lbl`, `sc-bytes`. Never the
+  viewer's address (`c-ip`, `x-forwarded-for`), the path or the query (`cs-uri-stem`, `cs-uri-query`), a cookie, the
+  user agent, the referer, the request's id, the country, the ASN or the host.
+- **The family** (`viewer-request-log-data`): the function `vega-v2-api-family` (`cloudfront-js-2.0`, viewer request)
+  names the request by its route, the path after `/api/` (or `live/`) with each identifier (`m_…`, `p_…`, `t_…`,
+  `l_…`, a World Cup match's key) written `id` and the segments joined by dots (`read.player`, `matches.id.summary`,
+  `players.id.injuries`, `live.matches.id`); a path that is not one of the read API's or the live function's routes is
+  `other`. The set is finite and closed: the function holds the list, and a test fails when a route of the read API
+  has no family or a family no route. The function returns the request as it came: no header, path, query, cache key or
+  origin changes.
+- **Where.** On the default behaviour and on `api/league-history`, `api/ops/*` and `live/*`; not on `data/*` (the image
+  copies: their records say `-` and the behaviour `data/*`, and the report names them `media`).
+- **Delivery.** Stack `vega-v2-edge-logs` (`edge-logs.yaml`, us-east-1, deployed after the read API stack): the log
+  group `vega-v2-api-access`, 14 days; the delivery source of the distribution, the destination (JSON), the delivery
+  with the fields above; the saved queries `vega-v2/api-cache-by-family`, `vega-v2/api-latency-by-family` (every
+  behaviour but `data/*`, the values of the function's form but `other`, by value), `vega-v2/api-latency-other` (every
+  behaviour but `data/*`: `other` and the values outside the form, pooled) and `vega-v2/api-latency-media` (`data/*` alone). The CloudFormation role may create these and set
+  the log group's resource policy for `delivery.logs.amazonaws.com`, in us-east-1, under `vega-v2-*` names only; the
+  deploy role may deploy that stack only.
+- **The aggregate.** Per family, over a window given with both ends: requests; `Hit`, `RefreshHit`, `Miss`, errors
+  (`Error`, or a status of 400 or more), others; the hit share `Hit / (Hit + RefreshHit + Miss)` and the refresh share,
+  over GET and HEAD answers below 400 only; bytes sent; the median and 95th percentile of `time-taken`. The probe
+  (`health`), the status page (`ops.status`), the image copies (`media`), `other` and `unlogged` are reported on their
+  own lines, never in a family's shares. Two ways, one fold: `infra/aws/edge-cache-report.mjs --records <file> --from
+  --to` on records as delivered, or `--live` (the saved queries through `aws logs start-query`, us-east-1).
+- **One family per record, the same in both ways** (review of 26 Nov 2026: the delivery writes `-` for a field the
+  function did not set, `data/*` among them, and the latency query grouped by that field alone, so `media`'s times
+  were filed under `-`): `data/*` is `media`; a record without a family (`-`, the delivery's mark of no value:
+  CloudFront answered before the function ran; a field absent from a record is read so) is `unlogged`; a value not of
+  the function's form (`[a-z0-9.-]{1,40}`, read as delivered, never decoded) is `other`. The volumes, the shares'
+  denominator and the percentiles use that family in `--records` and in `--live`; `--live`'s percentiles come from
+  groups that are each exactly one family — the latency query groups the values of the form outside `data/*` by value
+  (`-` is `unlogged`), `other` (the function's name for an unknown route) left out; `other`'s query pools `other` and
+  the values outside the form; `media`'s takes `data/*` alone — never percentiles merged after the fact. The queries
+  read the family as `coalesce(<field>, "-")` (counter-review of 26 Nov 2026, 05 h 21: a record without the field was in
+  `unlogged`'s volumes but in no latency group, its p95 0.9 s live against 0.02 s locally).
+- **One window, both ways** (counter-review of 26 Nov 2026, 05 h 23: `--records` compared milliseconds, Logs Insights
+  rounds its range to the second). The window is `[from, to)` in milliseconds, its end excluded: `--records` compares
+  each record's `timestamp(ms)`; `--live` asks Logs Insights for the whole seconds that cover it (start rounded down,
+  end rounded up) and filters every query on `toMillis(@timestamp)` to the same bounds. Two adjacent windows share no
+  record; a bound may fall inside a second. `--live`'s percentiles are Logs
+  Insights' `pct()`; `--records`' the nearest rank.
+- **#137 / #145.** No TTL and no validator changes here. The next route is chosen from real counts: the 24-hour count
+  of revalidations at the origin already named `/api/matchdays` (GH137M); the report's counts by family can name the
+  next ones (a week of logs is one possible window of analysis, not a condition); none is invented here.
+
+### GH149.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| GH149-a | Every route of the read API and of the live function (the paths of `backend/api/src`, the site's reads of the reference session) | a family that is not `other`, each family one route; the read API's handler claims every family's route |
+| GH149-b | A path with identifiers, a query, a cookie, an unknown route (`/api/read/<anything>`, `/api/x/../../etc`), a long path, a path of the image copies' shape, `/` | the family by route with `id`, never an identifier, a query value or a segment outside the list; `other` for the rest; at most 40 bytes |
+| GH149-c | The function's result | the event's request object, unchanged (headers, uri, querystring, cookies, method) |
+| GH149-d | Representative requests (the reference session's match and player pages, the probe, the status page, an image copy, an unknown path) run through the function, then delivered records built with the template's fields, outcomes hit, refresh hit, miss, error | the report's table: each family's counts, shares and volumes as computed by hand; the probe, the status page, `media` and `other` apart; no record holds a field outside the list |
+| GH149-e | The report without `--from` or `--to`, an inverted window, records outside the window, a record with an unknown field, a malformed line | exit 2 on the arguments; records outside left out; the unknown field refused (exit 1, named), the malformed line counted as malformed, not guessed |
+| GH149-f | `edge-logs.yaml` | us-east-1 asserted; the log group's name matches `[\w-]+`, 14 days; the delivery's fields exactly the list; the source's log type `ACCESS_LOGS` on this distribution; the saved query reads that group; `cfn-lint` clean for us-east-1 |
+| GH149-g | `api.yaml` | the function on the four behaviours, viewer request, not on `data/*`; no cache policy, origin or path pattern changed |
+| GH149-h | `deploy.sh`, `deploy-roles.yaml` | the edge logs stack after the read API stack, in us-east-1, with the distribution's id; the deploy role may deploy `vega-v2-edge-logs` only; the CloudFormation role's delivery and log rights in us-east-1, named resources |
+| GH149-i | The same delivered records (hits, refresh hits, misses, errors; `read.player`, `ops.status`, `other`, `media` on `data/*` with `-`, `-` on the default behaviour, a slow record without the field at all) folded locally, and answered by the four saved queries as Logs Insights would (their groups, `-` included; two values outside the form pooled in `other`'s query) folded live | one table both ways: `media`, `unlogged` and `other` with their requests, bytes and percentiles, apart; no `-` family; each share over the same denominator |
+| GH149-j | Records at a window's start, one millisecond before its end, at its end, and inside one second split by a bound at .500; two adjacent windows `[t0, t1)` and `[t1, t2)`, each folded locally and through the saved queries (Logs Insights given whole seconds that cover it, as AWS takes them) | each record in one window only, the one at `t1` in the second; the same counts both ways for each window; the two windows' sums those of `[t0, t2)` |
+
+GH149-a–e, i, j: `backend/api/test/edge-logs.test.mjs` (the function's code read from `api.yaml`, run as CloudFront runs it:
+the `cloudfront` module's `logCustomData`; the real handler for a); f–h: `backend/tests/test_edge_logs.py` and
+`cfn-lint`. Not verifiable here: CloudFront's own delivery and its field values (checked once deployed: README), real
+hit shares.
+
 ## GH129. The match page's season read once; the player page's reads without waste (GH #129, VI-69)
 
 Seen in production on 25 Nov 2026 (`optimisations-suite-2611/reference/lectures.log`): Brentford–Everton opened at
