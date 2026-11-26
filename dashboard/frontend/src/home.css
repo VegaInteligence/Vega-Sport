@@ -819,11 +819,14 @@ html[data-theme="light"] {
 
 /* Title race */
 .home-tabs {
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+.home-tabs-scroll {
   display: flex;
   gap: 2px;
   padding: 8px 10px 0;
   overflow-x: auto;
-  border-bottom: 1px solid var(--border);
   scrollbar-width: none;
 }
 .home-tabs button {

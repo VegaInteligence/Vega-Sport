@@ -494,15 +494,32 @@ html[data-theme="light"]
 
 /* « Course au titre »: the leagues in a track, the chosen one filled. */
 :root .home-page .home-tabs {
-  gap: 2px;
   width: fit-content;
   max-width: 100%;
   margin-top: 12px;
-  padding: 3px;
   border: 0;
   border-radius: 999px;
   background: var(--pill-track);
   box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+:root .home-page .home-tabs-scroll {
+  padding: 3px;
+}
+.home-tabs-scroll[data-overflow-left] {
+  --fade-left: 14px;
+}
+.home-tabs-scroll[data-overflow-right] {
+  --fade-right: 14px;
+}
+.home-tabs-scroll:is([data-overflow-left], [data-overflow-right]) {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black var(--fade-left, 0px),
+    black calc(100% - var(--fade-right, 0px)),
+    transparent
+  );
+  scroll-padding-inline: var(--fade-left, 0px) var(--fade-right, 0px);
 }
 :root .home-page .home-tabs button {
   flex: none;

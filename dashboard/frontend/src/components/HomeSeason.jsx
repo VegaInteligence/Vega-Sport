@@ -185,6 +185,25 @@ export function TitleRace({ tables, competitions, initial }) {
   const f = useFootball(),
     [league, setLeague] = useState(initial),
     [focus, setFocus] = useState(null);
+  const tabsScroll = useRef(null);
+  useEffect(() => {
+    const scroller = tabsScroll.current;
+    if (!scroller) return;
+    const updateEdges = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = scroller;
+      scroller.toggleAttribute("data-overflow-left", scrollLeft > 1);
+      scroller.toggleAttribute("data-overflow-right", scrollWidth - clientWidth - scrollLeft > 1);
+    };
+    const observer = new ResizeObserver(updateEdges);
+    observer.observe(scroller);
+    for (const button of scroller.children) observer.observe(button);
+    scroller.addEventListener("scroll", updateEdges, { passive: true });
+    updateEdges();
+    return () => {
+      observer.disconnect();
+      scroller.removeEventListener("scroll", updateEdges);
+    };
+  }, [tables]);
   const table = tables.find((t) => t.leagueId === league) || tables[0];
   if (!table) return null;
   const leader = table.rows[0],
@@ -205,27 +224,29 @@ export function TitleRace({ tables, competitions, initial }) {
       </div>
       {tables.length > 1 && (
         <div className="home-tabs" role="group" aria-label="Championnat">
-          {tables.map((t) => {
-            const c = competitions.get(t.leagueId);
-            return (
-              <button
-                key={t.leagueId}
-                type="button"
-                aria-pressed={t.leagueId === table.leagueId}
-                onClick={() => {
-                  setLeague(t.leagueId);
-                  setFocus(null);
-                }}
-              >
-                <Media
-                  name={c?.name || ""}
-                  url={c?.imageUrl}
-                  className="crest home-crest-xs"
-                />
-                {c?.name || t.leagueId}
-              </button>
-            );
-          })}
+          <div className="home-tabs-scroll" ref={tabsScroll}>
+            {tables.map((t) => {
+              const c = competitions.get(t.leagueId);
+              return (
+                <button
+                  key={t.leagueId}
+                  type="button"
+                  aria-pressed={t.leagueId === table.leagueId}
+                  onClick={() => {
+                    setLeague(t.leagueId);
+                    setFocus(null);
+                  }}
+                >
+                  <Media
+                    name={c?.name || ""}
+                    url={c?.imageUrl}
+                    className="crest home-crest-xs"
+                  />
+                  {c?.name || t.leagueId}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
       <div className="home-race-body">
