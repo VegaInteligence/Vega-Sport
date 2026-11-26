@@ -8,6 +8,19 @@ by its GitHub issue and each case by the issue and a letter: GH220-a, GH194-a, G
 - **GH194** (VI-134): the isolated pilot, by hand from `main`, its own provider key, a bounded run.
 - **GH137** (VI-77) for `/api/league-history` only, with **GH145** (VI-85): its validator, its reads, an hour at the edge.
 
+The batch of 26 Nov 2026 (branch `codex/audit-suite-2611`, base `e4014803`) adds, each written before its tests:
+
+- **GH171** (VI-111): the statements' statistics of `vega_v2`, Performance Insights and the PostgreSQL log, without a
+  password, a bound value or a row's value leaving the base.
+- **GH149** (VI-89): the distribution's access logs (standard logging v2, us-east-1), a finite family per request, and
+  the cache's hits, misses and refreshes by family.
+- **GH157** (VI-97) and **GH158** (VI-98): a Deploy builds or reuses the worker's image before anything stops, migrates
+  while the collection runs when it may, names the image by what goes into it, and keeps its own state.
+- **GH202** (VI-142) and **GH204** (VI-144): the checks at the end of a Deploy, and the alarms and the dashboard.
+- **GH129** (VI-69): the match page's season read once, the player page's reads started at once.
+- **GH137M** (VI-77, with GH145, VI-85): `/api/matchdays`, the route production's counts of revalidations name first,
+  read from the editions asked instead of `api.fixtures`; the same answers and validators, no longer edge time.
+
 A first version of these sections was numbered 62 to 64 in the shared register; the review of 25 Nov 2026 (19:29 Paris)
 asked for these names and for the corrections marked « review » below, each written here before its test changed.
 
@@ -485,6 +498,305 @@ GH149-a–e, i, j: `backend/api/test/edge-logs.test.mjs` (the function's code re
 the `cloudfront` module's `logCustomData`; the real handler for a); f–h: `backend/tests/test_edge_logs.py` and
 `cfn-lint`. Not verifiable here: CloudFront's own delivery and its field values (checked once deployed: README), real
 hit shares.
+
+## GH157 and GH158. A Deploy builds or reuses the worker's image before anything stops, migrates while the collection runs when it may, and keeps its own state (GH #157, VI-97; GH #158, VI-98)
+
+Seen before this change (`deploy.sh` of `e4014803`): step 3 sets the worker and the backfill to 0, then the image is
+built and pushed, the migrations run, and step 6 starts both again: every Deploy stops the collection for the build,
+the push, the migrate task and two stack updates, even when only the site or the read API changed (the image is tagged
+with the commit, so every commit is a new image and a restart). Also seen: a failure reading the backfill's count
+(`describe-stacks … 2>/dev/null || true`) reads as 0, and a Deploy that failed after step 3 leaves the backfill at 0,
+which the next Deploy then keeps; `describe-images` failing for any reason (a refusal, expired credentials) reads as
+« no image » and builds; the first Deploy needs the worker stack before the image (the repository is in it).
+
+### GH157/158.1 Rules
+
+- **Two identities.** The commit (`IMAGE_TAG`, `HEAD` by default) names the clean export the Deploy reads, and
+  nothing else. The worker's image is named by what it is made of: `infra/aws/image_identity.py` asks BuildKit for the
+  build context as it sends it (`docker build -f backend/Dockerfile --target context --output type=local`: the
+  Dockerfile's own `.dockerignore`, no parser of ours), then hashes, in a fixed order, the identity's version, the
+  platform (`linux/arm64`), the Dockerfile's and the ignore file's bytes, and each file of the context (path, type,
+  mode, contents or link target): 64 hexadecimal characters, the tag of `vega-v2-worker`. The base image is pinned by
+  digest in the Dockerfile. What a build resolves by itself (Debian's `nodejs`, pip's unpinned dependencies of
+  `boto3`) is not in the identity: an image keeps them until one of its inputs changes; to take newer ones, change the
+  Dockerfile's `VEGA_DEPS_REFRESH` (or its base digest): a new identity, one rebuild, one restart (GH158-g: the
+  apt and pip layers read it, so a warm builder runs them again; a comment would not).
+- **The image before anything stops.** The repository answered: its image is reused when `describe-images` finds the
+  identity's tag (no build, no push), built and pushed when it answers `ImageNotFoundException`; any other answer (a
+  refusal, an expired session, a network error) stops the Deploy there, nothing stopped. The repository missing
+  (`RepositoryNotFoundException`) with the worker stack missing too: a first install, the worker stack created with
+  both services at 0, then the image; the repository missing while the stack exists: stop (named). The registry
+  login failing: stop before anything stops.
+- **Migrations while collecting.** A migration file whose header holds the line `-- vega:online` keeps the code of
+  the previous Deploy working while and after it applies (additive only: new objects, functions or views redefined
+  with the same columns). The migrate task of the candidate image runs first as `python -m vega.migrate --online`:
+  - the base holds a migration the image does not know: exit 4, nothing applied (an older image never runs on a newer
+    base); a file applied with other bytes: exit 1, nothing applied;
+  - every pending file marked: applied, the account's files and the logins too, while the old worker runs; exit 0;
+  - a pending file not marked (every file before 179): nothing applied, exit 3; the Deploy then stops the services and
+    runs `python -m vega.migrate` (the same checks, then everything). A file is applied in its own transaction: a
+    failing one leaves the earlier ones applied, and stops the run.
+- **The candidate's migrations, without touching the services.** Before the online run the worker stack's tasks
+  (migrate, archives) take the candidate's image by `TaskImageTag`, with `update-stack --use-previous-template` and
+  every other parameter's previous value: the services' task definitions do not change. This requires the template
+  that stack was last deployed with to be the candidate's (`TemplateDigest`, the SHA-256 of `worker.yaml`, recorded
+  by each Deploy in the stack); another or unknown (the first Deploy after this change): the services are stopped
+  first (below), then the candidate's template applied.
+- **Stopping.** Only for a pending unmarked file, another template, or a previous Deploy that left the services
+  stopped. Before any count changes, the Deploy writes in its state the counts and image the services have; it stops
+  them with `update-stack --use-previous-template` (the counts alone change), then applies the candidate's template
+  and image with both counts at 0, marks the state « unsafe » and runs the full migrate task. One final update gives
+  the services the candidate's image, template, secrets' revision and counts: one replacement of each task at most.
+- **Counts.** The worker: `WORKER_DESIRED_COUNT` 0 or 1 when given; `keep` or unset (the workflow's default since the
+  review of 26 Nov 2026): the count a previous Deploy saved when it stopped them and could not restore, else the
+  stack's own, else 1 (a first install). The backfill: `BACKFILL_DESIRED_COUNT`; without it, the count a previous
+  Deploy saved; without that, the stack's own (a stack that does not exist: 0; any other error reading it: stop).
+- **Same image.** No build, no push; the final update changes nothing of a service whose image, template, secrets'
+  revision (`SecretsRevision`: the versions of the SSM parameters the services read, no value: a rotation replaces the
+  tasks once) and odds parameter are unchanged: counts are reconciled without a replacement. The migrate task runs on
+  every Deploy, online: the account switched on, a login's password rotated, a migration a failed Deploy left pending
+  are applied without stopping anything.
+- **The Deploy's state** (`s3://vega-v2-deploy-state-…/state.json` since GH157.3, read and written with S3's conditional
+  requests only: created if absent, replaced if unchanged since read). It holds the owner (the run), its last sign of life,
+  the phase (`idle`, `running`, `stopped`), the counts and image saved, whether the template or image of the stopped
+  services changed (`changed`), and whether a full migration started and has not succeeded (`unsafe`).
+  - Held by another run: the Deploy stops before changing anything (`another Deploy …`), unless that run is known
+    finished (its GitHub run `completed`) or `DEPLOY_TAKEOVER` names it (GH157.3: a lease's age proves nothing). Taken
+    over: its saved counts and flags kept, said. A write that finds the state changed since read (another run): stop.
+  - **Held before each change** (review of 26 Nov 2026: a run whose lease expired while it was busy — a slow build or
+    push, a long wait — kept changing stacks after another run took the state over, and its exit restored counts on a
+    stack no longer its own). Before each step that changes the worker, the backfill, the base or a stack (the online
+    path's task image and migrate, the stop, the candidate's template, the full migrate, the final update, the stacks
+    after it), the run writes its state again (a conditional write, which also renews its lease). Refused because
+    another run holds it: the state is lost to this run, which stops at once: no further change, no restore, no
+    release; it names the run now holding it. The workflow runs one Deploy at a time (`concurrency: vega-v2-deploy`);
+    a workstation's run, or a run whose job died, is what this guards against.
+  - On failure (any error, a signal): the services stopped, their template and image unchanged (`changed` false,
+    `unsafe` false): restored at once to the saved counts, by `--use-previous-template` (exactly what ran before:
+    known compatible). Otherwise they stay stopped and the Deploy says why and what the next one does: it restores the
+    saved counts on the candidate's image once its own migrations succeed. Never a restart of an older image on a base
+    a migration may have changed. The owner is released in both cases (the next Deploy needs no takeover). The restore
+    comes after the state is written again (still this run's) and goes through the fence (GH157.3).
+- **Order.** Preflight (account, the roles' grants: `DeployGrants` of `vega-v2-deploy-roles`), the state taken, the
+  database, the secrets, the image, the tasks' image, the online migrate, [stop, the candidate's template, the full
+  migrate], the services, live, the read API, the edge logs, archives, alerts, account, the checks; the state released.
+
+### GH157/158.3 Review of 26 Nov 2026 (independent review of `8bf6f48a`)
+
+- **One authority, before any creation** (review of the tree `27068a52`, 05 h 26 – 05 h 30: an SSM lock relayed to an
+  object of the release bucket, which the worker stack creates, left windows where two runs each held one; an SSM
+  fence written after the state could be written again by a run that woke up, and a change set keeps the SSM values it
+  was created with; a fence parameter in every template broke the README's manual commands before the first Deploy).
+  The Deploy's state is one object, `s3://vega-v2-deploy-state-<account>-<region>/state.json`, in a private bucket the
+  roles stack creates (`vega-v2-deploy-roles`, the owner's and already a prerequisite of any Deploy; versioned,
+  encrypted, no public access); the deploy role may read and write that object alone. Every run, a first install
+  included, takes it with a conditional write before its first change; it says who deploys, the counts and image to
+  restore, the migrate task asked for. No SSM lock, no fence, no template parameter for it.
+- **Another run's state** (P1). Taken over only from a run known dead, never for its age: a GitHub run
+  (`gh-<run>-<attempt>`) once GitHub answers that attempt `completed` (a hosted runner's job is over and its machine
+  gone; the workflow's token, `actions: read`); a workstation's run (`host:<host>:<pid>:<start>`) when this run is on
+  that host and no process of that run lives: the run holds, from its start, a lock its children inherit (descriptor 9
+  on `/tmp/vega-deploy-<pid>-<start>.lock`, `infra/aws/run_lock.py`), so that an `aws cloudformation deploy` its shell
+  left behind (CreateChangeSet, its wait and ExecuteChangeSet are separate requests) keeps it held; the lock free is the
+  proof (counter-review of 06 h 07: a shell's PID alone was taken for the run); a run the owner attested dead with the
+  maintenance entry `python3 infra/aws/deploy_state.py abandon --holder <name> --reason <why>`, which is refused for a
+  GitHub run and for a run of the host it runs on (both can be checked). `DEPLOY_TAKEOVER` no longer exists: a flag
+  cannot tell a live process. Otherwise the run stops before any change, saying what would prove the other dead.
+- **What a dead run left**, reconciled before the first change (taken over or not). Each stack's operation in
+  progress (`*_IN_PROGRESS`) is awaited to its end, within bounds; `REVIEW_IN_PROGRESS` — a stack whose creating
+  change set was never executed — is no operation (the next `deploy` creates its own change set on it); then each
+  status is read again. No change set is deleted: executing one makes CloudFormation delete a stack's others, and a
+  manual one is the owner's. The migrate task the state names is settled (below), and no migrate task of the family
+  may run when this run starts its own (a missing cluster is accepted only on a first install).
+- **Durable migrate tasks** (05 h 25, 05 h 28). The intent, written before RunTask, holds the task's immutable
+  identity: its token (`startedBy` and `clientToken`, at most 36 characters), the exact task definition revision (the
+  worker stack's `MigrationTaskDefinition`), the command, the security group, the time asked. RunTask's answer: a task,
+  whose ARN is written; `tasks` empty with `failures`, or a client error that rejects the request
+  (`InvalidParameterException`, `ClientException`, `AccessDeniedException`, `ClusterNotFoundException`,
+  `PlatformUnknownException`), to the intent's very first attempt: no task, the intent cleared, the run stops; any other
+  end (a timeout, a throttling, an answer lost): unknown, the same request replayed with the same token and parameters,
+  so that ECS returns the task it created or creates it now, once, up to three times; still unknown, the intent stays
+  and the run stops. A refusal is final for the request it answers (the tries end), but after an answer lost, or for a
+  later run's replay, it proves nothing of the first request, which may have started a task (counter-review of 06 h 08,
+  an IAM refusal included): the intent stays, as unknown; only a task returned settles it. The CLI sends each RunTask
+  once (`AWS_MAX_ATTEMPTS=1` on that call alone, counter-review of 06 h 28): its own retries (three requests in its
+  standard mode) answer only the last, which would hide a first request whose answer was lost behind the refusal of
+  the next; the run's loop does the retrying. Settling an intent (the next
+  run, or before any migrate task): with its ARN, waited for until `STOPPED` and its exit read. ECS keeps a stopped
+  task an hour at least and a task stops after its ARN is answered, so `MISSING` within an hour of that answer (the
+  state's `migrate.seen`; a task just listed counts as just answered) is a task not visible yet (DescribeTasks lagging
+  behind RunTask): waited for, as a running one; `MISSING` later (ECS no longer knows a task stopped beyond its
+  retention) with no migrate task running: its outcome is unknown, and the run's own migrations reconcile the base's
+  journal (the candidate image's checks: exit 4 for a base newer than it) before any service starts. Without ARN, a
+  task running under its token is waited for, else the request is replayed within an hour of its asking
+  (`MIGRATE_REPLAY_WINDOW`, well inside what ECS keeps); later, it is suspended: the run stops, naming what to check —
+  the family's stopped tasks (`list-tasks --family vega-v2-migrate --desired-status STOPPED`, since ListTasks takes
+  `startedBy` only as its sole filter), those of them under that token (`describe-tasks`, filtered by `startedBy`),
+  else the migrate log once ECS has forgotten it — and the maintenance entry `python3 infra/aws/deploy_state.py
+  resolve-migrate --token <token> (--arn <arn> | --none) --reason <what was checked>`. Never a second migrate task on
+  an empty list, never a service started on an unknown outcome.
+- **The intent before the stack's change** (05 h 29). Before the candidate's template and image are submitted to the
+  worker stack, the state says `changed`; before the full migrate's RunTask, `unsafe`. On failure the stopped services
+  are restored only when the stack has no operation in progress and its `ImageTag` and `TemplateDigest` are still
+  those saved when they were stopped (an update rolled back); otherwise they stay stopped with their saved counts,
+  whatever the CLI answered.
+- **A first install** (05 h 27). Its target counts (the worker's `WORKER_DESIRED_COUNT`, 1 for `keep`; the backfill's
+  `BACKFILL_DESIRED_COUNT`, else 0) are saved in the state as a stop's are, before the worker stack is created at 0 and
+  before the image is built: a failure afterwards leaves them, and the next run (`keep`) starts the services with them
+  once its migrations succeed. A stack at 0 by an existing install's choice (nothing saved) keeps 0. The release
+  bucket missing beside the worker stack or the repository: stop before any change (the owner restores it).
+- **The README's manual entries** (05 h 20, 05 h 29 P2): the base's first sizing (`database.yaml`), the web ACL's keys
+  and mode (`waf.yaml`), the read API's web ACL detached in an emergency (`update-stack --use-previous-template`) run
+  as before the review: no parameter they do not give, no SSM parameter, before the first Deploy as after; the roles
+  stack comes first (it creates the state's bucket).
+- **Counts kept** (P2: `COUNT=1` by default lost a worker stopped on purpose). « Counts » above; the workflow's input
+  `worker_desired_count` is `keep`, `1` or `0`, `keep` by default, passed as given.
+- **A first install, alone and consistent** (P1: the release bucket missing while the repository and the worker stack
+  existed left the run without state nor lock). The release bucket missing is a first install only when the worker
+  stack and the repository are missing too; otherwise the Deploy stops before any change, naming what is missing and
+  what exists. A first install takes, before any change (the database, the secrets), a lock that exists before any
+  bucket: SSM `/vega/v2/deploy-bootstrap`, created without `--overwrite` (one run succeeds; another stops, naming it;
+  `DEPLOY_TAKEOVER` naming a dead one replaces it, then reads it back as its own). Once the worker stack has created
+  the bucket, the state is taken there and the bootstrap parameter deleted.
+- **The grants, call by call** (P1: `ecr:DescribeRepositories`, called at step 3 since GH157, was not granted to
+  `vega-v2-deploy`). Every AWS call the Deploy makes itself (`deploy.sh`, `deploy_state.py`, `ci/secrets.sh`,
+  `verify-deploy.mjs`) is in one table of `backend/tests/test_deploy_grants.py` with its IAM action(s), resource and
+  region: the test fails for a call missing from the table, and for an entry `vega-v2-deploy` does not grant on that
+  resource. What CloudFormation does to the stacks' resources is `vega-v2-cloudformation`'s. The state's object is the deploy role's only
+  grant on the state's bucket; the release bucket's existence is read with `s3:ListBucket` on it alone (`head-bucket`).
+- **The CloudFormation role and the two buckets** (P1: AWS's handler for `AWS::S3::Bucket` reads every configuration
+  back after creating a bucket — `s3:ListBucket`, `s3:GetLifecycleConfiguration`, … — which `s3:GetBucket*` does not
+  match). The role's `Buckets` statement names, on the media and release buckets only, the actions AWS's handlers
+  document (CloudFormation's registry schemas of `AWS::S3::Bucket` and `AWS::S3::BucketPolicy`, vendored with their
+  source and digests in `backend/tests/fixtures/cfn-handlers.json`): the whole read handler; of create and update,
+  the actions of the properties the templates set (name, public access block, ownership, encryption, tags) and the
+  handler's own checks (`s3:GetBucketAcl`, `s3:ListBucket`); delete; the media bucket's policy. No wildcard action.
+  A first install's prerequisites, all the owner's: the stack `vega-v2-deploy-roles` (these grants), GitHub's OIDC
+  provider, the PitchAPI key; the Deploy creates everything else. Not verifiable here: AWS's evaluation of these
+  policies (checked against what AWS documents, not by AWS).
+
+### GH157/158.2 Failure modes and expected outcomes
+
+| # | Situation (the real `deploy.sh`, entered as the workflow enters it: no export variable, a git commit exported by `git archive`) | Expected |
+|---|---|---|
+| GH157-a | The stacks as production has them (state absent, the worker stack without `TemplateDigest`), the same commit deployed twice | first run: image built before any count changes, the services stopped (the template unknown), the full migrate, one start; the second: no build, the online migrate, no stop, no task replaced, `done` |
+| GH157-b | A first install (no repository, no stack, no bucket) | the worker stack created at 0, the image built and pushed, the full migrate, the services started; the state written once the bucket exists |
+| GH157-c | `describe-repositories` or `describe-images` refused (AccessDenied), the registry login failing, the session expired | stop before any count changes and before any stack is deployed after the database and the secrets; no build when refused |
+| GH157-d | The repository missing, the worker stack present | stop, named, nothing stopped |
+| GH157-e | A candidate with a new marked migration (179), the template unchanged | the tasks' image updated by the previous template, the online migrate applies it while the worker runs (desired 1 throughout), one final update: one replacement |
+| GH157-f | A candidate with a new unmarked migration | the online migrate exits 3, nothing applied; the counts saved, then the services stopped, the candidate's template, the full migrate, the services started with the saved backfill |
+| GH157-g | The base holds a migration the candidate does not know (an older commit after a newer Deploy) | the online migrate exits 4; the Deploy stops, nothing stopped, nothing applied |
+| GH157-h | The full migrate fails (a file errors after earlier ones applied), or its waiter times out, or its task gives no exit code | the services stay stopped, the state `unsafe` with the saved counts; no restart of the old image; the log says what the next Deploy does |
+| GH157-i | The same, then a retry of the corrected (or the same) candidate | the saved counts restored exactly (the backfill 1 though the stack says 0), after the retry's own migrations |
+| GH157-j | A failure after the services stopped and before their template or image changed (the candidate's template update rolled back) | restored at once to the saved counts by the previous template; the state idle |
+| GH157-k | `BACKFILL_DESIRED_COUNT=0` (history collected), then a Deploy without it; a stack whose count cannot be read (AccessDenied) | 0, then 0 again; stop before any change |
+| GH157-l | Another run holds the state (seen 5 minutes ago); a run killed 2 hours ago (its GitHub run `completed`) left it `stopped` with saved counts; two Deploys write it between one's read and write | refused, nothing changed; taken over with its saved counts kept and restored; the second write fails (412) and that Deploy stops |
+| GH157-m | The Deploy killed (SIGKILL) after the services stopped (its GitHub run then `completed`), then a new Deploy | the state still holds the saved counts; the new Deploy takes it over and restores them |
+| GH157-n | A failure in the online path (the online migrate fails, or a later stack) | the services never stopped; the state released; `unsafe` not set |
+| GH157-o | Another run takes the state over while this one pushes its image (its lease expired), then this one resumes | it stops at its next change: no stack, task or service changed after the push, the other run's state untouched (not released) |
+| GH157-p | Another run takes the state over right after this one stopped the services (saved counts, `changed` and `unsafe` false); then a third Deploy run with `DEPLOY_TAKEOVER` naming the second | the first stops before the candidate's template: no template, no migrate, no restore by its exit, the state the second's; the third takes it over and restores the saved counts once its migrations succeed |
+| GH157-q | Every AWS call the Deploy makes itself, against the role `vega-v2-deploy` | each in the table (a call missing from it fails), each granted on its resource and region; before: `ecr:DescribeRepositories` not granted |
+| GH157-r | The CloudFormation role's grants on the two buckets, against AWS's handler permissions (vendored) | the whole read handler, create and update of the properties set, delete, the media bucket's policy; on those two buckets only; no wildcard action; before: `s3:ListBucket`, `s3:Get…Configuration` missing |
+| GH157-s | The release bucket missing while the worker stack exists; while the repository alone exists | stop before any change (no database stack, no secret, no state written), naming what is missing and what exists |
+| GH157-t | Two first installs at once; the second started once the first's worker stack has created the release bucket | the first installs; the second stops at the state, before any change, naming the first (no lock to relay, the state exists before) |
+| GH157-u | The state held by another run 2 hours old: its GitHub attempt `in_progress`, `completed`, not answered; a workstation's run of another host; of this host, its run's lock held (a process of it alive), then no process of it; one the owner attested dead (`abandon`) | refused (no takeover for age); taken over; refused; refused; refused, then taken over; taken over |
+| GH157-v | Run A (a workstation's) suspended inside a stack call; run B on that host; A resumes; then A killed while its live stack update runs (left `UPDATE_IN_PROGRESS`), a stack in `REVIEW_IN_PROGRESS` left by a dead first install and a manual change set on another stack | B refused (A's run lock held), A completes, B changed nothing; then B takes over, waits for the update's end, does not wait on `REVIEW_IN_PROGRESS`, reads each status again, keeps the manual change set |
+| GH157-w | The full migrate still running after the waiter's rounds (ECS keeps it `RUNNING`); the job returns; then a new Deploy | the first stops, token, ARN and revision in its state, the services stopped; the second waits until `STOPPED`, reads its exit, then runs its own migrate and starts the services: never two migrate tasks at once |
+| GH157-ad | A workstation's run whose shell alone is killed (SIGKILL) while its `aws cloudformation deploy` lives on; another run of that host; then that command ends | refused while the command lives (its run's lock held), whatever the shell's PID; once it ends, taken over and its stacks' operations awaited |
+| GH157-ae | RunTask's first answer lost (the task created), its replays refused by IAM (`AccessDeniedException`), `ListTasks` empty — with the CLI's own retries modelled (three requests per invocation unless `AWS_MAX_ATTEMPTS` says otherwise); a run on a task's ARN that DescribeTasks answers `MISSING` for a while after its answer | each RunTask sent once per invocation (`AWS_MAX_ATTEMPTS=1` on that call alone); the intent stays (unknown), the run stops, the services stopped stay so; the next run with the rights finds the one task and waits for it; `MISSING` waited through until the task shows and stops: one task, its exit read. Before (06 h 28): the CLI's retry turned "lost, then denied" into a first refusal, and the intent was cleared |
+| GH157-x | RunTask refused (`tasks` empty, `failures`); RunTask's answer lost after ECS created the task, then a first `ListTasks` empty; the request lost before ECS saw it; an ARN that ECS answers `MISSING`; an intent past the replay window and not found, then `resolve-migrate --none` | no task, the intent cleared, the run stops, the next one migrates; the next run replays the same token and parameters and gets that task (one task in all, waited for; no service started before); the replay creates it once; no migrate task running: the intent cleared, its outcome unknown, the run's own migrations before any service; suspended (exit 1, the entry named, nothing changed), then the run proceeds |
+| GH157-y | Saved counts worker 0 / backfill 1, then 1 / 0, resumed without an override; `WORKER_DESIRED_COUNT` 0 and 1; `keep` with the stack at 0; the workflow's input | 0 / 1 and 1 / 0 restored; 0 and 1; 0 kept; `keep` by default, `0` passed as `0` |
+| GH157-z | A first install whose image build fails after its worker stack was created at 0; then a run with `keep` | the target (worker 1, backfill 0) saved before the stack and the build; the second run starts the worker at 1 once its migrations succeed |
+| GH157-aa | The candidate's template applied to the worker stack, the CLI's answer lost (exit 255); the candidate's update rolled back instead | the services stay stopped (the stack holds the candidate's image), the next run migrates, then starts them; restored at once by the previous template (GH157-j) |
+| GH157-ab | The README's manual CloudFormation commands against their templates | each template parameter without a default given by `deploy`; every parameter named by `update-stack --use-previous-template`; no SSM-typed parameter, no fence |
+| GH157-ac | The maintenance entries: `abandon` of a GitHub run, of this host's live run, of another host's run; `resolve-migrate` with another token | refused; refused; written (the next Deploy takes it over); refused |
+| GH158-a | Commits that change only the site's files the image does not copy (`MatchNav.jsx`), only the read API, only a template other than the worker's | the same image identity: no build, no push, no replacement of the worker or the backfill |
+| GH158-b | A commit changing a site file the image copies (`services/format.js`), a shared file (`dashboard/shared/archive.js`), an account SQL file, `requirements.txt`, the Dockerfile's `VEGA_DEPS_REFRESH`, a file's mode (executable), a copied file deleted, a file added under `backend/vega` | a new identity each: built, pushed, one replacement |
+| GH158-c | The identity of one tree computed twice, from two clean exports of one commit (different mtimes), on two checkouts | the same 64 characters |
+| GH158-d | The account switched on with the same image; a login's password parameter rotated; `WORKER_DESIRED_COUNT` 1 → 0 → 1 | the migrate task runs (account, logins) without a stop; the rotation replaces the tasks once (`SecretsRevision`); counts change without a replacement |
+| GH158-e | A retry after a failure that came after the push | the image found: no second build or push |
+| GH158-f | `live.yaml`'s ingestor | the worker's image identity (`ImageTag`), never the commit |
+| GH158-g | A warm BuildKit builder (the real Docker): the Dockerfile unchanged; a comment changed; `VEGA_DEPS_REFRESH` changed | every step `CACHED`; a new identity but the apt and pip steps still `CACHED` (what the review found); the apt and pip steps run again (not `CACHED`), the steps before them cached |
+
+GH157-q, r, ab: `backend/tests/test_deploy_grants.py`. GH157-ac: `backend/tests/test_deploy_state.py`. GH157-a–p, s–ae, GH158-a, b, d–f: `backend/tests/test_deploy_flow.py`, the real `deploy.sh` and its export (`git archive` of a
+commit of a temporary repository holding this tree), the real `image_identity.py` and `deploy_state.py`, the real
+Docker for the context only (BuildKit), stateful stand-ins of `aws` (CloudFormation stacks and their parameters and
+templates, ECS services, ECR, S3 with conditional requests, SSM versions) and of `docker build`/`push`; the migrate
+task runs the real `python -m vega.migrate` of the image's tree on a disposable PostgreSQL 18
+(`VEGA_V2_DEPLOY_FLOW_TEST_DSN`). GH158-c: `backend/tests/test_image_identity.py`. GH158-g: `backend/tests/test_image_refresh.py` (the real Docker's
+BuildKit, skipped without it). Not verifiable here: AWS's own
+answers (CloudFormation's change sets, ECS's replacements, S3's conditional requests on the real bucket), the real
+build and push.
+
+## GH202 and GH204. The checks at the end of a Deploy; the alarms and the dashboard (GH #202, VI-142; GH #204, VI-144)
+
+Seen before this change (`e4014803`): a Deploy ends with `done` once its stacks are deployed and the home's personal read
+answered for one club and one player (GH220.3); nothing checks that the distribution serves the read API just
+uploaded, that `/api/health` answers, or that the worker and the backfill run the task definitions just deployed. In
+production on 25 Nov 2026 (GH #220's comment): the route `/api/read/home-favourites` failed 133 of 168 calls with real
+visitors' favourites while the Deploy's check (one club, one player) passed; the function-wide 5xx alarm rang once. Not
+watched: a slowing of the function below its 20 s alarm, a worker or backfill restarting in a loop (their CPU samples
+continue), a backfill meant to run that does not; no dashboard (#204).
+
+### GH202/204.1 Rules
+
+- **The release served.** `/api/health` answers `release`: the SHA-256 of the read API's package (`VEGA_RELEASE`,
+  `releases/v2-api/<sha256>.zip`), `null` without it. The last steps (`infra/aws/verify-deploy.mjs`, step 11b) ask it
+  through the distribution (never kept there) until it answers 200, `status: ok` and the release the Deploy uploaded,
+  at most 24 times 5 s apart; then a failure naming the last status and release seen.
+- **The services.** `describe-services` of both, until each has the desired count the Deploy set (the worker's input,
+  the backfill's), as many running, one deployment, primary, `COMPLETED`, whose task definition is the stack's
+  (`WorkerTaskDefinition`, `BackfillTaskDefinition`, with its revision): at most 30 times 10 s apart; then a failure
+  naming what differs. A refusal of the call is a failure, never a pass.
+- **No favourites read of its own.** The home's personal read is checked once a Deploy, by GH220.3's probe in step 12
+  (`smoke-favourites.mjs`, unchanged here; a visitor's list of several clubs and players and the base's time budget
+  are GH #220's, PR #240, GH220.4). Step 11b asks the distribution `/api/health` only (and ECS its services), never a
+  `/api/read/*` route: no second favourites read and no setting of its own (an earlier draft's `--mix`, `--teams`,
+  `--players` and `SMOKE_MIX_*` are gone; given, they are refused).
+- **Order and outcome.** Step 11b runs its two checks whatever each answers, then step 12 runs as before; a failed
+  check ends the Deploy without `done` after step 12 (everything deployed).
+- **Alarms** (`alerts.yaml`; each notifies the topic of ALARM and OK; none duplicates another):
+  - `vega-v2-api-p95`: the function's 95th percentile duration at 3 s or more in each of 6 five-minute periods (a
+    slowing long before `vega-v2-api-slow`'s 20 s of p90).
+  - `vega-v2-api-route-5xx`: a Contributor Insights rule over the function's request lines (one rule for every route:
+    the lines carry `route`, the read API's route with each identifier written `id`, `other` for a path no route
+    serves) counting answers of 500 or more by route; the alarm when the route with the most has 2 or more in each of 3
+    five-minute periods (a route failing for its visitors, as GH #220, rings even when the function's total stays
+    under `vega-v2-api-5xx`'s 10). The request line is written as a JSON line of its own (no Lambda text prefix), the
+    form the rule reads; the two metric filters read it as before.
+  - `vega-v2-worker-restarts`, `vega-v2-backfill-restarts`: an EventBridge rule per service matching its tasks
+    stopped by their container (`EssentialContainerExited`) or failing to start (`TaskFailedToStart`); a deploy, a
+    count lowered (`ServiceSchedulerInitiated`), a hand stop (`UserInitiated`) and AWS's maintenance are not; the alarm
+    on 3 or more in 30 minutes; each only while its service is meant to run (`WatchWorker`, `WatchBackfill`).
+  - `vega-v2-backfill-down`: no task of the backfill for 15 minutes, only while the Deploy set it to 1.
+- **Dashboard** `vega-v2` (free, the first three): the function's requests, errors, throttles, durations (p50, p95,
+  p99) and copies; its 5xx and the base's refusals; the routes in 5xx (the rule) and each route's p95 (Logs Insights);
+  the two services' tasks and abnormal stops; the base's CPU, connections and memory; the distribution's requests and
+  5xx rate (us-east-1); the alarms.
+- **Rights.** The CloudFormation role: the dashboard, the rule and the EventBridge rules under `vega-v2-*` names; the
+  deploy role: what it already has (`ecs:DescribeServices`), the read API through the distribution needs none.
+
+### GH202/204.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| GH202-a | `/api/health` with and without `VEGA_RELEASE` | `release` the package's SHA-256; `null` |
+| GH202-b | The distribution answering the previous release twice, then the new one; answering it never; `/api/health` 503 | passed at the third try; failed after its tries, naming the release seen; failed naming the status |
+| GH202-c | The services as the Deploy left them; the worker running 0 of 1; two deployments; a primary on another task definition; `IN_PROGRESS`; the call refused | passed; each a failure naming the service and what differs, after the tries; refused: failed |
+| GH202-d | The verifier's requests to the origin, its checks passing and its release check failing; `--mix 2x2`, `--teams t_… --players p_…` given | `/api/health` only (as many as its tries), no `/api/read/*` and no manifest; refused, exit 2, nothing asked |
+| GH202-e | The real `deploy.sh`: everything well; the services check failing; GH220.3's probe failing; `SMOKE_MIX_TEAMS` and `SMOKE_MIX_PLAYERS` set; the real verifier and the real probe against one origin | `done`, the probe called once (step 12); no `done`, exit 1, step 12 still run; exit 1 as before; nothing of them reaches step 11b; every `/api/read/home-favourites` the origin sees is one the probe printed (none of step 11b's) |
+| GH204-a | `alerts.yaml` | the alarms and rules of GH202/204.1, each with its topic, none treating missing data as breaching but the backfill's (like the worker's); the rule's log group, keys and filter; the EventBridge patterns' stop codes; conditions on the services' watch |
+| GH204-b | The handler's request lines (the real handler, a route answering 503, an unknown path) | a JSON line of its own each, holding `route` (`read.home-favourites`, `matches.id.summary`, `other`); the 5xx filter and the rule's filter match the 503s only; the route the edge function names (GH149) |
+| GH204-c | `deploy.sh` | `WatchBackfill` true with a backfill of 1, false at 0 |
+| GH204-d | `deploy-roles.yaml` | the CloudFormation role's dashboard, insight rule and EventBridge rights on `vega-v2-*` names; `DeployGrants` 1 |
+| GH204-e | The CloudFormation role against AWS's handlers (CloudFormation's registry schemas, us-east-2, vendored in `backend/tests/fixtures/cfn-handlers.json`) of the dashboard, the alarms (both regions), the insight rule and the EventBridge rules the alert stacks create (review of 26 Nov 2026, 05 h 29: the dashboard's tags were granted on the alarms and rules only) | each create, read, update and delete permission granted on that resource's own ARN (`dashboard/vega-v2`, `alarm:vega-v2-…`, `insight-rule/vega-v2-…`, `rule/vega-v2-…`); before: `cloudwatch:TagResource`, `UntagResource`, `ListTagsForResource` missing on the dashboard, `events:PutTargets`, `RemoveTargets` on the rules; `iam:PassRole` of the rules' handler only for a target with a role, which none has |
+
+GH202-a: `backend/api/test/read-api.test.mjs`; GH202-b–d: `backend/api/test/verify-deploy.test.mjs` (a local origin,
+answers made for each failure); GH202-e: `backend/tests/test_account_deploy.py` and `backend/tests/test_deploy_flow.py`
+(the real `deploy.sh`; the latter with the real verifier and probe, also run with PR #240's probe); GH204-e: `backend/tests/test_deploy_grants.py`; GH204-a–d:
+`backend/tests/test_alerts.py`. Not verifiable
+here: CloudWatch's own evaluation (Contributor Insights, the EventBridge metrics, the dashboard's widgets), real
+production answers.
 
 ## GH129. The match page's season read once; the player page's reads without waste (GH #129, VI-69)
 

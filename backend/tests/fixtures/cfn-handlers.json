@@ -1,0 +1,285 @@
+{
+ "source": "https://schema.cloudformation.us-east-2.amazonaws.com/CloudformationSchema.zip",
+ "read_on": "2026-11-26",
+ "zip_sha256": "a9dd74d97c533101e2f48ebf7c366a5549de57e69fb7b672409db899c9f36d9d",
+ "why": "AWS's documented permissions of CloudFormation's resource handlers for the types the Deploy's templates create and the CloudFormation role must manage: the two buckets of worker.yaml and the media bucket's policy (GH157-r), the alert stacks' dashboard, alarms, insight rule and EventBridge rules (GH204-e). Regenerate: download the zip, read handlers.*.permissions of each file.",
+ "types": {
+  "AWS::S3::Bucket": {
+   "file": "aws-s3-bucket.json",
+   "file_sha256": "b2f1c30da4ea3065be89563c7b04d6120f9fff47c37e6f77eb442781a9cd419b",
+   "handlers": {
+    "create": [
+     "iam:PassRole",
+     "s3:CreateBucket",
+     "s3:CreateBucketMetadataTableConfiguration",
+     "s3:DeleteObject",
+     "s3:GetBucketAcl",
+     "s3:GetBucketMetadataTableConfiguration",
+     "s3:ListBucket",
+     "s3:PutAccelerateConfiguration",
+     "s3:PutAnalyticsConfiguration",
+     "s3:PutBucketAbac",
+     "s3:PutBucketCORS",
+     "s3:PutBucketDefaultStorageClass",
+     "s3:PutBucketLogging",
+     "s3:PutBucketNotification",
+     "s3:PutBucketObjectLockConfiguration",
+     "s3:PutBucketOwnershipControls",
+     "s3:PutBucketPublicAccessBlock",
+     "s3:PutBucketReplication",
+     "s3:PutBucketTagging",
+     "s3:PutBucketVersioning",
+     "s3:PutBucketWebsite",
+     "s3:PutEncryptionConfiguration",
+     "s3:PutIntelligentTieringConfiguration",
+     "s3:PutInventoryConfiguration",
+     "s3:PutLifecycleConfiguration",
+     "s3:PutMetricsConfiguration",
+     "s3:PutObjectAcl",
+     "s3:PutObjectLockConfiguration",
+     "s3:PutReplicationConfiguration",
+     "s3:TagResource",
+     "s3tables:CreateNamespace",
+     "s3tables:CreateTable",
+     "s3tables:CreateTableBucket",
+     "s3tables:GetTable",
+     "s3tables:GetTableMetadataLocation",
+     "s3tables:PutTableBucketPolicy",
+     "s3tables:PutTableEncryption",
+     "s3tables:PutTablePolicy",
+     "s3tables:UpdateTableMetadataLocation"
+    ],
+    "delete": [
+     "s3:DeleteBucket",
+     "s3:ListBucket"
+    ],
+    "list": [
+     "s3:ListAllMyBuckets"
+    ],
+    "read": [
+     "s3:GetAccelerateConfiguration",
+     "s3:GetAnalyticsConfiguration",
+     "s3:GetBucketAbac",
+     "s3:GetBucketCORS",
+     "s3:GetBucketDefaultStorageClass",
+     "s3:GetBucketLogging",
+     "s3:GetBucketMetadataTableConfiguration",
+     "s3:GetBucketNotification",
+     "s3:GetBucketObjectLockConfiguration",
+     "s3:GetBucketOwnershipControls",
+     "s3:GetBucketPublicAccessBlock",
+     "s3:GetBucketTagging",
+     "s3:GetBucketVersioning",
+     "s3:GetBucketWebsite",
+     "s3:GetEncryptionConfiguration",
+     "s3:GetIntelligentTieringConfiguration",
+     "s3:GetInventoryConfiguration",
+     "s3:GetLifecycleConfiguration",
+     "s3:GetMetricsConfiguration",
+     "s3:GetReplicationConfiguration",
+     "s3:ListBucket",
+     "s3:ListTagsForResource"
+    ],
+    "update": [
+     "iam:PassRole",
+     "s3:CreateBucketMetadataTableConfiguration",
+     "s3:DeleteBucketAnalyticsConfiguration",
+     "s3:DeleteBucketCors",
+     "s3:DeleteBucketEncryption",
+     "s3:DeleteBucketLifecycle",
+     "s3:DeleteBucketMetadataTableConfiguration",
+     "s3:DeleteBucketMetricsConfiguration",
+     "s3:DeleteBucketReplication",
+     "s3:DeleteBucketWebsite",
+     "s3:GetBucketMetadataTableConfiguration",
+     "s3:ListBucket",
+     "s3:PutAccelerateConfiguration",
+     "s3:PutAnalyticsConfiguration",
+     "s3:PutBucketAbac",
+     "s3:PutBucketAcl",
+     "s3:PutBucketCORS",
+     "s3:PutBucketDefaultStorageClass",
+     "s3:PutBucketLogging",
+     "s3:PutBucketNotification",
+     "s3:PutBucketObjectLockConfiguration",
+     "s3:PutBucketOwnershipControls",
+     "s3:PutBucketPublicAccessBlock",
+     "s3:PutBucketReplication",
+     "s3:PutBucketTagging",
+     "s3:PutBucketVersioning",
+     "s3:PutBucketWebsite",
+     "s3:PutEncryptionConfiguration",
+     "s3:PutIntelligentTieringConfiguration",
+     "s3:PutInventoryConfiguration",
+     "s3:PutLifecycleConfiguration",
+     "s3:PutMetricsConfiguration",
+     "s3:PutObjectLockConfiguration",
+     "s3:PutReplicationConfiguration",
+     "s3:TagResource",
+     "s3:UntagResource",
+     "s3:UpdateBucketMetadataAnnotationTableConfiguration",
+     "s3:UpdateBucketMetadataInventoryTableConfiguration",
+     "s3:UpdateBucketMetadataJournalTableConfiguration",
+     "s3tables:CreateNamespace",
+     "s3tables:CreateTable",
+     "s3tables:CreateTableBucket",
+     "s3tables:GetTable",
+     "s3tables:GetTableMetadataLocation",
+     "s3tables:PutTableBucketPolicy",
+     "s3tables:PutTableEncryption",
+     "s3tables:PutTablePolicy",
+     "s3tables:UpdateTableMetadataLocation"
+    ]
+   }
+  },
+  "AWS::S3::BucketPolicy": {
+   "file": "aws-s3-bucketpolicy.json",
+   "file_sha256": "d08297940ff85be93a54c50ea61df0832c481b1d1d3b7e0dad520cef973d68d9",
+   "handlers": {
+    "create": [
+     "s3:GetBucketPolicy",
+     "s3:PutBucketPolicy"
+    ],
+    "delete": [
+     "s3:DeleteBucketPolicy",
+     "s3:GetBucketPolicy"
+    ],
+    "list": [
+     "s3:GetBucketPolicy",
+     "s3:ListAllMyBuckets"
+    ],
+    "read": [
+     "s3:GetBucketPolicy"
+    ],
+    "update": [
+     "s3:GetBucketPolicy",
+     "s3:PutBucketPolicy"
+    ]
+   }
+  },
+  "AWS::CloudWatch::Dashboard": {
+   "file": "aws-cloudwatch-dashboard.json",
+   "file_sha256": "77c8aef94259cbe81f27aa370ed4ba6de627a52028a05ba62374e946c51c2493",
+   "handlers": {
+    "create": [
+     "cloudwatch:GetDashboard",
+     "cloudwatch:PutDashboard",
+     "cloudwatch:TagResource"
+    ],
+    "delete": [
+     "cloudwatch:DeleteDashboards",
+     "cloudwatch:GetDashboard"
+    ],
+    "list": [
+     "cloudwatch:ListDashboards"
+    ],
+    "read": [
+     "cloudwatch:GetDashboard",
+     "cloudwatch:ListTagsForResource"
+    ],
+    "update": [
+     "cloudwatch:ListTagsForResource",
+     "cloudwatch:PutDashboard",
+     "cloudwatch:TagResource",
+     "cloudwatch:UntagResource"
+    ]
+   }
+  },
+  "AWS::CloudWatch::Alarm": {
+   "file": "aws-cloudwatch-alarm.json",
+   "file_sha256": "dadabfe079ace9b3d8de68e5a437f7cf07d35679606fcd3596e630024718e8be",
+   "handlers": {
+    "create": [
+     "cloudwatch:DescribeAlarms",
+     "cloudwatch:ListTagsForResource",
+     "cloudwatch:PutMetricAlarm",
+     "cloudwatch:TagResource"
+    ],
+    "delete": [
+     "cloudwatch:DeleteAlarms",
+     "cloudwatch:DescribeAlarms"
+    ],
+    "list": [
+     "cloudwatch:DescribeAlarms"
+    ],
+    "read": [
+     "cloudwatch:DescribeAlarms",
+     "cloudwatch:ListTagsForResource"
+    ],
+    "update": [
+     "cloudwatch:DescribeAlarms",
+     "cloudwatch:ListTagsForResource",
+     "cloudwatch:PutMetricAlarm",
+     "cloudwatch:TagResource",
+     "cloudwatch:UntagResource"
+    ]
+   }
+  },
+  "AWS::CloudWatch::InsightRule": {
+   "file": "aws-cloudwatch-insightrule.json",
+   "file_sha256": "072daf839d3dd2b480c29aba34dff2b2e56df2c15c8f7976bffb7f9f17d7a1ee",
+   "handlers": {
+    "create": [
+     "cloudwatch:DescribeInsightRules",
+     "cloudwatch:PutInsightRule",
+     "cloudwatch:TagResource"
+    ],
+    "delete": [
+     "cloudwatch:DeleteInsightRules",
+     "cloudwatch:DescribeInsightRules"
+    ],
+    "list": [
+     "cloudwatch:DescribeInsightRules"
+    ],
+    "read": [
+     "cloudwatch:DescribeInsightRules",
+     "cloudwatch:ListTagsForResource"
+    ],
+    "update": [
+     "cloudwatch:DescribeInsightRules",
+     "cloudwatch:PutInsightRule",
+     "cloudwatch:TagResource",
+     "cloudwatch:UntagResource"
+    ]
+   }
+  },
+  "AWS::Events::Rule": {
+   "file": "aws-events-rule.json",
+   "file_sha256": "66d0c21eec2fb459b42b1bb4d209690c9db3592c03f661067638a57d4ea72dca",
+   "handlers": {
+    "create": [
+     "events:DescribeRule",
+     "events:PutRule",
+     "events:PutTargets",
+     "events:TagResource",
+     "iam:PassRole"
+    ],
+    "delete": [
+     "events:DeleteRule",
+     "events:DescribeRule",
+     "events:ListTargetsByRule",
+     "events:RemoveTargets",
+     "iam:PassRole"
+    ],
+    "list": [
+     "events:ListRules"
+    ],
+    "read": [
+     "events:DescribeRule",
+     "events:ListTagsForResource",
+     "events:ListTargetsByRule",
+     "iam:PassRole"
+    ],
+    "update": [
+     "events:DescribeRule",
+     "events:PutRule",
+     "events:PutTargets",
+     "events:RemoveTargets",
+     "events:TagResource",
+     "events:UntagResource",
+     "iam:PassRole"
+    ]
+   }
+  }
+ }
+}

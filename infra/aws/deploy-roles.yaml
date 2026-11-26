@@ -20,6 +20,8 @@ Resources:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement: [{Effect: Allow, Principal: {Service: cloudformation.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      # The two buckets (CloudFormationBuckets, below): a policy of their own.
+      ManagedPolicyArns: [!Ref CloudFormationBuckets]
       Policies:
         - PolicyName: V2Stacks
           PolicyDocument:
@@ -169,19 +171,35 @@ Resources:
                 Action: ['route53:CreateHealthCheck', 'route53:GetHealthCheck', 'route53:UpdateHealthCheck', 'route53:DeleteHealthCheck',
                          'route53:ChangeTagsForResource', 'route53:ListTagsForResource', 'route53:ListHealthChecks']
                 Resource: '*'
+              # GH204: the dashboard, the rule counting the 5xx by route, the rules of the services' abnormal stops.
+              # The dashboard's handler also tags it and reads its tags back (GH204-e, AWS::CloudWatch::Dashboard's
+              # schema): on that dashboard's ARN alone.
+              - Sid: Dashboard
+                Effect: Allow
+                Action: ['cloudwatch:PutDashboard', 'cloudwatch:DeleteDashboards', 'cloudwatch:GetDashboard', 'cloudwatch:TagResource',
+                         'cloudwatch:UntagResource', 'cloudwatch:ListTagsForResource']
+                Resource: !Sub 'arn:${AWS::Partition}:cloudwatch::${AWS::AccountId}:dashboard/vega-v2'
+              - Sid: RouteRule
+                Effect: Allow
+                Action: ['cloudwatch:PutInsightRule', 'cloudwatch:DeleteInsightRules', 'cloudwatch:EnableInsightRules', 'cloudwatch:DisableInsightRules',
+                         'cloudwatch:TagResource', 'cloudwatch:UntagResource', 'cloudwatch:ListTagsForResource']
+                Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:insight-rule/vega-v2-*'
+              - Sid: RouteRuleList
+                Effect: Allow
+                Action: ['cloudwatch:DescribeInsightRules']
+                Resource: '*'
+              # PutTargets and RemoveTargets: AWS::Events::Rule's handler (GH204-e), the rules having no target today.
+              - Sid: StopRules
+                Effect: Allow
+                Action: ['events:PutRule', 'events:DeleteRule', 'events:DescribeRule', 'events:EnableRule', 'events:DisableRule', 'events:TagResource',
+                         'events:UntagResource', 'events:ListTagsForResource', 'events:ListTargetsByRule', 'events:PutTargets', 'events:RemoveTargets']
+                Resource: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/vega-v2-*'
               # --- end of alerts
               # The schedule that starts the live ingestor (live.yaml IngestorSchedule).
               - Sid: LiveSchedule
                 Effect: Allow
                 Action: ['scheduler:*']
                 Resource: !Sub 'arn:${AWS::Partition}:scheduler:${AWS::Region}:${AWS::AccountId}:schedule/default/vega-v2-live*'
-              - Sid: Buckets
-                Effect: Allow
-                Action: ['s3:CreateBucket', 's3:DeleteBucket', 's3:PutBucket*', 's3:GetBucket*', 's3:PutEncryptionConfiguration',
-                         's3:GetEncryptionConfiguration', 's3:PutBucketPolicy', 's3:DeleteBucketPolicy']
-                Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::vega-v2-media-${AWS::AccountId}-${AWS::Region}'
-                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}'
               - Sid: Distribution
                 Effect: Allow
                 Action: ['cloudfront:*']
@@ -221,6 +239,54 @@ Resources:
                 Action: ['wafv2:ListWebACLs']
                 Resource: '*'
               # END VI-35 web ACL
+  # The two buckets of worker.yaml and the media bucket's policy (api.yaml), as AWS's handlers of AWS::S3::Bucket and
+  # AWS::S3::BucketPolicy document them (FAILURE_MODES_OPTIMISATIONS.md GH157-r, backend/tests/fixtures/
+  # cfn-s3-handlers.json): the whole read handler, which reads every configuration back after a creation (s3:GetBucket*
+  # did not match s3:ListBucket nor s3:Get…Configuration); create and update of the properties the template sets (name,
+  # public access block, ownership, encryption, tags) and the handler's own check (s3:GetBucketAcl); delete; the policy.
+  # No wildcard. A managed policy of its own: the role's inline policies are near IAM's 10 240 characters, and cfn-lint
+  # 1.43.0 (CI's) does not know s3:GetBucketDefaultStorageClass yet (the read handler's, schema of 26 November 2026),
+  # the one warning this resource ignores (W3037; test_deploy_grants.py checks its actions against AWS's schema).
+  CloudFormationBuckets:
+    Type: AWS::IAM::ManagedPolicy
+    Metadata:
+      cfn-lint: {config: {ignore_checks: [W3037]}}
+    Properties:
+      ManagedPolicyName: vega-v2-cloudformation-buckets
+      Description: What vega-v2-cloudformation may do to the media and release buckets and the media bucket's policy.
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Buckets
+            Effect: Allow
+            Action: ['s3:CreateBucket', 's3:PutBucketPublicAccessBlock', 's3:PutBucketOwnershipControls', 's3:PutEncryptionConfiguration',
+                   's3:PutBucketTagging', 's3:TagResource', 's3:UntagResource', 's3:GetBucketAcl', 's3:DeleteBucket',
+                   's3:GetAccelerateConfiguration', 's3:GetAnalyticsConfiguration', 's3:GetBucketAbac', 's3:GetBucketCORS',
+                   's3:GetBucketDefaultStorageClass', 's3:GetBucketLogging', 's3:GetBucketMetadataTableConfiguration',
+                   's3:GetBucketNotification', 's3:GetBucketObjectLockConfiguration', 's3:GetBucketOwnershipControls',
+                   's3:GetBucketPublicAccessBlock', 's3:GetBucketTagging', 's3:GetBucketVersioning', 's3:GetBucketWebsite',
+                   's3:GetEncryptionConfiguration', 's3:GetIntelligentTieringConfiguration', 's3:GetInventoryConfiguration',
+                   's3:GetLifecycleConfiguration', 's3:GetMetricsConfiguration', 's3:GetReplicationConfiguration', 's3:ListBucket',
+                   's3:ListTagsForResource', 's3:GetBucketPolicy', 's3:PutBucketPolicy', 's3:DeleteBucketPolicy']
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:s3:::vega-v2-media-${AWS::AccountId}-${AWS::Region}'
+              - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}'
+  # The Deploy's state (FAILURE_MODES_OPTIMISATIONS.md GH157.3): one object, state.json, read and written with
+  # conditional requests by deploy.sh (infra/aws/deploy_state.py). Here, in the owner's stack, so that it exists before
+  # anything a Deploy creates: one lock and one state for a first install as for any Deploy. Versioned: each state
+  # written is kept (who held it, what it saved).
+  DeployStateBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub 'vega-v2-deploy-state-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+      OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
+      BucketEncryption: {ServerSideEncryptionConfiguration: [{ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}}]}
+      VersioningConfiguration: {Status: Enabled}
+      LifecycleConfiguration: {Rules: [{Id: old-states, Status: Enabled, NoncurrentVersionExpiration: {NoncurrentDays: 90}}]}
+      Tags: [{Key: project, Value: vega-v2}]
   DeployRole:
     Type: AWS::IAM::Role
     Properties:
@@ -271,10 +337,12 @@ Resources:
                 Effect: Allow
                 Action: 'iam:PassRole'
                 Resource: !GetAtt CloudFormationRole.Arn
+              # ecr:DescribeRepositories: step 3 asks whether the repository exists (a first install) before anything stops
+              # (GH157-q: called since GH157, granted since the review of 26 November 2026).
               - Sid: Image
                 Effect: Allow
                 Action: ['ecr:BatchCheckLayerAvailability', 'ecr:InitiateLayerUpload', 'ecr:UploadLayerPart', 'ecr:CompleteLayerUpload',
-                         'ecr:PutImage', 'ecr:BatchGetImage', 'ecr:DescribeImages']
+                         'ecr:PutImage', 'ecr:BatchGetImage', 'ecr:DescribeImages', 'ecr:DescribeRepositories']
                 Resource: !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/vega-v2-worker'
               - Sid: RegistryLogin
                 Effect: Allow
@@ -287,6 +355,17 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-api/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-live/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-account/*'
+              # GH157.3: the Deploy's own state, read and written with conditional requests (infra/aws/deploy_state.py):
+              # the one object of the bucket this stack creates (DeployStateBucket), nothing else of it.
+              - Sid: DeployState
+                Effect: Allow
+                Action: ['s3:PutObject', 's3:GetObject']
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::vega-v2-deploy-state-${AWS::AccountId}-${AWS::Region}/state.json'
+              # GH157-s: whether the release bucket exists, before any change (head-bucket).
+              - Sid: ReleaseBucketExists
+                Effect: Allow
+                Action: 's3:ListBucket'
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}'
               - Sid: Secrets
                 Effect: Allow
                 Action: ['ssm:GetParameter', 'ssm:PutParameter']
@@ -306,6 +385,12 @@ Resources:
                 Effect: Allow
                 Action: ['ecs:DescribeTasks', 'ecs:DescribeServices']
                 Resource: '*'
+              # GH157.3: a migrate task found by its token (startedBy), or any still running before a run asks for its own.
+              - Sid: TaskList
+                Effect: Allow
+                Action: 'ecs:ListTasks'
+                Resource: '*'
+                Condition: {ArnEquals: {'ecs:cluster': !Sub 'arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/vega-v2'}}
               - Sid: TaskRoles
                 Effect: Allow
                 Action: 'iam:PassRole'
@@ -355,6 +440,13 @@ Outputs:
   # it). The Deploy cannot update this stack; the owner does, from his Mac
   # (backend/account/DEPLOYMENT.md, section 3).
   AccountGrants: {Value: '2'}
+  # Read by deploy.sh's preflight (FAILURE_MODES_OPTIMISATIONS.md GH157): 1 once this stack holds the grants of 26 November
+  # 2026 (the Deploy's state object, the edge logs in us-east-1, the alarms, rules and dashboard of GH204, the RDS log
+  # group of GH171; after the reviews of that day: the Deploy state's own bucket and object, ecr:DescribeRepositories,
+  # the release bucket's existence, the tasks a run settles, the buckets' and the alerts' handlers). The owner deploys it
+  # from the Mac before the next Deploy.
+  DeployStateBucket: {Value: !Ref DeployStateBucket}
+  DeployGrants: {Value: '1'}
   PilotRoleArn: {Value: !GetAtt PilotRole.Arn}
   DeployRoleArn: {Value: !GetAtt DeployRole.Arn}
   CloudFormationRoleArn: {Value: !GetAtt CloudFormationRole.Arn}

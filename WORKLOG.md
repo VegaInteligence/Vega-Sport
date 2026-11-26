@@ -9,6 +9,15 @@
 - Relecture de Codex sur #238 (P2, vérifiée) : une lecture de joueur, de club ou de saison n'est validée que par les versions de ses éditions (`actorVersion`, `scopeVersion`), ni par la publication ni par le match ; l'étape avance donc aussi la version de l'édition des matchs notés, dans l'ordre de la collecte. 69e et 69j le vérifient (rouge puis vert).
 - Reste : PR #238 (accord de hugo pour fusionner et déployer, carte du 25 nov. à 22 h 24) ; après le Deploy, lire `agg.match_grade_arrivals` et l'écart `first_z` / `z` au bout d'une semaine.
 
+## Suite de l’audit du 26 novembre 2026
+
+- Les six chantiers couvrent le [contrôle de fin de déploiement](https://linear.app/vegainteligence/issue/VI-142) et ses [alertes](https://linear.app/vegainteligence/issue/VI-144), la [reprise du worker](https://linear.app/vegainteligence/issue/VI-97), son [image Docker](https://linear.app/vegainteligence/issue/VI-98), les [fiches match et joueur](https://linear.app/vegainteligence/issue/VI-69), [PostgreSQL](https://linear.app/vegainteligence/issue/VI-111) et [CloudFront](https://linear.app/vegainteligence/issue/VI-89). La PR #240 traite les 503 des favoris avec son propre responsable.
+- Astra et Codex ont cadré le lot depuis `e4014803`. Opus (`claude-opus-5-5`, effort maximal) implémente et teste, une session Codex indépendante assure la revue. Hugo a validé les références ordinateur et mobile de la fiche joueur de Christos Tzolis le 26 novembre.
+- [PR #241](https://github.com/VegaInteligence/Vega-Sport/pull/241), CI verte. Observabilité RDS et [optimisation SQL des journées](https://linear.app/vegainteligence/issue/VI-77). Sur 747 lectures locales, statuts, corps et ETag identiques. Les politiques de cache restent au réglage mesuré.
+- [PR #242](https://github.com/VegaInteligence/Vega-Sport/pull/242), CI verte. Les lectures passent de 19 à 11 sur la fiche match, de 14 à 13 sur la fiche joueur sur ordinateur et de 13 à 12 sur mobile. Les huit comparaisons de rendu et les 29 contrôles des onglets passent.
+- [PR #243](https://github.com/VegaInteligence/Vega-Sport/pull/243), mesures par famille dans les journaux CloudFront. Les 8 tests Node, les 3 tests Python ciblés et les sept contrôles GitHub et Vercel sont verts. Les mesures réelles nécessitent l’activation et du trafic.
+- [Branche déploiement](https://github.com/VegaInteligence/Vega-Sport/tree/codex/audit-deploiement-2611). Le stockage dédié de la pile des rôles conserve le propriétaire, les comptes cibles et la migration demandée. La reprise locale attend aussi la fin du sous-processus CloudFormation. La CI vérifie le script avec Docker et PostgreSQL. Le propriétaire doit mettre à jour `vega-v2-deploy-roles` avant le premier Deploy. La livraison se fait en PR brouillon et la vérification en production suit la fusion.
+
 ## PSG – Roma en direct : photos des compositions et alerte « incohérentes » — FAILURE_MODES § 67 (25 novembre 2026, branche `claude/compo-photos-alerte-stats` depuis main 6e48b6c)
 
 - Signalé par hugo pendant le match (21 h 10) : pas de photos dans les compositions officielles, et « Statistiques d'équipe signalées comme incohérentes » sans aucune stat.

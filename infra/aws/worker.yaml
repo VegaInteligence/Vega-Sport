@@ -6,7 +6,17 @@ Description: >-
   Public IP in the default VPC subnets: outbound HTTPS without a NAT gateway; no
   inbound port is open.
 Parameters:
-  ImageTag: {Type: String, AllowedPattern: '[a-f0-9]{12,64}', Description: Immutable image tag (git SHA) in the vega-v2-worker repository.}
+  ImageTag: {Type: String, AllowedPattern: '[a-f0-9]{12,64}', Description: "The services' image: its identity (infra/aws/image_identity.py), immutable in vega-v2-worker."}
+  # GH157 (FAILURE_MODES_OPTIMISATIONS.md): the one-off tasks (migrate, archives) take the candidate's image before the
+  # services do, by this parameter alone (deploy.sh, update-stack --use-previous-template): the services' task
+  # definitions do not change while the candidate's migrations run. Empty: the services' image.
+  TaskImageTag: {Type: String, Default: '', AllowedPattern: '([a-f0-9]{12,64})?', Description: "The migrate and archive tasks' image; empty, ImageTag"}
+  # The versions of the SSM parameters the services read (deploy.sh), never a value: a rotated password or key gives
+  # another revision, so the services' tasks are replaced once and read the new value.
+  SecretsRevision: {Type: String, Default: '', AllowedPattern: '([a-f0-9]{64})?', Description: "The revision of the services' secrets"}
+  # The SHA-256 of this template as the last Deploy applied it (deploy.sh): another template stops the services before
+  # the candidate's migrations (GH157).
+  TemplateDigest: {Type: String, Default: '', AllowedPattern: '([a-f0-9]{64})?', Description: SHA-256 of worker.yaml as last deployed}
   DesiredCount: {Type: Number, Default: 1, AllowedValues: [0, 1]}
   BackfillDesiredCount: {Type: Number, Default: 0, AllowedValues: [0, 1], Description: 'The backfill service: 1 while history is collected, 0 once it is.'}
   CollectUrlParameter: {Type: String, Default: /vega/v2/collect-database-url}
@@ -33,6 +43,8 @@ Parameters:
     Description: 'true: the migrate task applies backend/account/sql and sets the login vega_v2_account (<prefix>-account)'
 Conditions:
   HasAccount: !Equals [!Ref Account, 'true']
+  HasTaskImage: !Not [!Equals [!Ref TaskImageTag, '']]
+  HasTemplateDigest: !Not [!Equals [!Ref TemplateDigest, '']]
   HasArchiveSources: !Not [!Equals [!Ref ArchiveSourcesBucket, '']]
   HasOddsApi: !Not [!Equals [!Ref OddsApiKeyParameter, '']]
 Resources:
@@ -147,6 +159,7 @@ Resources:
           ReadonlyRootFilesystem: true
           Environment:
             - {Name: V2_MEDIA_BUCKET, Value: !Ref MediaBucket}
+            - {Name: V2_SECRETS_REVISION, Value: !Ref SecretsRevision}
           Secrets:
             - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
             - {Name: V2_CALC_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CalcUrlParameter}'}
@@ -180,6 +193,8 @@ Resources:
           # service is set to 0 once history is collected (BackfillDesiredCount).
           Command: [--lanes, backfill]
           ReadonlyRootFilesystem: true
+          Environment:
+            - {Name: V2_SECRETS_REVISION, Value: !Ref SecretsRevision}
           Secrets:
             - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
             - {Name: V2_CALC_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CalcUrlParameter}'}
@@ -200,7 +215,9 @@ Resources:
       TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
         - Name: migrate
-          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
+          Image: !Sub
+            - '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${Tag}'
+            - {Tag: !If [HasTaskImage, !Ref TaskImageTag, !Ref ImageTag]}
           Essential: true
           EntryPoint: [python, -m, vega.migrate]
           ReadonlyRootFilesystem: true
@@ -262,7 +279,9 @@ Resources:
       TaskRoleArn: !GetAtt ArchiveRole.Arn
       ContainerDefinitions:
         - Name: archives
-          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
+          Image: !Sub
+            - '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${Tag}'
+            - {Tag: !If [HasTaskImage, !Ref TaskImageTag, !Ref ImageTag]}
           Essential: true
           EntryPoint: [python, -m, vega.archives]
           # --fresh: seasons holding no archive match only; a repair of stored archives goes through a reviewed
@@ -315,7 +334,11 @@ Resources:
 Outputs:
   RepositoryUri: {Value: !GetAtt Repository.RepositoryUri}
   Cluster: {Value: !Ref Cluster}
+  # The task definitions the services run (with their revision): the end of a Deploy checks each service's primary
+  # deployment against them (GH202).
+  WorkerTaskDefinition: {Value: !Ref WorkerTask}
   BackfillTaskDefinition: {Value: !Ref BackfillTask}
+  TemplateDigest: {Condition: HasTemplateDigest, Value: !Ref TemplateDigest}
   MigrationTaskDefinition: {Value: !Ref MigrationTask}
   ArchiveTaskDefinition: {Condition: HasArchiveSources, Value: !Ref ArchiveTask}
   MediaBucket: {Value: !Ref MediaBucket, Export: {Name: vega-v2-media-bucket}}
