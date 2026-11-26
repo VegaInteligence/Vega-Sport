@@ -83,13 +83,20 @@ import { createDataVersions } from "../data-versions.mjs";
 import { contentTag, readReceipt } from "../read-receipts.mjs";
 import { ROLE_LABEL } from "./rankings.mjs";
 
-const PLAYER = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))$/,
-  TEAM = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))$/;
+const PLAYER = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))$/;
+// The club profile declarations supply both their matchers and the cold-read coverage check.
+const clubProfileSuffixes = {
+  TEAM: "", CLUB_SIMILAR: "/similar", PASSING: "/passing", AGE_PROFILE: "/age-profile",
+  TEAM_ABSENCES: "/absences", SQUAD: "/squad", CHANGES: "/substitutions",
+};
+export const CLUB_PROFILE_SUFFIXES = Object.values(clubProfileSuffixes);
+const { TEAM, CLUB_SIMILAR, PASSING, AGE_PROFILE, TEAM_ABSENCES, SQUAD, CHANGES } = Object.fromEntries(
+  Object.entries(clubProfileSuffixes).map(([name, suffix]) => [name, new RegExp(String.raw`^/api/teams/(t_(?:[A-Za-z0-9]{6}|v\d{7}))${suffix}$`)]),
+);
 const PARTNERS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/partners$/;
 const PARTNER_COUNT = 5;
 const SIMILAR = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/similar$/;
 const SIMILAR_COUNT = 8;
-const CLUB_SIMILAR = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/similar$/;
 const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 // Style axes (vega/models.py TEAM_SIMILARITY_AXES) and the site's name of each (club-scout.js).
 const STYLE_AXES = {
@@ -110,20 +117,16 @@ const SQUARES = Array.from({ length: DIMENSIONS }, (_, i) => `power(o.e${i + 1}-
 
 const RETURN = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/return$/;
 const HALVES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/halves$/;
-const PASSING = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/passing$/;
-const AGE_PROFILE = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/age-profile$/;
 const ACTIONS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/actions$/;
 const FACED = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/faced$/;
 // GET /api/players/{id}/injuries: a player's injuries and suspensions, most recent first (api.player_injuries, 116;
 // api.player_suspensions, 174).
 const INJURIES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/injuries$/;
 // GET /api/teams/{id}/absences: a club's current injured and suspended players (api.team_absences, 174).
-const TEAM_ABSENCES = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/absences$/;
 // GET /api/matches/{id}/absences: a match's absent players on its day (api.match_absences, 181).
 const MATCH_ABSENCES = /^\/api\/matches\/(m_(?:[A-Za-z0-9]{6}|v\d{7}))\/absences$/;
 // GET /api/players/{id}/transfers: a player's transfers, oldest first (api.player_transfers, 135).
 const TRANSFERS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/transfers$/;
-const SQUAD = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/squad$/;
 // Share of a league's clubs with a squad value before a club's rank among them is given.
 export const SQUAD_RANKED = 0.75;
 const PHYSICAL = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/physical$/;
@@ -188,7 +191,6 @@ export function passingTriangle(pairs) {
   return { triangle, pair };
 }
 
-const CHANGES = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/substitutions$/;
 const SUBSTITUTES_SHOWN = 3;
 const pointsOf = (scored, conceded) => (scored > conceded ? 3 : scored === conceded ? 1 : 0);
 
@@ -426,8 +428,8 @@ export function profileSpec(path, params) {
   if (FACED.test(path)) return profile(["api.keeper_shot_totals", SEASON, ID]);
   if (ACTIONS.test(path)) return profile(["api.player_action_values", SEASON, ID]);
   if (AGE_PROFILE.test(path)) return profile(["api.club_age_minutes", SEASON, ID]);
-  if (PASSING.test(path)) return profile(["api.team_pass_edges", "api.player_profiles", SEASON, ID]);
-  if (CHANGES.test(path)) return profile(["api.team_change_matches", "api.team_substitute_matches", "api.player_profiles", PUBLIC, SEASON, ID]);
+  if (PASSING.test(path)) return profile(["api.team_pass_edges", "api.player_identities", SEASON, ID]);
+  if (CHANGES.test(path)) return profile(["api.team_change_matches", "api.team_substitute_matches", "api.player_identities", SEASON, ID]);
   if (CLUB_SIMILAR.test(path)) return profile(["api.team_style_centiles", "api.team_profiles", "api.team_season", PUBLIC, SEASON, ID]);
   if (SIMILAR.test(path) && REPLACEMENT_PARAMS.some((key) => params.has(key)))
     return profile([...PEOPLE, "api.player_replacement_facts", "api.player_profile_axes", "api.player_team_fit", "api.team_style_centiles",
@@ -893,8 +895,8 @@ async function profileAnswer(read, path, params) {
       const { triangle, pair } = passingTriangle(pairs);
       if (!pair) reject(404, "Donnée indisponible.");
       const wanted = [...new Set([...(triangle?.players ?? []), ...pair.players])];
-      const people = new Map((await read("SELECT player_id, public_id, name, image_url FROM api.player_profiles WHERE player_id = ANY($1::int[])", [wanted]))
-        .map((r) => [r.player_id, put({ id: r.public_id, name: r.name }, "image_url", r.image_url)]));
+      const people = new Map((await read("SELECT player_key, player_id, name, image_url FROM api.player_identities WHERE player_key = ANY($1::int[])", [wanted]))
+        .map((r) => [r.player_key, put({ id: r.player_id, name: r.name }, "image_url", r.image_url)]));
       const named = (group) => (group ? { passes: group.passes, players: group.players.map((key) => people.get(key)).filter(Boolean) } : null);
       return ({ id: passing[1], season, triangle: named(triangle), pair: named(pair) });
     }
@@ -908,12 +910,17 @@ async function profileAnswer(read, path, params) {
       const [matches, substitutes] = await Promise.all([
         read(`SELECT change_minute, goals_for_then, goals_against_then, goals_for, goals_against, complete FROM api.team_change_matches WHERE ${scope}`, key),
         read(
-          `SELECT api.public_id('player', s.player_key) AS id, p.name, p.image_url, count(*)::int AS entries, sum(s.minutes)::int AS minutes,
-                  sum(s.goals)::int AS goals, sum(s.assists)::int AS assists
-           FROM api.team_substitute_matches s JOIN api.player_profiles p ON p.player_id = s.player_key
-           WHERE ${scope.replace(/season_id/, "s.season_id").replace(/team_key/, "s.team_key")}
-           GROUP BY s.player_key, p.name, p.image_url HAVING sum(s.goals) + sum(s.assists) > 0
-           ORDER BY sum(s.goals) + sum(s.assists) DESC, sum(s.goals) DESC, sum(s.minutes), p.name LIMIT ${SUBSTITUTES_SHOWN}`,
+          `WITH decisive AS MATERIALIZED (
+             SELECT player_key, count(*) AS entries, sum(minutes) AS minutes, sum(goals) AS goals, sum(assists) AS assists
+             FROM api.team_substitute_matches
+             WHERE ${scope}
+             GROUP BY player_key
+             HAVING sum(goals) + sum(assists) > 0
+           )
+           SELECT p.player_id AS id, p.name, p.image_url, d.entries::int, d.minutes::int, d.goals::int, d.assists::int
+           FROM decisive d JOIN api.player_identities p USING (player_key)
+           ORDER BY d.goals + d.assists DESC, d.goals DESC, d.minutes, p.name, d.player_key
+           LIMIT ${SUBSTITUTES_SHOWN}`,
           key,
         ),
       ]);
