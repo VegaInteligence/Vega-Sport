@@ -19,7 +19,8 @@
 // light · R44 the pills on a phone; the six tabs, the best grade and the leaders unchanged · R45 (hugo's review of the
 // release) the season stepper the height of the choices, the players' search without a frame around its pill.
 // § 73 (hugo chose piste A « Les journées numérotées » of the round picker's mock-up, 26 Nov): R47 the rounds as numbered
-// pills, all in sight, the round's matches by day.
+// pills, all in sight, the round's matches by day · § 73.3 (hugo, 11 h 04: « le truc rectangulaire droit ») R49 the
+// window rounded, R50 on a phone with a margin.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -190,6 +191,26 @@ async function check(name, expected, run) {
     result.passed = false;
   }
   process.stdout.write((result.passed ? "PASS " : "FAIL ") + name + (result.passed ? "" : " — " + result.actual.split("\n")[0]) + "\n");
+}
+
+/** The round picker's window (§ 73.3): its corners, frame, header line, close button, logo, widest pill, margins. */
+async function pickerWindow(page) {
+  await page.locator(".match-head button[data-match-picker]").click();
+  const dialog = page.getByRole("dialog");
+  await dialog.waitFor();
+  await page.waitForTimeout(300);
+  const got = await dialog.evaluate((d) => {
+    const cs = getComputedStyle(d), head = d.querySelector(".modal-header"), close = d.querySelector(".modal-close");
+    const r = d.getBoundingClientRect();
+    return {
+      radius: cs.borderTopLeftRadius, border: cs.borderTopWidth, headLine: getComputedStyle(head).borderBottomWidth,
+      close: getComputedStyle(close).borderRadius, closeBorder: getComputedStyle(close).borderTopWidth,
+      logo: Boolean(head.querySelector("img, svg, [data-media-state]")),
+      widest: Math.max(...[...d.querySelectorAll('[role="group"][aria-label="Journées"] button')].map((b) => Math.round(b.getBoundingClientRect().width))),
+      margin: Math.round(Math.min(r.left, innerWidth - r.right, r.top, innerHeight - r.bottom)),
+    };
+  });
+  return { dialog, got };
 }
 
 /** A page on the match, its families mocked. `plan`: { status, minutes (from kick-off), roundName, forecast, momentum }. */
@@ -471,6 +492,17 @@ try {
         assert.equal(after, "15", "« Journée suivante » goes to 15");
         assert.deepEqual(got, { rounds: ["13", "14", "15"], states: ["played", "played", "next"], pressed: "14", dot: "14", cols: 3, heights: [32],
           progress: "2 journées jouées sur 3", head: "14ᵉ journée", steps: 2, days: DAYS_14, current: { bg: "rgb(244, 241, 234)" }, scroll: false });
+        return got;
+      });
+
+      await check("R49 the picker's window rounded (28 px), no frame nor line under the title, a round close button, the competition's logo, pills of 44 px at most",
+        { radius: "28px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widestMax: 44 }, async () => {
+        const { dialog, got } = await pickerWindow(page);
+        await page.screenshot({ path: join(out, "choix-journee-fenetre-bureau.png") });
+        await page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "detached" }).catch(() => {});
+        assert.deepEqual({ ...got, widest: undefined, margin: undefined }, { radius: "28px", border: "0px", headLine: "0px", close: "50%", closeBorder: "0px", logo: true, widest: undefined, margin: undefined });
+        assert.ok(got.widest <= 44, `widest pill ${got.widest}px`);
         return got;
       });
 
@@ -850,6 +882,17 @@ try {
         assert.equal(got.report.radius, "999px", "report radius");
         await f.page.locator(".match-head").screenshot({ path: join(out, "pilules-haut-telephone.png") });
         return { ...sizes, got };
+      });
+
+      await check("R50 phone: the picker's window rounded (28 px) with a margin around it, not edge to edge", { radius: "28px", border: "0px", marginMin: 8 }, async () => {
+        const { dialog, got } = await pickerWindow(f.page);
+        await f.page.screenshot({ path: join(out, "choix-journee-fenetre-telephone.png") });
+        await f.page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "detached" }).catch(() => {});
+        assert.equal(got.radius, "28px");
+        assert.equal(got.border, "0px");
+        assert.ok(got.margin >= 8, `margin ${got.margin}px`);
+        return got;
       });
     } finally {
       await f.close();

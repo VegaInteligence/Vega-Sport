@@ -193,7 +193,7 @@ const complete = (g) => g.matches.every(played);
 /** Rounds per row of the numbered grid on a computer: one row up to 19, else rows as even as can be (17 + 17 for 34). */
 const perRow = (n) => Math.ceil(n / Math.ceil(n / 19));
 
-function Picker({ title, groups, current, currentGroup, href, onClose }) {
+function Picker({ title, logo, groups, current, currentGroup, href, onClose }) {
   const [selected, setSelected] = useState(currentGroup.key);
   const [query, setQuery] = useState("");
   const grid = useRef(null);
@@ -237,7 +237,17 @@ function Picker({ title, groups, current, currentGroup, href, onClose }) {
     return n ? `${n} joués sur ${g.matches.length}` : "à venir";
   };
   return (
-    <Modal title={title} onClose={onClose} className={s.picker}>
+    <Modal
+      title={title}
+      onClose={onClose}
+      className={s.picker}
+      header={
+        <h2 className={s.pickerTitle}>
+          {logo}
+          <span className={s.pickerName}>{title}</span>
+        </h2>
+      }
+    >
       <label className={s.search}>
         <Icon name="search" />
         <input
@@ -479,6 +489,7 @@ export default function MatchHead({ match, competition, back, logo, actions }) {
       {open && position && (
         <Picker
           title={`${name} · ${season}`}
+          logo={logo}
           groups={groups}
           current={match.id}
           currentGroup={position.group}
