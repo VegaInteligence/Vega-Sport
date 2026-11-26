@@ -20,7 +20,8 @@
  * PitchAPI tables (main: the retired cup worker's files). The cup worker index and the
  * open-matchday tables (/api/cup-index, /api/cup-table, /api/supplemental) stay on main.
  */
-import { reject, validateParams } from "../http.mjs";
+import { createHash } from "node:crypto";
+import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { createDataVersions } from "../data-versions.mjs";
 import { fixture, forecastOf } from "./matches.mjs";
 import { standingsBody } from "./reference.mjs";
@@ -92,7 +93,16 @@ function validate(p, spec) {
   return Object.fromEntries(p);
 }
 
-// Each path's statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A); the bodies and former tags are unchanged.
+// The base commit's validator, the hash of the body: /api/cups/edition keeps it (FAILURE_MODES_OPTIMISATIONS.md GH137A-o),
+// its written contract keeping a client's tag through an import that leaves the edition's bytes (test_snapshot_roles.py
+// 35m–35o, test_dfb_periods.py).
+function respond(req, body, family) {
+  const etag = `W/"${family}-v1-${createHash("sha256").update(JSON.stringify(body)).digest("hex")}"`;
+  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 60 });
+  return send(req, body, 200, { etag, ttl: 60 });
+}
+
+// Each other path's statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A); the bodies and former tags are unchanged.
 const CUP_BODY = ["api.cup_editions", "api.cup_table_rows", "api.match_forecasts", "api.cup_matches", "api.international_goals"];
 const STANDINGS = ["api.edition_keys", "api.standing_rows", "api.standings_withheld"];
 const SNAPSHOT = { native: ["api.fixtures", "api.match_rounds", "api.publication"], standings: [...STANDINGS, "api.publication"], edition: CUP_BODY };
@@ -102,7 +112,6 @@ export function cupSpec(path, params) {
   if (path === "/api/cups/index") return cup("catalog", ["api.cup_editions"]);
   if (path === "/api/cup-index") return cup("catalog", ["api.source_revisions", "api.cup_editions", "api.cup_table_rows"]);
   if (path === "/api/cup-table") return cup("catalog", ["api.cup_table_rows", "api.match_forecasts"]);
-  if (path === "/api/cups/edition") return cup("support", CUP_BODY);
   if (path === "/api/cup-snapshot") return cup("catalog", SNAPSHOT[params.get("kind")] ?? [...new Set(Object.values(SNAPSHOT).flat())]);
   return null;
 }
@@ -236,6 +245,7 @@ async function nativeSnapshot(read, competition, season) {
 
 export function createCupRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
+    if (path === "/api/cups/edition") return respond(req, await cupAnswer(read, path, params), "support");
     const spec = cupSpec(path, params);
     return spec ? versioned(req, params, spec, (guarded) => cupAnswer(guarded, path, params)) : null;
   };

@@ -8,12 +8,10 @@
  * official table when a source publishes one (SportScore), otherwise from Vega's own
  * table (`source: "Vega"`), where the legacy read answered 404 and the site computed
  * the table from the fixtures. Rows carry the team's id and its own name (legacy:
- * SportScore's spelling), and `season` is always given. Validators: for the standings, the data versions read before
- * the answer, with the content's hash (FAILURE_MODES_OPTIMISATIONS.md GH137A); for the matchdays, the content's hash.
+ * SportScore's spelling), and `season` is always given. Validators are content hashes.
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
-import { createDataVersions } from "../data-versions.mjs";
 
 const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/,
   YEAR = /^\d{4}(?:\/\d{4})?$/;
@@ -37,13 +35,10 @@ function respond(req, body, family) {
 
 const iso = (value) => (value instanceof Date ? value.toISOString() : value ?? null);
 
-// GET /api/standings' statements' relations (FAILURE_MODES_OPTIMISATIONS.md GH137A); its body and former tag unchanged.
-export const STANDINGS_SPEC = { family: "support", reads: ["api.edition_keys", "api.standing_rows", "api.standings_withheld"], ttl: SHARE_TTL };
-
-export async function standings(read, p) {
+export async function standings(req, p, read) {
   const { competition, season } = validate(p, { competition: LEAGUE, season: YEAR });
   if (!competition) reject(400, "Paramètre manquant.");
-  return standingsBody(read, competition, season);
+  return respond(req, await standingsBody(read, competition, season), "support");
 }
 
 /** The standings body of a competition (and season), or a 404. */
@@ -96,16 +91,15 @@ export async function matchdays(req, p, read) {
   const { competition, season } = validate(p, { competition: LEAGUE, season: YEAR }, true);
   // The league's editions of that season first, then their matches by index (FAILURE_MODES_OPTIMISATIONS.md GH137M):
   // api.match_rounds' rows and order, without building every match of the base. One statement: the answer and its
-  // validator (the hash of every field) come from one snapshot. Not validated by the data versions (GH137A): its tag
-  // names its selection's bytes alone, a write outside the selection keeps it.
+  // validator (the hash of every field) come from one snapshot.
   const rows = await read("SELECT id,name,playoff FROM api.matchday_rounds($1,$2) ORDER BY id", [competition, season]);
   if (!rows.length) missing();
   return respond(req, { matches: Object.fromEntries(rows.map((r) => [r.id, { name: r.name, playoff: r.playoff }])) }, "catalog");
 }
 
-export function createReferenceRoute(read, { versioned = createDataVersions(read) } = {}) {
+export function createReferenceRoute(read) {
   return async (req, path, params) => {
-    if (path === "/api/standings") return versioned(req, params, STANDINGS_SPEC, (guarded) => standings(guarded, params));
+    if (path === "/api/standings") return standings(req, params, read);
     if (path === "/api/matchdays") return matchdays(req, params, read);
     return null;
   };

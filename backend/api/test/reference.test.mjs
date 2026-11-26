@@ -7,8 +7,7 @@ import { get, skip } from "./context.mjs";
 test("standings: Vega's table when no official one is published", { skip }, async () => {
   const { response, body } = await get("/api/standings?competition=l_3FJFUl");
   assert.equal(response.status, 200);
-  // The support family; the tag's form since GH137A (FAILURE_MODES_OPTIMISATIONS.md): its check, then its content.
-  assert.match(response.headers.get("etag"), /^W\/"support-v2-[a-f0-9]{16}-[a-f0-9]{64}"$/);
+  assert.match(response.headers.get("etag"), /^W\/"support-v1-/);
   assert.deepEqual(Object.keys(body).sort(), ["competition", "fetchedAt", "season", "source", "tables"]);
   assert.deepEqual([body.competition, body.season, body.source, body.fetchedAt], ["Ligue 1", "2025/2026", "Vega", "2025-09-20T11:00:00.000Z"]);
   assert.equal(body.tables.length, 1);

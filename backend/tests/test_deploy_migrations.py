@@ -69,7 +69,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # GH171 (#171): the statements' statistics of the base (the extension pg_stat_statements, ops.statement_stats).
          "179_statement_statistics.sql",
          # GH137M (#137): /api/matchdays read from the editions asked (a function, api.matchday_rounds; no table).
-         "180_matchday_rounds.sql"]
+         "180_matchday_rounds.sql",
+         # GH137A (#137): the writers' data versions (five ops tables, functions, four triggers per table the api reads).
+         "181_data_versions.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -201,8 +203,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
         self.assertEqual(len(applied), 160)
         self.assertEqual(self.at_production, "migrations applied=160 total=160 logins=unchanged")
         self.assertEqual(self.merged_added, ADDED)
-        self.assertEqual(self.deployed, "migrations applied=25 total=185 logins=unchanged")
-        self.assertEqual(self.again, "migrations applied=0 total=185 logins=unchanged")
+        self.assertEqual(self.deployed, "migrations applied=26 total=186 logins=unchanged")
+        self.assertEqual(self.again, "migrations applied=0 total=186 logins=unchanged")
         self.assertEqual([v for v, *_ in self.migrations_after if v not in {w for w, *_ in self.migrations_before}], ADDED)
         self.assertEqual([r for r in self.migrations_after if r[0] < "155"], self.migrations_before)
         self.assertEqual(self.migrations_again, self.migrations_after)

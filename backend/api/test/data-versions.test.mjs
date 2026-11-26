@@ -25,6 +25,10 @@
 // - a day passing without any write unseen by a route reading current_date (w);
 // - a statement, or a 503, for a request its parameters already refuse (y); a leaf detached, updated and attached again
 //   leaving a held tag valid at its route (s).
+// Added after the third review (findings 12, 13): the version read with the build's first statement, once per request
+// (validation runs once, never against a reader that refuses on purpose); parallel statements and a build that catches a
+// statement's rejection neither run a statement of the answer after a verified tag nor turn a failed version into a 200
+// (y, probe); two processes of one tree, no release named, agree (i).
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -33,7 +37,7 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { context, heldTag, skip } from "./context.mjs";
 import { createHandler } from "../src/handler.mjs";
-import { createDataVersions } from "../src/data-versions.mjs";
+import { createDataVersions, VERSION_SQL } from "../src/data-versions.mjs";
 
 const DSN = process.env.VEGA_V2_API_NODE_TEST_DSN;
 const NOW = Date.parse("2025-09-06T12:00:00Z");
@@ -80,7 +84,6 @@ const ANSWERS = [
   "/api/archives/index?kind=results", "/api/archives/index?kind=goals", "/api/archives/details",
   "/api/cups/index", "/api/cup-index?kind=supplemental", "/api/cup-snapshot?kind=native&competition=l_3FJFUl&season=2025/2026",
   "/api/cup-snapshot?kind=standings&competition=l_3FJFUl&season=2025/2026",
-  "/api/standings?competition=l_3FJFUl&season=2025/2026", "/api/standings?competition=l_3FJFUl",
   "/api/player-honours?id=p_aaaab1", "/api/club-facts?club=t_aaaaa1", "/api/coach-portrait?name=coach%20un", "/api/stadium?club=t_aaaaa1",
   "/api/players/p_aaaab1", "/api/teams/t_aaaaa1", "/api/competitions", "/api/players/facts-coverage", "/api/player-market-values?id=p_aaaab2",
   "/api/players/p_aaaab1/partners?season=2025/2026", "/api/players/p_aaaab1/similar?season=2025/2026", "/api/players/p_aaaab2/return",
@@ -240,8 +243,10 @@ test("GH137A-i: another release, another check; a tag of another release is answ
     console.log(JSON.stringify({ status: r.status, etag: r.headers.get("etag"), timing: r.headers.get("server-timing") }));
     await reader.end();`;
   const run = (release, held = "") => {
+    const env = { ...process.env, VEGA_RELEASE: release, HELD: held };
+    if (release === null) delete env.VEGA_RELEASE;
     const out = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
-      encoding: "utf8", cwd: fileURLToPath(new URL("..", import.meta.url)), env: { ...process.env, VEGA_RELEASE: release, HELD: held },
+      encoding: "utf8", cwd: fileURLToPath(new URL("..", import.meta.url)), env,
     });
     assert.equal(out.status, 0, out.stderr);
     return JSON.parse(out.stdout.trim().split("\n").at(-1));
@@ -258,6 +263,12 @@ test("GH137A-i: another release, another check; a tag of another release is answ
   const same = run("releases/v2-api/" + "a".repeat(64) + ".zip", a.etag);
   assert.deepEqual([same.status, same.etag], [304, a.etag]);
   assert.match(same.timing, /desc="1 query"/, "one statement: the version");
+  // No release named (a local run, the end-to-end suites that start one process per request): the code itself is the
+  // release, so every process of this tree agrees, and none of them takes a named release's tag for its own.
+  const local = run(null), local2 = run(null, local.etag);
+  assert.deepEqual([local2.status, local2.etag], [304, local.etag], "two processes of one tree, no release named: one tag");
+  assert.match(local2.timing, /desc="1 query"/);
+  assert.notEqual(local.etag, a.etag);
 });
 
 test("GH137A-j: the base's day is part of a version for a read of current_date, not for the others", { skip }, async () => {
@@ -453,6 +464,9 @@ test("GH137A-y: a request its parameters already refuse is refused before any st
     ["/api/worldcup/matches/bad-key", 400], ["/api/archives/details?match=a%20b", 400], ["/api/archives/index?kind=other", 400],
     ["/api/player-form?season=bad", 400], ["/api/matches/m_aaaaa1/players/display?x=1", 400], ["/api/matchdays?competition=l_3FJFUl", 400],
     ["/api/league-history?competition=l_3FJFUl&season=2015/2016&x=1", 400],
+    // Checked after the edition's statement before the versions (one statement then); their form alone refuses them.
+    ["/api/rankings/round?competition=l_3FJFUl&season=2025/2026&round=x1", 400], ["/api/rankings/round?competition=l_3FJFUl&season=2025/2026&race=10", 400],
+    ["/api/rankings/round?competition=l_3FJFUl&season=2025/2026&race=", 400],
   ];
   const down = async () => { throw Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }); };
   for (const [path, status] of REFUSED)
@@ -483,5 +497,90 @@ test("GH137A-s: a leaf detached, updated without a new file and attached again: 
   } finally {
     for (const row of kept)
       await owner.query("UPDATE core.player_match_stats SET goals = $2 WHERE season_id = 2025 AND match_id = 1 AND player_id = $1", [row.player_id, row.goals]);
+  }
+});
+
+// GH137A-y, the probe (third review, finding 12), without a base: a reader that answers the version and counts the rest.
+function probe({ version = "v-one", fail = null } = {}) {
+  const statements = [];
+  const read = async (sql) => {
+    statements.push(sql);
+    if (sql === VERSION_SQL) {
+      if (fail) throw fail;
+      return [{ version }];
+    }
+    return [{ n: statements.length }];
+  };
+  const serve = createDataVersions(read, { strict: true });
+  const spec = { family: "catalog", reads: ["api.probe_a", "api.probe_b"], ttl: 60 };
+  const ask = async (build, held) => {
+    statements.length = 0;
+    const req = new Request("https://api.test/api/probe", { headers: held ? { "if-none-match": held } : {} });
+    const r = await serve(req, new URLSearchParams(), spec, build).catch((error) => ({ error }));
+    return r.error ? { error: r.error, statements: [...statements] } : { status: r.status, etag: r.headers.get("etag"), statements: [...statements] };
+  };
+  return { ask };
+}
+
+test("GH137A-y, probe: the version is read with the build's first statement, once; a verified tag runs no statement of the answer", async () => {
+  const { ask } = probe();
+  let checks = 0;
+  const parallel = async (read) => {
+    checks += 1; // the build's own checks: once per request
+    const [a, b] = await Promise.all([read("SELECT 1 FROM api.probe_a"), read("SELECT 2 FROM api.probe_b")]);
+    return { a: a.length, b: b.length };
+  };
+  const first = await ask(parallel);
+  assert.equal(first.status, 200);
+  assert.deepEqual(first.statements, [VERSION_SQL, "SELECT 1 FROM api.probe_a", "SELECT 2 FROM api.probe_b"], "one version for both statements");
+  assert.equal(checks, 1, "the checks ran once");
+  const again = await ask(parallel, first.etag);
+  assert.deepEqual([again.status, again.etag, again.statements], [304, first.etag, [VERSION_SQL]], "Promise.all: no statement of the answer");
+  assert.equal(checks, 2);
+  // A build that catches its statements' rejections: a verified tag is still a 304 with no statement of the answer, and
+  // a tag of another version a 200 built by its genuine statements.
+  const forgiving = async (read) => ({ rows: await read("SELECT 1 FROM api.probe_a").catch(() => []), more: await read("SELECT 2 FROM api.probe_b").catch(() => []) });
+  const built = await ask(forgiving);
+  const hit = await ask(forgiving, built.etag);
+  assert.deepEqual([hit.status, hit.statements], [304, [VERSION_SQL]], "a caught rejection: still no statement of the answer");
+  const miss = await ask(forgiving, built.etag.replace(/-v2-[a-f0-9]{16}-/, "-v2-0000000000000000-"));
+  assert.deepEqual([miss.status, miss.statements.length], [200, 3], "another check: the genuine statements");
+});
+
+test("GH137A-y, probe: refused parameters run nothing; a failed version is never a 200, whatever the build catches", async () => {
+  const { ask } = probe();
+  const refused = await ask(async () => {
+    throw Object.assign(new Error("Paramètre invalide."), { status: 400 });
+  });
+  assert.deepEqual([refused.error?.status, refused.statements], [400, []]);
+  const down = Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" });
+  const failing = probe({ fail: down });
+  const swallowed = await failing.ask(async (read) => ({ rows: await read("SELECT 1 FROM api.probe_a").catch(() => []) }));
+  assert.equal(swallowed.error, down, "the version's error, not a 200 built from a swallowed failure");
+  assert.deepEqual(swallowed.statements, [VERSION_SQL]);
+  const missing = probe({ fail: Object.assign(new Error("no function"), { code: "42883" }) });
+  const older = await missing.ask(async (read) => ({ rows: await read("SELECT 1 FROM api.probe_a") }));
+  assert.equal(older.status, 200);
+  assert.match(older.etag, /^W\/"catalog-v1-[a-f0-9]{64}"$/, "a base before 181: the former tag, its genuine statements");
+});
+
+// GH137A-o (third review, finding 13): the routes whose written contracts keep a client's tag through a writer's pass
+// that leaves their bytes (test_sportscore_standings.py 35t, test_snapshot_roles.py 35m–35o, test_dfb_periods.py,
+// test_transfermarkt_history.py 35w–35z) keep the base commit's content tag: a 304 for it is built, and every base and
+// process gives it alike.
+test("GH137A-o: standings, cup editions and transfers keep their content tags", { skip }, async () => {
+  const handle = fresh();
+  for (const [path, form] of [["/api/standings?competition=l_3FJFUl", /^W\/"support-v1-[a-f0-9]{64}"$/],
+    ["/api/cups/edition?competition=l_3FJFUl&season=2025/2026", /^W\/"support-v1-[a-f0-9]{64}"$/],
+    ["/api/players/p_aaaab1/transfers", /^W\/"profile-v1-[a-f0-9]{64}"$/]]) {
+    const first = await handle.ask(path);
+    if (first.status !== 200) {
+      assert.equal(first.status, 404, path); // not in the seed: nothing to keep
+      continue;
+    }
+    assert.match(first.etag, form, path);
+    const again = await fresh().ask(path, { "if-none-match": first.etag });
+    assert.deepEqual([again.status, again.etag], [304, first.etag], path);
+    assert.ok(!again.statements.some((sql) => sql.includes("api.data_version(")), `${path}: no version read`);
   }
 });

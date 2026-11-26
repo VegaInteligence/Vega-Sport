@@ -988,11 +988,13 @@ export function roundRace(rows, mode) {
  */
 async function leagueRound(read, params) {
   validateParams(params, ["competition", "season", "round", "race"]);
-  const { competition, season, edition } = await editionOf(read, params);
+  // The parameters' own form before any statement (FAILURE_MODES_OPTIMISATIONS.md GH137A-y): a malformed round or race
+  // is a 400 without the base, even for an edition the base does not hold.
   const key = params.get("round");
   if (key !== null && !/^(r\d{1,9}|w\d{4}-\d{2}-\d{2})$/.test(key)) reject(400, "Paramètre invalide.");
   const mode = params.get("race");
   roundRace([], mode);
+  const { competition, season, edition } = await editionOf(read, params);
   const [current] = await read(
     key
       ? "SELECT * FROM api.league_rounds WHERE competition_season_id=$1 AND round_key=$2 AND status<>'open'"

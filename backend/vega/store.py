@@ -166,11 +166,14 @@ def migrate(conn, *, vector=False):
                 "INSERT INTO ops.schema_migrations(version,checksum) VALUES(%s,%s)",
                 (name, checksum),
             )
-    # The tables the read API's views and functions read, tracked again after every run (181,
-    # FAILURE_MODES_OPTIMISATIONS.md GH137A): a table a later migration adds to a read gets its triggers.
+    # The tables the read API's views and functions read, tracked again when the map is older than the schema (181,
+    # FAILURE_MODES_OPTIMISATIONS.md GH137A): a table a later migration adds to a read gets its triggers, and a tracking
+    # that failed is made again by the next run. A run that applied nothing to an up-to-date map tracks nothing (and
+    # needs no privilege of the owner).
     with conn.transaction():
         conn.execute(lock)
-        if conn.execute("SELECT to_regprocedure('ops.track_data_changes()')").fetchone()[0]:
+        if (conn.execute("SELECT to_regprocedure('ops.data_tracking_stale()')").fetchone()[0]
+                and conn.execute("SELECT ops.data_tracking_stale()").fetchone()[0]):
             conn.execute("SELECT ops.track_data_changes()")
 
 

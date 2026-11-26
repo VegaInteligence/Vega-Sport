@@ -1,25 +1,51 @@
 /**
  * Validators read before the answer is built (docs/calculs/09-audit-2026-11/FAILURE_MODES_OPTIMISATIONS.md, GH137A).
  *
- * A route of the manifest declares the api relations its statements name (`reads`). Its own checks of the request come
- * first: the build runs once with a reader that refuses every statement, and what it refuses before its first statement
- * is the answer, with no statement run (a 400 needs no base). Then one statement reads the version of the relations
- * (api.data_version, migration 181: the base's head, its day when the answer reads current_date, and each source
- * table's committed changes and partition tree). The tag is W/"<family>-v2-<check>-<content>": `content` the SHA-256 the
- * route's former tag already hashed, `check` 16 hexadecimal characters of the SHA-256 of the resource (the release, the
- * runtime, the media base, the family, the path, the sorted parameters), the version, the freshness and the content.
- * A held tag whose check is right for the current version is the tag the answer would carry: a 304 at once. Otherwise
- * the answer is built, every statement checked against the declaration; a 413 over its size limit whatever is held;
+ * A route of the manifest declares the api relations its statements name (`reads`). The build runs once: its own checks
+ * of the request first (a request they refuse runs no statement, and needs no base), then its first statement waits for
+ * one statement that reads the version of the relations (api.data_version, migration 181: the base's head, its day when
+ * the answer reads current_date, and each source table's committed changes and partition tree), shared by statements
+ * asked together. The tag is W/"<family>-v2-<check>-<content>": `content` the SHA-256 the route's former tag already
+ * hashed, `check` 16 hexadecimal characters of the SHA-256 of the resource (the release, the runtime, the media base, the
+ * family, the path, the sorted parameters), the version, the freshness and the content. A held tag whose check is right
+ * for the current version is the tag the answer would carry: a 304, and no statement of the answer runs (each one the
+ * build still asks is refused). Otherwise the answer is built, every statement checked against the declaration; a 413
+ * over its size limit whatever is held;
  * else a 304 only when the request holds its tag (http.mjs's send: weak comparison, or '*'), a 200 otherwise. A version
  * that cannot be read (NULL, or a base before 181) gives the former tag, W/"<family>-v1-<content>".
  */
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { entityTags, send, tooLarge } from "./http.mjs";
 
 const sha = (text) => createHash("sha256").update(text).digest("hex");
-// What builds an answer: the read API's release (VEGA_RELEASE, api.yaml), else a value drawn once per process (a local
-// run), and the runtime. Two copies of one release give the same checks; another release, other checks.
-export const REPRESENTATION = sha(JSON.stringify(["data-versions-v1", process.env.VEGA_RELEASE || randomUUID(), process.version]));
+/**
+ * The code that builds the answers when no release names it (a local run, the end-to-end suites that start one process
+ * per request): the read API's sources, its package.json and the site's shared modules they import, file by file, in
+ * one order. Every process of one tree agrees; a change to any of these files is another release.
+ */
+export function codeDigest(src = fileURLToPath(new URL(".", import.meta.url))) {
+  const hash = createHash("sha256");
+  const visit = (path) => {
+    let entries;
+    try {
+      entries = readdirSync(path, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === "ENOENT") return;
+      if (error.code !== "ENOTDIR") throw error;
+      hash.update(relative(src, path)).update("\0").update(readFileSync(path)).update("\0");
+      return;
+    }
+    for (const entry of entries.map((e) => e.name).sort()) visit(join(path, entry));
+  };
+  for (const root of [src, join(src, "..", "package.json"), join(src, "..", "..", "..", "dashboard", "shared")]) visit(root);
+  return hash.digest("hex");
+}
+// What builds an answer: the read API's release (VEGA_RELEASE, api.yaml: its package's SHA-256), else the code itself
+// (codeDigest), and the runtime. Two processes of one release give the same checks; another release, other checks.
+export const REPRESENTATION = sha(JSON.stringify(["data-versions-v1", process.env.VEGA_RELEASE || codeDigest(), process.version]));
 const NAMES = /\bapi\.([a-z_][a-z0-9_]*)/g;
 /** The api relations a statement names. */
 export const relationsOf = (sql) => [...new Set([...String(sql).matchAll(NAMES)].map((m) => `api.${m[1]}`))];
@@ -55,27 +81,8 @@ export function heldOf(header, family) {
   return out;
 }
 
-// What the validation run's reader answers every statement with.
-const REFUSAL = Object.freeze(Object.assign(new Error("validation run: no statement"), { code: "VEGA_VALIDATION_RUN" }));
-/**
- * The route's own checks, before any statement (GH137A-y): the build with a reader that refuses every statement. An
- * error thrown before its first statement is the request's answer (a 400, a 404 its parameters alone decide), as it
- * was before the versions; once the build has asked for a statement, whatever it then does is ignored.
- */
-export async function checkedFirst(build) {
-  let asked = false;
-  const refuse = () => {
-    asked = true;
-    const refused = Promise.reject(REFUSAL);
-    refused.catch(() => {}); // a build that drops it, throwing first, leaves no unhandled rejection
-    return refused;
-  };
-  try {
-    await build(refuse);
-  } catch (error) {
-    if (!asked) throw error;
-  }
-}
+// What every statement of the answer meets once the request holds the current tag: no statement runs after it.
+const CURRENT = Object.freeze(Object.assign(new Error("the held tag is current: no statement of the answer"), { code: "VEGA_TAG_CURRENT" }));
 
 /**
  * The validator of the manifest's routes. `strict`: an undeclared relation or clock read throws (the tests); otherwise a
@@ -107,22 +114,48 @@ export function createDataVersions(read, { strict = false, warn = (line) => cons
     return answer(req, url, params, spec, build);
   }
   async function answer(req, url, params, spec, build) {
-    await checkedFirst(build);
     const ttls = [].concat(spec.ttl);
     const former = spec.former ?? ((content) => `W/"${spec.family}-v1-${content}"`);
     const key = keyOf(mediaBase, spec.family, url.pathname, params);
     const held = heldOf(req.headers.get("if-none-match"), spec.family);
-    const version = await versionOf(spec);
-    // A held tag checked for this version, this resource and its content is the tag the 200 would carry (GH137A-v).
-    if (version !== null && !held.any)
-      for (const tag of held.checks)
-        for (const ttl of ttls) if (checkOf(key, version, ttl, tag.content) === tag.check) return send(req, null, 200, { etag: tag.etag, ttl });
+    // The version, read once, with the build's first statement (GH137A-y): the build's own checks of the request run
+    // before it, once, and a request they refuse runs no statement. Parallel statements share it.
+    let version, failed = null, current = null, pending = null;
+    const versioned = () =>
+      (pending ??= versionOf(spec).then(
+        (found) => {
+          version = found;
+          // A held tag checked for this version, this resource and its content is the tag the 200 would carry (GH137A-v).
+          if (found !== null && !held.any)
+            for (const tag of held.checks)
+              for (const ttl of ttls) if (!current && checkOf(key, found, ttl, tag.content) === tag.check) current = { etag: tag.etag, ttl };
+        },
+        (error) => {
+          failed = error;
+        },
+      ));
     const unknown = new Set();
-    const guarded = (sql, ...rest) => {
+    const guarded = async (sql, ...rest) => {
+      await versioned();
+      if (failed) throw failed;
+      if (current) throw CURRENT; // whatever the build does with it, nothing else is read
       for (const name of undeclared(spec, sql)) unknown.add(name);
       return read(sql, ...rest);
     };
-    const built = await build(guarded);
+    let built;
+    try {
+      built = await build(guarded);
+    } catch (error) {
+      if (!current && !failed) throw error;
+    }
+    // A failed version fails the request, whatever the build made of its statements' rejections: never a 200 from it.
+    if (failed) throw failed;
+    if (current) return send(req, null, 200, { etag: current.etag, ttl: current.ttl });
+    if (pending === null) {
+      // A build that ran no statement: its version, for the tag, after it.
+      await versioned();
+      if (failed) throw failed;
+    }
     if (unknown.size) {
       const line = `undeclared read ${url.pathname}: ${[...unknown].join(",")}`;
       if (strict) throw new Error(line);

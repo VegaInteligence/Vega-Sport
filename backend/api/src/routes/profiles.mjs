@@ -71,7 +71,8 @@
  * carries no `is_free` (a plan of the source, not a fact of the competition); team
  * profiles are served (legacy: none was kept).
  */
-import { reject, validateParams } from "../http.mjs";
+import { createHash } from "node:crypto";
+import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { createDataVersions } from "../data-versions.mjs";
 import { ROLE_LABEL } from "./rankings.mjs";
 
@@ -410,7 +411,6 @@ export function profileSpec(path, params) {
   if (INJURIES.test(path)) return profile(["api.player_injuries", "api.player_suspensions", "api.player_injury_reads", ID]);
   // Its own statement reads current_date (a member's injuries read 45 days ago at most).
   if (TEAM_ABSENCES.test(path)) return profile(["api.team_keys", "api.team_absence_players", "api.team_absences", ID], { clock: "day" });
-  if (TRANSFERS.test(path)) return profile(["api.player_transfers", "api.player_transfer_reads", ID]);
   if (PARTNERS.test(path)) return profile(["api.player_pass_partners", SEASON, ID]);
   if (RETURN.test(path)) return profile(["api.player_returns", "api.return_curves", ID]);
   if (HALVES.test(path)) return profile(["api.player_half_coverage", "api.player_half_totals", SEASON, ID]);
@@ -535,8 +535,18 @@ const seasonParam = (params) => {
 };
 const SEASON_KEY = "(SELECT season_id FROM api.season_keys WHERE season=$2)";
 
+// The base commit's validator, the hash of the data: /api/players/{id}/transfers keeps it (FAILURE_MODES_OPTIMISATIONS.md
+// GH137A-o), its written contract keeping a client's tag through a reader's pass that leaves the list as it was
+// (test_transfermarkt_history.py 35w–35z: a refused refresh records its attempt in the tables the list reads).
+function respond(req, data) {
+  const etag = `W/"profile-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
+  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 300 });
+  return send(req, { data }, 200, { etag, ttl: 300, maxBytes: 2 * 1024 * 1024 });
+}
+
 export function createProfileRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
+    if (TRANSFERS.test(path)) return respond(req, await profileAnswer(read, path, params));
     const spec = profileSpec(path, params);
     return spec ? versioned(req, params, spec, (guarded) => profileAnswer(guarded, path, params)) : null;
   };

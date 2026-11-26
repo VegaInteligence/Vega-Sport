@@ -624,7 +624,9 @@ class ServedAbsencesTest(AbsencesBase):
         team, p10, p11 = self.public("team", 1), self.public("player", 10), self.public("player", 11)
         served, = self.http(f"/api/teams/{team}/absences")
         self.assertEqual((served["status"], served["conditional"]), (200, 304))
-        self.assertTrue(served["etag"].startswith('W/"profile-v1-'))
+        # The profile family's validator, read from the data versions since GH137A (FAILURE_MODES_OPTIMISATIONS.md): its
+        # check, then the SHA-256 of the answer the former profile-v1 tag hashed.
+        self.assertRegex(served["etag"], r'^W/"profile-v2-[0-9a-f]{16}-[0-9a-f]{64}"$')
         d = self.d
         player10 = {"id": p10, "name": "Kylian Mbappé", "imageUrl": None, "role": None}
         player11 = {"id": p11, "name": "Ousmane Dembélé", "imageUrl": None, "role": None}

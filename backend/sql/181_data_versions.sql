@@ -211,6 +211,16 @@ END
 $$;
 REVOKE ALL ON FUNCTION ops.track_data_changes() FROM PUBLIC;
 
+-- Whether the map is older than the schema (ops.data_tracking). store.migrate asks it and tracks only then: a run that
+-- applies nothing (GH171's administrator, rotating the logins without the owner's rights) needs no privilege of the
+-- owner. Any role may ask; it tells whether a tracking is due, nothing else.
+CREATE FUNCTION ops.data_tracking_stale() RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog AS $$
+  SELECT NOT EXISTS (SELECT 1 FROM ops.data_tracking t
+    WHERE t.head IS NOT DISTINCT FROM (SELECT max(m.version) FROM ops.schema_migrations m)
+      AND t.migrations = (SELECT count(*) FROM ops.schema_migrations))
+$$;
+
 -- The version of what `relations` (api views and functions, 'api.name') read: the SHA-256 of the base's head (its last
 -- migration and their count), the base's day when one of them reads current_date, and each source table's version:
 -- its count of committed changes and, for a partitioned table, its partition tree as the catalog holds it: each
@@ -228,7 +238,8 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog AS $$
   sources AS (
     SELECT s.source, bool_or(s.partitioned) AS partitioned, to_regclass(s.source) AS oid
     FROM ops.data_sources s JOIN wanted w ON w.relation = s.relation GROUP BY s.source),
-  pending AS (
+  -- Counted once per source (its value is used twice below).
+  pending AS MATERIALIZED (
     SELECT s.source, s.partitioned, s.oid,
       (SELECT count(*) FROM (SELECT 1 FROM ops.data_changes c WHERE c.relation = s.source LIMIT 10001) w) AS waiting
     FROM sources s WHERE s.oid IS NOT NULL),

@@ -356,8 +356,10 @@ class DataVersionsTest(unittest.TestCase):
         self.assertEqual(grantees("pg_proc", "ops.track_data_changes()"), {owner})
         self.assertEqual(grantees("pg_proc", "ops.fold_data_changes()"), {owner, "vega_collect", "vega_calc"})
         self.assertEqual(grantees("pg_proc", "api.data_version(text[],text)"), {owner, "vega_read"})
-        # The claim keeps PostgreSQL's default (no ACL: PUBLIC may run it): every role that writes a table runs it.
+        # The claim keeps PostgreSQL's default (no ACL: PUBLIC may run it): every role that writes a table runs it; so
+        # does the question whether the map is older than the schema (store.migrate's, whoever runs it).
         self.assertIsNone(self.db.execute("SELECT proacl FROM pg_proc WHERE oid = 'ops.claim_data_change(text)'::regprocedure").fetchone()[0])
+        self.assertIsNone(self.db.execute("SELECT proacl FROM pg_proc WHERE oid = 'ops.data_tracking_stale()'::regprocedure").fetchone()[0])
 
     # The closure ----------------------------------------------------------
 
@@ -390,13 +392,18 @@ class DataVersionsTest(unittest.TestCase):
             return self.version(relation)
 
     def test_a_table_added_later_is_tracked_by_the_next_migrate_run(self):
+        # A later migration, as store.migrate records one: its table and view, and its row.
         self.db.execute("CREATE TABLE core.gh137a_late(id int PRIMARY KEY)")
         self.db.execute("CREATE VIEW api.gh137a_late AS SELECT id FROM core.gh137a_late")
-        # Cleanups run last first: the table goes, then the sources are recomputed without it.
+        self.db.execute("INSERT INTO ops.schema_migrations(version, checksum) VALUES ('999_gh137a_late.sql', '\\x00')")
+        # Cleanups run last first: the table and the row go, then the sources are recomputed without them.
         self.addCleanup(self.db.execute, "SELECT ops.track_data_changes()")
+        self.addCleanup(self.db.execute, "DELETE FROM ops.schema_migrations WHERE version = '999_gh137a_late.sql'")
         self.addCleanup(self.db.execute, "DROP TABLE IF EXISTS core.gh137a_late CASCADE")
         self.assertIsNone(self.version("api.gh137a_late"), "not tracked yet: unknown")
+        self.assertTrue(self.db.execute("SELECT ops.data_tracking_stale()").fetchone()[0])
         migrate(self.db)
+        self.assertFalse(self.db.execute("SELECT ops.data_tracking_stale()").fetchone()[0])
         self.assertIsNotNone(self.version("api.gh137a_late"))
         self.db.execute("INSERT INTO core.gh137a_late VALUES (1)")
         self.assertEqual(self.marks("core.gh137a_late"), 1)
@@ -440,6 +447,24 @@ class DataVersionsTest(unittest.TestCase):
         with self.db.transaction():
             self.db.execute("DROP VIEW api.gh137a_probe")
             self.db.execute("CREATE VIEW api.gh137a_probe AS SELECT p.id, p.label, q.season_id FROM core.gh137a_plain p LEFT JOIN core.gh137a_parts q ON q.id = p.id")
+
+    def test_a_migrate_run_with_nothing_new_tracks_nothing(self):
+        # GH171's administrator runs vega.migrate for the logins without the owner's rights: a base whose map is the
+        # schema's needs no tracking, hence no privilege on ops.track_data_changes (store.migrate asks first).
+        self.assertFalse(self.db.execute("SELECT ops.data_tracking_stale()").fetchone()[0])
+        self.db.execute("DROP ROLE IF EXISTS gh137a_admin")
+        self.db.execute("CREATE ROLE gh137a_admin")
+        self.addCleanup(self.db.execute, "DROP ROLE IF EXISTS gh137a_admin")
+        self.addCleanup(self.db.execute, "REVOKE ALL ON SCHEMA ops FROM gh137a_admin")
+        self.addCleanup(self.db.execute, "REVOKE ALL ON ops.schema_migrations FROM gh137a_admin")
+        self.db.execute("GRANT USAGE ON SCHEMA ops TO gh137a_admin")
+        self.db.execute("GRANT SELECT ON ops.schema_migrations TO gh137a_admin")
+        with self.db.transaction():
+            self.db.execute("SET LOCAL ROLE gh137a_admin")
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with self.db.transaction():
+                    self.db.execute("SELECT ops.track_data_changes()")
+            migrate(self.db)  # every file applied: nothing to run, nothing to track
 
     # Privileges, the deploy, the worker ---------------------------------------
 

@@ -272,7 +272,8 @@ Manifest (each route module holds its paths' declarations, beside its code):
   those contracts. Keeping a content tag and a read-free 304 together needs a signature per selection kept by a writer
   (the read API writes nothing): with versions per table, every write of those tables makes every selection's
   signature stale, so the worker would rebuild all of them (each a read of the selection, the work a revalidation does
-  today) after each write: more work than the revalidations it would save. Measured locally in the evidence `gh137/`.
+  today) after each write: more work than the revalidations it would save. Their answers under writes to another
+  match are measured in the evidence (`gh137/ingestion`: a 304 after each write, in their one statement).
 - Not in it, and why: the compact reads `/api/read/*` (validated by the publication or their own versions), the match
   families on the match's revision, `/api/fixtures*`, `/api/matches/{id}/summary`, search, partition, Europe, the home,
   `/api/ops/*`, health, status and the manifest (their own validators); the media wrapper (`media=1`) fronts only
@@ -312,11 +313,19 @@ Manifest (each route module holds its paths' declarations, beside its code):
   partitioned source's version also names its partition tree as the catalog holds it: for each member, its oid, its
   file (`relfilenode`, which a TRUNCATE replaces in its transaction) and its attachment's incarnation (the
   transaction that wrote its `pg_inherits` row: an ATTACH, the first step of a concurrent DETACH, a leaf created
-  later each write one). Index lookups in `pg_inherits` and `pg_class`, a few rows each, for the partitioned sources
-  alone. Maintenance that rewrites a leaf's file (VACUUM FULL, CLUSTER, a rewriting ALTER) changes it too: a 200 once,
+  later each write one). A leaf left detaching (a DETACH CONCURRENTLY interrupted) is no longer a member: PostgreSQL
+  leaves it out of the tree, as out of every read; its FINALIZE then changes nothing a read sees. A few catalog rows
+  for the partitioned sources alone. Maintenance that rewrites a leaf's file (VACUUM FULL, CLUSTER, a rewriting ALTER) changes it too: a 200 once,
   never a wrong 304. No event trigger (RDS would need its superuser).
 - **New tables.** `store.migrate` calls `ops.track_data_changes()` after every run: a migration that adds a table to
   a read is followed by its triggers and its source rows.
+- **The map and the schema (second review).** `store.migrate` commits each file, then tracks in a transaction of its
+  own: in between, a view a migration gave another table is read with the map made before (the new table has no
+  trigger yet), and a tracking that fails leaves it so. `ops.data_tracking` holds the schema the map was made for (the
+  last migration and their count), written in the tracking's transaction; `api.data_version` is NULL whenever the
+  schema is not that one. In the window, and after a failed tracking until the next run of `store.migrate`, every
+  route answers as without versions (the base commit's tags, every statement run): never a 304 from a map that
+  misses a table.
 - **Privileges.** Only the trigger function (SECURITY DEFINER) writes marks; `vega_collect` and `vega_calc` hold no
   privilege on the four tables nor the sequence (the default privileges of `ops` revoked for them); the fold may be run
   by the worker's two roles; `vega_read` runs `api.data_version` and reads nothing else of it; `PUBLIC` keeps only the
@@ -327,7 +336,9 @@ Manifest (each route module holds its paths' declarations, beside its code):
   missing) run before any statement: an intrinsically invalid request is its 400 (or 404) and no-store after zero
   statements, the base reachable or not. The data validator runs each builder once against a reader that refuses
   every statement: an error the builder raises before its first statement is the answer; once a statement is
-  asked, validation is over and the version is read.
+  asked, validation is over and the version is read. A builder that checked a parameter's form after its first
+  statement checks it first (`/api/rankings/round`: `round`, `race`): a malformed one is a 400 without the base, also
+  for an edition the base does not hold (a 404 before; the same 400 body otherwise).
 - **The version, read before the answer.** `api.data_version(relations text[], clock text)` (SECURITY DEFINER):
   for the relations a route declares, the SHA-256 of the base's head (the last applied migration and how many),
   `current_date` of the base when a relation or the route's own statements read it (`clock` `day`: player profiles,
@@ -365,6 +376,21 @@ Manifest (each route module holds its paths' declarations, beside its code):
 - **What stays.** Statuses, bodies byte for byte, headers, errors, HEAD (but 413 over the size limit, above); no
   parameter added (no generation, no pin).
 
+**What it costs, measured (evidence `gh137/plans`, `gh137/ingestion`, `gh137/oracle2`).** One statement more for a
+request without a tag (the version, 1 to 1.7 ms warm on the seed for the widest partitioned closures); a revalidation
+of a current tag one statement in all (the 231-path oracle: 75 revalidations, 158 statements before, 75 after). The
+version is per table: a committed write anywhere in a table a route reads changes the route's version. Under live
+collection, `core.matches` changes with every score, and 72 relations read it: each holder of such an answer then gets
+one 200 per version change (its bytes again, under a new tag), where the base commit answered 304 after building it
+(measured: `/api/standings` of 2025/26, a 304 in one statement while nothing is written, then a 200 in two after each
+write to another match; the base's 304s ran its statements each time). `/api/league-history` and `/api/matchdays`
+keep their content tags (304 after every such write, as GH137-d and GH137M-d say); `/api/archives/index` reads no
+table the live collection writes (304 in one statement throughout). Versions scoped by season or edition (the marks
+of `core.matches` and of the season-partitioned facts carrying the row's `season_id`, a route declaring the seasons
+it reads) would keep the archived selections' tags under that collection; not done here: it needs, per route, a claim
+about the rows its views read that the strict mode cannot check, and `agg.standings` and `core.standings_official`
+carry no `season_id`.
+
 ### GH137A.2 Failure modes and expected outcomes
 
 | # | Situation | Expected |
@@ -377,7 +403,7 @@ Manifest (each route module holds its paths' declarations, beside its code):
 | GH137A-f | A committed change to a table of a route's closure (a row of the answer, a row elsewhere in the same table) | another check: built again; 200 with the current tag, the new answer if it changed, the same bytes if not; then 304 in one statement for that tag |
 | GH137A-g | The same change rolled back; in a rolled-back savepoint | no mark: 304 in one statement |
 | GH137A-h | An upsert of unchanged values (a `jsonb` column included); INSERT … ON CONFLICT DO NOTHING conflicting; DELETE of nothing | no mark; 304 in one statement |
-| GH137A-i | Another release (a held tag of it, same bytes); another migration applied | 200 with the current tag, then 304s in one statement; the same release and base: the same tag |
+| GH137A-i | Another release (a held tag of it, same bytes); another migration applied and tracked | 200 with the current tag, then 304s in one statement; the same release and base: the same tag |
 | GH137A-j | A route reading `current_date`, its base's day changed | another check |
 | GH137A-k | An undeclared `api` relation read while building | strict: error naming it; otherwise the former tag form |
 | GH137A-l | A base without `api.data_version` | the base commit's tags and outcomes |
@@ -386,19 +412,20 @@ Manifest (each route module holds its paths' declarations, beside its code):
 | GH137A-o | `/api/league-history`, `/api/matchdays` | GH137-a–n and GH137M-a–f as written, unchanged |
 | GH137A-p | `/api/matches/{id}/players/display` of a finished match and of a match in play | each 304's freshness that of its answer (60, 15) |
 | GH137A-q | Writers' cost: 200 000-row insert, update, no-op update, delete; a transaction of many single-row upserts; two writers at once | within the bounds measured (evidence `gh137/`) |
-| GH137A-r | Readers' cost: the version statement on the seed, with marks pending and folded | index lookups only, milliseconds; more than 10 000 pending marks on a source: NULL, the reads bounded |
-| GH137A-s | A leaf truncated directly (the review's nine rows); a leaf created later then truncated; a row written into a leaf directly; a partition detached, attached with rows, detached concurrently; a detached table truncated; the second review's sequence: DETACH, UPDATE the detached leaf, ATTACH it again | the version changes for each, the detached table excepted; rolled back, it does not; at the route, the tag held before the sequence is a 200 with the corrected bytes |
+| GH137A-r | Readers' cost: the version statement on the seed, with marks pending and folded; 250 000 marks pending (a worker stopped) | index lookups only, about 1.5 ms; more than 10 000 pending marks on a source: NULL, at most 10 001 index entries read per source (about 2 ms; the draft counted them all, 10 to 30 ms and growing); the fold, 100 000 marks a call (about 0.1 s), the versions unchanged by it |
+| GH137A-s | A leaf truncated directly (the review's nine rows); a leaf created later then truncated; a row written into a leaf directly; a partition detached, attached with rows, detached concurrently; a detached table truncated; the second review's sequence: DETACH, UPDATE the detached leaf, ATTACH it again; a concurrent detach interrupted (left pending), finalized, the leaf updated and attached again | the version changes for each, the detached table excepted; rolled back, it does not; the pending detach changes it, the leaf attached again gives a version not seen before; at the route, the tag held before the sequence is a 200 with the corrected bytes |
 | GH137A-t | A check right for the resource and version with another content; a tag of the same family from another route, or the same path with other parameters; the same release in two processes; another release | 200; 200; a fresh process of the same release answers the tag in one statement; 200 with its own tag |
 | GH137A-u | An answer over its size limit, GET and HEAD, with its content's tag, `*`, nothing | 413, no tag, never 304 |
 | GH137A-v | Every 304 of every test, `*` aside | its tag weakly equals a tag the request held |
 | GH137A-w | A day changes without any write (the base's `current_date`, read in another time zone) for a route that reads it, and for one that does not | another check for the first (built again, 200), the same for the second |
 | GH137A-x | 181 on a base already populated at 180 (the API seed) and on an empty one; the locks it takes | applies on both; each table it adds triggers to is locked SHARE ROW EXCLUSIVE until its commit (not online: the services are stopped); the same answers from both |
-| GH137A-y | An intrinsically invalid request of every family (unknown, repeated, malformed or missing parameter), the base reachable and not | 400 (or the route's 404), no-store, zero statements; never 503 |
+| GH137A-y | An intrinsically invalid request of every family (unknown, repeated, malformed or missing parameter), the base reachable and not; `/api/rankings/round` with a malformed `round` or `race` | 400 (or the route's 404), no-store, zero statements; never 503 |
+| GH137A-z | An existing api view given another table by a migration committed before its tracking, seen from another session; a tracking that fails; the next `store.migrate` | every version NULL in the window and after the failure (the base commit's tags); tracked again: versions, and the new table's writes move them |
 
 GH137A-a–e, k, p, s (route), t–w, y: `backend/api/test/data-versions.test.mjs` with the existing route tests run strict
 (`context.mjs` asks every 200 again with its tag and requires a 304 in one statement whose tag the request held); f–j,
-l, n: the same file (writes through the owner role, the reader as `vega_read`); m, q, r, s: `backend/tests/
-test_data_versions.py` and the evidence's `gh137/`; o: `league-history-validator.test.mjs`, `matchdays-lean.test.mjs`
+l, n: the same file (writes through the owner role, the reader as `vega_read`); i, z: both files; m, q, r, s, z:
+`backend/tests/test_data_versions.py` and the evidence's `gh137/`; o: `league-history-validator.test.mjs`, `matchdays-lean.test.mjs`
 as written for GH137 and GH137M; x: the evidence. Not verifiable here: production's write rate per table, hence the
 share of revalidations a check answers there (the access logs after a Deploy, GH149).
 
