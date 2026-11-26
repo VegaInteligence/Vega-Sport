@@ -107,6 +107,11 @@ class ZonesTest(unittest.TestCase):
             with self.subTest(path):
                 self.assertTrue(zones <= needed(path), needed(path))
 
+    def test_h2b_a_shared_fixture_runs_every_suite_that_reads_fixtures(self):
+        # Codex's review of #247 (af2b636): match-families.test.mjs reads match_m_08LEIz/${name}, a path no literal names.
+        self.assertEqual(needed("backend/tests/fixtures/match_m_08LEIz/events.json") & {"python", "deploy", "api", "site"},
+                         {"python", "deploy", "api", "site"})
+
     def test_h3_a_path_no_rule_knows_runs_everything(self):
         self.assertEqual(needed("dashboard/frontend/src/styles.css", "Makefile"), set(changed_suites.ZONES))
         self.assertEqual(needed(".gitignore"), set(changed_suites.ZONES))

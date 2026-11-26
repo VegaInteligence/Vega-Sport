@@ -60,11 +60,13 @@ ZONES = {
         r"infra/aws/", r"backend/sql/", r"backend/api/", r"backend/account/", r"backend/Dockerfile$",
         r"backend/requirements\.txt$", r"backend/vega/migrate\.py$", r"\.github/workflows/deploy\.yml$",
         r"backend/tests/(" + "|".join(DEPLOY_MODULES) + r"|deploy_fakes|deploy_repo|prerequisites)\.py$",
+        r"backend/tests/fixtures/",
     ),
     # The read API's and the account API's Node suites, the SQL they read, the Lambda entry points and transport they
-    # import (infra/aws/*.mjs) and the templates they check.
+    # import (infra/aws/*.mjs), the templates they check and the fixtures they share with the Python suites (read by
+    # built paths too: match-families.test.mjs reads match_m_08LEIz/${name}).
     "api": (r"backend/api/", r"backend/account/", r"backend/sql/", r"infra/aws/[^/]+\.mjs$",
-            r"infra/aws/(api|live|account|edge-logs)\.yaml$"),
+            r"infra/aws/(api|live|account|edge-logs)\.yaml$", r"backend/tests/fixtures/"),
     "infra": (r"infra/aws/", r"backend/tests/test_deploy_state\.py$"),
     "image": (r"backend/",),
     "package": (r"backend/api/", r"backend/account/", r"infra/aws/package_api\.py$", r"infra/aws/[^/]+\.mjs$"),
