@@ -25,6 +25,12 @@ Parameters:
     Default: 'true'
     AllowedValues: ['true', 'false']
     Description: 'false while the worker is stopped on purpose (deploy.sh: WORKER_DESIRED_COUNT=0): no alarm for a service meant to be off'
+  # GH204: true while the backfill is meant to run (deploy.sh: its count is 1): its absence and its restarts are alarms.
+  WatchBackfill:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'true while the backfill service is set to 1 (deploy.sh): an alarm when it does not run or restarts in a loop'
   WatchLive:
     Type: String
     Default: 'false'
@@ -40,6 +46,7 @@ Conditions:
   HasEmail: !Not [!Equals [!Ref AlertEmail, '']]
   HasEmail2: !Not [!Equals [!Ref AlertEmail2, '']]
   Worker: !Equals [!Ref WatchWorker, 'true']
+  Backfill: !Equals [!Ref WatchBackfill, 'true']
   Live: !Equals [!Ref WatchLive, 'true']
   Account: !Equals [!Ref Account, 'true']
 Resources:
@@ -201,6 +208,56 @@ Resources:
       AlarmActions: [!Ref Topic]
       OKActions: [!Ref Topic]
 
+  # GH204 (FAILURE_MODES_OPTIMISATIONS.md): a slowing long before the 20 s of vega-v2-api-slow, for the whole function
+  # (a percentile: it holds whatever the traffic).
+  ApiP95Alarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-api-p95
+      AlarmDescription: The slowest twentieth of vega-v2-api's answers took 3 s or more for 30 minutes (6 five-minute periods)
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Dimensions: [{Name: FunctionName, Value: vega-v2-api}]
+      ExtendedStatistic: p95
+      Period: 300
+      EvaluationPeriods: 6
+      DatapointsToAlarm: 6
+      Threshold: 3000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  # GH204: one route failing for its visitors (GH #220: 133 of 168 calls of /api/read/home-favourites in 503 while the
+  # function's total stayed under vega-v2-api-5xx's 10). The request lines are JSON lines of their own
+  # (infra/aws/api-index.mjs) naming their route (src/route-family.mjs, identifiers written id): one rule counts the 5xx
+  # answers by route, whatever the routes; the alarm reads the route with the most in each period.
+  RouteErrorsRule:
+    Type: AWS::CloudWatch::InsightRule
+    Properties:
+      RuleName: vega-v2-api-route-5xx
+      RuleState: ENABLED
+      RuleBody: '{"Schema":{"Name":"CloudWatchLogRule","Version":1},"LogGroupNames":["/aws/lambda/vega-v2-api"],"LogFormat":"JSON","Contribution":{"Keys":["$.route"],"Filters":[{"Match":"$.request","In":["read"]},{"Match":"$.status","GreaterThan":499}]},"AggregateOn":"Count"}'
+      Tags: [{Key: project, Value: vega-v2}]
+  RouteErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DependsOn: RouteErrorsRule
+    Properties:
+      AlarmName: vega-v2-api-route-5xx
+      AlarmDescription: One route of vega-v2-api answered 2 errors (5xx) or more in each of 3 five-minute periods (Contributor Insights rule vega-v2-api-route-5xx names it)
+      Metrics:
+        - Id: route
+          Label: 5xx of the route with the most
+          ReturnData: true
+          Expression: "INSIGHT_RULE_METRIC('vega-v2-api-route-5xx', 'MaxContributorValue')"
+          Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 2
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+
   # --- The database (database.yaml: vega-football-db-postgres) -------------------------
   # The first three were in database.yaml until 23 November 2026, with no action.
   DatabaseLowMemoryAlarm:
@@ -300,6 +357,79 @@ Resources:
       AlarmActions: [!Ref Topic]
       OKActions: [!Ref Topic]
 
+  # GH204: a service's task stopped by its container or failing to start, three times in 30 minutes: a restart loop the
+  # CPU samples above do not show. A deploy, a lowered count (ServiceSchedulerInitiated), a stop by hand (UserInitiated)
+  # and AWS's maintenance are not counted. The rule has no target: the alarm reads its MatchedEvents.
+  WorkerStopsRule:
+    Type: AWS::Events::Rule
+    Condition: Worker
+    Properties:
+      Name: vega-v2-worker-stops
+      Description: vega-v2-worker's tasks stopped by their container or failing to start (alerts.yaml, GH204)
+      State: ENABLED
+      EventPattern: '{"source":["aws.ecs"],"detail-type":["ECS Task State Change"],"detail":{"group":["service:vega-v2-worker"],"lastStatus":["STOPPED"],"stopCode":["EssentialContainerExited","TaskFailedToStart"]}}'
+  WorkerRestartsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: Worker
+    Properties:
+      AlarmName: vega-v2-worker-restarts
+      AlarmDescription: A task of vega-v2-worker stopped by itself or failed to start 3 times or more in 30 minutes (EventBridge rule vega-v2-worker-stops)
+      Namespace: AWS/Events
+      MetricName: MatchedEvents
+      Dimensions: [{Name: RuleName, Value: vega-v2-worker-stops}]
+      Statistic: Sum
+      Period: 1800
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  BackfillStopsRule:
+    Type: AWS::Events::Rule
+    Condition: Backfill
+    Properties:
+      Name: vega-v2-backfill-stops
+      Description: vega-v2-backfill's tasks stopped by their container or failing to start (alerts.yaml, GH204)
+      State: ENABLED
+      EventPattern: '{"source":["aws.ecs"],"detail-type":["ECS Task State Change"],"detail":{"group":["service:vega-v2-backfill"],"lastStatus":["STOPPED"],"stopCode":["EssentialContainerExited","TaskFailedToStart"]}}'
+  BackfillRestartsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: Backfill
+    Properties:
+      AlarmName: vega-v2-backfill-restarts
+      AlarmDescription: A task of vega-v2-backfill stopped by itself or failed to start 3 times or more in 30 minutes (EventBridge rule vega-v2-backfill-stops)
+      Namespace: AWS/Events
+      MetricName: MatchedEvents
+      Dimensions: [{Name: RuleName, Value: vega-v2-backfill-stops}]
+      Statistic: Sum
+      Period: 1800
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  # The backfill meant to run (WatchBackfill: deploy.sh set it to 1) that does not, as vega-v2-worker-down.
+  BackfillDownAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: Backfill
+    Properties:
+      AlarmName: vega-v2-backfill-down
+      AlarmDescription: No task of vega-v2-backfill ran for 15 minutes while the Deploy set it to run
+      Namespace: AWS/ECS
+      MetricName: CPUUtilization
+      Dimensions: [{Name: ClusterName, Value: vega-v2}, {Name: ServiceName, Value: vega-v2-backfill}]
+      Statistic: SampleCount
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+
   # --- Live (live.yaml), only once a provider is chosen --------------------------------
   LiveReadErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -319,5 +449,43 @@ Resources:
       TreatMissingData: notBreaching
       AlarmActions: [!Ref Topic]
       OKActions: [!Ref Topic]
+  # GH204: one page of what the alarms watch (the first three dashboards are free).
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: vega-v2
+      DashboardBody: !Sub
+        - |
+          {"widgets":[
+           {"type":"metric","x":0,"y":0,"width":12,"height":6,"properties":{"title":"Read API: requests, errors, refusals","region":"${AWS::Region}","stat":"Sum","period":300,
+            "metrics":[["AWS/Lambda","Invocations","FunctionName","vega-v2-api"],[".","Errors",".","."],[".","Throttles",".","."],["Vega/Api","Responses5xx"],[".","DatabaseRefused"]]}},
+           {"type":"metric","x":12,"y":0,"width":12,"height":6,"properties":{"title":"Read API: duration (ms) and copies","region":"${AWS::Region}","period":300,
+            "metrics":[["AWS/Lambda","Duration","FunctionName","vega-v2-api",{"stat":"p50"}],["...",{"stat":"p95"}],["...",{"stat":"p99"}],[".","ConcurrentExecutions",".",".",{"stat":"Maximum","yAxis":"right"}]]}},
+           {"type":"metric","x":0,"y":6,"width":12,"height":6,"properties":{"title":"Routes in 5xx (vega-v2-api-route-5xx)","region":"${AWS::Region}","period":300,
+            "insightRule":{"maxContributorCount":10,"orderBy":"Sum","ruleName":"vega-v2-api-route-5xx"},"legend":{"position":"bottom"},"view":"timeSeries"}},
+           {"type":"log","x":12,"y":6,"width":12,"height":6,"properties":{"title":"95th percentile by route (ms)","region":"${AWS::Region}","view":"table",
+            "query":"SOURCE '/aws/lambda/vega-v2-api' | fields route, ms | filter request = 'read' | stats pct(ms, 95) by route | sort route"}},
+           {"type":"metric","x":0,"y":12,"width":12,"height":6,"properties":{"title":"Worker and backfill: tasks running (CPU samples), abnormal stops","region":"${AWS::Region}","period":300,
+            "metrics":[["AWS/ECS","CPUUtilization","ClusterName","vega-v2","ServiceName","vega-v2-worker",{"stat":"SampleCount"}],["...","vega-v2-backfill",{"stat":"SampleCount"}],
+             ["AWS/Events","MatchedEvents","RuleName","vega-v2-worker-stops",{"stat":"Sum","yAxis":"right"}],["...","vega-v2-backfill-stops",{"stat":"Sum","yAxis":"right"}]]}},
+           {"type":"metric","x":12,"y":12,"width":12,"height":6,"properties":{"title":"Base: CPU, connections, freeable memory","region":"${AWS::Region}","period":300,
+            "metrics":[["AWS/RDS","CPUUtilization","DBInstanceIdentifier","vega-football-db-postgres",{"stat":"Average"}],[".","DatabaseConnections",".",".",{"stat":"Maximum","yAxis":"right"}],[".","FreeableMemory",".",".",{"stat":"Minimum","yAxis":"right"}]]}},
+           {"type":"metric","x":0,"y":18,"width":12,"height":6,"properties":{"title":"Distribution (us-east-1): requests and 5xx rate","region":"us-east-1","period":300,
+            "metrics":[[{"expression":"SEARCH('{AWS/CloudFront,DistributionId,Region} MetricName=\"Requests\"', 'Sum', 300)","id":"requests"}],
+             [{"expression":"SEARCH('{AWS/CloudFront,DistributionId,Region} MetricName=\"5xxErrorRate\"', 'Average', 300)","id":"errors","yAxis":"right"}]]}},
+           {"type":"alarm","x":12,"y":18,"width":12,"height":6,"properties":{"title":"Alarms","alarms":["${Errors}","${Throttles}","${Copies}","${Slow}","${P95}","${Five}","${Route}","${Refused}","${Memory}","${Storage}","${Cpu}","${Connections}"]}}
+          ]}
+        - Errors: !GetAtt ApiErrorsAlarm.Arn
+          Throttles: !GetAtt ApiThrottlesAlarm.Arn
+          Copies: !GetAtt ApiCopiesAlarm.Arn
+          Slow: !GetAtt ApiSlowAlarm.Arn
+          P95: !GetAtt ApiP95Alarm.Arn
+          Five: !GetAtt Responses5xxAlarm.Arn
+          Route: !GetAtt RouteErrorsAlarm.Arn
+          Refused: !GetAtt DatabaseRefusedAlarm.Arn
+          Memory: !GetAtt DatabaseLowMemoryAlarm.Arn
+          Storage: !GetAtt DatabaseLowStorageAlarm.Arn
+          Cpu: !GetAtt DatabaseHighCpuAlarm.Arn
+          Connections: !GetAtt DatabaseConnectionsAlarm.Arn
 Outputs:
   TopicArn: {Value: !Ref Topic, Export: {Name: vega-v2-alerts-topic}}

@@ -18,6 +18,8 @@ const reader = createReader(process.env.V2_READ_DATABASE_URL || "postgresql://of
   role: "vega_read",
 });
 export const handler = adapt(
-  // log: one line per request the function receives (README, "The read API's connections").
-  createHandler({ read: reader.read, mediaBase: process.env.V2_MEDIA_BASE_URL || null, opsKey: process.env.V2_OPS_KEY || null, log: console.log }),
+  // log: one line per request the function receives (README, "The read API's connections"), a JSON line of its own on
+  // stdout: the runtime's text prefix (time, request id, level) would hide it from the Contributor Insights rule that
+  // counts the 5xx answers by route (alerts.yaml, GH204); the metric filters read it either way.
+  createHandler({ read: reader.read, mediaBase: process.env.V2_MEDIA_BASE_URL || null, opsKey: process.env.V2_OPS_KEY || null, log: (line) => process.stdout.write(line + "\n") }),
 );

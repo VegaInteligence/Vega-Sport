@@ -157,7 +157,8 @@ test("manifest, health and status", { skip }, async () => {
   ]);
   assert.deepEqual(body.clubCountries, { t_aaaaa1: "FRA", t_aaaaa2: "FRA", t_aaaaa4: "FRA" });
   const health = await get("/api/health");
-  assert.deepEqual(health.body, { source: "AWS", status: "ok", revision: "7" });
+  // GH202-a: the package it runs (VEGA_RELEASE), null without it (FAILURE_MODES_OPTIMISATIONS.md).
+  assert.deepEqual(health.body, { source: "AWS", status: "ok", revision: "7", release: null });
   const status = await get("/api/status");
   assert.equal(status.body.schema, "v2");
   assert.match(status.response.headers.get("server-timing"), /^total;dur=\d+\.\d, db;dur=0\.0;desc="0 queries"$/);

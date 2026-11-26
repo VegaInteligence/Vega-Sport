@@ -126,6 +126,8 @@ def lambda_text_line(level, message):
     return f"2026-11-20T21:04:05.123Z\t6f1c9b0e-1d2a-4a51-9c33-0d6a2b7e9f10\t{level}\t{message}"
 
 
+# The request lines go through infra/aws/api-index.mjs's `log` (RAW: a JSON line of its own, written to stdout without
+# the runtime's text prefix, GH204); the errors through console.error (ERROR: the Text format's prefix).
 REAL_LINES = r"""
 import { createHandler } from "./backend/api/src/handler.mjs";
 const out = [];
@@ -133,12 +135,16 @@ const capture = (level) => (...args) => out.push([level, args.map(String).join("
 console.error = capture("ERROR");
 const failing = (code) => async () => { const e = new Error("refused"); e.code = code; throw e; };
 for (const code of ["53300", "57P03", "ECONNREFUSED", "57014"]) {
-  const handle = createHandler({ read: failing(code), log: capture("INFO") });
+  const handle = createHandler({ read: failing(code), log: capture("RAW") });
   await handle(new Request("https://statarena.invalid/api/health"));
 }
-const ok = createHandler({ read: async () => [{ revision: "1", ready: true }], log: capture("INFO") });
+const slow = createHandler({ read: failing("57014"), log: capture("RAW") });
+await slow(new Request("https://statarena.invalid/api/read/home-favourites?season=2025/2026&leagues=all&personalPlayers=p_aaaab1"));
+const ok = createHandler({ read: async () => [{ revision: "1", ready: true }], log: capture("RAW") });
 await ok(new Request("https://statarena.invalid/api/health"));
 await ok(new Request("https://statarena.invalid/api/nothing-here"));
+const empty = createHandler({ read: async () => [], log: capture("RAW") });
+await empty(new Request("https://statarena.invalid/api/matches/m_aaaaa1/summary"));
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -149,9 +155,11 @@ class FilterPatternTest(unittest.TestCase):
     def setUpClass(cls):
         run = subprocess.run([NODE, "--input-type=module", "-e", REAL_LINES], cwd=ROOT, capture_output=True, text=True, timeout=60)
         assert run.returncode == 0, run.stderr
-        cls.lines = [lambda_text_line(level, message) for level, message in json.loads(run.stdout)]
+        cls.lines = [message if level == "RAW" else lambda_text_line(level, message) for level, message in json.loads(run.stdout)]
         filters = {name: block for name, (kind, block) in resources(text(ALERTS)).items() if kind == "AWS::Logs::MetricFilter"}
         cls.patterns = {re.search(r"MetricName: (\w+)", b).group(1): prop(b, "FilterPattern") for b in filters.values()}
+        rule = [b for kind, b in resources(text(ALERTS)).values() if kind == "AWS::CloudWatch::InsightRule"]
+        cls.rule = json.loads(re.search(r"RuleBody: '(.*)'", rule[0]).group(1).replace("''", "'")) if rule else None
 
     def lines_with(self, needle):
         found = [line for line in self.lines if needle in line]
@@ -174,11 +182,37 @@ class FilterPatternTest(unittest.TestCase):
         pattern = self.patterns.get("Responses5xx")
         self.assertIsNotNone(pattern, "no Responses5xx metric filter")
         five = self.lines_with('"status":503')
-        self.assertEqual(len(five), 4, "one 503 line per failed read")
+        self.assertEqual(len(five), 5, "one 503 line per failed read")
         for line in five:
             self.assertTrue(cw_matches(pattern, line), f"{pattern} misses {line!r}")
         for line in self.lines_with('"status":200') + self.lines_with('"status":404') + self.lines_with("read failed"):
             self.assertFalse(cw_matches(pattern, line), f"{pattern} counts {line!r}")
+
+
+    # --- GH204-b: the request line, a JSON line of its own, with its route ------------------------------------------------
+
+    def test_GH204_b_each_request_line_is_json_with_its_route(self):
+        requests = [json.loads(line) for line in self.lines if line.startswith('{"request":"read"')]
+        self.assertEqual(len(requests), 8)
+        self.assertEqual({r["route"] for r in requests}, {"health", "read.home-favourites", "other", "matches.id.summary"})
+        self.assertEqual([r["route"] for r in requests if r["path"] == "/api/nothing-here"], ["other"])
+        index = (ROOT / "infra/aws/api-index.mjs").read_text()
+        self.assertRegex(index, r"log: \(line\) => process\.stdout\.write\(line \+ \"\\n\"\)")
+
+    def test_GH204_b_the_rule_counts_the_5xx_answers_by_route(self):
+        self.assertIsNotNone(self.rule, "no Contributor Insights rule in alerts.yaml")
+        self.assertEqual(self.rule["LogFormat"], "JSON")
+        self.assertEqual(self.rule["LogGroupNames"], ["/aws/lambda/vega-v2-api"])
+        self.assertEqual(self.rule["Contribution"]["Keys"], ["$.route"])
+        filters = self.rule["Contribution"]["Filters"]
+        self.assertEqual(filters, [{"Match": "$.request", "In": ["read"]}, {"Match": "$.status", "GreaterThan": 499}])
+        self.assertEqual(self.rule["AggregateOn"], "Count")
+
+        def matches(record):
+            return all((record.get(f["Match"][2:]) in f["In"]) if "In" in f else (isinstance(record.get(f["Match"][2:]), (int, float))
+                                                                                  and record[f["Match"][2:]] > f["GreaterThan"]) for f in filters)
+        counted = [json.loads(line) for line in self.lines if line.startswith("{") and matches(json.loads(line))]
+        self.assertEqual(sorted(r["route"] for r in counted), ["health"] * 4 + ["read.home-favourites"])
 
 
 class AlertsTest(unittest.TestCase):
@@ -252,8 +286,11 @@ class AlertsTest(unittest.TestCase):
             expected = {
                 "FunctionName": {function, one(r"^      FunctionName: (vega-v2-live-read)$", live, "live read function")},
                 "ClusterName": {one(r"^      ClusterName: (\S+)$", worker, "cluster")},
-                "ServiceName": {one(r"^      ServiceName: (vega-v2-worker)$", worker, "worker service")},
+                "ServiceName": {one(r"^      ServiceName: (vega-v2-worker)$", worker, "worker service"),
+                                one(r"^      ServiceName: (vega-v2-backfill)$", worker, "backfill service")},
                 "DBInstanceIdentifier": {one(r"^      DBInstanceIdentifier: (\S+)$", database, "instance")},
+                # GH204: the EventBridge rules of alerts.yaml itself.
+                "RuleName": set(re.findall(r"^      Name: (vega-v2-[a-z-]+-stops)$", self.alerts, re.M)),
             }[key]
             self.assertIn(value, expected, key)
         filters = [b for kind, b in resources(self.alerts).values() if kind == "AWS::Logs::MetricFilter"]
@@ -295,8 +332,10 @@ class AlertsTest(unittest.TestCase):
                 "set -euo pipefail\n"
                 'aws() { printf "%s\\n" "$FAKE_VALUE"; }\n'
                 'stack() { echo "stack $*"; }\n'
+                # Each step writes the Deploy's state again first (GH157); its own tests are test_deploy_flow's.
+                "hold_state() { :; }\n"
                 "output() { echo E2NNDNWK491L8W; }\n"
-                "COUNT=1; media=https://d111111abcdef8.cloudfront.net\n" + fragment)
+                "COUNT=1; BACKFILL=1; media=https://d111111abcdef8.cloudfront.net\n" + fragment)
             env = {"PATH": "/usr/bin:/bin", "FAKE_VALUE": value}
             if actions:
                 env["GITHUB_ACTIONS"] = actions
@@ -331,7 +370,7 @@ class AlertsTest(unittest.TestCase):
                 with self.subTest(alarm=alarm):
                     self.assertIn(prop(block, "TreatMissingData"), {"notBreaching", "breaching"})
                     if prop(block, "TreatMissingData") == "breaching":
-                        self.assertIn(prop(block, "AlarmName"), {"vega-v2-api-unreachable", "vega-v2-worker-down"})
+                        self.assertIn(prop(block, "AlarmName"), {"vega-v2-api-unreachable", "vega-v2-worker-down", "vega-v2-backfill-down"})
         rate = alarm_named(self.edge, "vega-v2-api-edge-5xx")
         self.assertRegex(rate, r"Expression: 'IF\(requests >= 100, rate, 0\)'")
         for name in ("vega-v2-api-errors", "vega-v2-api-throttles", "vega-v2-api-5xx", "vega-v2-api-db-refused"):
@@ -359,6 +398,84 @@ class AlertsTest(unittest.TestCase):
 
     def test_ci_lints_the_edge_template_for_its_region(self):
         self.assertRegex(CI, r"cfn-lint --regions us-east-1 -- infra/aws/alerts-edge\.yaml")
+
+
+class AlarmsOfGH204Test(unittest.TestCase):
+    """GH204-a, c, d (FAILURE_MODES_OPTIMISATIONS.md, written before this test)."""
+
+    def setUp(self):
+        self.alerts = text(ALERTS)
+        self.deploy = DEPLOY
+        self.roles = ROLES
+
+    def test_GH204_a_the_p95_alarm(self):
+        alarm = alarm_named(self.alerts, "vega-v2-api-p95")
+        self.assertIn("{Name: FunctionName, Value: vega-v2-api}", alarm)
+        self.assertEqual((prop(alarm, "MetricName"), prop(alarm, "ExtendedStatistic"), prop(alarm, "Period"), prop(alarm, "EvaluationPeriods"),
+                          prop(alarm, "DatapointsToAlarm"), prop(alarm, "Threshold"), prop(alarm, "TreatMissingData")),
+                         ("Duration", "p95", "300", "6", "6", "3000", "notBreaching"))
+
+    def test_GH204_a_the_route_alarm_reads_the_rule(self):
+        rule = [(name, b) for name, (kind, b) in resources(self.alerts).items() if kind == "AWS::CloudWatch::InsightRule"]
+        self.assertEqual(len(rule), 1)
+        self.assertIn("RuleName: vega-v2-api-route-5xx", rule[0][1])
+        self.assertIn("RuleState: ENABLED", rule[0][1])
+        alarm = alarm_named(self.alerts, "vega-v2-api-route-5xx")
+        self.assertIn("Expression: \"INSIGHT_RULE_METRIC('vega-v2-api-route-5xx', 'MaxContributorValue')\"", alarm)
+        self.assertEqual((prop(alarm, "EvaluationPeriods"), prop(alarm, "DatapointsToAlarm"), prop(alarm, "Threshold"), prop(alarm, "TreatMissingData")),
+                         ("3", "3", "2", "notBreaching"))
+        self.assertRegex(alarm, r"Period: 300")
+
+    def test_GH204_a_abnormal_stops_counted_per_service_while_it_is_meant_to_run(self):
+        for service, condition in (("worker", "Worker"), ("backfill", "Backfill")):
+            with self.subTest(service=service):
+                rules = [b for kind, b in resources(self.alerts).values() if kind == "AWS::Events::Rule" and f"Name: vega-v2-{service}-stops" in b]
+                self.assertEqual(len(rules), 1)
+                rule = rules[0]
+                self.assertEqual(prop(rule, "Condition"), condition)
+                pattern = json.loads(re.search(r"EventPattern: '(.*)'", rule).group(1))
+                self.assertEqual(pattern["source"], ["aws.ecs"])
+                self.assertEqual(pattern["detail-type"], ["ECS Task State Change"])
+                self.assertEqual(pattern["detail"]["group"], [f"service:vega-v2-{service}"])
+                self.assertEqual(pattern["detail"]["lastStatus"], ["STOPPED"])
+                self.assertEqual(sorted(pattern["detail"]["stopCode"]), ["EssentialContainerExited", "TaskFailedToStart"])
+                self.assertNotIn("Targets", rule)
+                alarm = alarm_named(self.alerts, f"vega-v2-{service}-restarts")
+                self.assertEqual(prop(alarm, "Condition"), condition)
+                self.assertEqual((prop(alarm, "Namespace"), prop(alarm, "MetricName"), prop(alarm, "Statistic"), prop(alarm, "Period"),
+                                  prop(alarm, "Threshold"), prop(alarm, "TreatMissingData")),
+                                 ("AWS/Events", "MatchedEvents", "Sum", "1800", "3", "notBreaching"))
+                self.assertIn(f"{{Name: RuleName, Value: vega-v2-{service}-stops}}", alarm)
+
+    def test_GH204_a_the_backfill_meant_to_run(self):
+        alarm = alarm_named(self.alerts, "vega-v2-backfill-down")
+        self.assertEqual(prop(alarm, "Condition"), "Backfill")
+        self.assertIn("{Name: ServiceName, Value: vega-v2-backfill}", alarm)
+        self.assertEqual(prop(alarm, "TreatMissingData"), "breaching")
+        self.assertIn("WatchBackfill:", self.alerts)
+        self.assertIn("Backfill: !Equals [!Ref WatchBackfill, 'true']", self.alerts)
+
+    def test_GH204_a_the_dashboard(self):
+        dashboards = [b for kind, b in resources(self.alerts).values() if kind == "AWS::CloudWatch::Dashboard"]
+        self.assertEqual(len(dashboards), 1)
+        body = dashboards[0]
+        self.assertIn("DashboardName: vega-v2", body)
+        for needle in ("AWS/Lambda", "Duration", "p95", "Vega/Api", "Responses5xx", "vega-v2-api-route-5xx", "AWS/ECS", "vega-v2-backfill",
+                       "AWS/Events", "AWS/RDS", "AWS/CloudFront", "us-east-1", "alarms", "stats pct(ms, 95) by route"):
+            self.assertIn(needle, body, needle)
+
+    def test_GH204_c_the_deploy_watches_the_backfill_as_it_sets_it(self):
+        self.assertIn('watch_backfill=true; [ "$BACKFILL" = 0 ] && watch_backfill=false', self.deploy)
+        line = one(r"^(stack vega-v2-alerts alerts\.yaml [^\n]*)$", self.deploy, "alerts stack deployed")
+        self.assertIn('WatchBackfill="$watch_backfill"', line)
+
+    def test_GH204_d_the_cloudformation_role_may_create_them(self):
+        block = one(r"(\n              # --- Alerts \(alerts\.yaml.*?# --- end of alerts\n)", self.roles, "alerts block of the CloudFormation role")
+        # The dashboard's own ARN, not a pattern (GH204-e).
+        for needle in ("cloudwatch:PutDashboard", ":dashboard/vega-v2'", "cloudwatch:PutInsightRule", ":insight-rule/vega-v2-*",
+                       "events:PutRule", ":rule/vega-v2-*"):
+            self.assertIn(needle, block)
+        self.assertRegex(self.roles, r"\n  DeployGrants: \{Value: '1'\}")
 
 
 if __name__ == "__main__":
