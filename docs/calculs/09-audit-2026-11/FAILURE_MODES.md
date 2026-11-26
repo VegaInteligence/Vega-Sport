@@ -5912,3 +5912,41 @@ clubs' crests, and slightly smaller choices (Probabilité de victoire / xG cumul
   5a4476b (stepper 44, the label's 1 px frame on the surface, field 34), green after.
 - The E2E's season pages now answer the publication the API's manifest names (GH129-m pins them to it): with « e2e »
   the head's thread and button were never drawn and R15–R19 failed on main before § 72.
+
+## 73. The round picker: every round, numbered (hugo, 26 Nov 2026, 10 h 32 « the one right now sucks as hell »; mock-up https://claude.ai/artifact/UEAvpQrYfJ5VqQafWT9jJC, piste A chosen at 10 h 38 « but change the day selector like 1,2,3 », version 2 approved at 10 h 40 « ok super envoie en main »; written before the tests)
+
+The picker that opens from the competition's button in the match page's head showed one scrolling strip of rounds, and
+only the rounds played: the provider names the round of played matches only (`round_name` null for the others), so
+Ligue 1 stopped at 11 of 34 and the 207 matches to come were nowhere. 140 of them carry midnight UTC for a time not set
+yet, read as « 02:00 ».
+
+### 73.1 Rules
+
+- **Every round of a league.** `inferRounds` (`services/match-nav.js`): only when every named round is a number (no
+  play-off) and the named rounds hold `size` matches between `2 × size` clubs. A named round short of matches (under
+  way, or a match postponed) takes, again and again, a match to come of two clubs it lacks when that match is the next
+  of both. The matches left, by kick-off, make rounds of `size` with every club once, numbered after the last named,
+  at most `2 × (clubs − 1)`; at the first that does not, the rest stays unnamed and out of the picker, as before. Never a
+  match in a wrong round, never a match lost: Ligue 1 2026/2027 read on 26 Nov, 306 matches in 34 rounds of 9.
+- **A time not set is no time.** A midnight UTC kick-off shared by five matches or more is a date without its time
+  (`withoutUnsetTimes`): « à venir » in the picker, no time on the thread's tile. A single real midnight kick-off keeps it.
+- **Numbered pills, all in sight.** The rounds are pills 1 to 34 in a grid, no scrolling: rows as even as can be on a
+  computer (17 + 17; one row up to 19), 9 a row on a phone. Played in a veil, the next outlined, the later plain, the
+  chosen one filled, a dot on the open match's round. A cup's named rounds wrap at their width. Under them, a bar and
+  « 11 journées jouées sur 34 » (numbered rounds only).
+- **The round's head** « 11ᵉ journée », its dates and « 9 matchs joués » / « 3 joués sur 9 » / « à venir », the
+  previous / next arrows beside it; its matches under their day, the open match filled. The club search lists by round.
+- **Unchanged:** the competition's button, the thread of matches (its gap kept at 4 px), the search's results, Escape.
+
+### 73.2 Failure modes and expected outcomes
+
+- **R46** (`tests/match-nav-rounds.test.mjs`) a double round robin of 18 clubs, 11 rounds played: 34 rounds of 9, each
+  with the 18 clubs, every match in its own round; a round under way (3 of 9 played) takes its own 6; a postponed match
+  of round 5 set after round 12 goes back to round 5; a round-20 match moved inside round 19 stops the rounds there, none
+  made up, none of the named ones short; a cup unchanged; a match to come has its place in the thread. Red on main
+  (11 rounds).
+- **R48** (same file) a round at midnight UTC loses its time, one real midnight kick-off keeps it. Red on main.
+- **R47** (`tests/e2e/match-tabs.e2e.mjs`, computer, dark, a build) the rounds 13, 14, 15 as pills, played / played /
+  next, 14 pressed and dotted, a 3-column grid with no scroll, 32 px, « 2 journées jouées sur 3 », « 14ᵉ journée »,
+  two arrows, the matches under their days, the open match filled ivory; « Journée suivante » goes to 15. Red on main.
+

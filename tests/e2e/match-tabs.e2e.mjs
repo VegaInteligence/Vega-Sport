@@ -18,6 +18,8 @@
 // § 72 (hugo, 26 Nov, piste A of the buttons' mock-up): R42 the head and the choices as pills (dark) · R43 the same in
 // light · R44 the pills on a phone; the six tabs, the best grade and the leaders unchanged · R45 (hugo's review of the
 // release) the season stepper the height of the choices, the players' search without a frame around its pill.
+// § 73 (hugo chose piste A « Les journées numérotées » of the round picker's mock-up, 26 Nov): R47 the rounds as numbered
+// pills, all in sight, the round's matches by day.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -152,6 +154,8 @@ const FIXTURES = [13, 14, 15].flatMap((round, r) => [0, 1, 2, 3].map((k) => {
     score_home: played ? k % 3 : null, score_away: played ? 1 : null };
 }));
 const ORDER = FIXTURES.map((m) => m.id);
+// Round 14's days in Paris: the picker shows its matches under each (§ 73, R47).
+const DAYS_14 = new Set(FIXTURES.filter((m) => m.round_name === "14").map((m) => new Date(m.time_utc).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }))).size;
 const momentum = { points: Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, value: Math.round(Math.sin(i / 6) * 60) })) };
 const forecast = {
   match: id, points: Array.from({ length: 91 }, (_, minute) => {
@@ -431,6 +435,42 @@ try {
         await page.keyboard.press("Escape");
         await dialog.waitFor({ state: "detached" }).catch(() => {});
         assert.deepEqual(got, { round: "regular:14", current: 1 });
+        return got;
+      });
+
+      await check("R47 the rounds as numbered pills, all in sight; played in a veil, the next outlined, the chosen filled; the round's matches by day",
+        { rounds: ["13", "14", "15"], states: ["played", "played", "next"], pressed: "14", dot: "14", cols: 3, heights: [32], progress: "2 journées jouées sur 3",
+          head: "14ᵉ journée", steps: 2, days: DAYS_14, current: { bg: "rgb(244, 241, 234)" }, scroll: false }, async () => {
+        await page.locator(".match-head button[data-match-picker]").click();
+        const dialog = page.getByRole("dialog");
+        await dialog.waitFor();
+        const got = await dialog.evaluate((d) => {
+          const grid = d.querySelector('[role="group"][aria-label="Journées"]');
+          const buttons = [...grid.querySelectorAll("button")];
+          const row = d.querySelector('a[aria-current="page"]');
+          return {
+            rounds: buttons.map((b) => b.textContent.trim()),
+            states: buttons.map((b) => b.dataset.state || ""),
+            pressed: buttons.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent.trim(),
+            dot: buttons.find((b) => b.hasAttribute("data-current"))?.textContent.trim(),
+            cols: getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+            heights: [...new Set(buttons.map((b) => Math.round(b.getBoundingClientRect().height)))],
+            progress: d.querySelector("[data-round-progress] span")?.textContent.trim(),
+            head: d.querySelector("h3")?.textContent.trim(),
+            steps: d.querySelectorAll('button[aria-label^="Journée "]').length,
+            days: d.querySelectorAll("h4").length,
+            current: { bg: getComputedStyle(row).backgroundColor },
+            scroll: grid.scrollWidth > grid.clientWidth,
+          };
+        });
+        await page.screenshot({ path: join(out, "choix-journee-bureau.png") });
+        await dialog.getByRole("button", { name: "Journée suivante" }).click();
+        const after = await dialog.evaluate((d) => d.querySelector('[role="group"] button[aria-pressed="true"]')?.textContent.trim());
+        await page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "detached" }).catch(() => {});
+        assert.equal(after, "15", "« Journée suivante » goes to 15");
+        assert.deepEqual(got, { rounds: ["13", "14", "15"], states: ["played", "played", "next"], pressed: "14", dot: "14", cols: 3, heights: [32],
+          progress: "2 journées jouées sur 3", head: "14ᵉ journée", steps: 2, days: DAYS_14, current: { bg: "rgb(244, 241, 234)" }, scroll: false });
         return got;
       });
 

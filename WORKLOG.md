@@ -1,5 +1,13 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Choix de la journée : les 34 journées numérotées — FAILURE_MODES § 73 (26 novembre 2026, branche `claude/choix-journee` depuis main 287c5ac)
+
+- hugo trouvait la fenêtre du choix de journée mauvaise. Maquette à trois pistes (https://claude.ai/artifact/UEAvpQrYfJ5VqQafWT9jJC) : il a pris la piste A en demandant des numéros 1, 2, 3…, puis a validé la version 2 (« ok super envoie en main »).
+- Constat : la fenêtre ne montrait que les journées jouées (11 sur 34 en Ligue 1), le fournisseur ne nommant pas la journée des matchs à venir ; 140 de ces matchs portent minuit UTC pour une heure pas encore fixée (« 02:00 »).
+- `inferRounds` et `withoutUnsetTimes` (`services/match-nav.js`) : journées à venir déduites des dates (chaque paquet de 9 contient les 18 clubs), journées incomplètes ou matchs reportés recasés, rien d'inventé quand les dates ne collent pas ; heure non fixée affichée « à venir ». Ligue 1 lue le 26 novembre : 306 matchs sur 306 en 34 journées.
+- `MatchNav.jsx` et `MatchNav.module.css` : pilules numérotées toutes visibles (17 + 17 à l'ordinateur, 9 par ligne au téléphone), jouées en voile, prochaine en contour, choisie en plein, point sur la journée du match ; barre de progression ; flèches à côté du titre ; matchs rangés par jour ; fenêtre de hauteur fixe.
+- Tests écrits d'abord : R46 et R48 (`tests/match-nav-rounds.test.mjs`), R47 (`match-tabs.e2e.mjs`, sur une build) rouges sur main, verts après ; site 1 118/1 118, match-tabs 34/34.
+
 ## Boutons en pilule sur la page match — FAILURE_MODES § 72 (26 novembre 2026, [#245](https://github.com/VegaInteligence/Vega-Sport/issues/245), branche `claude/boutons-pilule-page-match` depuis main 64ac3f9)
 
 - Demande de hugo : les boutons carrés à bordure grise remplacés par des pilules (modèle : « Rejoindre la liste d'attente »). Maquettes : page compétition (pistes A et B), puis page match en piste A, sans fond derrière les logos, sélecteurs un peu plus petits, blocs « Meilleure note » et repères inchangés ; validée avec « ok pour la page match envoie en prod ».

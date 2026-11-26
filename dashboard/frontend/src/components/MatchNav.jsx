@@ -4,7 +4,13 @@
  * page's actions, then the thread of matches: the previous and next matches in kick-off order (into the
  * neighbouring round at either end) around a strip of the six before and six after. Without the season's list the
  * button is plain text and there is no thread. */
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -35,9 +41,7 @@ const instant = (m) => {
   return Number.isFinite(value) ? new Date(value) : null;
 };
 const played = (m) =>
-  m.status !== "not_started" &&
-  m.home.score != null &&
-  m.away.score != null;
+  m.status !== "not_started" && m.home.score != null && m.away.score != null;
 /** « 2 – 1 », or the kick-off time of a match to come. */
 const result = (m) =>
   played(m)
@@ -73,14 +77,21 @@ function Step({ match, href, direction }) {
     );
   const label = `${previous ? "Match précédent" : "Match suivant"} : ${describe(match)}`;
   return (
-    <Link className={s.step} href={href(match)} aria-label={label} title={label} prefetch={false}>
+    <Link
+      className={s.step}
+      href={href(match)}
+      aria-label={label}
+      title={label}
+      prefetch={false}
+    >
       <Icon name={previous ? "back" : "arrow"} />
     </Link>
   );
 }
 
 /** A round's short name on a tile: « J14 » for a numbered round, else its label. */
-const roundTag = (group) => (/^\d+$/.test(group.name) ? `J${group.name}` : group.label);
+const roundTag = (group) =>
+  /^\d+$/.test(group.name) ? `J${group.name}` : group.label;
 
 function Tile({ match, group, current, href }) {
   const score = played(match);
@@ -96,7 +107,9 @@ function Tile({ match, group, current, href }) {
       >
         <small className={s.tileHead}>
           {roundTag(group)} · {day(match)}
-          {!score && instant(match) && match.timeUtc ? ` · ${result(match)}` : ""}
+          {!score && instant(match) && match.timeUtc
+            ? ` · ${result(match)}`
+            : ""}
         </small>
         {[match.home, match.away].map((side, i) => (
           <span key={i} className={s.tileSide}>
@@ -110,7 +123,17 @@ function Tile({ match, group, current, href }) {
   );
 }
 
-function Row({ match, current, href, onPick }) {
+const longDay = new Intl.DateTimeFormat("fr-FR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "Europe/Paris",
+});
+/** A match's score, its kick-off time, or « à venir » while its time is not set. */
+const middle = (m) =>
+  played(m) || (instant(m) && m.timeUtc) ? result(m) : "à venir";
+
+function Row({ match, current, href, onPick, showDay = false }) {
   return (
     <li>
       <Link
@@ -120,14 +143,15 @@ function Row({ match, current, href, onPick }) {
         aria-label={describe(match)}
         prefetch={false}
         onClick={onPick}
+        data-day={showDay || undefined}
       >
-        <span className={s.rowDay}>{day(match)}</span>
+        {showDay && <span className={s.rowDay}>{day(match)}</span>}
         <span className={`${s.rowTeam} ${s.rowHome}`}>
           <span>{match.home.name}</span>
           <ClubCrest club={match.home} size={20} />
         </span>
         <strong className={played(match) ? s.score : s.kickoff}>
-          {result(match)}
+          {middle(match)}
         </strong>
         <span className={s.rowTeam}>
           <ClubCrest club={match.away} size={20} />
@@ -138,21 +162,57 @@ function Row({ match, current, href, onPick }) {
   );
 }
 
+/** A round's matches under the day they are played. */
+function Days({ matches, current, href, onPick }) {
+  const days = [];
+  for (const m of matches) {
+    const name = instant(m) ? longDay.format(instant(m)) : "Date à venir";
+    if (days.at(-1)?.name !== name) days.push({ name, matches: [] });
+    days.at(-1).matches.push(m);
+  }
+  return days.map((d) => (
+    <section key={d.name} className={s.day}>
+      <h4>{d.name}</h4>
+      <ul className={s.list}>
+        {d.matches.map((m) => (
+          <Row
+            key={m.id}
+            match={m}
+            current={m.id === current}
+            href={href}
+            onPick={onPick}
+          />
+        ))}
+      </ul>
+    </section>
+  ));
+}
+
+const numbered = (g) => /^\d+$/.test(g.name);
+const complete = (g) => g.matches.every(played);
+/** Rounds per row of the numbered grid on a computer: one row up to 19, else rows as even as can be (17 + 17 for 34). */
+const perRow = (n) => Math.ceil(n / Math.ceil(n / 19));
+
 function Picker({ title, groups, current, currentGroup, href, onClose }) {
   const [selected, setSelected] = useState(currentGroup.key);
   const [query, setQuery] = useState("");
-  const strip = useRef(null);
+  const grid = useRef(null);
   const at = groups.findIndex((g) => g.key === selected);
   const group = groups[at] || currentGroup;
   const found = useMemo(() => navSearch(groups, query), [groups, query]);
-  useEffect(() => {
-    strip.current
-      ?.querySelector('[aria-pressed="true"]')
-      ?.scrollIntoView({ block: "nearest", inline: "center" });
-  }, [selected]);
-  const move = (by) => {
+  const allNumbered = groups.every(numbered);
+  const nextKey = groups.find((g) => !complete(g))?.key;
+  const done = groups.filter(complete).length;
+  const move = (by, focus = false) => {
     const next = groups[Math.min(groups.length - 1, Math.max(0, at + by))];
-    if (next) setSelected(next.key);
+    if (!next) return;
+    setSelected(next.key);
+    if (focus)
+      queueMicrotask(() =>
+        grid.current
+          ?.querySelector(`[data-round="${CSS.escape(next.key)}"]`)
+          ?.focus(),
+      );
   };
   const searching = query.trim().length > 0;
   const byRound = searching
@@ -164,8 +224,17 @@ function Picker({ title, groups, current, currentGroup, href, onClose }) {
         .filter((g) => g.matches.length)
     : [];
   const span = (g) => {
-    const first = g.matches[0], last = g.matches.at(-1);
-    return day(first) === day(last) ? day(first) : `${day(first)} – ${day(last)}`;
+    const first = g.matches[0],
+      last = g.matches.at(-1);
+    return day(first) === day(last)
+      ? day(first)
+      : `${day(first)} – ${day(last)}`;
+  };
+  const state = (g) => {
+    const n = g.matches.filter(played).length;
+    if (n === g.matches.length)
+      return `${n} ${n > 1 ? "matchs joués" : "match joué"}`;
+    return n ? `${n} joués sur ${g.matches.length}` : "à venir";
   };
   return (
     <Modal title={title} onClose={onClose} className={s.picker}>
@@ -183,7 +252,65 @@ function Picker({ title, groups, current, currentGroup, href, onClose }) {
       </label>
       {!searching && (
         <>
-          <div className={s.rounds}>
+          <div
+            ref={grid}
+            className={s.rounds}
+            role="group"
+            aria-label="Journées"
+            data-numbered={allNumbered || undefined}
+            style={
+              allNumbered
+                ? { "--round-cols": perRow(groups.length) }
+                : undefined
+            }
+            onKeyDown={(e) => {
+              if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+              e.preventDefault();
+              move(e.key === "ArrowLeft" ? -1 : 1, true);
+            }}
+          >
+            {groups.map((g) => (
+              <button
+                key={g.key}
+                type="button"
+                data-round={g.key}
+                className={s.round}
+                aria-pressed={g.key === group.key}
+                aria-label={g.label}
+                title={`${g.label} · ${span(g)}`}
+                data-state={
+                  complete(g)
+                    ? "played"
+                    : g.key === nextKey
+                      ? "next"
+                      : undefined
+                }
+                data-current={g.key === currentGroup.key || undefined}
+                tabIndex={g.key === group.key ? 0 : -1}
+                onClick={() => setSelected(g.key)}
+              >
+                {short(g)}
+              </button>
+            ))}
+          </div>
+          {allNumbered && (
+            <div className={s.progress} data-round-progress="">
+              <i aria-hidden="true">
+                <b style={{ width: `${(done / groups.length) * 100}%` }} />
+              </i>
+              <span>
+                {done} {done > 1 ? "journées jouées" : "journée jouée"} sur{" "}
+                {groups.length}
+              </span>
+            </div>
+          )}
+          <div className={s.groupHead}>
+            <div>
+              <h3>{group.label}</h3>
+              <small>
+                {span(group)} · {state(group)}
+              </small>
+            </div>
             <button
               type="button"
               className={s.roundStep}
@@ -193,46 +320,6 @@ function Picker({ title, groups, current, currentGroup, href, onClose }) {
             >
               <Icon name="back" />
             </button>
-            <div
-              ref={strip}
-              className={s.strip}
-              role="group"
-              aria-label="Journées"
-              onKeyDown={(e) => {
-                if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-                e.preventDefault();
-                const next =
-                  groups[
-                    Math.min(
-                      groups.length - 1,
-                      Math.max(0, at + (e.key === "ArrowLeft" ? -1 : 1)),
-                    )
-                  ];
-                if (!next) return;
-                setSelected(next.key);
-                queueMicrotask(() =>
-                  strip.current
-                    ?.querySelector(`[data-round="${CSS.escape(next.key)}"]`)
-                    ?.focus(),
-                );
-              }}
-            >
-              {groups.map((g) => (
-                <button
-                  key={g.key}
-                  type="button"
-                  data-round={g.key}
-                  className={s.round}
-                  aria-pressed={g.key === group.key}
-                  aria-label={g.label}
-                  data-current={g.key === currentGroup.key || undefined}
-                  tabIndex={g.key === group.key ? 0 : -1}
-                  onClick={() => setSelected(g.key)}
-                >
-                  {short(g)}
-                </button>
-              ))}
-            </div>
             <button
               type="button"
               className={s.roundStep}
@@ -243,28 +330,19 @@ function Picker({ title, groups, current, currentGroup, href, onClose }) {
               <Icon name="arrow" />
             </button>
           </div>
-          <h3 className={s.groupHead}>
-            <span>{group.label}</span>
-            <small>{span(group)}</small>
-          </h3>
-          <ul className={s.list}>
-            {group.matches.map((m) => (
-              <Row
-                key={m.id}
-                match={m}
-                current={m.id === current}
-                href={href}
-                onPick={onClose}
-              />
-            ))}
-          </ul>
+          <Days
+            matches={group.matches}
+            current={current}
+            href={href}
+            onPick={onClose}
+          />
         </>
       )}
       {searching &&
         (byRound.length ? (
           byRound.map(({ group: g, matches }) => (
             <section key={g.key} className={s.found}>
-              <h3 className={s.groupHead}>
+              <h3 className={s.foundHead}>
                 <span>{g.label}</span>
                 <small>{span({ matches })}</small>
               </h3>
@@ -276,6 +354,7 @@ function Picker({ title, groups, current, currentGroup, href, onClose }) {
                     current={m.id === current}
                     href={href}
                     onPick={onClose}
+                    showDay
                   />
                 ))}
               </ul>
@@ -290,7 +369,9 @@ function Picker({ title, groups, current, currentGroup, href, onClose }) {
 
 /** The tiles around the current match: up to `around` before and after, in the season's order. */
 function windowOf(groups, id, around = 6) {
-  const order = groups.flatMap((group) => group.matches.map((match) => ({ match, group })));
+  const order = groups.flatMap((group) =>
+    group.matches.map((match) => ({ match, group })),
+  );
   const at = order.findIndex((item) => item.match.id === id);
   return at < 0 ? [] : order.slice(Math.max(0, at - around), at + around + 1);
 }
@@ -300,7 +381,8 @@ function Thread({ groups, position, current, href }) {
   const tiles = useMemo(() => windowOf(groups, current), [groups, current]);
   // The current tile in the middle of the strip, without moving the page.
   useLayoutEffect(() => {
-    const box = strip.current, tile = box?.querySelector('[aria-current="page"]');
+    const box = strip.current,
+      tile = box?.querySelector('[aria-current="page"]');
     if (!box || !tile) return;
     const li = tile.parentElement;
     box.scrollLeft = li.offsetLeft - (box.clientWidth - li.offsetWidth) / 2;
@@ -310,7 +392,13 @@ function Thread({ groups, position, current, href }) {
       <Step match={position.previous} href={href} direction="previous" />
       <ol ref={strip} className={s.strip} data-match-strip="">
         {tiles.map(({ match, group }) => (
-          <Tile key={match.id} match={match} group={group} current={match.id === current} href={href} />
+          <Tile
+            key={match.id}
+            match={match}
+            group={group}
+            current={match.id === current}
+            href={href}
+          />
         ))}
       </ol>
       <Step match={position.next} href={href} direction="next" />
@@ -329,7 +417,10 @@ export default function MatchHead({ match, competition, back, logo, actions }) {
     Boolean(league && season && f.statusKnown),
   );
   const groups = useMemo(() => navRounds(resource.value), [resource.value]);
-  const position = useMemo(() => navPosition(groups, match.id), [groups, match.id]);
+  const position = useMemo(
+    () => navPosition(groups, match.id),
+    [groups, match.id],
+  );
   const href = useMatchHref(league, season);
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [match.id]);
@@ -341,14 +432,17 @@ export default function MatchHead({ match, competition, back, logo, actions }) {
       {season && <span className={s.centerSeason}>{season}</span>}
       {position && (
         <>
-          <span className={s.centerDot} aria-hidden="true">·</span>
+          <span className={s.centerDot} aria-hidden="true">
+            ·
+          </span>
           <span>{position.group.label}</span>
           <Icon name="chevron" />
         </>
       )}
     </>
   );
-  const loading = Boolean(league && season) && resource.loading && !resource.value;
+  const loading =
+    Boolean(league && season) && resource.loading && !resource.value;
   return (
     <div className="match-head">
       <div className={s.top}>
@@ -371,8 +465,17 @@ export default function MatchHead({ match, competition, back, logo, actions }) {
         </div>
         <div className={s.actions}>{actions}</div>
       </div>
-      {loading && <div className={s.threadLoading} data-loading aria-hidden="true" />}
-      {position && <Thread groups={groups} position={position} current={match.id} href={href} />}
+      {loading && (
+        <div className={s.threadLoading} data-loading aria-hidden="true" />
+      )}
+      {position && (
+        <Thread
+          groups={groups}
+          position={position}
+          current={match.id}
+          href={href}
+        />
+      )}
       {open && position && (
         <Picker
           title={`${name} · ${season}`}
