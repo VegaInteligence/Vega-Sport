@@ -10,9 +10,10 @@
 //     a pointer at its left edge, its middle and its right edge (nothing lies over it); the
 //     last menu ends at least 12 px before the search; the header's parts and the actions
 //     neither overlap nor leave the window; the page does not scroll sideways.
-//  H2 (field) From 920 px the search is a field at least 200 px wide, its text visible. From
-//     1024 px the account button shows its label, under it the icon alone.
-//  H3 (icon) From 641 to 919 px the search is its icon: a 34 px square, no field text, no
+//  H2 (icon from 920 px) Since the bar's piste B (§ 76, 26 Nov 2026) the search is its icon at
+//     every width from 641 px, 920 px and wider included (it was a field of 200 px at least
+//     there before). From 1024 px the account button shows its label, under it the icon alone.
+//  H3 (icon) From 641 px the search is its icon: a 34 px round, no field text, no
 //     shortcut hint, still named « Rechercher un joueur, un club ou une compétition ».
 //     a. A click opens the field in the menus' place: at least 300 px wide, focused, inside
 //        the window, right of the logo; the menus are not visible meanwhile; the theme and the
@@ -31,15 +32,16 @@
 //  H5 (touch) On a touch screen (768, 641 and 1024 px wide): the logo, the search, the theme
 //     and the account each answer a finger on 44 × 44 px around their middle (the four corners
 //     of that square and its middle reach the control), their look unchanged (34 px icons, the
-//     logo's link 40 px); every menu is at least 44 px wide and tall; a tap 4 px outside the
-//     search icon's 34 px square opens the search (at 1024 px, a tap on the field focuses
-//     it). Focused, the field is still drawn 34 px tall: 3 px above and 3 px below it the
+//     logo's link 40 px); every menu is at least 44 px wide and answers a finger 21 px above
+//     and below its middle (its pill is drawn 34 px tall, § 76); a tap 4 px outside the search
+//     icon's 34 px round opens the search. Focused, the field is still drawn 34 px tall: 3 px above and 3 px below it the
 //     screen shows the header's own background.
 //  H6 (menus) At 700 and 768 px a menu opens under its button when the mouse comes over it
 //     (as before), inside the window, and its first entry answers a pointer; on a touch
 //     screen 768 px wide a tap on the menu opens it the same way.
 //  H7 (ends) At 640 px the phone layout is untouched: no menus and no search in the header,
-//     the tab bar shown. At 1365 px the field keeps its width (30 % of the window, 409 px).
+//     the tab bar shown. At 1365 px the search is its icon and the five menus are whole, in
+//     the bar's middle (§ 76).
 //  X1 No page error and no console error on the home page.
 //
 // The account button must be in the header (as in production): a local server shows it only
@@ -116,7 +118,7 @@ const header = (page) =>
       height: round(box(top).height),
       menus: menus.map((m) => {
         const b = box(m), y = (b.top + b.bottom) / 2;
-        return { text: m.innerText.trim(), width: round(b.width), height: round(b.height), reached: [b.left + 2, (b.left + b.right) / 2, b.right - 2].every((x) => reaches(m, x, y)) };
+        return { text: m.innerText.trim(), width: round(b.width), height: round(b.height), finger: [y - 21, y + 21].every((yy) => reaches(m, (b.left + b.right) / 2, yy)), reached: [b.left + 2, (b.left + b.right) / 2, b.right - 2].every((x) => reaches(m, x, y)) };
       }),
       menusOpacity: shown(nav) ? Number(getComputedStyle(nav).opacity) : null,
       room: menus.length && shown(field) ? round(box(field).left - box(menus.at(-1)).right) : null,
@@ -175,7 +177,8 @@ const aroundField = async (page, field) => {
 /** The open menu's panel: where it is, its entries, whether the first one answers a pointer. */
 const menuPanel = (page) =>
   page.evaluate(() => {
-    const p = document.querySelector(".topbar .nav-menu-panel");
+    // One panel for every menu since § 76, drawn while open.
+    const p = document.querySelector(".topbar .nav-panel.is-open");
     if (!p) return null;
     const r = p.getBoundingClientRect(), first = p.querySelector(".nav-menu-item"), f = first.getBoundingClientRect();
     const at = document.elementFromPoint((f.left + f.right) / 2, (f.top + f.bottom) / 2);
@@ -229,15 +232,15 @@ try {
     brokenAt.length === 0);
 
   const fields = sweep.filter((h) => h.width >= 920);
-  check("H2a", "from 920 px the search is a field of 200 px at least, its text visible",
+  check("H2a", "from 920 px too the search is its icon (piste B, § 76)",
     fields.map((h) => `${h.width}: ${h.search?.width}`).join(", "),
-    fields.every((h) => h.search && h.search.width >= 200 && h.search.text));
+    fields.every(closed));
   check("H2b", "the account button shows its label from 1024 px, the icon alone under it",
     sweep.map((h) => `${h.width}: ${h.account?.label ? "label" : "icon"} ${h.account?.width}`).join(", "),
     sweep.every((h) => h.account && h.account.label === (h.width >= 1024) && (h.width >= 1024 ? h.account.width > 100 : Math.abs(h.account.width - 34) <= 1)));
 
-  const icons = sweep.filter((h) => h.width <= 919);
-  check("H3", `from 641 to 919 px the search is its icon: a 34 px square, no field text, no shortcut hint, named « ${SEARCH_NAME} »`,
+  const icons = sweep;
+  check("H3", `from 641 px the search is its icon: a 34 px square, no field text, no shortcut hint, named « ${SEARCH_NAME} »`,
     icons.map((h) => `${h.width}: ${h.search?.width}×${h.search?.height}${h.search?.text ? " text" : ""}${h.search?.hint ? " hint" : ""}`).join(", "),
     icons.every((h) => closed(h) && !h.search.hint && h.search.name === SEARCH_NAME));
 
@@ -357,8 +360,8 @@ try {
   check("H7a", "640 px: the phone layout, no menus and no search in the header, the tab bar shown", phone, !phone.menus && !phone.search && phone.tabbar && phone.sideways <= 0);
   await resize(page, 1365);
   const wide = await header(page);
-  check("H7b", "1365 px: the field keeps its width, 30 % of the window (409 px), the five menus before it", { field: wide.search?.width, room: wide.room, first: wide.menus[0]?.text },
-    wide.search && Math.abs(wide.search.width - 409.5) <= 1 && wide.room >= 12 && wide.menus.length === 5 && wide.menus[0].text === "Vue d’ensemble");
+  check("H7b", "1365 px: the search is its icon, the five menus whole before it", { field: wide.search?.width, room: wide.room, first: wide.menus[0]?.text },
+    closed(wide) && wide.room >= 12 && wide.menus.length === 5 && wide.menus[0].text === "Vue d’ensemble");
   await page.context().close();
 
   // ---- H5: touch
@@ -371,11 +374,11 @@ try {
       areas[name] = await tapArea(touch, selector);
     const h = await header(touch);
     await touch.locator(".topbar").screenshot({ path: path.join(out, `touch-${width}.png`) });
-    const iconMode = width <= 919;
+    const iconMode = true; // the search is its icon at every width since § 76
     const looks = areas.logo && areas.theme && areas.account && areas.logo.look.join() === "40,40" && areas.theme.look.join() === "34,34" && (width >= 1024 ? areas.account.look[1] === 34 : areas.account.look.join() === "34,34") && (iconMode ? closed(h) : h.search.height === 34);
-    check(`H5a-${width}`, `touch, ${width} px: the logo, the search, the theme and the account answer on 44 × 44 px around their middle; their look is unchanged; every menu is 44 px at least each way`,
+    check(`H5a-${width}`, `touch, ${width} px: the logo, the search, the theme and the account answer on 44 × 44 px around their middle; their look is unchanged; every menu is 44 px wide at least and answers a finger 21 px above and below its middle`,
       { coarse, areas, searchLook: h.search && [h.search.width, h.search.height], menus: h.menus.map((m) => `${m.text} ${m.width}×${m.height}`) },
-      coarse && Object.values(areas).every((a) => a && a.reached === a.of) && looks && h.menus.length === 5 && h.menus.every((m) => m.width >= 44 && m.height >= 44) && whole({ ...h, width }));
+      coarse && Object.values(areas).every((a) => a && a.reached === a.of) && looks && h.menus.length === 5 && h.menus.every((m) => m.width >= 44 && m.finger) && whole({ ...h, width }));
     if (iconMode) {
       // A finger 4 px outside the icon's square, inside its 44 px.
       const [cx, cy] = areas.search.middle;

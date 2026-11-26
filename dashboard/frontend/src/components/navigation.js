@@ -53,9 +53,25 @@ const SHORTCUT_IDS = [
   "l_0bfbkO",
 ];
 const SHORTCUT_NAMES = { l_0bfbkO: "Ligue des champions" };
+/* Their logos, as the provider's competitions list gives them (`imageUrl`): the menus draw them with
+   `Media`, which reads its copy on the site's API and falls back to the initials (§ 76). */
+const LEAGUE_LOGO = {
+  l_3FJFUl: "60132b94cec9376428f59561ef11650b8a69b097d492642f9b737dc76f45cf94",
+  l_4WFCIZ: "91b2d9475023f0a6197af3d0d9295809f8a2ba871e9a8dc538da6a3d5604bb3e",
+  l_0ErfuF: "4a840c09a3b5d1b2150eeba66e2c31d83d23503c0df04b3ddd04341f9c7b2b48",
+  l_1Isor4: "f798d3b662336f2336cbd121d4e83958ae3205fb9922b6716e2e9bd5eb7c6050",
+  l_0ALvwF: "1e6b2d0d7b14ef10ae27b51a6a7f536b32fdceea229d84c475be346978232f22",
+  l_0bfbkO: "b1d686d355832acff3032f4b9ee3cf885bf81879dac40c68e6ad033b695c1210",
+};
 export const SHORTCUTS = SHORTCUT_IDS.map((id) => {
   const competition = EUROPE_FOCUS.find((entry) => entry.id === id);
-  return { id, label: SHORTCUT_NAMES[id] || competition.name };
+  return {
+    id,
+    label: SHORTCUT_NAMES[id] || competition.name,
+    logo: LEAGUE_LOGO[id]
+      ? `https://cdn.pitchapi.dev/images/leagues/${LEAGUE_LOGO[id]}.webp`
+      : undefined,
+  };
 });
 
 /** A competition's page, keeping the rest of the navigation's context. */

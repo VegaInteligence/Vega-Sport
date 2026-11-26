@@ -1972,11 +1972,11 @@ th[aria-sort="descending"] .sort-indicator {
     flex-wrap: wrap;
   }
 }
-/* The header between the phone layout and 920px. A field no longer fits beside the five
-   menus there: the search is its icon, a square like the theme's. Engaged (a click, a tap,
-   « / », the Tab key) it opens as a field in the menus' place, from the icon leftwards, and
-   the menus come back when it closes. */
-@media (min-width: 641px) and (max-width: 919px) {
+/* The header from 641px (piste B, § 76; it was only under 920px before): the search is its
+   icon, a round button like the theme's. Engaged (a click, a tap, « / », the Tab key) it opens
+   as a field in the menus' place, from the icon leftwards, and the menus come back when it
+   closes. */
+@media (min-width: 641px) {
   .topbar-actions > .global-search {
     flex: none;
     width: var(--control-h);
@@ -1988,15 +1988,20 @@ th[aria-sort="descending"] .sort-indicator {
     top: 0;
     right: 0;
     width: 100%;
+    border-radius: 999px;
   }
-  /* Closed: the icon alone. The field is still there, unseen, to take the focus. */
+  .topbar .global-search-panel {
+    border-radius: var(--match-radius, 22px);
+  }
+  /* Closed: the icon alone, in a quiet round. The field is still there, unseen, to take the
+     focus. */
   .topbar .global-search:not(.is-engaged, :focus-within) .global-search-field {
     border-color: transparent;
-    background: none;
+    background: var(--pill-quiet);
   }
   .topbar .global-search:not(.is-engaged, :focus-within) .global-search-field:hover {
-    border-color: var(--border);
-    background: var(--surface);
+    border-color: transparent;
+    background: var(--pill-quiet-hover);
   }
   .topbar .global-search:not(.is-engaged, :focus-within) .global-search-field > .icon:first-child {
     left: 8px;
@@ -2016,8 +2021,14 @@ th[aria-sort="descending"] .sort-indicator {
   .topbar .global-search:is(.is-engaged, :focus-within) .global-search-field {
     z-index: 45;
     width: 380px;
-    border-color: var(--border-strong);
+    border-color: var(--pill-quiet-hover);
     background: var(--surface-raised);
+  }
+  .topbar .global-search:is(.is-engaged, :focus-within) .global-search-field > .icon:first-child {
+    left: 13px;
+  }
+  .topbar .global-search:is(.is-engaged, :focus-within) .global-search-field input[type="search"] {
+    padding-left: 36px;
   }
   .topbar:has(.global-search:is(.is-engaged, :focus-within)) .main-nav {
     opacity: 0;
@@ -2067,8 +2078,10 @@ th[aria-sort="descending"] .sort-indicator {
     background-clip: padding-box;
   }
 }
-@media (min-width: 641px) and (max-width: 919px) and (pointer: coarse) {
+@media (min-width: 641px) and (pointer: coarse) {
   .topbar .global-search:not(.is-engaged, :focus-within) .global-search-field input[type="search"] {
+    /* Square: the round field's rounding would cut the finger's corners off (§ 76). */
+    border-radius: 0;
     position: absolute;
     top: 50%;
     left: 50%;

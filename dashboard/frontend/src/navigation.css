@@ -35,58 +35,354 @@ button.nav-button {
 .nav-button[aria-expanded="true"] .nav-caret {
   transform: rotate(180deg);
 }
-.nav-menu-panel {
-  position: absolute;
-  top: calc(100% + 1px);
-  left: -12px;
-  z-index: 50;
-  min-width: 230px;
-  padding: 6px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-pop);
+/* ---------- The bar from 641px (piste B, § 76) ----------
+   hugo chose it on 26 Nov 2026 (https://claude.ai/artifact/AripxUsLqPgkJQndd7YQhr): no line under the
+   bar, the sections in one track of pills like the match page's choices, the current one filled, a
+   veil gliding behind the one under the mouse; the search is a round button that opens as a field.
+   Its menus (piste 1 of https://claude.ai/artifact/GxP3vebwEg17Eo4Fk5wdFm): one panel under the
+   track that slides from one section to the next, the leagues as tiles with their logos. */
+@media (min-width: 641px) {
+  .topbar {
+    border-bottom-color: transparent;
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+  }
+  .topbar .main-nav {
+    position: relative;
+    align-self: center;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--pill-track);
+  }
+  .topbar .nav-button {
+    z-index: 1;
+    gap: 5px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    transition:
+      color 0.15s,
+      background-color 0.15s;
+  }
+  .topbar .nav-button::after,
+  .topbar .nav-button[aria-current]::after {
+    content: none;
+  }
+  .topbar .nav-button:is(:hover, [aria-expanded="true"]) {
+    color: var(--ink-strong);
+  }
+  .topbar .nav-button:is([aria-current="page"], [aria-current="true"]) {
+    background: var(--pill-fill);
+    color: var(--pill-ink);
+  }
+  .topbar .nav-button[aria-current] .nav-caret {
+    color: inherit;
+    opacity: 0.7;
+  }
+  .topbar .nav-button:focus-visible {
+    outline: 2px solid var(--pill-focus);
+    outline-offset: 2px;
+  }
+  /* Touch and keyboard, which the glide does not follow: the open section's own veil. */
+  .topbar .nav-button[aria-expanded="true"]:not([aria-current]) {
+    background: var(--pill-quiet);
+  }
+  .topbar
+    .main-nav.is-gliding
+    .nav-button[aria-expanded="true"]:not([aria-current]) {
+    background: none;
+  }
+  .nav-glide {
+    position: absolute;
+    top: 3px;
+    left: 0;
+    width: 0;
+    height: 34px;
+    border-radius: 999px;
+    background: var(--pill-quiet-hover);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform 0.22s cubic-bezier(0.3, 0.7, 0.2, 1),
+      width 0.22s cubic-bezier(0.3, 0.7, 0.2, 1),
+      opacity 0.15s;
+  }
+
+  /* The theme and the account: rounds and a pill, like the track. */
+  .topbar .theme-toggle {
+    border-color: transparent;
+    border-radius: 50%;
+    background: var(--pill-quiet);
+  }
+  .topbar .theme-toggle:hover {
+    border-color: transparent;
+    background: var(--pill-quiet-hover);
+  }
+  .topbar .account-entry {
+    border-radius: 999px;
+  }
+
+  /* The one panel. Its place and size come from what it holds (SiteNavigation.jsx); between two
+     sections it slides there. */
+  .nav-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    z-index: 50;
+    overflow: hidden;
+    border-radius: var(--match-radius, 22px);
+    background: var(--surface-raised);
+    box-shadow:
+      var(--shadow-pop),
+      0 0 0 1px var(--pill-quiet);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.985);
+    transform-origin: top center;
+    pointer-events: none;
+    transition:
+      opacity 0.18s ease,
+      transform 0.22s cubic-bezier(0.3, 0.7, 0.2, 1),
+      visibility 0s linear 0.18s;
+  }
+  .nav-panel.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    pointer-events: auto;
+    transition:
+      opacity 0.18s ease,
+      transform 0.22s cubic-bezier(0.3, 0.7, 0.2, 1);
+  }
+  .nav-panel.is-open.is-sliding {
+    transition:
+      opacity 0.18s ease,
+      transform 0.22s cubic-bezier(0.3, 0.7, 0.2, 1),
+      left 0.28s cubic-bezier(0.3, 0.7, 0.2, 1),
+      width 0.28s cubic-bezier(0.3, 0.7, 0.2, 1),
+      height 0.28s cubic-bezier(0.3, 0.7, 0.2, 1);
+  }
+  .nav-panel-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: max-content;
+    padding: 14px;
+    animation: nav-fade 0.16s ease;
+  }
+  .nav-menu-panel.is-wide {
+    display: grid;
+    grid-template-columns: 236px auto;
+    gap: 14px;
+  }
+  .nav-menu-panel.is-wide .nav-menu-list {
+    gap: 4px;
+  }
+  .nav-menu-panel.is-tiles {
+    display: grid;
+    grid-template-columns: repeat(var(--tiles, 2), 168px);
+    gap: 8px;
+  }
+  .nav-league-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 120px);
+    gap: 8px;
+  }
 }
-.nav-menu-panel.is-wide {
-  display: grid;
-  grid-template-columns: 230px 210px;
-  gap: 6px;
+/* Where the bar has the room, the track sits in its exact middle: two equal sides around it. */
+@media (min-width: 1120px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+  .topbar .brand {
+    justify-self: start;
+  }
 }
-.nav-menu-shortcuts {
-  padding-left: 6px;
-  border-left: 1px solid var(--border);
+/* A finger: each section answers 44 px tall around its 34 px pill (tests/e2e/header.e2e.mjs H5). */
+@media (min-width: 641px) and (pointer: coarse) {
+  .topbar .nav-button::after,
+  .topbar .nav-button[aria-current]::after {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 50%;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    height: 44px;
+    background: none;
+    transform: translateY(-50%);
+  }
+}
+/* Narrower, the pills tighten; under 761px the menus also drop their arrows (still announced
+   as menus), so the track keeps clear of the account at 641px. */
+@media (min-width: 641px) and (max-width: 919px) {
+  .topbar .nav-button {
+    gap: 4px;
+    padding: 0 10px;
+  }
+}
+@media (min-width: 641px) and (max-width: 760px) {
+  .topbar .nav-button {
+    padding: 0 9px;
+  }
+  .topbar .nav-caret {
+    display: none;
+  }
+}
+.nav-menu-cap {
+  margin: 2px 6px 8px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .nav-menu-list {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 4px;
 }
+/* A page of a menu: a quiet pill. */
 .nav-menu-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 36px;
-  padding: 0 10px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
   color: var(--ink);
-  font-size: var(--text-md);
+  font-size: 13.5px;
+  font-weight: 500;
   white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    transform 0.15s;
 }
 .nav-menu-item .nav-icon {
+  flex: none;
   color: var(--muted);
 }
 .nav-menu-item:hover {
-  background: var(--surface-subtle);
+  background: var(--pill-quiet-hover);
   color: var(--ink-strong);
 }
 .nav-menu-item[aria-current="page"] {
-  background: var(--accent-soft);
-  color: var(--ink-strong);
+  background: var(--pill-fill);
+  color: var(--pill-ink);
 }
 .nav-menu-item[aria-current="page"] .nav-icon {
-  color: var(--accent-dark);
+  color: inherit;
+}
+.nav-menu-item:focus-visible {
+  outline: 2px solid var(--pill-focus);
+  outline-offset: 2px;
+}
+/* A league: a tile, its logo over its name. */
+.nav-league,
+.nav-tile {
+  border-radius: 16px;
+  font-weight: 600;
+  white-space: normal;
+}
+.nav-league {
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  height: 104px;
+  min-height: 0;
+  padding: 8px;
+  font-size: 12.5px;
+  text-align: center;
+}
+.nav-league:hover,
+.nav-tile:hover {
+  transform: translateY(-2px);
+}
+.nav-league-logo {
+  flex: none;
+  border-radius: 0;
+  background: none;
+}
+.nav-league-logo img {
+  object-fit: contain;
+}
+/* Three logos drawn in black are lost on the dark panel: they are drawn light there. */
+html[data-theme="dark"]
+  .nav-league:is(
+    [data-league="l_3FJFUl"],
+    [data-league="l_4WFCIZ"],
+    [data-league="l_0bfbkO"]
+  )
+  .nav-league-logo
+  img {
+  filter: brightness(0) invert(0.92);
+}
+/* A page of the other menus: a large tile, its symbol above its name. */
+.nav-tile {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  height: 120px;
+  padding: 16px;
+  color: var(--ink-strong);
+  font-size: 14px;
+}
+.nav-tile .nav-icon {
+  color: var(--muted);
 }
 
 /* ---------- Phones ---------- */
 @media (max-width: 640px) {
+  /* The tab bar: a floating pill; the current tab filled with its name, the others their symbol
+     (their name stays for screen readers). */
+  .tabbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 0;
+    border-radius: 999px;
+    box-shadow:
+      var(--shadow-pop),
+      0 0 0 1px var(--pill-quiet);
+  }
+  .tabbar-item {
+    flex: none;
+    flex-direction: row;
+    gap: 7px;
+    min-width: 48px;
+    height: 48px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .tabbar-item:not([aria-current="page"]) span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .tabbar-item[aria-expanded="true"]:not([aria-current="page"]) {
+    background: var(--pill-quiet-hover);
+    color: var(--ink-strong);
+  }
+  .tabbar-item[aria-current="page"],
+  .tabbar-item[aria-current="page"]:hover {
+    background: var(--pill-fill);
+    color: var(--pill-ink);
+  }
+  .tabbar-item:focus-visible {
+    outline: 2px solid var(--pill-focus);
+    outline-offset: 2px;
+  }
   /* A section's pages in a sheet above the tab bar. */
   .nav-sheet-layer {
     position: fixed;
@@ -99,9 +395,9 @@ button.nav-button {
     position: absolute;
     left: 50%;
     bottom: calc(var(--tabbar-space) + 8px);
-    width: min(430px, calc(100% - 24px));
-    padding: 6px;
-    border: 1px solid var(--border-strong);
+    width: min(430px, calc(100% - 20px));
+    padding: 16px;
+    border-radius: var(--match-radius, 22px);
     background: var(--surface-raised);
     box-shadow: var(--shadow-pop);
     transform: translateX(-50%);
@@ -109,33 +405,43 @@ button.nav-button {
   }
   .nav-sheet .nav-menu-item {
     min-height: 48px;
-    font-size: var(--text-md);
   }
-  .nav-sheet-rail {
-    position: relative;
-    display: flex;
+  .nav-sheet .nav-league-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    overflow-x: auto;
-    padding: 8px 4px 4px;
-    margin-top: 4px;
-    border-top: 1px solid var(--border);
-    scrollbar-width: none;
   }
-  .nav-sheet-rail::-webkit-scrollbar {
-    display: none;
+  .nav-sheet .nav-league {
+    gap: 8px;
+    height: 88px;
+    min-height: 0;
+    font-size: 11.5px;
   }
-  .nav-pill {
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    height: 40px;
-    padding: 0 14px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--ink);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    white-space: nowrap;
+  .nav-sheet .nav-league:hover {
+    transform: none;
+  }
+  .nav-sheet-pages {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .nav-sheet-pages .nav-menu-item {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 10px;
+    font-size: 13px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+  }
+}
+@media (max-width: 359px) {
+  .tabbar-item {
+    padding: 0 8px;
+  }
+  .tabbar-item[aria-current="page"] {
+    padding: 0 12px;
   }
 }
 @keyframes nav-fade {
@@ -151,7 +457,19 @@ button.nav-button {
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-sheet-layer,
-  .nav-sheet {
+  .nav-sheet,
+  .nav-panel-inner {
     animation: none;
+  }
+  .nav-glide,
+  .nav-panel,
+  .nav-panel.is-open,
+  .nav-panel.is-open.is-sliding,
+  .nav-menu-item {
+    transition: none;
+  }
+  .nav-league:hover,
+  .nav-tile:hover {
+    transform: none;
   }
 }

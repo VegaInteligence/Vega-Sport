@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Barre de navigation : piste B et panneau qui glisse en tuiles — FAILURE_MODES § 76 (26 novembre 2026, sur main depuis 6c75337)
+
+- Demandes de hugo : maquette de la barre (14 h 35), piste B choisie avec des sous-menus à revoir (14 h 44), maquette des sous-menus, piste 1 « Un panneau qui glisse, en tuiles », puis « t'es un boss envoie ca en prod ».
+- `SiteNavigation.jsx` : un seul panneau sous la piste (mesuré, placé sous la section ouverte, il glisse d'une section à l'autre), voile qui suit la souris, tuiles des six ligues avec logos (`navigation.js`, `SHORTCUTS[].logo`), grandes tuiles pour Équipes et Joueurs, Tab de la section vers son panneau et du panneau vers la section suivante.
+- `navigation.css` / `styles.css` : sections en pilules dans une piste centrée, plus de trait sous la barre, recherche repliée en rond à toutes les largeurs dès 641 px, thème rond, compte en pilule ; téléphone : barre du bas en pilule flottante, onglet courant plein avec son nom, feuille à 22 px avec les tuiles des ligues.
+- Tests : `tests/e2e/navbar.e2e.mjs` (N1 à N12, X1) rouge sur 6c75337, 15/15 après ; `header.e2e.mjs` mis à la piste B (36/37, X1 rouge seulement par le 404 de `/api/read/home` du serveur de rejeu local) ; match-tabs 40/40 ; site 1 118/1 118.
+
 ## Cases des chiffres pleines et cartes du fil à 10 px — FAILURE_MODES § 75 (26 novembre 2026, sur main depuis 5f63f03)
 
 - Demande de hugo (11 h 28, captures Possession et fil de la Ligue des champions) : ces deux endroits à 10 px. Maquette https://claude.ai/artifact/Sf5wRw5NTSV8wrNr4jzhQL ; hugo a pris la piste B (cinq cases pleines sans traits gris) et les cartes du fil à 10 px, « tu peux tout push dans main » (11 h 31).

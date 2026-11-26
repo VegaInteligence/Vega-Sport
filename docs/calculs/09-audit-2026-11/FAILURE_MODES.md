@@ -6016,3 +6016,35 @@ line above). hugo chose 22 px; piste A, the recommended one, taken for the line.
 - **R42, R49, R50, R51** now expect 22 px. **R53** the strip: 22 px, 1 px all round, clipped, the lines between the tiles
   kept. **R54** the same on a phone. Red on 87ee215.
 
+
+## 76. The site's bar: the sections in one track, one sliding panel of tiles (hugo, 26 Nov 2026, 14 h 35 « passons a la nabar propose moi une maquette », 14 h 44 « lets go on B but we need to work on the sub menu hoover », 15 h « t'es un boss envoie ca en prod »; written before the tests)
+
+Before: a 56 px bar with a grey line under it, the current section underlined in blue, the search a 409 px rectangle
+from 920 px, each menu a square panel under its button; on a phone, a square tab bar of five labelled tabs. Mock-ups:
+the bar https://claude.ai/artifact/AripxUsLqPgkJQndd7YQhr (piste B chosen), its menus
+https://claude.ai/artifact/GxP3vebwEg17Eo4Fk5wdFm (piste 1, the recommended one, « Un panneau qui glisse, en tuiles »).
+
+- **The bar from 641 px** (`navigation.css`, `styles.css`): no line under it, the page's background slightly
+  see-through. The five sections in one track of pills (`--pill-track`, 999 px), the current one filled (ivory on night
+  in dark, night on ivory in light), no underline. A veil (`.nav-glide`) glides behind the section under the mouse. From
+  1120 px the track is in the bar's exact middle (a grid of two equal sides); under it, after the logo. Under 920 px
+  the pills tighten, under 761 px they drop their arrows (the first one reads « Accueil », as before).
+- **The search** is its round icon at every width from 641 px (only under 920 px before): a click, a tap, « / » or Tab
+  opens the 380 px field in the menus' place, as § H3 of `header.e2e.mjs` already described; its results panel 22 px.
+  The theme button a round, the account button a pill.
+- **The menus**: one panel (`.nav-panel`, 22 px) under the track, measured from what it holds and placed under the
+  open section within the window; going from one section to the next it slides and resizes there instead of closing
+  and opening. Compétitions: the two pages as pills beside the six leagues as tiles with their logos (`SHORTCUTS[].logo`,
+  the PitchAPI image the site's media copy serves from `/api/crest`); Ligue 1, Premier League and the Champions League,
+  drawn in black, are drawn light in the dark theme. Équipes and Joueurs: large tiles, a symbol above the name. Opened
+  on hover with the same 180 ms grace as before; touch and keyboard keep the click; Tab goes from a section into its
+  open panel and from the panel's last link on to the next section (the panel follows the track in the page).
+- **The phone** (≤ 640 px): the tab bar a floating pill, the current tab filled with its name, the others their symbol
+  (the name kept for screen readers). A section's sheet 22 px: Compétitions shows the six league tiles, then its two
+  pages in pills.
+- Unchanged: the sections, their pages and links, the match page's logos and its active tab's colour, the header's
+  56 px, the phone's header.
+- **Tests**: `tests/e2e/navbar.e2e.mjs` N1 to N12 and X1, red on 6c75337 (N1 to N5, N7, N8, N10, N11a, N11b), green after.
+  `header.e2e.mjs`: H2a and H7b now expect the icon from 920 px and at 1365 px; H3 from 641 px; H5 a menu answers a
+  finger 21 px above and below its middle (its pill is drawn 34 px tall, a 44 px target around it); the panel read is
+  `.nav-panel.is-open`.
