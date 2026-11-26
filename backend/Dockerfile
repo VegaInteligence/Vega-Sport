@@ -4,8 +4,8 @@
 # its .dockerignore and every file of the build context below. A Deploy builds an image only for an identity the
 # registry does not hold.
 #
-# What the build resolves by itself is not in the identity: pip's unpinned dependencies of boto3. Change
-# VEGA_DEPS_REFRESH to refresh them (GH158-g), or the respective base image digest for Python and Node updates.
+# Debian's libstdc++ and pip's unpinned dependencies resolve at build time. Change VEGA_DEPS_REFRESH to refresh
+# both layers (GH158-g). Python and Node follow their base image digests.
 
 # The build context as BuildKit sends it (this file's .dockerignore applied): what the image is made of. Built only when
 # asked (--target context --output type=local), never part of the image.
@@ -28,7 +28,7 @@ ARG VEGA_DEPS_REFRESH=2026-11-26
 # Node runs the read receipt, archive and source scripts.
 COPY --from=read-runtime /usr/local/bin/node /usr/local/bin/node
 COPY --from=read-runtime /app/backend/api/node_modules backend/api/node_modules
-RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 && rm -rf /var/lib/apt/lists/*
+RUN echo "dependencies of $VEGA_DEPS_REFRESH" && apt-get update && apt-get install -y --no-install-recommends libstdc++6 && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements.txt .
 RUN echo "dependencies of $VEGA_DEPS_REFRESH" && pip install --no-cache-dir -r requirements.txt
 COPY backend/vega vega
@@ -41,6 +41,8 @@ COPY backend/archives backend/archives
 COPY backend/api/src backend/api/src
 COPY backend/api/package.json backend/api/package-lock.json backend/api/
 COPY dashboard/shared dashboard/shared
+# The parser manifest includes the preserved 8018e0836c source baseline (FAILURE_MODES.md §22).
+COPY dashboard/shared/legacy-8018e08 dashboard/shared/legacy-8018e08
 # main's Wikidata and Commons readers (vega/sources/wikidata.py) and their imports.
 COPY dashboard/frontend/src/services/wikidata-club.js dashboard/frontend/src/services/wikidata-club-identity.js \
      dashboard/frontend/src/services/wikidata-stadium.js dashboard/frontend/src/services/stadium-plans.js \
