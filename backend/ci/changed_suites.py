@@ -39,19 +39,21 @@ SHARED_WITH_BACKEND = ("python", "deploy", "api", "image", "package")
 # Zone -> paths (regular expressions anchored at the start of the path) whose change needs it.
 ZONES = {
     "site": (r"dashboard/", r"tests/"),
-    # The Python suites read through the real read API (read_http.mjs) and apply the SQL: any backend file but the
-    # Node suites' own tests.
-    "python": (r"backend/(?!api/test/|account/test/)",),
+    # The Python suites read through the real read API (read_http.mjs), apply the SQL and read the stacks' templates
+    # and scripts (test_alerts, test_edge_logs...): any backend file but the Node suites' own tests, and infra/aws/.
+    "python": (r"backend/(?!api/test/|account/test/)", r"infra/aws/"),
     # What deploy.sh runs or ships (infra/aws/*.py, the migrations, the API bundles, the image) and its tests.
     "deploy": (
         r"infra/aws/", r"backend/sql/", r"backend/api/", r"backend/account/", r"backend/Dockerfile$",
         r"backend/requirements\.txt$", r"backend/vega/migrate\.py$", r"\.github/workflows/deploy\.yml$",
         r"backend/tests/(" + "|".join(DEPLOY_MODULES) + r"|deploy_fakes|deploy_repo|prerequisites)\.py$",
     ),
-    # The read API's and the account API's Node suites, and the SQL they read.
-    "api": (r"backend/api/", r"backend/account/", r"backend/sql/"),
+    # The read API's and the account API's Node suites, the SQL they read, the Lambda entry points and transport they
+    # import (infra/aws/*.mjs) and the templates they check.
+    "api": (r"backend/api/", r"backend/account/", r"backend/sql/", r"infra/aws/[^/]+\.mjs$",
+            r"infra/aws/(api|live|account|edge-logs)\.yaml$"),
     "image": (r"backend/",),
-    "package": (r"backend/api/", r"backend/account/", r"infra/aws/package_api\.py$"),
+    "package": (r"backend/api/", r"backend/account/", r"infra/aws/package_api\.py$", r"infra/aws/[^/]+\.mjs$"),
 }
 SUITES = ("python", "deploy", "api")
 

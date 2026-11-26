@@ -61,7 +61,14 @@ class ZonesTest(unittest.TestCase):
                      ".github/workflows/deploy.yml", "backend/tests/test_deploy_flow.py", "backend/tests/deploy_repo.py"):
             with self.subTest(path):
                 self.assertIn("deploy", needed(path))
-        self.assertEqual(needed("infra/aws/deploy.sh") & {"python", "api", "site"}, set())
+        self.assertEqual(needed("infra/aws/deploy.sh"), {"python", "deploy"})
+
+    def test_f2_the_api_s_inputs_outside_backend_run_its_suites_and_package(self):
+        # Codex's review of #247: infra/aws/transport.mjs is bundled by api-index.mjs and tested by edge.test.mjs.
+        for path in ("infra/aws/transport.mjs", "infra/aws/api-index.mjs", "infra/aws/live-index.mjs"):
+            with self.subTest(path):
+                self.assertTrue({"python", "deploy", "api", "package"} <= needed(path))
+        self.assertIn("api", needed("infra/aws/api.yaml"))
 
     def test_g_the_ci_itself_a_push_to_main_or_a_manual_run_runs_everything(self):
         everything = set(changed_suites.ZONES)
