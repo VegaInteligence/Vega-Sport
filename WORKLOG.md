@@ -1,5 +1,13 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Les compétitions choisies sur l'accueil suivent la personne — FAILURE_MODES § 78 (26 novembre 2026)
+
+- Demande de hugo (17 h 06) : les compétitions choisies sur l'accueil suivent sur la page Compétitions, et reviennent après une déconnexion puis une reconnexion.
+- Le choix était déjà dans le contrat des préférences (`leagues`, `focus`) et sur le compte : il revient bien à la reconnexion, sur ce navigateur et sur un autre.
+- `CompetitionsPage.jsx` : avec des compétitions choisies (autres que le Top 7 Europe + UEFA), la rangée devient « Mes compétitions » avec exactement celles-là, et la page s'ouvre sur l'une d'elles. Sans choix, la page est comme avant ; une adresse `?id=` ouvre toujours n'importe quelle compétition.
+- Défaut trouvé : « Se déconnecter » laissait parfois le choix du compte sur le navigateur (une synchro rattachée pendant la déconnexion réécrivait le compte dans les préférences vidées). `account-state.js` : aucune synchro ne se rattache pendant une déconnexion ou une suppression.
+- Tests : `tests/e2e/accounts/competitions-follow.e2e.mjs` F1 à F7 (F3 rouge sur 68442dd, F4 rouge une fois), 8/8 après ; tests unitaires 1 119/1 119. `accounts.e2e.mjs` non relancé en entier : le rejeu local n'a pas la page club qu'il ouvre.
+
 ## Page Vue d'ensemble (l'accueil) : boutons et sous-menus — FAILURE_MODES § 77 (26 novembre 2026)
 
 - Demandes de hugo (14 h 56, 16 h 17) : refaire les interactions et les boutons de l'accueil « en gardant le même esprit », sous-menus compris. Maquette https://claude.ai/artifact/DPfYC6jW2ooKwPGzmaGsdD : résultats de la semaine en piste A, barre de réglages en piste B, **sans pays** (automatique, réglé dans Paramètres de /compte). « une fois fait tu peux merge dans main ».
