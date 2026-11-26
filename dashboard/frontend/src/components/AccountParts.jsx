@@ -15,7 +15,7 @@ import { authErrorMessage, deletionMessage, planLabel } from "../services/accoun
 import { favouriteGroups, hasPassword, syncNote } from "../services/account-page.js";
 import { accountSummary } from "../services/account-summary.js";
 import { menuCountries } from "../services/home-country.js";
-import { applyTheme, THEME_EVENT } from "../services/local-preferences.js";
+import { applyTheme, readTheme, THEME_EVENT } from "../services/local-preferences.js";
 import { currentContract, preferencesChanged } from "../services/user-preferences.js";
 import { orderedCompetitions } from "../services/competition-selector.js";
 
@@ -40,12 +40,13 @@ function download(data) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** The theme shown, followed when the header's toggle or the account's contract changes it. */
+/** The theme chosen (« system » when nothing is: the computer's, § 76.2), followed when the account's contract or
+ *  the computer changes it. */
 function useTheme() {
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState("system");
   useEffect(() => {
-    setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
-    const follow = (event) => setTheme(event.detail === "light" ? "light" : "dark");
+    setTheme(readTheme() || "system");
+    const follow = () => setTheme(readTheme() || "system");
     window.addEventListener(THEME_EVENT, follow);
     return () => window.removeEventListener(THEME_EVENT, follow);
   }, []);
@@ -198,11 +199,12 @@ export function SignOutButton({ page, className = "" }) {
   );
 }
 
-/** Light or dark: two words, the chosen one marked. */
+/** The computer's, light or dark: three words, the chosen one marked (§ 76.2). */
 export function ThemeChoice({ page }) {
   return (
     <div className="account-choice" role="group" aria-label="Thème">
       {[
+        ["system", "Système"],
         ["light", "Clair"],
         ["dark", "Sombre"],
       ].map(([key, text]) => (

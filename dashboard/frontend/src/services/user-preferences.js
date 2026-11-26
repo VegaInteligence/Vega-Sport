@@ -15,7 +15,7 @@
  * {
  *   "v": 1,                          // CONTRACT_VERSION; any other value is refused
  *   "focus": "all",                  // "europe" | "all"                         not chosen: "europe"
- *   "theme": "light",                // "light" | "dark" | null                  not chosen: null (dark is shown)
+ *   "theme": "light",                // "light" | "dark" | "system" | null       not chosen: null (the computer's is shown)
  *   "leagues": ["l_3FJFUl"],         // chosen competitions, /^l_[A-Za-z0-9]+$/, in order, at most 200
  *                                    //                                          not chosen: []
  *   "country": "FRA",                // three capitals | "none" | null           not chosen: null (detection applies)
@@ -75,7 +75,7 @@ const LEAGUE = /^l_[A-Za-z0-9]+$/;
 const COUNTRY = /^(?:[A-Z]{3}|none)$/;
 const SEASON = /^\d{4}\/\d{4}$/;
 const COMPETITION = /^[A-Za-z0-9_-]{1,80}$/;
-const THEMES = ["light", "dark"];
+const THEMES = ["light", "dark", "system"];
 const PRIORITIES = Object.values(HOME_PRIORITIES);
 const pick = (value, pattern) => (typeof value === "string" && pattern.test(value) ? value : null);
 const list = (value) => (Array.isArray(value) ? value : []);

@@ -562,3 +562,13 @@ test("C3 currentContract is the one reader of the browser's contract", async () 
   }
   assert.equal(currentContract(), null);
 });
+
+test("U2b the theme « system » (follow the computer, § 76.2) is a choice the contract keeps", () => {
+  const base = { v: 1, lists: [] };
+  assert.equal(validateContract({ ...base, theme: "system" }).theme, "system");
+  assert.equal(validateContract({ ...base, theme: "light" }).theme, "light");
+  assert.equal(validateContract({ ...base, theme: "auto" }).theme, null);
+  const kept = toContract({ preferences: {}, research: EMPTY_RESEARCH, theme: "system", competition: null });
+  assert.equal(kept.theme, "system");
+  assert.equal(fromContract(kept).theme, "system");
+});

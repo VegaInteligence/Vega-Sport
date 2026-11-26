@@ -96,7 +96,7 @@ function LeagueTiles({ href, onPick }) {
           href={competitionHref(href, league.id)}
           onClick={onPick}
         >
-          <Media url={league.logo} name={league.label} kind="club" size={32} className="crest nav-league-logo" />
+          <Media url={league.logo} name={league.label} kind="club" size={28} className="crest nav-league-logo" />
           <span>{league.label}</span>
         </Link>
       ))}
@@ -132,7 +132,7 @@ function MenuPanel({ section, path, href, onPick }) {
           aria-current={isCurrent(path, item) ? "page" : undefined}
           onClick={onPick}
         >
-          <NavIcon name={item.icon || SECTION_ICON[item.key]} size={24} />
+          <NavIcon name={item.icon || SECTION_ICON[item.key]} size={20} />
           <span>{item.label}</span>
         </Link>
       ))}

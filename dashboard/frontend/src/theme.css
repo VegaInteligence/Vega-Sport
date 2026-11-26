@@ -121,7 +121,7 @@ html[data-theme="light"] {
 }
 
 /* Set for two frames while the theme changes, so every element takes its
-   new colours at once (see ThemeToggle). */
+   new colours at once (see applyTheme in services/local-preferences.js). */
 html[data-theme-switching] *,
 html[data-theme-switching] *::before,
 html[data-theme-switching] *::after {
@@ -142,27 +142,6 @@ html[data-theme-switching] *::after {
 [data-theme="light"] .logo-light {
   display: block;
 }
-.theme-toggle {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  color: var(--muted);
-  background: transparent;
-}
-.theme-toggle svg {
-  width: 17px;
-  height: 17px;
-}
-.theme-toggle:hover {
-  color: var(--ink);
-  border-color: var(--border);
-  background: var(--surface);
-}
-
 /* Native select pickers follow the active theme. */
 select,
 select option,

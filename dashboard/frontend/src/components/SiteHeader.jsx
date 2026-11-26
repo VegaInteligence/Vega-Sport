@@ -1,6 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
-import ThemeToggle from "./ThemeToggle.jsx";
 import AccountEntry from "./AccountEntry.jsx";
 import Icon from "./Icon.jsx";
 import StatarenaLogo from "./StatarenaLogo.jsx";
@@ -127,7 +126,6 @@ export default function SiteHeader({ path, href }) {
         >
           <Icon name="calendar" />
         </Link>
-        <ThemeToggle />
         <AccountEntry />
       </div>
     </header>

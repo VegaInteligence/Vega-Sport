@@ -43,6 +43,8 @@ button.nav-button {
    track that slides from one section to the next, the leagues as tiles with their logos. */
 @media (min-width: 641px) {
   .topbar {
+    /* The search and the account as tall as the track (hugo, 26 Nov 2026, 15 h 29; § 76.2). */
+    --control-h: 40px;
     border-bottom-color: transparent;
     background: color-mix(in srgb, var(--bg) 86%, transparent);
     -webkit-backdrop-filter: blur(16px) saturate(1.4);
@@ -111,17 +113,6 @@ button.nav-button {
       opacity 0.15s;
   }
 
-  /* The theme and the account: rounds and a pill, like the track. */
-  .topbar .theme-toggle {
-    border-color: transparent;
-    border-radius: 50%;
-    background: var(--pill-quiet);
-  }
-  .topbar .theme-toggle:hover {
-    border-color: transparent;
-    background: var(--pill-quiet-hover);
-  }
-
   /* The one panel. Its place and size come from what it holds (SiteNavigation.jsx); between two
      sections it slides there. */
   .nav-panel {
@@ -166,32 +157,37 @@ button.nav-button {
     top: 0;
     left: 0;
     width: max-content;
-    padding: 14px;
+    padding: 10px;
     animation: nav-fade 0.16s ease;
   }
   .nav-menu-panel.is-wide {
     display: grid;
-    grid-template-columns: 236px auto;
-    gap: 14px;
+    grid-template-columns: 200px auto;
+    gap: 10px;
   }
   .nav-menu-panel.is-wide .nav-menu-list {
     gap: 4px;
   }
   .nav-menu-panel.is-tiles {
     display: grid;
-    grid-template-columns: repeat(var(--tiles, 2), 168px);
-    gap: 8px;
+    grid-template-columns: repeat(var(--tiles, 2), 132px);
+    gap: 6px;
   }
   .nav-league-grid {
     display: grid;
-    grid-template-columns: repeat(3, 120px);
-    gap: 8px;
+    grid-template-columns: repeat(3, 96px);
+    gap: 6px;
   }
 }
 /* The account (hugo, 26 Nov 2026, 15 h 14: no square, no icon): a pill at every width. Signed in, a quiet pill
    « Mon compte » with no monogram; where the label does not fit (under 1024 px) a round holding the initial alone. */
 .topbar .account-entry {
   border-radius: 999px;
+}
+@media (min-width: 641px) {
+  .topbar .account-entry {
+    height: 40px;
+  }
 }
 .topbar .account-entry-in,
 .topbar .account-entry-in[data-current] {
@@ -210,6 +206,11 @@ button.nav-button {
 }
 .topbar .account-entry-monogram {
   display: none;
+}
+@media (min-width: 641px) and (max-width: 1023px) {
+  .topbar .account-entry {
+    width: 40px;
+  }
 }
 @media (max-width: 1023px) {
   .topbar .account-entry-in,
@@ -318,12 +319,12 @@ button.nav-button {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 42px;
+  min-height: 36px;
   padding: 0 14px;
   border-radius: 999px;
   background: var(--pill-quiet);
   color: var(--ink);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   transition:
@@ -350,20 +351,21 @@ button.nav-button {
   outline-offset: 2px;
 }
 /* A league: a tile, its logo over its name. */
+/* Smaller since § 76.2 (hugo, 15 h 29 « un peu trop gros »): 96 × 80 and 132 × 84 instead of 120 × 104 and 168 × 120. */
 .nav-league,
 .nav-tile {
-  border-radius: 16px;
+  border-radius: 14px;
   font-weight: 600;
   white-space: normal;
 }
 .nav-league {
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
-  height: 104px;
+  gap: 7px;
+  height: 80px;
   min-height: 0;
-  padding: 8px;
-  font-size: 12.5px;
+  padding: 6px;
+  font-size: 12px;
   text-align: center;
 }
 .nav-league:hover,
@@ -394,10 +396,10 @@ html[data-theme="dark"]
   flex-direction: column;
   align-items: flex-start;
   justify-content: space-between;
-  height: 120px;
-  padding: 16px;
+  height: 84px;
+  padding: 12px;
   color: var(--ink-strong);
-  font-size: 14px;
+  font-size: 13px;
 }
 .nav-tile .nav-icon {
   color: var(--muted);

@@ -6064,3 +6064,26 @@ https://claude.ai/artifact/GxP3vebwEg17Eo4Fk5wdFm (piste 1, the recommended one,
   220 px at least, back in place after Escape) and N14 (the signed-in markup in the header: pill without monogram at
   1440 px, 34 px round at 900 px), red on f2d62a6, green after. `header.e2e.mjs` H3a: the menus stay, 8 px left of the
   field (220 px at least); waits of 0.45 s after the search opens or closes.
+
+### 76.2 One height, no theme button, the theme of the computer, the account's menu and smaller menus (hugo, 26 Nov 2026, 15 h 29 « search bar and search button, profil button should be same size as corps of navbar et le bouton light/dark mode remove it goes into the settings and add a system setting to follow the computer setting … review le design du hover de mon compte … un peu trop gros les hover du corps de la navbar »; mock-up https://claude.ai/artifact/HWrnX3K1t1JY5asLRUqW7j, 15 h 33 « je suis d'accord avec tout … je choisis A », 15 h 34 « pour non connecté on est en mode system automatiquement donc ne mets rien dans le footer »; written before the tests)
+
+- **One height**: from 641 px the search (closed round, open field) and the account button are 40 px tall, the track's
+  height (`--control-h: 40px` on `.topbar`).
+- **No theme button** in the header (`ThemeToggle.jsx` removed, the phone's header too). The theme is chosen in the
+  account's settings: « Système » (the computer's, followed while the page is open), « Clair », « Sombre », three pills
+  in a track. The contract takes `"system"` beside `"light"` and `"dark"` (null is still « not chosen »); the account
+  API keeps the document as it is.
+- **Signed out the theme is the computer's**: the theme script shows the stored light or dark, else the computer's, and
+  follows a change of the computer's setting; once the session reads « signed out » (or accounts are off) a stored
+  choice is forgotten (`AccountEntry.jsx`), so a visitor who used the old button sees the computer's theme after one
+  load. Nothing in the footer.
+- **The account's menu** (piste A): the bar's panel (22 px, no border, no lines), the address then the formula in a
+  pill, « Mon compte » and « Paramètres » as pills with their symbol, « Se déconnecter » below with its symbol.
+- **Smaller menus**: league tiles 96 × 80 (logo 28 px), pages as 36 px pills, the large tiles 132 × 84; the
+  Compétitions panel about 520 px wide instead of 654.
+- **Tests**: `navbar.e2e.mjs` N8 (no theme button), N15 (heights), N16 (sizes), N17 (the account's menu), N18 (the
+  computer's theme, live, and a kept theme forgotten signed out), red on 09c982d, green after; N7, N13, N14 at 40 px.
+  `user-preferences.test.mjs` U2b (`"system"` kept). `header.e2e.mjs`: no theme button, 40 px, Tab from the search goes
+  to the account. `brand.e2e.mjs` turns the computer light or dark instead of pressing the button (its B5n, B12d, B12h
+  « same document » fail because the logo's link reloads the page after its turn, as before this change; B10 needs
+  ORION_API_ORIGIN). `accounts.e2e.mjs` changes the theme through the settings' choice (not run here: it needs Neon).

@@ -586,16 +586,24 @@ html[data-theme="light"] {
   position: relative;
   display: flex;
 }
+/* The menu (piste A of https://claude.ai/artifact/HWrnX3K1t1JY5asLRUqW7j, chosen by hugo on 26 Nov 2026; § 76.2): the
+   bar's panel (22 px, no border), who is signed in with the formula in a pill, then pills with their symbol. */
 .account-menu {
   position: absolute;
-  top: calc(100% + 11px);
+  top: calc(100% + 10px);
   right: 0;
   z-index: 50;
-  width: 264px;
-  padding: 6px;
-  border: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 288px;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--match-radius, 22px);
   background: var(--surface-raised);
-  box-shadow: var(--shadow-pop);
+  box-shadow:
+    var(--shadow-pop),
+    0 0 0 1px var(--pill-quiet);
 }
 /* The gap down to the panel stays « inside » for the mouse. */
 .account-menu::before {
@@ -607,48 +615,73 @@ html[data-theme="light"] {
   height: 12px;
 }
 .account-menu-who {
-  display: grid;
-  gap: 2px;
-  margin: 0 0 6px;
-  padding: 10px 10px 12px;
-  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 10px 12px;
+  border: 0;
 }
 .account-menu-address {
+  max-width: 100%;
   overflow: hidden;
   color: var(--ink-strong);
-  font-size: var(--text-md);
-  font-weight: 550;
+  font-size: 14px;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .account-menu-plan {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
   color: var(--muted);
-  font-size: var(--text-sm);
+  font-size: 11.5px;
+  font-weight: 600;
 }
 .account-menu-links {
-  display: grid;
-  gap: 1px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .account-menu-links a,
 .account-menu-out {
   display: flex;
   align-items: center;
+  gap: 10px;
   width: 100%;
-  min-height: 36px;
-  padding: 0 10px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
   color: var(--ink);
-  font-size: var(--text-md);
+  font-size: 13.5px;
+  font-weight: 500;
   text-align: left;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.account-menu-icon {
+  flex: none;
+  color: var(--muted);
 }
 .account-menu-links a:hover,
 .account-menu-out:hover {
-  background: var(--surface-subtle);
+  background: var(--pill-quiet);
   color: var(--ink-strong);
+}
+.account-menu-links a:focus-visible,
+.account-menu-out:focus-visible {
+  outline: 2px solid var(--pill-focus);
+  outline-offset: 2px;
 }
 .account-menu-foot {
   margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid var(--border);
+  padding-top: 0;
+  border: 0;
 }
 .account-menu-out {
   color: var(--muted);
@@ -658,7 +691,8 @@ html[data-theme="light"] {
   gap: 10px;
   margin-top: 6px;
   padding: 10px;
-  border-top: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--pill-quiet);
   color: var(--warning-ink);
   font-size: var(--text-sm);
 }
@@ -775,24 +809,38 @@ html[data-theme="light"] {
 .account-syncblock:not(:empty) {
   margin-top: 14px;
 }
-/* Light or dark: two words, the chosen one with the site's tab underline. */
+/* The theme: three pills in a track, the chosen one filled (the bar's own look, § 76.2). */
 .account-choice {
-  display: flex;
-  gap: 22px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--pill-track);
 }
 .account-choice button {
-  padding: 0 0 5px;
-  border-bottom: 2px solid transparent;
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
   color: var(--muted);
-  font-size: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 .account-choice button:hover {
-  color: var(--ink);
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
 }
 .account-choice button[aria-pressed="true"] {
-  border-bottom-color: var(--accent);
-  color: var(--ink-strong);
-  font-weight: 550;
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+.account-choice button:focus-visible {
+  outline: 2px solid var(--pill-focus);
+  outline-offset: 2px;
 }
 /* The country: a word that opens the header's menu panel, no field around it. */
 .account-country .home-country-button {

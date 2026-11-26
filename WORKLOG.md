@@ -7,6 +7,7 @@
 - `navigation.css` / `styles.css` : sections en pilules dans une piste centrée, plus de trait sous la barre, recherche repliée en rond à toutes les largeurs dès 641 px, thème rond, compte en pilule ; téléphone : barre du bas en pilule flottante, onglet courant plein avec son nom, feuille à 22 px avec les tuiles des ligues.
 - Tests : `tests/e2e/navbar.e2e.mjs` (N1 à N12, X1) rouge sur 6c75337, 15/15 après ; `header.e2e.mjs` mis à la piste B (36/37, X1 rouge seulement par le 404 de `/api/read/home` du serveur de rejeu local) ; match-tabs 40/40 ; site 1 118/1 118.
 - Retours de hugo à 15 h 13 et 15 h 14 (§ 76.1) : la recherche ouverte ne cache plus la piste, qui glisse à gauche (puis passe en symboles si la place manque) ; bouton du compte connecté sans monogramme carré (pilule « Mon compte », rond avec l'initiale sous 1 024 px). N13 et N14 rouges sur f2d62a6, verts après ; barre 17/17, en-tête 36/37 (X1 : 404 du rejeu), match-tabs 40/40, site 1 118/1 118.
+- Retours de 15 h 29 (§ 76.2, maquette https://claude.ai/artifact/HWrnX3K1t1JY5asLRUqW7j, A choisie) : recherche et compte à 40 px comme la piste ; bouton du thème retiré ; thème Système / Clair / Sombre dans Paramètres, sans compte toujours celui de l'ordinateur ; menu « Mon compte » en pilules ; sous-menus plus petits. N8, N15 à N18 rouges sur 09c982d, verts après ; barre 21/21, en-tête 36/37 (X1 : rejeu), match-tabs 40/40, site 1 119/1 119.
 
 ## Cases des chiffres pleines et cartes du fil à 10 px — FAILURE_MODES § 75 (26 novembre 2026, sur main depuis 5f63f03)
 

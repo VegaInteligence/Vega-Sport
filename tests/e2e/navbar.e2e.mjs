@@ -15,9 +15,9 @@
 //      « Clubs » and « Nations »; « Équipes » is the expanded one.
 //  N5  Under the mouse a veil glides in the track behind the section (its left edge and width those of the section).
 //  N6  Moving to « Calendrier » (no menu) closes the panel.
-//  N7  1440 px: the search is a round 34 px icon (no field text); a click opens the field (300 px at least,
+//  N7  1440 px: the search is a round 40 px icon (§ 76.2) (no field text); a click opens the field (300 px at least,
 //      focused); Escape twice closes it again.
-//  N8  The theme button is round, the account button a pill.
+//  N8  No theme button in the header (it moved to the account's settings, § 76.2); the account button a pill.
 //  N9  1000 px: the track follows the logo (no overlap with the logo nor the actions).
 //  N10 Light theme: the current section is night on ivory.
 //  N11 Phone (393 px): the tab bar is a floating pill; the current tab is filled; the other tabs show their icon only
@@ -31,8 +31,20 @@
 //      field needs the room the track slides left; where even that is not enough its sections show their symbol
 //      alone (their names kept for screen readers). Escape twice puts the track back where it was (±1 px).
 //  N14 (hugo, 15 h 14 « icon du user elle est carré c'est pas bon … enleve la ») The signed-in account button:
-//      no square monogram. From 1024 px a quiet pill « Mon compte », the monogram not drawn; under it a 34 px round
+//      no square monogram. From 1024 px a quiet pill « Mon compte », the monogram not drawn; under it a 40 px round (§ 76.2)
 //      (the initial, no square background).
+//  N15 (hugo, 15 h 29 « search bar and search button, profil button should be same size as corps of navbar »,
+//      § 76.2) At 1440 and 900 px: the track, the closed search and the account button are 40 px tall and share their
+//      middle (±1 px); the search is a 40 px round; opened, the field is 40 px tall. No theme button, phone included.
+//  N16 (15 h 29 « un peu trop gros les hover du corps de la navbar ») The menus are smaller: a league tile 100 × 84 px
+//      at most, the Compétitions panel 540 px wide at most, a Joueurs tile 90 px tall and 136 px wide at most.
+//  N17 (15 h 33, piste A of https://claude.ai/artifact/HWrnX3K1t1JY5asLRUqW7j) The account's menu: a 22 px panel with
+//      no border, its formula in a pill, its links pills (999 px, 36 to 40 px tall) each with a symbol, « Se
+//      déconnecter » with no line above it. (A local server has no session: AccountEntry's markup is put in.)
+//  N18 (15 h 29 « add a system setting to follow the computer setting », 15 h 34 « pour non connecté on est en mode
+//      system automatiquement ») Signed out, the site follows the computer: a light computer shows the light theme,
+//      a dark one the dark theme, a change of the computer's setting switches the page at once, and a theme kept from
+//      the old header button is forgotten (signed out the choice is the computer's).
 //  X1  No page error.
 //
 //   node tests/e2e/navbar.e2e.mjs <base url> <evidence dir>     (a `next build` + `next start`, not `next dev`)
@@ -54,12 +66,12 @@ const LEAGUES = ["Ligue 1", "Premier League", "LaLiga", "Bundesliga", "Serie A",
 const IVORY = "rgb(244, 241, 234)", NIGHT = "rgb(7, 8, 11)", NIGHT_LIGHT = "rgb(11, 13, 15)";
 
 const browser = await chromium.launch();
-async function open(options, scheme = "dark", path = "/") {
+async function open(options, scheme = "dark", path = "/", { stored = null } = {}) {
   const context = await browser.newContext({ locale: "fr-FR", colorScheme: scheme, ...options });
   const page = await context.newPage();
   await page.addInitScript(() => localStorage.setItem("vega.consent.v1", JSON.stringify({ measurement: false, at: "2026-11-25T12:00:00Z" })));
-  // The site's theme is its own choice (dark unless « statarena.theme » says light), not the system's.
-  if (scheme === "light") await page.addInitScript(() => localStorage.setItem("statarena.theme", "light"));
+  // Signed out the site follows the computer (§ 76.2): the colour scheme is the theme. `stored` puts a kept choice in.
+  if (stored) await page.addInitScript((value) => localStorage.setItem("statarena.theme", value), stored);
   page.on("pageerror", (e) => errors.push(e.message.split("\n")[0]));
   await page.goto(base + path, { waitUntil: "load", timeout: 90000 });
   await page.waitForSelector(".topbar .brand");
@@ -161,17 +173,17 @@ try {
   await page.keyboard.press("Escape");
   await page.waitForTimeout(300);
   const again = await search();
-  check("N7", "1440 px: the search a round 34 px icon; a click opens the field (300 px, focused); Escape twice closes it",
+  check("N7", "1440 px: the search a round 40 px icon (§ 76.2); a click opens the field (300 px, focused); Escape twice closes it",
     { closed, opened, again },
-    closed.width === 34 && closed.height === 34 && parseFloat(closed.radius) >= 17 && !closed.text && opened.width >= 300 && opened.focused && opened.text && again.width === 34 && !again.text);
+    closed.width === 40 && closed.height === 40 && parseFloat(closed.radius) >= 20 && !closed.text && opened.width >= 300 && opened.focused && opened.text && again.width === 40 && !again.text);
 
   const shapes = await page.evaluate(() => ({
-    theme: getComputedStyle(document.querySelector(".topbar .theme-toggle")).borderTopLeftRadius,
+    themeButton: Boolean(document.querySelector(".topbar .theme-toggle")),
     account: getComputedStyle(document.querySelector(".topbar .account-entry") || document.body).borderTopLeftRadius,
     hasAccount: Boolean(document.querySelector(".topbar .account-entry")),
   }));
-  check("N8", "the theme button round, the account button a pill", shapes,
-    parseFloat(shapes.theme) >= 17 && (!shapes.hasAccount || shapes.account === "999px"));
+  check("N8", "no theme button in the header, the account button a pill", shapes,
+    !shapes.themeButton && (!shapes.hasAccount || shapes.account === "999px"));
 
   await page.setViewportSize({ width: 1000, height: 900 });
   await page.waitForTimeout(300);
@@ -210,7 +222,7 @@ try {
     const after = await place();
     const ok = during.opacity > 0.99 && during.visibility === "visible" && during.buttons.length === 5 && during.buttons.every((w) => w >= 30) && during.names.every(Boolean) &&
       during.nav[0] >= during.brand + 8 && during.field[0] >= during.nav[1] + 8 && during.field[2] >= 220 && during.field[1] <= during.window && during.focused &&
-      Math.abs(after.nav[0] - before.nav[0]) <= 1 && Math.abs(after.nav[1] - before.nav[1]) <= 1 && after.field[2] === 34;
+      Math.abs(after.nav[0] - before.nav[0]) <= 1 && Math.abs(after.nav[1] - before.nav[1]) <= 1 && after.field[2] === 40;
     roomAt.push({ width, ok, before: before.nav, during: { nav: during.nav, field: during.field, buttons: during.buttons, opacity: during.opacity }, after: after.nav });
     await p.context().close();
   }
@@ -240,10 +252,99 @@ try {
     await p.context().close();
   }
   const [wideAccount, narrowAccount] = signed;
-  check("N14", "signed in: no square monogram; a pill « Mon compte » from 1024 px, a 34 px round with the initial under it", signed,
+  check("N14", "signed in: no square monogram; a pill « Mon compte » from 1024 px, a 40 px round with the initial under it (§ 76.2)", signed,
     wideAccount.radius === "999px" && wideAccount.monogram.display === "none" && wideAccount.label &&
-      narrowAccount.width === 34 && parseFloat(narrowAccount.radius) >= 17 && narrowAccount.monogram.display !== "none" &&
+      narrowAccount.width === 40 && parseFloat(narrowAccount.radius) >= 20 && narrowAccount.monogram.display !== "none" &&
       (narrowAccount.monogram.bg === "rgba(0, 0, 0, 0)" || parseFloat(narrowAccount.monogram.radius) >= narrowAccount.monogram.width / 2 - 1));
+
+  // ------------------------------------------------------------------ heights (N15)
+  const heights = [];
+  for (const width of [1440, 900]) {
+    const p = await open({ viewport: { width, height: 800 } });
+    const read = () => p.evaluate(() => {
+      const box = (s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { h: Math.round(r.height), w: Math.round(r.width), mid: Math.round(r.top + r.height / 2) }; };
+      return { track: box(".topbar .main-nav"), search: box(".topbar .global-search-field"), account: box(".topbar .account-entry"), theme: Boolean(document.querySelector(".topbar .theme-toggle")), radius: getComputedStyle(document.querySelector(".topbar .global-search-field")).borderTopLeftRadius };
+    });
+    const closedLook = await read();
+    await p.locator(".topbar .global-search input").click();
+    await p.waitForTimeout(450);
+    const openLook = await read();
+    await p.locator(".topbar").screenshot({ path: join(out, `hauteurs-${width}.png`) });
+    heights.push({ width, closed: closedLook, open: openLook.search });
+    await p.context().close();
+  }
+  const phoneBar = await open({ ...devices["iPhone 13"], viewport: { width: 393, height: 852 } });
+  const phoneTheme = await phoneBar.evaluate(() => Boolean(document.querySelector(".topbar .theme-toggle")));
+  await phoneBar.context().close();
+  check("N15", "the track, the search and the account 40 px tall on one middle; the search a 40 px round, 40 px open; no theme button (phone too)",
+    { heights, phoneTheme },
+    !phoneTheme && heights.every(({ closed: c, open: o }) => c.track.h === 40 && c.search.h === 40 && c.search.w === 40 && parseFloat(c.radius) >= 20 &&
+      (!c.account || (c.account.h === 40 && Math.abs(c.account.mid - c.track.mid) <= 1)) && Math.abs(c.search.mid - c.track.mid) <= 1 && !c.theme && o.h === 40));
+
+  // ------------------------------------------------------------------ smaller menus (N16)
+  {
+    const p = await open({ viewport: { width: 1440, height: 900 } });
+    await hover(p, "Compétitions");
+    const comp = await p.evaluate(() => {
+      const panel = document.querySelector(".topbar .nav-panel.is-open"), tile = panel?.querySelector(".nav-league");
+      return panel && tile ? { panel: Math.round(panel.getBoundingClientRect().width), tile: [Math.round(tile.getBoundingClientRect().width), Math.round(tile.getBoundingClientRect().height)] } : null;
+    });
+    await p.screenshot({ path: join(out, "menu-competitions-petit.png"), clip: { x: 0, y: 0, width: 1440, height: 360 } });
+    await hover(p, "Joueurs");
+    await p.waitForTimeout(300);
+    const players = await p.evaluate(() => {
+      const tile = document.querySelector(".topbar .nav-panel.is-open .nav-tile");
+      return tile ? [Math.round(tile.getBoundingClientRect().width), Math.round(tile.getBoundingClientRect().height)] : null;
+    });
+    await p.screenshot({ path: join(out, "menu-joueurs-petit.png"), clip: { x: 0, y: 0, width: 1440, height: 300 } });
+    await p.context().close();
+    check("N16", "smaller menus: league tiles 100 × 84 at most, the Compétitions panel 540 px at most, Joueurs tiles 136 × 90 at most", { comp, players },
+      comp && comp.tile[0] <= 100 && comp.tile[1] <= 84 && comp.panel <= 540 && players && players[0] <= 136 && players[1] <= 90);
+  }
+
+  // ------------------------------------------------------------------ the account's menu (N17)
+  {
+    const p = await open({ viewport: { width: 1440, height: 900 } });
+    const menu = await p.evaluate(() => {
+      const actions = document.querySelector(".topbar .topbar-actions");
+      const root = document.createElement("div");
+      root.className = "account-menu-root";
+      const icon = '<svg class="account-menu-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"></svg>';
+      root.innerHTML = `<button type="button" class="account-entry account-entry-in" aria-label="Mon compte" aria-expanded="true"><span class="account-entry-monogram" aria-hidden="true">P</span><span class="account-entry-label">Mon compte</span></button>
+        <div class="account-menu"><p class="account-menu-who"><span class="account-menu-address">prenom@exemple.fr</span><span class="account-menu-plan">Gratuit</span></p>
+        <nav class="account-menu-links" aria-label="Mon compte"><a href="/compte">${icon}Mon compte</a><a href="/compte#parametres">${icon}Paramètres</a></nav>
+        <div class="account-menu-foot"><button class="account-menu-out" type="button">${icon}Se déconnecter</button></div></div>`;
+      (actions.querySelector(".account-entry")?.closest(".account-menu-root, .account-entry") || actions.lastElementChild).replaceWith(root);
+      const c = (s) => getComputedStyle(root.querySelector(s));
+      const links = [...root.querySelectorAll(".account-menu-links a")].map((a) => ({ radius: getComputedStyle(a).borderTopLeftRadius, h: Math.round(a.getBoundingClientRect().height) }));
+      return { radius: c(".account-menu").borderTopLeftRadius, border: c(".account-menu").borderTopWidth, plan: c(".account-menu-plan").borderTopLeftRadius, links, footLine: c(".account-menu-foot").borderTopWidth, whoLine: c(".account-menu-who").borderBottomWidth };
+    });
+    await p.screenshot({ path: join(out, "menu-compte.png"), clip: { x: 1040, y: 0, width: 400, height: 320 } });
+    await p.context().close();
+    check("N17", "the account's menu: 22 px panel without border, formula in a pill, links pills 36–40 px, no lines", menu,
+      menu.radius === "22px" && menu.border === "0px" && parseFloat(menu.plan) >= 9 && menu.links.every((l) => l.radius === "999px" && l.h >= 36 && l.h <= 40) && menu.footLine === "0px" && menu.whoLine === "0px");
+  }
+
+  // ------------------------------------------------------------------ the computer's theme (N18)
+  {
+    const lightComputer = await open({ viewport: { width: 1280, height: 800 } }, "light");
+    const shownLight = await lightComputer.evaluate(() => document.documentElement.dataset.theme);
+    await lightComputer.emulateMedia({ colorScheme: "dark" });
+    await lightComputer.waitForTimeout(300);
+    const switched = await lightComputer.evaluate(() => document.documentElement.dataset.theme);
+    await lightComputer.context().close();
+    const darkComputer = await open({ viewport: { width: 1280, height: 800 } }, "dark");
+    const shownDark = await darkComputer.evaluate(() => document.documentElement.dataset.theme);
+    await darkComputer.context().close();
+    // A theme kept by the old header button, signed out: forgotten, the computer's shown.
+    const kept = await open({ viewport: { width: 1280, height: 800 } }, "light", "/", { stored: "dark" });
+    await kept.waitForTimeout(1500);
+    const keptShown = await kept.evaluate(() => ({ theme: document.documentElement.dataset.theme, stored: localStorage.getItem("statarena.theme"), status: document.querySelector(".topbar .account-entry-out") ? "signed-out" : document.querySelector(".topbar .account-entry") ? "other" : "off" }));
+    await kept.context().close();
+    check("N18", "signed out the site follows the computer: light shows light, dark shows dark, a change switches at once, an old kept theme is forgotten",
+      { shownLight, switched, shownDark, keptShown },
+      shownLight === "light" && switched === "dark" && shownDark === "dark" && keptShown.theme === "light" && keptShown.stored === null);
+  }
 
   // ------------------------------------------------------------------ computer, light
   const light = await open({ viewport: { width: 1440, height: 900 } }, "light");

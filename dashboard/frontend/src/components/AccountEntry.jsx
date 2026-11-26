@@ -1,17 +1,18 @@
 "use client";
-// The header's way into the account (VI-38): « Se connecter » signed out; signed in, the monogram and « Mon compte »,
+// The header's way into the account (VI-38): « Se connecter » signed out; signed in, « Mon compte » (§ 76.1: the initial alone under 1024 px),
 // a button that opens a small menu (hover or keyboard focus with a mouse, a click or a tap): who is signed in, « Mon
 // compte » (the top of /compte), « Paramètres » (/compte#parametres) and « Se déconnecter ». Accounts off: nothing
 // at all, the header as before. While the session is read the slot keeps its size (no shift).
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogIn } from "lucide-react";
+import { LogIn, LogOut, Settings2, UserRound } from "lucide-react";
 import { useAccount } from "../hooks/useAccount.js";
 import { refreshSession, signOut } from "../services/account-state.js";
 import { ACCOUNT_PATH, signInHref } from "../services/account-links.js";
 import { planLabel } from "../services/account-messages.js";
 import { accountInitial } from "../services/account-summary.js";
+import { applyTheme, readTheme } from "../services/local-preferences.js";
 
 /** The menu of the signed-in entry. Same rules as the header's menus (SiteNavigation.jsx): hover opens it for a
  *  mouse, a click or a tap toggles it, Escape and a click elsewhere close it. Keyboard focus opens it too, so Tab
@@ -124,9 +125,11 @@ function AccountMenu({ account, here }) {
           </p>
           <nav className="account-menu-links" aria-label="Mon compte">
             <Link href={ACCOUNT_PATH} onClick={go("")}>
+              <UserRound className="account-menu-icon" size={16} strokeWidth={1.7} aria-hidden="true" />
               Mon compte
             </Link>
             <Link href={`${ACCOUNT_PATH}#parametres`} onClick={go("parametres")}>
+              <Settings2 className="account-menu-icon" size={16} strokeWidth={1.7} aria-hidden="true" />
               Paramètres
             </Link>
           </nav>
@@ -145,6 +148,7 @@ function AccountMenu({ account, here }) {
           ) : (
             <div className="account-menu-foot">
               <button className="account-menu-out" type="button" onClick={() => out(false)} disabled={leaving}>
+                <LogOut className="account-menu-icon" size={16} strokeWidth={1.7} aria-hidden="true" />
                 Se déconnecter
               </button>
             </div>
@@ -165,6 +169,11 @@ export default function AccountEntry() {
   useEffect(() => {
     if (!off) refreshSession();
   }, [off]);
+  // Signed out the theme is the computer's (hugo, 26 Nov 2026, « pour non connecté on est en mode system
+  // automatiquement », § 76.2): a choice kept on this browser (the old header button, a past session) is forgotten.
+  useEffect(() => {
+    if ((account.status === "off" || account.status === "signed-out") && readTheme() !== null) applyTheme(null);
+  }, [account.status]);
   const readQuery = () => setQuery(window.location.search.replace(/^\?/, ""));
   useEffect(readQuery, [pathname]);
   if (off) return null;

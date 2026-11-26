@@ -18,6 +18,12 @@ import path from "node:path";
 import { startAuthStandIn } from "./auth-stand-in.mjs";
 import { startAccountApiStandIn } from "./account-api-stand-in.mjs";
 
+/** No theme button in the header since § 76.2: a theme change goes through the account's settings (/compte). */
+const flipTheme = (page) =>
+  page.evaluate(() => {
+    const want = document.documentElement.dataset.theme === "light" ? "Sombre" : "Clair";
+    [...document.querySelectorAll('[role="group"][aria-label="Thème"] button')].find((b) => b.textContent.trim() === want)?.click();
+  });
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT || "playwright");
 
@@ -439,7 +445,7 @@ try {
     await shot(A.page, "06-compte-en-echec.png");
 
     // O2: the last save fails at sign-out: told, cancel keeps the session.
-    await A.page.locator(".theme-toggle").click();
+    await flipTheme(A.page);
     await A.page.getByRole("button", { name: "Se déconnecter" }).click();
     const unsaved = await A.page.locator(".account-unsaved").textContent({ timeout: 20000 }).catch(() => "");
     record("O2", "a failed last save is told before signing out", "Vos derniers changements…", unsaved, /n’ont pas pu être enregistrés/.test(unsaved));
@@ -447,7 +453,7 @@ try {
     await A.page.getByRole("button", { name: "Annuler" }).click();
     record("O2b", "« Annuler » keeps the person signed in", "Mon compte", await entryLabel(A.page), (await entryLabel(A.page)) === "Mon compte");
     api.control.down = false;
-    await A.page.locator(".theme-toggle").click(); // back to the theme of the run
+    await flipTheme(A.page); // back to the theme of the run
 
     // A5: the account holds a contract of another version: stopped, never overwritten.
     const held = await doc(id);
@@ -456,11 +462,11 @@ try {
     const stopped = await until(async () => /Arrêtée/.test(await state(A.page)) && (await state(A.page)), { timeout: 20000 });
     record("A5", "an other-version contract stops the sync, with the reason", "Arrêtée Version de préférences non reconnue : 2.", stopped, /Arrêtée/.test(stopped || "") && /Version de préférences non reconnue : 2/.test(stopped || ""));
     await shot(A.page, "08-compte-arretee.png");
-    await A.page.locator(".theme-toggle").click();
+    await flipTheme(A.page);
     await A.page.waitForTimeout(2500);
     const untouched = (await doc(id)).document;
     record("A5b", "the other-version contract is not overwritten after a change", { v: 2, lists: [] }, untouched, JSON.stringify(untouched) === JSON.stringify({ v: 2, lists: [] }));
-    await A.page.locator(".theme-toggle").click();
+    await flipTheme(A.page);
     await api.db.query("UPDATE account.preferences SET document = $2::jsonb WHERE account_id = $1", [id, JSON.stringify(held.document)]);
     await open(A.page, "/compte");
     await until(async () => /À jour/.test(await state(A.page)));
@@ -587,7 +593,7 @@ try {
       await L.page.mouse.move(700, 700);
       const left = await until(async () => (await expanded()) === "false", { timeout: 3000 });
       record("C6b", "leaving with the mouse closes it", "false", await expanded(), Boolean(left));
-      await L.page.locator(".theme-toggle").focus();
+      await L.page.locator(".topbar .global-search input").focus(); // no theme button since § 76.2: the search is before the account
       await L.page.keyboard.press("Tab");
       const byKeyboard = await until(async () => (await expanded()) === "true", { timeout: 3000 });
       await L.page.keyboard.press("Tab");

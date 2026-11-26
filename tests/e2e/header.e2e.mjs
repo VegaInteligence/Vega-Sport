@@ -13,11 +13,11 @@
 //  H2 (icon from 920 px) Since the bar's piste B (§ 76, 26 Nov 2026) the search is its icon at
 //     every width from 641 px, 920 px and wider included (it was a field of 200 px at least
 //     there before). From 1024 px the account button shows its label, under it the icon alone.
-//  H3 (icon) From 641 px the search is its icon: a 34 px round, no field text, no
+//  H3 (icon) From 641 px the search is its icon: a 40 px round (§ 76.2), no field text, no
 //     shortcut hint, still named « Rechercher un joueur, un club ou une compétition ».
 //     a. A click opens the field beside the menus: at least 220 px wide, focused, inside
 //        the window, right of the logo; the menus stay, opaque, 8 px left of it at least (they
-//        slide left or show their symbols, § 76.1); the theme and the account still answer a
+//        slide left or show their symbols, § 76.1); no theme button (§ 76.2), the account still answers a
 //        pointer. Typed text gives the results panel, inside the window.
 //     b. The clear button empties the field and leaves it open and focused.
 //     c. Escape closes the results first (the field stays), then the field: the icon again,
@@ -25,17 +25,17 @@
 //     d. A click elsewhere closes it; the typed text is kept for the next opening and the
 //        closed search shows the icon alone (no clear button over it).
 //     e. « / » opens it from the keyboard.
-//     f. Tab leaves it for the theme button and it closes.
+//     f. Tab leaves it for the account button (no theme button since § 76.2) and it closes.
 //  H4 (first menu) From 641 to 760 px the first menu reads « Accueil », from 761 px « Vue
 //     d’ensemble »; it has that one name for a screen reader, leads to the path « / » (the
 //     link keeps the page's season and scope in its query) and is the current page on the
 //     home page.
-//  H5 (touch) On a touch screen (768, 641 and 1024 px wide): the logo, the search, the theme
+//  H5 (touch) On a touch screen (768, 641 and 1024 px wide): the logo, the search
 //     and the account each answer a finger on 44 × 44 px around their middle (the four corners
-//     of that square and its middle reach the control), their look unchanged (34 px icons, the
+//     of that square and its middle reach the control), their look unchanged (the search and the account 40 px, the
 //     logo's link 40 px); every menu is at least 44 px wide and answers a finger 21 px above
 //     and below its middle (its pill is drawn 34 px tall, § 76); a tap 4 px outside the search
-//     icon's 34 px round opens the search. Focused, the field is still drawn 34 px tall: 3 px above and 3 px below it the
+//     icon's 40 px round opens the search. Focused, the field is still drawn 40 px tall: 3 px above and 3 px below it the
 //     screen shows the header's own background.
 //  H6 (menus) At 700 and 768 px a menu opens under its button when the mouse comes over it
 //     (as before), inside the window, and its first entry answers a pointer; on a touch
@@ -127,7 +127,8 @@ const header = (page) =>
         ? { left: round(box(field).left), right: round(box(field).right), top: round(box(field).top), bottom: round(box(field).bottom), width: round(box(field).width), height: round(box(field).height), text: Number(getComputedStyle(input).opacity) > 0.5, name: input.getAttribute("aria-label"), hint: shown(hint), clear: shown(clear), focused: document.activeElement === input, value: input.value }
         : null,
       account: account ? { width: round(box(account).width), label: Boolean(label && box(label).width > 20) } : null,
-      themeReached: (() => { const t = top.querySelector(".theme-toggle"), b = box(t); return reaches(t, (b.left + b.right) / 2, (b.top + b.bottom) / 2); })(),
+      // No theme button since § 76.2 (the theme is the computer's, or the account's setting).
+      themeReached: !top.querySelector(".theme-toggle"),
       accountReached: account ? (() => { const b = box(account); return reaches(account, (b.left + b.right) / 2, (b.top + b.bottom) / 2); })() : null,
       brandRight: round(box(top.querySelector(".brand")).right),
       partsOverlap: overlap(parts),
@@ -208,7 +209,7 @@ const resize = async (page, width, height = 900) => {
   await page.waitForTimeout(200);
 };
 // « Elsewhere » is the page's left gutter (3, 420): no link there.
-const closed = (h) => h.search && Math.abs(h.search.width - 34) <= 1 && Math.abs(h.search.height - 34) <= 1 && !h.search.text;
+const closed = (h) => h.search && Math.abs(h.search.width - 40) <= 1 && Math.abs(h.search.height - 40) <= 1 && !h.search.text;
 const opened = (h) => h.search && h.search.width >= 220 && h.search.text && h.search.focused;
 
 try {
@@ -238,10 +239,10 @@ try {
     fields.every(closed));
   check("H2b", "the account button shows its label from 1024 px, the icon alone under it",
     sweep.map((h) => `${h.width}: ${h.account?.label ? "label" : "icon"} ${h.account?.width}`).join(", "),
-    sweep.every((h) => h.account && h.account.label === (h.width >= 1024) && (h.width >= 1024 ? h.account.width > 100 : Math.abs(h.account.width - 34) <= 1)));
+    sweep.every((h) => h.account && h.account.label === (h.width >= 1024) && (h.width >= 1024 ? h.account.width > 100 : Math.abs(h.account.width - 40) <= 1)));
 
   const icons = sweep;
-  check("H3", `from 641 px the search is its icon: a 34 px square, no field text, no shortcut hint, named « ${SEARCH_NAME} »`,
+  check("H3", `from 641 px the search is its icon: a 40 px round (§ 76.2), no field text, no shortcut hint, named « ${SEARCH_NAME} »`,
     icons.map((h) => `${h.width}: ${h.search?.width}×${h.search?.height}${h.search?.text ? " text" : ""}${h.search?.hint ? " hint" : ""}`).join(", "),
     icons.every((h) => closed(h) && !h.search.hint && h.search.name === SEARCH_NAME));
 
@@ -280,7 +281,7 @@ try {
     });
     const typed = await header(page);
     await page.screenshot({ path: path.join(out, `search-results-${width}.png`), clip: { x: 0, y: 0, width, height: 420 } });
-    check(`H3a-${width}`, `${width} px: a click opens the field beside the menus (220 px at least, focused, inside the window, right of the logo), the menus stay, 8 px left of it, the theme and the account answer; « ${QUERY} » gives the results panel inside the window`,
+    check(`H3a-${width}`, `${width} px: a click opens the field beside the menus (220 px at least, focused, inside the window, right of the logo), the menus stay, 8 px left of it, no theme button, the account answers; « ${QUERY} » gives the results panel inside the window`,
       { field: empty.search, brandRight: empty.brandRight, menusOpacity: empty.menusOpacity, room: empty.room, menus: empty.menus.length, theme: empty.themeReached, account: empty.accountReached, actionsOverlap: empty.actionsOverlap, sideways: typed.sideways, panel },
       opened(empty) && empty.search.left >= empty.brandRight && empty.search.right <= empty.window && empty.menusOpacity === 1 && empty.menus.length === 5 && empty.room >= 8 && empty.themeReached && empty.accountReached && empty.actionsOverlap <= 0 && empty.height === 56 &&
         typed.sideways <= 0 && panel && panel.left >= 0 && panel.right <= width && panel.top >= 34);
@@ -332,9 +333,9 @@ try {
     await page.keyboard.press("Tab");
     await page.waitForTimeout(450);
     const tabbed = await header(page);
-    check(`H3f-${width}`, `${width} px: Tab leaves the search for the theme button and the search closes`,
+    check(`H3f-${width}`, `${width} px: Tab leaves the search for the account button and the search closes`,
       { active: tabbed.active, field: tabbed.search, menusOpacity: tabbed.menusOpacity },
-      /theme-toggle/.test(String(tabbed.active)) && closed(tabbed) && tabbed.menusOpacity === 1);
+      /account-entry/.test(String(tabbed.active)) && closed(tabbed) && tabbed.menusOpacity === 1);
     await page.mouse.click(3, 420);
   }
 
@@ -372,13 +373,13 @@ try {
     await touch.waitForTimeout(300);
     const coarse = await touch.evaluate(() => matchMedia("(pointer: coarse)").matches);
     const areas = {};
-    for (const [name, selector] of [["logo", ".topbar .brand"], ["search", ".topbar .global-search input"], ["theme", ".topbar .theme-toggle"], ["account", ".topbar .account-entry"]])
+    for (const [name, selector] of [["logo", ".topbar .brand"], ["search", ".topbar .global-search input"], ["account", ".topbar .account-entry"]])
       areas[name] = await tapArea(touch, selector);
     const h = await header(touch);
     await touch.locator(".topbar").screenshot({ path: path.join(out, `touch-${width}.png`) });
     const iconMode = true; // the search is its icon at every width since § 76
-    const looks = areas.logo && areas.theme && areas.account && areas.logo.look.join() === "40,40" && areas.theme.look.join() === "34,34" && (width >= 1024 ? areas.account.look[1] === 34 : areas.account.look.join() === "34,34") && (iconMode ? closed(h) : h.search.height === 34);
-    check(`H5a-${width}`, `touch, ${width} px: the logo, the search, the theme and the account answer on 44 × 44 px around their middle; their look is unchanged; every menu is 44 px wide at least and answers a finger 21 px above and below its middle`,
+    const looks = areas.logo && areas.account && areas.logo.look.join() === "40,40" && (width >= 1024 ? areas.account.look[1] === 40 : areas.account.look.join() === "40,40") && (iconMode ? closed(h) : h.search.height === 34);
+    check(`H5a-${width}`, `touch, ${width} px: the logo, the search and the account answer on 44 × 44 px around their middle; their look is unchanged; every menu is 44 px wide at least and answers a finger 21 px above and below its middle`,
       { coarse, areas, searchLook: h.search && [h.search.width, h.search.height], menus: h.menus.map((m) => `${m.text} ${m.width}×${m.height}`) },
       coarse && Object.values(areas).every((a) => a && a.reached === a.of) && looks && h.menus.length === 5 && h.menus.every((m) => m.width >= 44 && m.finger) && whole({ ...h, width }));
     if (iconMode) {
@@ -389,8 +390,8 @@ try {
       const tapped = await header(touch);
       await touch.locator(".topbar").screenshot({ path: path.join(out, `touch-open-${width}.png`) });
       const drawn = await aroundField(touch, tapped.search);
-      check(`H5b-${width}`, `touch, ${width} px: a tap 4 px outside the icon's square opens the search; the field is drawn 34 px tall, the header's background above and below it`, { field: tapped.search, drawn },
-        opened(tapped) && tapped.search.right <= tapped.window && tapped.search.height === 34 && drawn.drawnAsBefore);
+      check(`H5b-${width}`, `touch, ${width} px: a tap 4 px outside the icon's square opens the search; the field is drawn 40 px tall, the header's background above and below it`, { field: tapped.search, drawn },
+        opened(tapped) && tapped.search.right <= tapped.window && tapped.search.height === 40 && drawn.drawnAsBefore);
     } else {
       // A finger on the field, 4 px above its 34 px, inside its 44 px.
       const [cx, cy] = areas.search.middle;
@@ -399,8 +400,8 @@ try {
       const tapped = await header(touch);
       await touch.locator(".topbar").screenshot({ path: path.join(out, `touch-open-${width}.png`) });
       const drawn = await aroundField(touch, tapped.search);
-      check(`H5b-${width}`, `touch, ${width} px: a tap 4 px above the field focuses it; the field is drawn 34 px tall, the header's background above and below it`, { field: tapped.search, drawn },
-        tapped.search.focused && tapped.search.height === 34 && drawn.drawnAsBefore);
+      check(`H5b-${width}`, `touch, ${width} px: a tap 4 px above the field focuses it; the field is drawn 40 px tall, the header's background above and below it`, { field: tapped.search, drawn },
+        tapped.search.focused && tapped.search.height === 40 && drawn.drawnAsBefore);
     }
     if (width === 768) {
       // H6 on touch: a tap elsewhere closes the search, a tap on a menu opens it.

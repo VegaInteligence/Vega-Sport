@@ -2004,7 +2004,7 @@ th[aria-sort="descending"] .sort-indicator {
     background: var(--pill-quiet-hover);
   }
   .topbar .global-search:not(.is-engaged, :focus-within) .global-search-field > .icon:first-child {
-    left: 8px;
+    left: calc((var(--control-h) - 17px) / 2);
     width: 17px;
     height: 17px;
     color: var(--muted);
@@ -2025,10 +2025,10 @@ th[aria-sort="descending"] .sort-indicator {
     background: var(--surface-raised);
   }
   .topbar .global-search:is(.is-engaged, :focus-within) .global-search-field > .icon:first-child {
-    left: 13px;
+    left: 14px;
   }
   .topbar .global-search:is(.is-engaged, :focus-within) .global-search-field input[type="search"] {
-    padding-left: 36px;
+    padding-left: 38px;
   }
 }
 /* Under 761px the five menus and the three icons need the gaps tightened and the first
@@ -2053,10 +2053,10 @@ th[aria-sort="descending"] .sort-indicator {
 /* A touch screen wider than a phone: the header's controls keep their look and answer a
    finger on 44px (the phone's own sizes are under 640px, below). */
 @media (min-width: 641px) and (pointer: coarse) {
-  .topbar :is(.brand, .theme-toggle, .account-entry) {
+  .topbar :is(.brand, .account-entry) {
     position: relative;
   }
-  .topbar :is(.brand, .theme-toggle, .account-entry, .global-search-clear)::after {
+  .topbar :is(.brand, .account-entry, .global-search-clear)::after {
     content: "";
     position: absolute;
     top: 50%;
@@ -2065,12 +2065,12 @@ th[aria-sort="descending"] .sort-indicator {
     height: max(100%, 44px);
     transform: translate(-50%, -50%);
   }
-  /* The search field: its input stands 44px tall across the 34px field. The six pixels
+  /* The search field: its input stands 44px tall across the 40px field (§ 76.2). The two pixels
      above and below are a border nothing is painted in, so a focused field looks as it does
      under a mouse. */
   .topbar .global-search .global-search-field input[type="search"] {
     height: 44px;
-    border-block: 6px solid transparent;
+    border-block: 2px solid transparent;
     background-clip: padding-box;
   }
 }
@@ -2293,10 +2293,6 @@ th[aria-sort="descending"] .sort-indicator {
   .brand {
     min-width: 44px;
     min-height: 44px;
-  }
-  .theme-toggle {
-    width: 44px;
-    height: 44px;
   }
   .segmented-control {
     padding: 0;

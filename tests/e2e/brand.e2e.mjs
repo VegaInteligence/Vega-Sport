@@ -250,9 +250,9 @@ const watch = (page, name) => {
   page.on("pageerror", (e) => log.push(`${name} pageerror ${e.message.split("\n")[0]}`));
   page.on("console", (m) => { if (m.type() === "error") log.push(`${name} console ${m.text().slice(0, 200)}`); });
 };
-const open = async (options, name, theme) => {
-  const context = await browser.newContext({ locale: "fr-FR", ...options });
-  if (theme) await context.addInitScript((t) => { try { localStorage.setItem("statarena.theme", t); } catch {} }, theme);
+// Signed out the site's theme is the computer's (§ 76.2): the colour scheme is the theme, dark unless said.
+const open = async (options, name, theme = "dark") => {
+  const context = await browser.newContext({ locale: "fr-FR", colorScheme: theme, ...options });
   const page = await context.newPage();
   watch(page, name);
   return page;
@@ -379,10 +379,10 @@ try {
   const colourMovedDark = await colours(dark);
   check("B12b", `dark theme, after a navigation inside the site (home → Matchs, same document): still ${THEME_COLOUR.dark} alone`,
     `${readings(colourMovedDark)} — same document: ${stayedDark} — head rebuilt: ${rebuiltDark}`, stayedDark && rebuiltDark && only(colourMovedDark, themed("dark")));
-  await dark.locator(".theme-toggle").first().click();
+  await dark.emulateMedia({ colorScheme: "light" }); // the computer turns light (no theme button since § 76.2)
   await dark.waitForFunction(() => document.documentElement.dataset.theme === "light");
   const colourSwitchedLight = await colours(dark);
-  check("B12c", `after the theme button (dark → light): ${THEME_COLOUR.light} alone`, readings(colourSwitchedLight), only(colourSwitchedLight, themed("light")));
+  check("B12c", `after the computer turns light (dark → light): ${THEME_COLOUR.light} alone`, readings(colourSwitchedLight), only(colourSwitchedLight, themed("light")));
   const rebuiltLight = await follow(dark, ".topbar .brand", (url) => url.pathname === "/");
   const colourBackLight = await colours(dark);
   const stayedLight = await dark.evaluate(() => window.__sameDocument === true);
@@ -420,7 +420,7 @@ try {
   await refused.goto(base + "/", { waitUntil: "networkidle" });
   const iconRefused = await icons(refused);
   const colourRefused = await colours(refused);
-  await refused.locator(".theme-toggle").first().click();
+  await refused.emulateMedia({ colorScheme: "light" });
   await refused.waitForFunction(() => document.documentElement.dataset.theme === "light");
   const iconRefusedLight = await icons(refused);
   const colourRefusedLight = await colours(refused);
@@ -450,12 +450,12 @@ try {
   const colourMoved = await colours(light);
   check("B12f", `light theme, after a navigation inside the site (home → Matchs, same document): still ${THEME_COLOUR.light} alone`,
     `${readings(colourMoved)} — same document: ${await sameDocument()} — head rebuilt: ${rebuilt}`, (await sameDocument()) && rebuilt && only(colourMoved, themed("light")));
-  await light.locator(".theme-toggle").first().click();
+  await light.emulateMedia({ colorScheme: "dark" });
   await light.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   const switched = await icons(light);
-  check("B5m", `after the theme button (light → dark): ${themeIcon("dark")} alone`, readings(switched), only(switched, themeIcon("dark")));
+  check("B5m", `after the computer turns dark (light → dark): ${themeIcon("dark")} alone`, readings(switched), only(switched, themeIcon("dark")));
   const colourSwitched = await colours(light);
-  check("B12g", `after the theme button (light → dark): ${THEME_COLOUR.dark} alone`, readings(colourSwitched), only(colourSwitched, themed("dark")));
+  check("B12g", `after the computer turns dark (light → dark): ${THEME_COLOUR.dark} alone`, readings(colourSwitched), only(colourSwitched, themed("dark")));
   const rebuiltBack = await follow(light, ".topbar .brand", (url) => url.pathname === "/");
   const back = await icons(light);
   check("B5n", `after the button, then a navigation (Matchs → home, same document): still ${themeIcon("dark")} alone`,
@@ -536,7 +536,7 @@ try {
         observed: new Date().toISOString(),
         base,
         rerun: `node tests/e2e/brand.e2e.mjs ${base} ${out}`,
-        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), widths 1120, 1024, 768 and 700, phone 393×852 (touch, ×3). B5: every list of icons is read 5 times, 300 ms apart, after a navigation once the head's icon links are rebuilt (a new apple-touch-icon node, waited for 5 s at most; a navigation check fails when it is not seen); B5o runs with JavaScript off; B5p makes Storage.getItem and Storage.setItem throw. B12: every list of theme colours is read the same way, at the same moments, with the site's theme (html data-theme) and the body's computed background; B12c and B12d press the theme button on the dark page, then follow the home link; B12i and B12j use the pages of B5o and B5p. B9 holds every /api/ answer for 8 s. A local server needs ORION_API_ORIGIN (report images) and, for the header to carry the account button as in production, NEON_AUTH_BASE_URL=http://127.0.0.1:9 with any NEON_AUTH_COOKIE_SECRET of 32 characters.",
+        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through the colour scheme: signed out the theme is the computer's, § 76.2), widths 1120, 1024, 768 and 700, phone 393×852 (touch, ×3). B5: every list of icons is read 5 times, 300 ms apart, after a navigation once the head's icon links are rebuilt (a new apple-touch-icon node, waited for 5 s at most; a navigation check fails when it is not seen); B5o runs with JavaScript off; B5p makes Storage.getItem and Storage.setItem throw. B12: every list of theme colours is read the same way, at the same moments, with the site's theme (html data-theme) and the body's computed background; B12c and B12d turn the computer light on the dark page, then follow the home link; B12i and B12j use the pages of B5o and B5p. B9 holds every /api/ answer for 8 s. A local server needs ORION_API_ORIGIN (report images) and, for the header to carry the account button as in production, NEON_AUTH_BASE_URL=http://127.0.0.1:9 with any NEON_AUTH_COOKIE_SECRET of 32 characters.",
         inputs: { home: "/", loading: "/joueurs/", report: REPORT, faviconVersion: VERSION, themeColour: THEME_COLOUR, ivory: IVORY, night: NIGHT },
         results,
         console: consoleLog,

@@ -6,20 +6,35 @@ export const THEME_KEY = "statarena.theme";
 /** Fired on window when the theme is set from elsewhere than the toggle (the account's contract). */
 export const THEME_EVENT = "vega:theme";
 
-/** "light" | "dark" chosen by the visitor, else null (app/layout.jsx shows dark). */
+const CHOICES = ["light", "dark", "system"];
+
+/** "light" | "dark" | "system" (follow the computer) chosen in the account's settings, else null: not chosen, the
+ *  computer's theme is shown (app/layout.jsx; § 76.2). */
 export function readTheme() {
   try {
     const saved = window.localStorage.getItem(THEME_KEY);
-    return saved === "light" || saved === "dark" ? saved : null;
+    return CHOICES.includes(saved) ? saved : null;
   } catch {
     return null;
   }
 }
 
-/** Shows and keeps a theme; null forgets the choice and shows dark. */
+/** The theme a choice shows: light or dark as chosen, else the computer's. */
+export function shownTheme(theme) {
+  if (theme === "light" || theme === "dark") return theme;
+  try {
+    return window.matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark";
+  } catch {
+    return "dark";
+  }
+}
+
+/** Shows and keeps a theme; "system" and null show the computer's (null forgets the choice). */
 export function applyTheme(theme) {
   const root = document.documentElement,
-    next = theme === "light" ? "light" : "dark";
+    next = shownTheme(theme);
   // Hover transitions on buttons, fields and cards would otherwise fade
   // those elements into the new theme after everything else: switch with
   // transitions off, then restore them once the new colours are painted.
@@ -36,7 +51,7 @@ export function applyTheme(theme) {
   window.__vegaSetFavicon?.(next);
   window.__vegaSetThemeColor?.(next);
   try {
-    if (theme === "light" || theme === "dark") localStorage.setItem(THEME_KEY, theme);
+    if (CHOICES.includes(theme)) localStorage.setItem(THEME_KEY, theme);
     else localStorage.removeItem(THEME_KEY);
   } catch {}
   window.dispatchEvent(new CustomEvent(THEME_EVENT, { detail: next }));
