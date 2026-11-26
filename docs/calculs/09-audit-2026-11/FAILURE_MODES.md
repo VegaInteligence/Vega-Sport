@@ -6171,6 +6171,8 @@ in it is never out, whatever the episode says (he came back, or the dates are ap
 
 **78.6 The page.** From the kick-off the « Avant-match » tab keeps its « Absents » card, read from this route (same card,
 same rows); a return date shows no « dans N j » (the match is past). Before the kick-off: unchanged.
+A side with no member read (78.2) is « Non renseignés » unless the route returns episodes for it (an end known over
+the day): those are shown (Codex on #253; E2E K6c). No card when neither side has a member read nor an episode.
 
 Cases (`backend/api/test/match-absences.test.mjs`, red before the migration):
 - **78a** an unknown match 404; a match not started with its kick-off to come 404, the same match once its kick-off has

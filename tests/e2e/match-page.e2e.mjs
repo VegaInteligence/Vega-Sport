@@ -224,6 +224,18 @@ async function absentChecks(browser) {
     await k.page.close();
     await k.ctx.close();
   }
+  // K6c: no member read within 45 days of the day, yet a dated episode over it is known: shown, never dropped.
+  const stale = matchDayAnswer(ABSENT_MATCH);
+  stale.home = { ...stale.home, asOf: null, squad: { players: 25, read: 0 }, absences: [] };
+  stale.away = { ...stale.away, asOf: null, squad: { players: 26, read: 0 } };
+  k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true, { answer: stale });
+  got = await read(k.page);
+  const staleSides = { card: got.card, home: names(got.sides[0] || { rows: [] }), homeText: got.sides[0]?.empty, away: names(got.sides[1] || { rows: [] }) };
+  check("K6c a side read 0 with dated absences of the day: shown; a side read 0 without: « Non renseignés »",
+    { card: true, home: [], homeText: "Non renseignés", away: finishedAway }, staleSides,
+    got.card && !staleSides.home.length && /Non renseignés/.test(staleSides.homeText || "") && JSON.stringify(staleSides.away) === JSON.stringify(finishedAway));
+  await k.page.close();
+  await k.ctx.close();
   check("K6b a finished match whose day's read is 404 or fails: no card, no page error", { "404": { card: false, errors: [] }, failure: { card: false, errors: [] } },
     finishedNone, Object.values(finishedNone).every((v) => !v.card && !v.errors.length));
 

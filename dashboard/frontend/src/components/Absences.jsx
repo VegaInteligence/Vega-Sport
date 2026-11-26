@@ -273,8 +273,12 @@ export function MatchAbsences({ match, started = false }) {
 function PlayedMatchAbsences({ match }) {
   const day = useMatchAbsences(match?.id);
   if (!match?.home?.id || !match?.away?.id) return null;
-  // A side with none of its members read is « Non renseignés », never « Aucun absent » (§ 78.2).
-  const value = (key) => (day.value?.[key]?.squad?.read > 0 ? { id: day.value[key].team, ...day.value[key] } : null);
+  // A side with none of its members read is « Non renseignés », never « Aucun absent » (§ 78.2), unless the day's
+  // episodes known with an end over it are there: those are shown (§ 78.4).
+  const value = (key) => {
+    const sideOf = day.value?.[key];
+    return sideOf?.squad?.read > 0 || sideOf?.absences?.length ? { id: sideOf.team, ...sideOf } : null;
+  };
   // Not read (404, a failure) or neither side read: no card rather than two empty halves.
   if (!day.loading && !value("home") && !value("away")) return null;
   const side = (key) => ({ loading: day.loading, value: value(key) });
