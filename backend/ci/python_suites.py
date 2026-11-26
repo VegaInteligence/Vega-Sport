@@ -97,6 +97,8 @@ if __name__ == "__main__":
     if args[1:] == ["--list"]:
         print("\n".join(t.id() for t in tests(chosen)))
         sys.exit(0)
+    # ESSAI (branche claude/ci-ordre-inverse, à ne pas fusionner) : chaque part dans l'ordre inverse de la découverte.
+    chosen = unittest.TestSuite(list(tests(chosen))[::-1])
     print(f"{args[0]}: {chosen.countTestCases()} tests", flush=True)
     result = unittest.TextTestRunner(verbosity=2).run(chosen)
     sys.exit(0 if result.wasSuccessful() else 1)
