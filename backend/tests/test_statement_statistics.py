@@ -77,6 +77,7 @@ VERIFIER = re.compile(r"SCRAM-SHA-256\$|md5[0-9a-f]{32}")
 # a superuser (CREATEROLE, ADMIN on the logins and roles it rotates, as RDS's master holds them). Fictitious values.
 LEGACY = {"collect": "legacyCollectClear" + "c" * 10, "calc": "legacyCalcClear" + "k" * 10, "read": "legacyReadClear" + "r" * 10}
 ADMIN, ADMIN_PASSWORD = "vega_statements_admin", "adminFictive" + "a" * 20
+USED = 20
 # The worst settings a server can hold before its group applies (GH171-l, n).
 WORST = {"pg_stat_statements.track": "all", "pg_stat_statements.track_utility": "on", "log_statement": "all",
          "log_min_duration_statement": "0", "log_error_verbosity": "verbose", "log_lock_waits": "on",
@@ -155,15 +156,18 @@ class StatementStatisticsTest(unittest.TestCase):
         # What earlier Deploys left in the module's memory (GH171-f): the old rotation's statements, run by the admin
         # identity exactly as vega/migrate.py wrote them until 179; beside them, what must stay: innocent reads naming a
         # role, a user and a password, another login's statement, another role's password statement.
+        # The module evicts its least used entries once full (pg_stat_statements.max, 5 000 by default, RDS's too): what
+        # these tests count is used often enough to outlast the migrations' one-call statements.
         if cls.preloaded:
             from psycopg import sql
-            for role, password in LEGACY.items():
-                cls.db.execute(sql.SQL("ALTER ROLE {} LOGIN PASSWORD {}").format(sql.Identifier(f"vega_v2_{role}"), sql.Literal(password)))
-            for _ in range(2):
+            for _ in range(USED):
+                for role, password in LEGACY.items():
+                    cls.db.execute(sql.SQL("ALTER ROLE {} LOGIN PASSWORD {}").format(sql.Identifier(f"vega_v2_{role}"), sql.Literal(password)))
                 cls.db.execute("SELECT 'r' AS role, 'p' AS password").fetchone()
                 cls.db.execute("SELECT current_user AS \"user\", 'x' AS password").fetchone()
             with psycopg.connect(as_login("vega_v2_collect", LEGACY["collect"]), autocommit=True) as c:
-                c.execute("SELECT 'c' AS role, 'p' AS password").fetchone()
+                for _ in range(USED // 2):
+                    c.execute("SELECT 'c' AS role, 'p' AS password").fetchone()
             cls.db.execute("DROP ROLE IF EXISTS vega_statements_probe")
             cls.db.execute("CREATE ROLE vega_statements_probe LOGIN PASSWORD 'otherRoleSecret000000000'")
         # GH171-k: another base of the same server, with its own activity and its own password statement, and this
@@ -173,13 +177,16 @@ class StatementStatisticsTest(unittest.TestCase):
             recreate("vega_v2_statements_other")
             with psycopg.connect(sibling("vega_v2_statements_other"), autocommit=True) as o:
                 o.execute("CREATE EXTENSION pg_stat_statements")
-                for _ in range(3):
+                for _ in range(3 * USED):
                     o.execute("SELECT 4242 AS other_marker_gh171k").fetchone()
                 o.execute("DROP ROLE IF EXISTS vega_statements_other_probe")
                 o.execute("CREATE ROLE vega_statements_other_probe PASSWORD 'otherBaseSecret000000000'")
-                for _ in range(2):
+                for _ in range(2 * USED):
                     cls.db.execute("SELECT 4243 AS ours_marker_gh171k").fetchone()
                 cls.other["reset_before"] = o.execute("SELECT stats_reset FROM pg_stat_statements_info").fetchone()[0]
+                # The old rotation's statements as recorded before 179: their absence after it is 179's doing.
+                cls.legacy_before = {password: [q for (q,) in o.execute(
+                    "SELECT query FROM pg_stat_statements WHERE strpos(query, %s) > 0", (password,)).fetchall()] for password in LEGACY.values()}
         cls.deployed = run_migrate(ROOT, DSN, PASSWORDS)
         cls.again = run_migrate(ROOT, DSN, PASSWORDS)
         if cls.preloaded:
@@ -300,12 +307,13 @@ class StatementStatisticsTest(unittest.TestCase):
     def test_GH171_f_the_old_rotation_s_statements_go_and_nothing_else(self):
         self.assertTrue(self.preloaded, "the server must preload pg_stat_statements, as database.yaml does (ci.yml)")
         for password in LEGACY.values():
+            self.assertEqual(len(self.legacy_before[password]), 1, f"the old rotation's statement was recorded before 179")
             self.assertEqual(self.hits.get(password, "no extension"), [], "the old rotation's statement is reset")
         kept = {(login, text): calls for login, text, calls in self.kept}
         admin = self.db.execute("SELECT current_user").fetchone()[0]
-        self.assertEqual(kept.get((admin, "SELECT $1 AS role, $2 AS password")), 2, kept)
-        self.assertEqual(kept.get((admin, 'SELECT current_user AS "user", $1 AS password')), 2, kept)
-        self.assertEqual(kept.get(("vega_v2_collect", "SELECT $1 AS role, $2 AS password")), 1, kept)
+        self.assertEqual(kept.get((admin, "SELECT $1 AS role, $2 AS password")), USED, kept)
+        self.assertEqual(kept.get((admin, 'SELECT current_user AS "user", $1 AS password')), USED, kept)
+        self.assertEqual(kept.get(("vega_v2_collect", "SELECT $1 AS role, $2 AS password")), USED // 2, kept)
         self.assertTrue([t for _, t, _ in self.kept if t.startswith("CREATE ROLE vega_statements_probe LOGIN PASSWORD")],
                         "another role's password statement is its owner's history: kept")
 
@@ -325,8 +333,8 @@ class StatementStatisticsTest(unittest.TestCase):
     def test_GH171_k_the_other_base_and_this_one_keep_their_counts(self):
         self.assertTrue(self.preloaded, "the server must preload pg_stat_statements, as database.yaml does (ci.yml)")
         entries = {(db, re.sub(r"\s+", " ", q)): calls for db, q, calls in self.other["entries"]}
-        self.assertEqual(entries.get(("vega_v2_statements_other", "SELECT $1 AS other_marker_gh171k")), 3, entries)
-        self.assertEqual(entries.get(("vega_v2_statements_test", "SELECT $1 AS ours_marker_gh171k")), 2, entries)
+        self.assertEqual(entries.get(("vega_v2_statements_other", "SELECT $1 AS other_marker_gh171k")), 3 * USED, entries)
+        self.assertEqual(entries.get(("vega_v2_statements_test", "SELECT $1 AS ours_marker_gh171k")), 2 * USED, entries)
         self.assertTrue([q for db, q in entries if db == "vega_v2_statements_other" and "otherBaseSecret" in q],
                         "the other base's own statement is its history: kept")
         self.assertEqual(self.other["reset_after"], self.other["reset_before"], "no reset of the whole module")
@@ -341,7 +349,13 @@ class StatementStatisticsTest(unittest.TestCase):
     @classmethod
     def drop_administrator(cls):
         if cls.db.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (ADMIN,)).fetchone():
-            cls.db.execute(f"DROP OWNED BY {ADMIN}")  # its grants in this base
+            # Its two grants in this base, the memberships it granted while rotating (the superuser's own grants of the
+            # same memberships stay), then the login.
+            cls.db.execute(f"REVOKE ALL ON ops.schema_migrations FROM {ADMIN}")
+            cls.db.execute(f"REVOKE ALL ON SCHEMA ops FROM {ADMIN}")
+            for role in ("collect", "calc", "read"):
+                if cls.db.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (f"vega_v2_{role}",)).fetchone():
+                    cls.db.execute(f"REVOKE vega_{role} FROM vega_v2_{role} GRANTED BY {ADMIN}")
             cls.db.execute(f"DROP ROLE {ADMIN}")
 
     def administrator(self):
