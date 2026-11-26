@@ -354,7 +354,6 @@ export default function MatchHead({ match, competition, back, logo, actions }) {
       <div className={s.top}>
         <div className={s.crumbs}>
           {back}
-          <span className={s.slash} aria-hidden="true">/</span>
           {position ? (
             <button
               type="button"

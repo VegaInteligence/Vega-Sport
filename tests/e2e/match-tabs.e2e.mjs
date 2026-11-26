@@ -15,6 +15,8 @@
 // § 63.6 (hugo chose direction C of the head's mock-up): R15 the top row · R16 the thread of matches · R17 previous /
 // next keep the view · R18 the competition's button opens the picker · R19 the head on a phone.
 // § 64 (hugo, 19 h 39): R26 each team in its crest's colour, blue and violet without one.
+// § 72 (hugo, 26 Nov, piste A of the buttons' mock-up): R42 the head and the choices as pills (dark) · R43 the same in
+// light · R44 the pills on a phone; the six tabs, the best grade and the leaders unchanged.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -228,10 +230,19 @@ async function setup(label, device, plan = {}) {
     const file = route.request().url().split("/").pop();
     return CREST_PNG[file] ? route.fulfill({ status: 200, contentType: "image/png", body: CREST_PNG[file] }) : route.fallback();
   });
+  // The pages are pinned to the manifest's publication (GH129-m): they answer the one the API's manifest names.
+  let published = "e2e";
+  await context.route(/\/api\/dashboard\/manifest/, async (route) => {
+    const response = await route.fetch().catch(() => null);
+    if (!response) return route.fallback();
+    const body = await response.json().catch(() => null);
+    if (body?.publicationVersion != null) published = String(body.publicationVersion);
+    return route.fulfill({ response, json: body ?? undefined }).catch(() => {});
+  });
   await context.route(/\/api\/fixtures\?/, (route) => {
     const q = new URL(route.request().url()).searchParams;
     if (q.get("league") !== "l_3FJFUl" || q.get("status") !== "all") return route.fallback();
-    return reply(route, { data: { matches: FIXTURES }, pagination: { generation: "e2e", nextCursor: null } });
+    return reply(route, { data: { matches: FIXTURES }, pagination: { generation: published, nextCursor: null } });
   });
   // The same season in one read, when the API's manifest offers it (FAILURE_MODES_OPTIMISATIONS.md GH129).
   await context.route(/\/api\/fixtures\/season\?/, (route) => {
@@ -273,6 +284,38 @@ const teamColours = (page) => page.evaluate(() => {
   const body = getComputedStyle(document.body);
   return { home, away, homeHue: hue(home), awayHue: hue(away), bodyHome: body.getPropertyValue("--chart-home").trim(), bodyAway: body.getPropertyValue("--chart-away").trim() };
 });
+/** § 72: the computed look of the match page's clickable things (null where an element is missing). */
+const pills = (page) => page.evaluate(() => {
+  const look = (el) => {
+    if (!el) return null;
+    const c = getComputedStyle(el), r = el.getBoundingClientRect();
+    return { bg: c.backgroundColor, color: c.color, radius: c.borderTopLeftRadius, border: c.borderTopWidth, h: Math.round(r.height), w: Math.round(r.width) };
+  };
+  const head = document.querySelector(".match-head");
+  const nav = document.querySelector('nav[aria-label="Matchs de la compétition"]');
+  const tab = document.querySelector('.match-view-tabs [role="tab"][aria-selected="true"]');
+  const card = document.querySelector('.match-detail [class*="cardButton"]');
+  return {
+    back: look(head.querySelector(".match-head-back")),
+    slash: [...head.querySelectorAll('[aria-hidden="true"]')].filter((x) => x.textContent.trim() === "/").length,
+    competition: look(head.querySelector("button[data-match-picker]")),
+    report: look([...head.querySelectorAll("a")].find((a) => a.textContent.includes("Rapport du match"))),
+    bookmark: look([...head.querySelectorAll("button")].find((b) => /Enregistrer/.test(b.textContent + (b.getAttribute("aria-label") || "")))),
+    step: look(nav && nav.firstElementChild),
+    current: look(nav && nav.querySelector('[data-match-tile][aria-current="page"]')),
+    other: look(nav && nav.querySelector('[data-match-tile]:not([aria-current="page"])')),
+    crests: [...document.querySelectorAll(".scoreboard-team > .crest")].map((x) => { const c = getComputedStyle(x); return c.borderTopWidth + " " + c.backgroundColor; }),
+    segments: look(document.querySelector('[role="tabpanel"] .segmented-control')),
+    pressed: look(document.querySelector('[role="tabpanel"] .segmented-control button[aria-pressed="true"]')),
+    tab: tab && (({ bg, color, radius, border }) => ({ bg, color, radius, border }))(look(tab)),
+    tabLine: tab && getComputedStyle(tab, "::after").backgroundColor + " " + getComputedStyle(tab).borderBottomColor + " " + getComputedStyle(tab).boxShadow,
+    card: card && (({ bg, radius, border }) => ({ bg, radius, border, left: getComputedStyle(card).borderLeftWidth }))(look(card)),
+  };
+});
+// The selected tab and the best grade's block as main draws them (read on main before § 72, dark, 1440 px).
+const TAB_BEFORE = { bg: "rgba(0, 0, 0, 0)", color: "rgb(248, 249, 251)", radius: "0px", border: "0px" };
+const TAB_LINE_BEFORE = "rgba(0, 0, 0, 0) rgb(114, 190, 255) none";
+const CARD_BEFORE = { bg: "rgba(0, 0, 0, 0)", radius: "0px", border: "1px", left: "0px" };
 const sideways = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 const viewOf = (page) => new URL(page.url()).searchParams.get("view");
 
@@ -319,6 +362,49 @@ try {
         const got = { tiles, current, inView };
         assert.deepEqual(got, { tiles: ORDER, current: id, inView: true });
         return got;
+      });
+
+      await check("R42 the head, the thread and the choices as pills (dark), the tabs and the cards unchanged",
+        { report: "ivory filled", quiet: "rgba(255, 255, 255, 0.07)", round: "999px", steps: "50%", crests: "no frame, no fill" }, async () => {
+          await page.waitForTimeout(300);
+          const got = await pills(page);
+          const fill = "rgb(244, 241, 234)", ink = "rgb(7, 8, 11)", quiet = "rgba(255, 255, 255, 0.07)";
+          const pill = (x, what) => { assert.ok(x, what + " missing"); assert.equal(x.radius, "999px", what + " radius"); assert.equal(x.border, "0px", what + " border"); };
+          pill(got.back, "back"); pill(got.competition, "competition"); pill(got.report, "report"); pill(got.bookmark, "bookmark");
+          assert.equal(got.slash, 0, "no « / » between the back link and the competition");
+          assert.equal(got.competition.h, 44, "competition height");
+          assert.deepEqual([got.report.bg, got.report.color, got.report.h], [fill, ink, 44], "report filled");
+          assert.deepEqual([got.back.bg, got.bookmark.bg, got.competition.bg], [quiet, quiet, quiet], "quiet pills");
+          assert.deepEqual([got.step.radius, got.step.border, got.step.w, got.step.h], ["50%", "0px", 44, 44], "round steps");
+          assert.deepEqual([got.current.bg, got.current.color, got.current.radius, got.current.border], [fill, ink, "22px", "0px"], "current tile");
+          assert.deepEqual([got.other.bg, got.other.radius], [quiet, "22px"], "other tile");
+          assert.deepEqual(got.crests, ["0px rgba(0, 0, 0, 0)", "0px rgba(0, 0, 0, 0)"], "crests without frame or fill");
+          assert.equal(got.segments.radius, "999px", "choices' track");
+          assert.deepEqual([got.pressed.bg, got.pressed.color, got.pressed.radius, got.pressed.h], [fill, ink, "999px", 32], "the current choice");
+          // The six tabs and the best grade's block keep the look they had on main (§ 72, read on main 64ac3f9 in a build).
+          assert.deepEqual(got.tab, TAB_BEFORE, "the selected tab unchanged");
+          assert.equal(got.tabLine, TAB_LINE_BEFORE, "the selected tab's line unchanged");
+          assert.deepEqual(got.card, CARD_BEFORE, "the best grade's block unchanged");
+          await page.locator(".match-head").screenshot({ path: join(out, "pilules-haut-bureau.png") });
+          return got;
+        });
+
+      await check("R43 the same pills in light: night filled, a dark veil", { report: "night filled", quiet: "rgba(11, 13, 15, 0.06)" }, async () => {
+        await page.evaluate(() => { document.documentElement.dataset.theme = "light"; });
+        await page.waitForTimeout(300);
+        try {
+          const got = await pills(page);
+          const fill = "rgb(11, 13, 15)", ink = "rgb(244, 241, 234)", quiet = "rgba(11, 13, 15, 0.06)";
+          assert.deepEqual([got.report.bg, got.report.color], [fill, ink], "report");
+          assert.deepEqual([got.current.bg, got.current.color], [fill, ink], "current tile");
+          assert.deepEqual([got.pressed.bg, got.pressed.color], [fill, ink], "current choice");
+          assert.deepEqual([got.back.bg, got.bookmark.bg, got.competition.bg, got.step.bg, got.other.bg], [quiet, quiet, quiet, quiet, quiet], "quiet pills");
+          await page.locator(".match-head").screenshot({ path: join(out, "pilules-haut-bureau-clair.png") });
+          await page.screenshot({ path: join(out, "pilules-resume-bureau-clair.png"), fullPage: true });
+          return got;
+        } finally {
+          await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
+        }
       });
 
       await check("R26 each team in its crest's colour: PSG's navy, Lorient's orange", { homeHue: "200–220", awayHue: "20–35" }, async () => {
@@ -689,6 +775,16 @@ try {
         await f.page.screenshot({ path: join(out, "compositions-telephone.png"), fullPage: true });
         assert.ok(resume <= 0 && lineups <= 0, JSON.stringify({ resume, lineups }));
         return { resume, lineups };
+      });
+      await check("R44 phone: the pills keep 44 px for the competition and the report, 36 px for a choice", { competition: 44, report: 44, pressed: 36 }, async () => {
+        await f.go();
+        await settle(f.page, "Le match minute par minute");
+        const got = await pills(f.page);
+        const sizes = { competition: got.competition?.h, report: got.report?.h, pressed: got.pressed?.h };
+        assert.deepEqual(sizes, { competition: 44, report: 44, pressed: 36 });
+        assert.equal(got.report.radius, "999px", "report radius");
+        await f.page.locator(".match-head").screenshot({ path: join(out, "pilules-haut-telephone.png") });
+        return { ...sizes, got };
       });
     } finally {
       await f.close();
