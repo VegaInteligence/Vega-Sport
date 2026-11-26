@@ -208,6 +208,62 @@ Resources:
           AccessControlExposeHeaders:
             Items: [ETag, Content-Length, Cache-Control, Age, X-Cache, X-Data-Source, Server-Timing, Retry-After, X-Amzn-ErrorType]
           OriginOverride: true
+  # The family of each request in the access logs (FAILURE_MODES_OPTIMISATIONS.md GH149; edge-logs.yaml): its route,
+  # each identifier written id, else other. Never the path, an identifier, the query, a cookie or a header; the request
+  # goes on unchanged (no cache key, header, path or origin changes). backend/api/test/edge-logs.test.mjs runs this code
+  # as CloudFront does and fails when a route of the read API has no family here, or a family no route.
+  EdgeFamily:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: vega-v2-api-family
+      AutoPublish: true
+      FunctionConfig:
+        Comment: The read API's route of each request, for the access logs (GH149)
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        import cf from 'cloudfront';
+        const ID = /^[mptl]_(?:[A-Za-z0-9]{6}|v[0-9]{7})$/;
+        const KEY = /^[A-Za-z0-9_-]{1,64}$/;
+        const FAMILIES = {};
+        (
+          'archives.details archives.index assets club-facts club-links clubs.europe clubs.europe.matches ' +
+          'coach-portrait competitions cup-index cup-snapshot cup-table cups.edition cups.index ' +
+          'dashboard.manifest fixtures fixtures.season forecasts.live forecasts.match forecasts.odds forecasts.season ' +
+          'forecasts.swap health league-history matchdays nations ops.status player-form player-honours ' +
+          'player-market-values players.facts-coverage rankings.associations rankings.award ' +
+          'rankings.award.player rankings.breakouts rankings.club rankings.edition rankings.fates ' +
+          'rankings.index rankings.leagues rankings.level rankings.level.player rankings.match ' +
+          'rankings.power rankings.power.history rankings.power.player rankings.round rankings.rounds ' +
+          'read.archive read.club read.clubs read.discipline read.home read.home-favourites read.home-local ' +
+          'read.league read.performance read.player read.players read.presence scouting.routes search ' +
+          'seasons.partition stadium standings status worldcup.matches matches.id matches.id.summary ' +
+          'matches.id.lineups.probable matches.id.lineups matches.id.events matches.id.shots ' +
+          'matches.id.stats matches.id.players matches.id.players.halves matches.id.players.display ' +
+          'matches.id.momentum matches.id.advanced matches.id.advanced.players matches.id.advanced.network ' +
+          'matches.id.heatmaps matches.id.h2h players.id players.id.actions players.id.faced ' +
+          'players.id.halves players.id.injuries players.id.partners players.id.physical players.id.return ' +
+          'players.id.similar players.id.style players.id.transfers teams.id teams.id.absences ' +
+          'teams.id.age-profile teams.id.passing teams.id.similar teams.id.squad teams.id.substitutions ' +
+          'nations.id worldcup.matches.id live.config live.matches.id '
+        ).trim().split(' ').forEach(function (name) { FAMILIES[name] = true; });
+        function family(uri) {
+          if (typeof uri !== 'string' || uri.length > 200) return 'other';
+          const parts = uri.split('/');
+          if (parts[0] !== '' || (parts[1] !== 'api' && parts[1] !== 'live')) return 'other';
+          const rest = parts[1] === 'live' ? ['live'].concat(parts.slice(2)) : parts.slice(2);
+          const named = [];
+          for (let i = 0; i < rest.length; i++) {
+            const part = rest[i];
+            const key = i === 2 && rest[0] === 'worldcup' && rest[1] === 'matches' && KEY.test(part);
+            named.push(ID.test(part) || key ? 'id' : part);
+          }
+          const name = named.join('.');
+          return FAMILIES[name] === true ? name : 'other';
+        }
+        function handler(event) {
+          cf.logCustomData(family(event.request.uri));
+          return event.request;
+        }
   Distribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -256,6 +312,7 @@ Resources:
             CachedMethods: [GET, HEAD]
             Compress: true
             CachePolicyId: !Ref LiveCache
+            FunctionAssociations: [{EventType: viewer-request, FunctionARN: !GetAtt EdgeFamily.FunctionMetadata.FunctionARN}]
             ResponseHeadersPolicyId: !Ref ViewerHeaders
           # Operations reads of the private status page (managed CachingDisabled policy).
           - PathPattern: api/ops/*
@@ -265,6 +322,7 @@ Resources:
             CachedMethods: [GET, HEAD]
             Compress: false
             CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            FunctionAssociations: [{EventType: viewer-request, FunctionARN: !GetAtt EdgeFamily.FunctionMetadata.FunctionARN}]
             OriginRequestPolicyId: !Ref OpsHeaders
           # The archived seasons: the default behaviour, kept up to an hour (LeagueHistoryCache). This path only.
           - PathPattern: api/league-history
@@ -274,6 +332,7 @@ Resources:
             CachedMethods: [GET, HEAD]
             Compress: true
             CachePolicyId: !Ref LeagueHistoryCache
+            FunctionAssociations: [{EventType: viewer-request, FunctionARN: !GetAtt EdgeFamily.FunctionMetadata.FunctionARN}]
             OriginRequestPolicyId: !Ref Validators
             ResponseHeadersPolicyId: !Ref ViewerHeaders
         DefaultCacheBehavior:
@@ -285,6 +344,7 @@ Resources:
           CachePolicyId: !Ref Cache
           OriginRequestPolicyId: !Ref Validators
           ResponseHeadersPolicyId: !Ref ViewerHeaders
+          FunctionAssociations: [{EventType: viewer-request, FunctionARN: !GetAtt EdgeFamily.FunctionMetadata.FunctionARN}]
         CustomErrorResponses:
           - {ErrorCode: 400, ErrorCachingMinTTL: 0}
           - {ErrorCode: 403, ErrorCachingMinTTL: 0}
