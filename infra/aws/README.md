@@ -217,6 +217,21 @@ AWS_PROFILE=statarena bash infra/aws/import-test.sh
 
 Defaults: Ligue 1 (`LEAGUE=l_3FJFUl`), 2025/2026 (`SEASON=2025`), archive `ARCHIVE_SEASON=2019/2020`. With PitchAPI's free plan at one call every 0.5 s, a 306-match season (13 families each) takes about 40 minutes. The worker service computes the aggregates and, within a day, the levels, similarities and power rankings of the backfilled season (it now runs once for a season never computed). It writes only to `vega-football-db-postgres`.
 
+### The base's statements, Performance Insights and its log (GH171)
+
+Migration 179 creates `pg_stat_statements` in `vega_v2` (the module is preloaded since the base was created) and the view `ops.statement_stats`: per normalized statement, the login that ran it, its command, calls, rows, times and blocks, never its text; the owner reads it, no login of the code does. The group (`database.yaml`) records the statements inside the functions, never a role's DDL, and keeps bound values and rows' values (`DETAIL`) out of the log; all of it applies without a restart (`shared_preload_libraries` is unchanged, no `auto_explain`). The migrate task sets the logins' passwords as verifiers computed by libpq, never in clear text. Performance Insights keeps 7 days (free, Database Insights standard); the PostgreSQL log goes to `/aws/rds/instance/vega-football-db-postgres/postgresql`, 14 days (FAILURE_MODES_OPTIMISATIONS.md, GH171). After the Deploy that carries them, from the Mac:
+
+```sh
+aws rds describe-db-instances --profile statarena --region us-east-2 --db-instance-identifier vega-football-db-postgres \
+  --query 'DBInstances[0].{insights:PerformanceInsightsEnabled,retention:PerformanceInsightsRetentionPeriod,mode:DatabaseInsightsMode,logs:EnabledCloudwatchLogsExports,group:DBParameterGroups[0].ParameterApplyStatus}'
+aws rds describe-db-parameters --profile statarena --region us-east-2 --source user \
+  --db-parameter-group-name "$(aws rds describe-db-instances --profile statarena --region us-east-2 --db-instance-identifier vega-football-db-postgres --query 'DBInstances[0].DBParameterGroups[0].DBParameterGroupName' --output text)" \
+  --query "Parameters[].[ParameterName,ParameterValue,ApplyType]" --output table
+aws logs describe-log-groups --profile statarena --region us-east-2 --log-group-name-prefix /aws/rds/instance/vega-football-db-postgres --query 'logGroups[].[logGroupName,retentionInDays]'
+```
+
+Expected: insights `true`, retention 7, mode `standard`, logs `["postgresql"]`, group `in-sync` (a `pending-reboot` would mean a static parameter changed: none does); the group's values as `database.yaml` writes them; the log group at 14 days. The heaviest statements, as the owner, in `vega_v2`: `SELECT login, command, calls, total_ms, mean_ms, shared_blks_read FROM ops.statement_stats ORDER BY total_ms DESC LIMIT 20;` (a statement's text, when needed, by its `queryid` in `pg_stat_statements`).
+
 ## Alerts
 
 On 20 November 2026 the API refused every read for hours (VI-33) and no one was told: the database's three alarms notified no one. Since 23 November every alarm notifies the topic `vega-v2-alerts` of its region, of the alarm and of the return to normal (OK), by e-mail. `backend/tests/test_alerts.py` fails when an alarm loses its action, a threshold leaves the number it comes from, a name no longer matches the stack that creates it, or a filter pattern no longer recognises the line the handler writes.

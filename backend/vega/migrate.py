@@ -21,6 +21,7 @@ import re
 import sys
 from urllib.parse import quote
 
+import psycopg
 from psycopg import sql
 
 from .store import migrate
@@ -99,21 +100,100 @@ def owner_url(env):
     return f"postgresql://{quote(user, safe='')}:{quote(password, safe='')}@{host}:5432/{name}?sslmode=verify-full&sslrootcert={quote(root)}"
 
 
+# A login's verifier is as sensitive as its password (an MD5 one logs in by itself, a SCRAM one opens an offline
+# search): it is never recorded nor logged, and nothing is cleaned afterwards (a rollback, a cancel or a client gone
+# would leave the cleaning undone). Before anything is sent, the rotation's transaction must hold the settings that
+# keep a nested statement's text out of the server's log and statistics; the role sets them when it may (a superuser:
+# CI's, a local server), else they must already be in effect (RDS: the group's values, database.yaml); otherwise the
+# rotation refuses (FAILURE_MODES_OPTIMISATIONS.md GH171.1, Logins; GH171-l to n).
+class LoginsRefused(RuntimeError):
+    pass
+
+
+def secure(conn):
+    """Sets, for the transaction, the settings the role may set, then checks the effective ones; raises LoginsRefused
+    naming each unsafe setting, before any verifier is sent."""
+    def setting(name):
+        return conn.execute("SELECT pg_catalog.current_setting(%s, true)", (name,)).fetchone()[0]
+
+    def holds(name, value):
+        if setting(name) != value:
+            try:
+                with conn.transaction():  # a savepoint: a refused setting leaves the transaction usable
+                    conn.execute("SELECT pg_catalog.set_config(%s, %s, true)", (name, value))
+            except psycopg.errors.InsufficientPrivilege:
+                pass
+        return setting(name) == value
+
+    unsafe = []
+    # No CONTEXT line: an error, a cancel, a termination or a lock wait during the nested statement would print it.
+    if not holds("log_error_verbosity", "terse"):
+        unsafe.append(f"log_error_verbosity is {setting('log_error_verbosity')}")
+    # pg_stat_statements records a nested utility statement only with track all and track_utility on.
+    if setting("pg_stat_statements.track") == "all" and not holds("pg_stat_statements.track_utility", "off"):
+        unsafe.append("pg_stat_statements.track_utility is on with pg_stat_statements.track all")
+    for name in ("debug_print_parse", "debug_print_rewritten", "debug_print_plan"):
+        if not holds(name, "off"):
+            unsafe.append(f"{name} is on")
+    if unsafe:
+        raise LoginsRefused("LOGINS_REFUSED the logins' passwords are not set, nothing was sent: this server would keep "
+                            f"their statements' text ({'; '.join(unsafe)}). Its group must hold database.yaml's values "
+                            "(log_error_verbosity terse, pg_stat_statements.track_utility off), or the role be one that "
+                            "may set them for its transaction.")
+
+
+# The verifiers reach the server as COPY data (in no statement's text and in no bound value); this block, whose text
+# holds no secret, sets the passwords with nested statements. A failure, a cancel or a statement timeout (which WHEN
+# OTHERS does not catch) is raised again without the nested statement.
+SET_LOGINS = """
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN SELECT login, verifier FROM pg_temp.vega_login_verifiers ORDER BY login LOOP
+    BEGIN
+      IF EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = r.login) THEN
+        EXECUTE format('ALTER ROLE %I LOGIN PASSWORD %L', r.login, r.verifier);
+      ELSE
+        EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', r.login, r.verifier);
+      END IF;
+    EXCEPTION
+      WHEN query_canceled THEN
+        RAISE EXCEPTION 'the password of % could not be set (%)', r.login, SQLSTATE USING ERRCODE = SQLSTATE;
+      WHEN OTHERS THEN
+        RAISE EXCEPTION 'the password of % could not be set (%)', r.login, SQLSTATE USING ERRCODE = SQLSTATE;
+    END;
+  END LOOP;
+END
+$$"""
+
+
 def ensure_logins(conn, env):
-    done = []
+    """Sets each login's password from the environment, all in one transaction: a verifier computed by libpq for the
+    server's password_encryption (the server stores the same one it would have computed), never the password."""
+    algorithm = conn.execute("SHOW password_encryption").fetchone()[0].encode()
+    rows = []
     for role in LOGINS:
         password = env.get(f"V2_{role.upper()}_PASSWORD")
-        if not password:
-            continue
-        login = f"vega_v2_{role}"
-        with conn.transaction():
-            exists = conn.execute("SELECT 1 FROM pg_roles WHERE rolname=%s", (login,)).fetchone()
-            statement = "ALTER ROLE {} LOGIN PASSWORD {}" if exists else "CREATE ROLE {} LOGIN PASSWORD {}"
-            conn.execute(sql.SQL(statement).format(sql.Identifier(login), sql.Literal(password)))
+        if password:
+            login = f"vega_v2_{role}"
+            rows.append((role, login, conn.pgconn.encrypt_password(password.encode(), login.encode(), algorithm).decode()))
+    if not rows:
+        return []
+    deadlock_ms = int(conn.execute("SELECT setting FROM pg_catalog.pg_settings WHERE name = 'deadlock_timeout'").fetchone()[0])
+    with conn.transaction():
+        secure(conn)
+        # A wait on another session's lock ends before it would be logged (deadlock_timeout), as a failure (55P03).
+        conn.execute(sql.SQL("SET LOCAL lock_timeout = {}").format(sql.Literal(f"{max(10, deadlock_ms // 2)}ms")))
+        conn.execute("CREATE TEMPORARY TABLE vega_login_verifiers (login text PRIMARY KEY, verifier text NOT NULL) ON COMMIT DROP")
+        with conn.cursor().copy("COPY pg_temp.vega_login_verifiers (login, verifier) FROM STDIN") as copy:
+            for _, login, verifier in rows:
+                copy.write_row((login, verifier))
+        conn.execute(SET_LOGINS)
+        for role, login, _ in rows:
             conn.execute(sql.SQL("GRANT {} TO {}").format(sql.Identifier(f"vega_{role}"), sql.Identifier(login)))
             conn.execute(sql.SQL("ALTER ROLE {} CONNECTION LIMIT {}").format(sql.Identifier(login), sql.Literal(CONNECTION_LIMITS[role])))
-        done.append(login)
-    return done
+    return [login for _, login, _ in rows]
 
 
 def main(env=os.environ):

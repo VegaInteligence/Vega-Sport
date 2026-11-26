@@ -293,3 +293,164 @@ What #137 asks beyond this route stays open: the other routes whose validator is
 in SQL (cheaper since 177); it spares the transfer of their rows, the building of the answer and its hash. A validator
 that skips the reads entirely would need a version kept by every writer of the tables they read (matches, teams,
 assets, provider ids, players, events, rounds, editions, player seasons): not done.
+
+## GH137M. `/api/matchdays`: the rounds of the season asked, read from its own editions (GH #137, VI-77; GH #145, VI-85)
+
+Counted in production (read only, by the coordinator, 26 Nov 2026; `optimisations-suite-2611/aws-revalidations-cibles-avant.json`,
+`aws-cache-public-avant.json`). Over 24 hours, the answers 304 the read API gave for the support routes, with the base's
+time they cost: `/api/matchdays` 56 (14.2 s in all, p95 477 ms), `/api/standings` 30 (24.2 s, p95 1 719 ms),
+`/api/cup-snapshot` 8 (10.1 s), `/api/rankings/associations` 18 (1.1 s). Two plain GETs from Paris of Premier League
+2026/27: `/api/matchdays` a `RefreshHit` of 748 ms (the origin's base 293 ms, one statement) then a `Hit` of 54 ms;
+`/api/standings` a `Miss` of 1 046 ms then a `Hit`. These counts say what a revalidation costs at the origin, route by
+route; two requests from one point of presence say nothing of the edge's hit ratio across visitors (GH149 measures
+that). `/api/matchdays` is the most revalidated of them and its refresh was seen directly: it comes first. Read in the
+code (`e4014803`): the route reads `api.match_rounds`, a view over `api.fixtures` (every match of the base with its
+teams, crests, venue, referee and keys), filtered on the computed league id and on the season label or native label;
+its validator is the SHA-256 of the answer, so a 304 costs the whole read. `/api/standings` (its withheld editions, the
+match page's « Classement » relying on its 404) is left as it is.
+
+### GH137M.1 Rules
+
+- **The same answer, the same validator.** For every `competition` and `season`, the rows of `api.match_rounds` (each
+  match's public id, its round's name, `playoff`), in the same order (the id), so the same body and the same ETag
+  (`W/"catalog-v1-<sha256 of the body>"`): an edge or a browser holding a tag of before the change gets its 304 after
+  it. No contract change: parameters, statuses, headers, body.
+- **The exact editions first.** One statement, through a function of the `api` schema (`api.matchday_rounds(league,
+  season)`, migration 180, `SECURITY DEFINER`, executable by `vega_read` alone): the league's editions (its current
+  PitchAPI key, else `l_v` and its id, as `api.fixtures` names it; never an archive's or a cup's edition) whose
+  season's label or native label is the one asked; then their matches through `matches_competition_kickoff` (the
+  editions' ids given as an array), each with its round (`core.rounds`), its current PitchAPI key (else `m_v` and its
+  id) and `playoff` (`has_playoff`, or a round of stage `playoff`), the round and the key looked up by index for each
+  match (review of the first plan: estimating ten times the matches it took, the planner hashed every round and every
+  match key of the base). Never `api.fixtures`, never another edition's match, round or key.
+  `api.match_rounds` stays (the tests' oracle).
+- **One snapshot.** The rows and the validator come from that one statement: the ETag is the hash of the answer built
+  from its rows (every field of every match), so a 304 holds exactly when the answer would be the same.
+- **Kept.** 400 for a missing, unknown, repeated or malformed parameter; 404 when no match of the selection has a
+  round; HEAD and `If-None-Match` as before; `public, max-age=0, s-maxage=60`. The migration is marked `-- vega:online`
+  (a function added: the worker's code is unaffected). What a revalidation still costs: the edition's matches read by
+  index and the hash, not the base.
+- **GH145 (the edge's time).** Not lengthened here: a longer time needs a perimeter of freshness for the route (which
+  writes change a round or a play-off flag, how soon the site must show them), which these counts do not give. The
+  access logs (GH149) can measure how often an answer changes, over a week for example, without that being a condition.
+  The private and dynamic routes keep their policies, `/api/league-history` its hour.
+
+### GH137M.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| GH137M-a | Every selection of the test base: a league by its PitchAPI key, by `l_v…` (no key), by a former key; a season by its label, by its native label (`2026` for a calendar-year league), not held; an archive's and a cup's edition; matches without a round, with a former key and a current one, without a key; a round of stage `playoff`; `has_playoff` | the base commit's status, body and ETag for each |
+| GH137M-b | HEAD; GET with the answer's tag; with a stale tag; `*`; HEAD with the tag | 200 without a body and the tag; 304; 200 with the answer; 304; 304 |
+| GH137M-c | A round renamed; a match moved to another round; `has_playoff` set; a round's stage set to `playoff`; a match's PitchAPI key changed; a match added to the edition, one taken out of it | another body and tag each, the base commit's; never 304 for the old tag |
+| GH137M-d | Writes outside the selection: another edition's round, another league's match, a match of another season of the same league | the same tag, 304 |
+| GH137M-e | An unknown league; a season not held; a league whose matches have no round; a malformed or missing parameter; a repeated or unknown one | 404; 404; 404; 400; 400 |
+| GH137M-f | One request whose selection holds 126 matches in a base of 20 000 more (other editions, archives) | one statement; `core.matches`, `core.rounds` and `core.provider_ids` read without a sequential scan, at most twice the selection's rows fetched from each (the base commit's statement reads `core.matches` through; the first version of the function every match key and round) |
+| GH137M-g | A local PostgreSQL 18 base sized on production (about 16 000 matches a season over six seasons, 150 000 archived): every league and season, the base commit's code and this one | identical status, body and ETag for each; their times and plans (`EXPLAIN ANALYZE`, buffers) |
+
+GH137M-a–f: `backend/api/test/matchdays-lean.test.mjs` (with `reference.test.mjs`); g: outside the repository (the
+evidence's `gh137/`). Not verifiable here: production's plan and time after the change (a Deploy, then the same
+24-hour count).
+
+## GH171. The statements' statistics, Performance Insights and the PostgreSQL log (GH #171, VI-111)
+
+Seen before this change (re-read on `e4014803`): `shared_preload_libraries: pg_stat_statements` is set
+(`database.yaml`) but no migration creates the extension, so no view reads what the module records; Performance
+Insights is off; the PostgreSQL log is not exported (the statements over 2 s are only in RDS's files). Measured on the
+local PostgreSQL 18.6 (the module preloaded, every setting at its default, as RDS's group leaves them), before any code:
+
+- `CREATE ROLE … PASSWORD '<clear>'` and `ALTER ROLE … PASSWORD '<clear>'` are recorded **verbatim** in
+  `pg_stat_statements.query` (`pg_stat_statements.track_utility` is `on`): the migrate task sets the three logins'
+  passwords that way on every Deploy (`vega/migrate.py`, `ensure_logins`). The module records them whether or not the
+  extension exists: a view created later shows what is already in shared memory.
+- The same statement with a verifier computed by libpq (`PQencryptPasswordConn`, psycopg's
+  `pgconn.encrypt_password`) records `PASSWORD 'SCRAM-SHA-256$4096:…'`: no clear password; with `track_utility` off it
+  is not recorded at all.
+- A bound value is never in `pg_stat_statements` (`SELECT $1::text`), but a statement slower than
+  `log_min_duration_statement` is logged with `DETAIL: Parameters: $1 = '<value>'` (`log_parameter_max_length` is
+  `-1`, every value in full); with `log_parameter_max_length = 0` the line has no value.
+- A unique violation logs `DETAIL: Key (email)=(<value>) already exists.`; with `log_error_verbosity = terse` the
+  DETAIL line is gone, the statement keeps its `$1`. The error's own message keeps the input it rejected (`invalid input
+  syntax for type integer: "<input>"`) whatever the verbosity: only `log_min_messages` would hide it, and with it
+  every error.
+
+### GH171.1 Rules
+
+- **Migration 179** (`179_statement_statistics.sql`, the next number on `main` at `e4014803`; marked `-- vega:online`,
+  GH157): `CREATE EXTENSION IF NOT EXISTS pg_stat_statements` in `vega_v2` (in `public`, or where it already is);
+  of the module's entries, only those the old rotation left (clear passwords): in this database, recorded for the login
+  that runs 179 (the admin identity that ran every earlier rotation), whose text is exactly that statement
+  (`ALTER ROLE "vega_v2_<collect|calc|read|account>" LOGIN PASSWORD '…'` or `CREATE ROLE …`, as `vega/migrate.py`
+  wrote it until 179), reset one by one (`pg_stat_statements_reset(userid, dbid, queryid)`); nothing when the module
+  is not loaded. Every other entry keeps its history and counters: an innocent read naming a `role`, `user` or
+  `password` column or alias, another login's statements, another role's password statement, the other databases of
+  the server; `pg_stat_statements_info` keeps its date of reset (reviews of 26 Nov 2026: a first version reset the
+  whole server's statistics; a second reset every entry of this database mentioning a role and a password, innocent
+  reads included, and again at every rotation); the extension's views and functions revoked
+  from `PUBLIC`; one view `ops.statement_stats`: per normalized statement of this database (`queryid`), the login that
+  ran it, its command (the first keyword: `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `COPY`, `CALL`, else
+  `OTHER`), top level or nested, calls, rows, total, mean and largest time, shared blocks hit and read, temporary blocks
+  written; never the statement's text. (A first version labelled the read API's statements by their leading
+  `/*vega:v2:<read>*/`: the module records a statement from its first token, without that comment, so every row read
+  `unlabelled`; found by GH171-d's first run.) No grant: `ops`'s default privileges would give it to `vega_collect`, they are revoked; the owner
+  reads it.
+- **Logins.** `ensure_logins` sends a verifier computed by libpq for the server's `password_encryption`, never the
+  password; the verifier is as sensitive as the password here (review of 26 Nov 2026: an MD5 verifier logs in by
+  itself, a SCRAM one opens an offline search). Nothing is cleaned afterwards (a transaction rolled back, a client gone,
+  a cancel would leave the cleaning undone): recording and logging are prevented before anything is sent.
+  - **The secure mode, checked first.** In the rotation's transaction, before any verifier leaves the process, the
+    session's effective settings must keep a nested statement's text out of every channel: `log_error_verbosity`
+    `terse` (no `CONTEXT` line: an error, a cancel, a termination or a lock wait during the nested statement would
+    print it), `pg_stat_statements` not recording a nested utility statement (not loaded, or `track` `top`/`none`, or
+    `track_utility` off), the `debug_print_*` dumps off. Each setting not yet so is set for the transaction when the
+    role may (a superuser: CI's, a local server); RDS's administrator is not one: there the group's values
+    (`database.yaml`: `terse`, `track_utility` 0) must be in effect. Otherwise the rotation refuses before sending
+    anything (`LOGINS_REFUSED`, naming each setting and its value; exit 1): the passwords stay as they were.
+  - **The path.** The verifiers reach the server as `COPY` data into a temporary table dropped at commit (in no
+    statement's text and in no bound value); a `DO` block whose text holds no secret sets each password with a nested
+    statement; `lock_timeout` below `deadlock_timeout`; a failure, a cancel (`query_canceled`, which `WHEN OTHERS`
+    does not catch) or a `statement_timeout` is raised again as `the password of <login> could not be set
+    (<SQLSTATE>)`. The top-level texts (`CREATE TEMPORARY TABLE`, `COPY … FROM STDIN`, the `DO` block) are the only
+    ones a statement, slow-statement, error or lock-wait line, Performance Insights or `pg_stat_activity` can show.
+  - **Guaranteed:** under the secure mode, neither `pg_stat_statements` nor the server's log holds a login's password
+    or verifier, whether the rotation succeeds, fails on any login, is cancelled, times out or loses its client.
+    `auto_explain` (not loaded, GH171.1 « Not assumed ») does not explain utility statements.
+- **Parameter group** (all dynamic: applied without a restart; `shared_preload_libraries` unchanged, no
+  `auto_explain`): `pg_stat_statements.track = all` (the statements inside the SQL and PL/pgSQL functions, normalized),
+  `pg_stat_statements.track_utility = 0`, `track_io_timing = 1`, `log_parameter_max_length = 0`,
+  `log_parameter_max_length_on_error = 0`, `log_error_verbosity = terse`, `log_lock_waits = 1`, `log_temp_files`
+  10 MB; `log_min_duration_statement` stays at 2 s.
+- **Instance.** Performance Insights on, 7 days (the free retention), Database Insights `standard`, on the classes that
+  take it (not `db.t4g.micro`/`small`, the template's default); the `postgresql` log exported to
+  `/aws/rds/instance/vega-football-db-postgres/postgresql`, created by the stack before the export with 14 days'
+  retention (an export creates its group without a retention otherwise).
+- **Not assumed.** No restart, no `auto_explain` (its plans would carry the values of `EXPLAIN`'d parameters), no
+  grant of `pg_read_all_stats`. The deploy role's CloudFormation role gets the RDS log group only.
+
+### GH171.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| GH171-a | A fresh base migrated to 179 (the module preloaded) | the extension in `vega_v2`; `ops.statement_stats` answers; its columns as GH171.1, no `query` column |
+| GH171-b | The same files applied again; a base where the extension already exists (created by hand, before 179) | nothing applied again; 179 applies, the view reads the existing extension |
+| GH171-c | A base without the preload (a local server; CI's preloads it, as the base) | 179 applies (no reset, no error); the view exists; reading it fails as the module says (not a silent empty view) |
+| GH171-d | Statements run after 179: the read API's search (real handler, twice), a worker login's read | the search's statement under `vega_read` with its two calls, its command `WITH`; the worker's under `vega_v2_collect`; every command one of the list |
+| GH171-e | `PUBLIC`, `vega_collect`, `vega_calc`, `vega_read` | no `SELECT` on `ops.statement_stats`, no `SELECT` on the extension's views, no `EXECUTE` on its functions |
+| GH171-f | Production before 179: the base commit's rotation (clear passwords) as the admin, beside innocent reads of the admin naming `role`, `user` and `password` aliases, another login's statements and another role's password statement; then 179 | the old rotation's statements gone; every other entry kept with its counts; never a text in the view |
+| GH171-g | `python -m vega.migrate` with the logins' passwords, the extension present | the logins log in with their passwords; no password in `pg_stat_statements` (track_utility on, the default), nor in the server's log |
+| GH171-h | A slow statement with a bound value, an error with a row's value, under the group's settings (set in the session as the group sets them) | no value in the log; under the defaults the same lines hold them (the settings are what removes them) |
+| GH171-i | `database.yaml` | the group's settings and the instance's properties of GH171.1; the log group before the instance; `shared_preload_libraries` unchanged; no `auto_explain`; `cfn-lint` clean |
+| GH171-j | `deploy-roles.yaml` | the CloudFormation role may create, tag and set the retention of the RDS log group, nothing wider |
+| GH171-k | One server, two bases with their own activity (statements run 2 and 3 times, a password statement in each), then 179 on `vega_v2` alone | every entry of the other base with its counts; this base's innocent entry with its counts; `pg_stat_statements_info.stats_reset` unchanged |
+| GH171-l | A rotation by an administrator who is not a superuser (as RDS's), under the worst settings a server can have before its group applies (`track` all, `track_utility` on, verbose errors, `log_statement` all, `log_min_duration_statement` 0, lock waits logged, bound values in full, `deadlock_timeout` 200 ms), another session holding the last login's row | refused before anything is sent: exit 1, `LOGINS_REFUSED` naming `log_error_verbosity` and `pg_stat_statements.track_utility`; checked at once, before any retry: no password or verifier (`SCRAM-SHA-256$`, `md5…`) in `pg_stat_statements` or in the server's log of the window; the old passwords still log in |
+| GH171-m | The same administrator under the group's settings (`database.yaml`'s values in effect): the rotation failing on the last login (its row held); cancelled by `pg_cancel_backend` during its nested statement; stopped by its own `statement_timeout`; its client killed mid-rotation; two rotations at once; then a retry, and a second rotation | each failure exits 1 with `the password of <login> could not be set (<SQLSTATE>)` (55P03, 57014), the client's death leaves the old passwords; checked at once after each, before any retry: no secret in `pg_stat_statements` or the log; the retry sets the new passwords (they log in); innocent entries keep their counts across the rotations (no purge) |
+| GH171-n | A superuser's rotation (CI's, a local server) under the worst settings, failing on the last login, then succeeding | the secure mode set for the transaction, nothing refused; checked at once after the failure and after the success: no secret in `pg_stat_statements` or the log |
+| GH171-o | The calculator's inventory of the views (`test_calculator.ApiViewTest.test_every_view_answers`), which counted four `ops` views before 179: CI's run of PR #241 (707f5e03) failed on `5 != 4` | the `ops` views named one by one: the three of 012 (`v_backlog`, `v_coverage_gaps`, `v_freshness`), live reliability (042), `statement_stats` (179); every view still read, `ops.statement_stats` included on the preloaded server (CI's); on a server without the preload its read refuses as GH171-c says (55000), the others are read |
+
+GH171-o: `backend/tests/test_calculator.py` (`VEGA_V2_AGG_TEST_DSN`). GH171-a–h, k–n: `backend/tests/test_statement_statistics.py` on the local PostgreSQL 18 (`VEGA_V2_STATEMENTS_TEST_DSN`);
+the server's log for GH171-l–n is read from its container (`VEGA_V2_PG_CONTAINER`, CI's service container: `ci.yml`
+passes `job.services.postgres.id`), for GH171-h outside the repository (evidence). RDS's administrator is played by a
+local login without `SUPERUSER` (`CREATEROLE`, `ADMIN` on the logins and roles it rotates, as RDS's master holds them);
+RDS itself is not verified here. GH171-i, j:
+`backend/tests/test_statement_statistics.py` (template) and `cfn-lint`. Not verifiable here: RDS's own application of
+the group (dynamic parameters apply at once; checked after a Deploy with the commands of `infra/aws/README.md`),
+Performance Insights' screens, the export's first lines.
