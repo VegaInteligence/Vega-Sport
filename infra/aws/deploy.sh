@@ -107,7 +107,7 @@ sha256() { openssl dgst -sha256 -r "$@" | cut -d' ' -f1; }
 ACCOUNT=off
 account_on=()
 account_preflight() {
-  local LC_ALL=C switch status value problems=() p name pattern need secure
+  local LC_ALL=C switch status value problems=() p name pattern need secure bytes
   switch=$(ssm_value /vega/v2/account-deploy)
   case "$switch" in
     "") echo "account: off (no SSM parameter /vega/v2/account-deploy): the account API is not deployed (backend/account/DEPLOYMENT.md, section 3)"; return 0 ;;
@@ -118,12 +118,14 @@ account_preflight() {
   if [ ${#problems[@]} = 0 ]; then
     [ "$(output vega-v2-deploy-roles AccountGrants)" = 2 ] ||
       problems+=("stack vega-v2-deploy-roles: its output AccountGrants is not 2: the owner updates it from the Mac with infra/aws/deploy-roles.yaml (backend/account/DEPLOYMENT.md, section 3)")
-    # name, pattern (account.yaml's AllowedPattern, matched on the whole value), required or optional, String or SecureString
-    while read -r name pattern need secure; do
+    # name, pattern (account.yaml's AllowedPattern, matched on the whole value), required or optional, String or
+    # SecureString, and a length in bytes (min-max) where a pattern would repeat more than 255 times, which macOS's bash
+    # 3.2 cannot compile (review of 07 h 09): the Neon key's 16 to 512 printable ASCII bytes but the space, under LC_ALL=C.
+    while read -r name pattern need secure bytes; do
       value=$(ssm_value "$name" "$([ "$secure" = SecureString ] && echo decrypt)")
       if [ -z "$value" ]; then
         [ "$need" = optional ] || problems+=("$name: missing (SSM $secure; backend/account/DEPLOYMENT.md, section 3)")
-      elif ! [[ $value =~ ^($pattern)$ ]]; then
+      elif ! [[ $value =~ ^($pattern)$ ]] || { [ -n "$bytes" ] && { [ "${#value}" -lt "${bytes%-*}" ] || [ "${#value}" -gt "${bytes#*-}" ]; }; }; then
         problems+=("$name: malformed (SSM $secure, not of the form infra/aws/account.yaml accepts)")
       fi
     done <<'PREREQUISITES'
@@ -131,7 +133,7 @@ account_preflight() {
 /vega/v2/neon-project-id [A-Za-z0-9_-]{1,64} required String
 /vega/v2/neon-branch-id [A-Za-z0-9_-]{1,64} required String
 /vega/v2/site-origins (https://[a-z0-9.-]+|http://localhost:[0-9]+)(,(https://[a-z0-9.-]+|http://localhost:[0-9]+))* required String
-/vega/v2/neon-api-key [[:graph:]]{16,512} optional SecureString
+/vega/v2/neon-api-key [[:graph:]]+ optional SecureString 16-512
 /vega/v2/account-database-url postgresql://vega_v2_account:[^@]+@[^/]+/vega_v2 optional SecureString
 /vega/v2/pass-key/k1 [A-Za-z0-9_-]{43,} optional SecureString
 PREREQUISITES

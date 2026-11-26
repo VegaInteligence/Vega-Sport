@@ -403,6 +403,23 @@ class AccountDeployTest(unittest.TestCase):
                 self.assert_refused(run, "/vega/v2/neon-api-key")
                 self.assertNotIn(value, run.log)
 
+    def test_w6_the_neon_api_key_is_16_to_512_printable_bytes(self):
+        """The preflight's own rule for the Neon key (account.yaml has no pattern for it, NoEcho): 16 to 512 bytes, each a
+        printable ASCII character but the space, under LC_ALL=C; checked as a length and a class, which macOS's bash 3.2
+        compiles (its regular expressions repeat at most 255 times: {16,512} does not compile there, review of 07 h 09)."""
+        for value, accepted in (("k" * 16, True), ("k" * 512, True), ("napi_" + "K9~!" * 70, True),
+                                ("k" * 15, False), ("k" * 513, False), ("\u00e9" * 8, False)):
+            with self.subTest(bytes=len(value.encode()), accepted=accepted):
+                state = prepared(base_state())
+                state["params"]["/vega/v2/neon-api-key"] = {"Type": "SecureString", "Value": value}
+                run = self.deploy(state)
+                if accepted:
+                    self.assertEqual(run.code, 0, run.log)
+                    self.assertEqual(run.overrides("vega-v2-account")[0]["NeonApiKey"], value)
+                else:
+                    self.assert_refused(run, "/vega/v2/neon-api-key")
+                    self.assertNotIn(value, run.log)
+
     def test_w7_a_malformed_generated_secret_is_refused(self):
         cases = {"/vega/v2/account-database-url": f"postgresql://vega_v2_account:pw@{ENDPOINT}:5432/vega_v2?sslmode=require",
                  "/vega/v2/pass-key/k1": "A" * 42}
