@@ -123,6 +123,8 @@ Resources:
             Condition:
               StringEquals:
                 'AWS:SourceArn': !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+  # The read API decides how long each answer is kept (its s-maxage; FAILURE_MODES_OPTIMISATIONS.md GH145): a year at
+  # most, the longest it may say. DefaultTTL 0: an answer that says nothing is not kept (transport.mjs: no-store).
   Cache:
     Type: AWS::CloudFront::CachePolicy
     Properties:
@@ -130,15 +132,15 @@ Resources:
         Name: vega-v2-api
         MinTTL: 0
         DefaultTTL: 0
-        MaxTTL: 60
+        MaxTTL: 31536000
         ParametersInCacheKeyAndForwardedToOrigin:
           CookiesConfig: {CookieBehavior: none}
           HeadersConfig: {HeaderBehavior: none}
           QueryStringsConfig: {QueryStringBehavior: all}
           EnableAcceptEncodingBrotli: true
           EnableAcceptEncodingGzip: true
-  # GET /api/league-history (an archived season, s-maxage=3600): the default policy's cache key, but an hour at
-  # most instead of 60 s (FAILURE_MODES_OPTIMISATIONS.md, GH137; GH #145 for this route only). DefaultTTL 0: an answer that says
+  # GET /api/league-history (an archived season, s-maxage=3600): the default policy's cache key, an hour at
+  # most (FAILURE_MODES_OPTIMISATIONS.md, GH137; GH #145). DefaultTTL 0: an answer that says
   # nothing is not kept. A correction may stay an hour at a point of presence; an invalidation of
   # /api/league-history* removes it sooner.
   LeagueHistoryCache:
@@ -155,7 +157,8 @@ Resources:
           QueryStringsConfig: {QueryStringBehavior: all}
           EnableAcceptEncodingBrotli: true
           EnableAcceptEncodingGzip: true
-  # GET /live/matches/{id} (live.yaml): the full live state, cached 2 s (doc "Live").
+  # GET /live/matches/{id} (live.yaml): the full live state, cached 2 s (doc "Live"). MaxTTL 2 also bounds the
+  # time an expired score may be served while the live function fails (stale-if-error, transport.mjs; GH145).
   LiveCache:
     Type: AWS::CloudFront::CachePolicy
     Properties:
@@ -164,6 +167,22 @@ Resources:
         MinTTL: 0
         DefaultTTL: 2
         MaxTTL: 2
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig: {CookieBehavior: none}
+          HeadersConfig: {HeaderBehavior: none}
+          QueryStringsConfig: {QueryStringBehavior: none}
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+  # GET /live/config (live.yaml): the stack's live settings, which only a stack update changes, kept the minute they
+  # say; the live policy otherwise (FAILURE_MODES_OPTIMISATIONS.md GH145). Its own behaviour, for this path only.
+  LiveConfigCache:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: vega-v2-live-config
+        MinTTL: 0
+        DefaultTTL: 2
+        MaxTTL: 60
         ParametersInCacheKeyAndForwardedToOrigin:
           CookiesConfig: {CookieBehavior: none}
           HeadersConfig: {HeaderBehavior: none}
@@ -305,6 +324,16 @@ Resources:
             CachedMethods: [GET, HEAD]
             Compress: false
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          # The live settings a minute (LiveConfigCache), listed before live/* (the first pattern that matches wins).
+          - PathPattern: live/config
+            TargetOriginId: live
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: !Ref LiveConfigCache
+            FunctionAssociations: [{EventType: viewer-request, FunctionARN: !GetAtt EdgeFamily.FunctionMetadata.FunctionARN}]
+            ResponseHeadersPolicyId: !Ref ViewerHeaders
           - PathPattern: live/*
             TargetOriginId: live
             ViewerProtocolPolicy: redirect-to-https
