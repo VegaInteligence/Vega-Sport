@@ -511,6 +511,46 @@
 - Deploy 122 (23 Nov, 23:13–23:26 UTC, main 3fe571b, green, log ends with `done`): `vega-v2-waf`, `vega-v2-alerts` and `vega-v2-alerts-edge` created, no e-mail subscription yet. Checked on AWS after it: 13 alarms in OK with one topic each for ALARM and OK, the web ACL attached to the distribution with its four rules in Count, the Route 53 probe green from 6 checkers, `vega-v2-live-read` at 10 reserved copies, the headers present on `/api/health` and on the site. PR #78 merged (main 8b2bd5a) and the roles stack redeployed at 23:33 UTC: the three subscription actions are allowed on `*`.
 - Spend alerts: `vega-v2-budget` created by the owner at 23:09 UTC (120 $, four notifications, daily anomaly mail, existing services monitor reused). Adding the second address to it asked for a replacement of the budget, which its fixed name forbids: the name now carries a `Revision` parameter (`budget.yaml`, README « Spend alerts »). Test first, seen red: `test_cost_caps` 14. Not run on AWS yet.
 
+## Direction visuelle du SaaS — 25 novembre 2026
+
+- Hugo a écarté la piste magazine et le comparateur de joueurs. Il veut adoucir la vraie page d’accueil en conservant ses fonctions et sa hiérarchie.
+- Maquette locale sur le HTML public du 25 novembre, semaine du 23 au 29, avec une feuille de style dédiée. Vue ordinateur et mobile contrôlées, détail du match ouvert sur mobile. [Accueil complet](/Users/lemonnierhugo/.codex/visualizations/2026/11/25/01a2139f-40a5-7553-b340-9f66af5edc0f/accueil-vega/accueil-complet.jpg). Proposition en attente de retour.
+
+## Plafond temporaire des inscriptions Neon Auth — 25 novembre 2026
+
+- Vérification en lecture seule du projet Vega Sport, branche `production` (`br-mute-bonus-be23014e`) : 2 comptes vérifiés, tous deux administrateurs et liés à Google. Inscriptions par e-mail ouvertes, Google activé, webhook désactivé. Le plafond demandé de 5 comptes au total laisse 3 places.
+- Les réglages Neon Auth consultés ne proposent pas de plafond de comptes. Le [webhook `user.before_create`](https://neon.com/docs/auth/guides/webhooks#userbefore_create) permet un refus avant création. Pour les trois premières inscriptions, réserver les places atomiquement. Pour trois personnes choisies, autoriser leurs adresses. Vérifier les inscriptions e-mail et Google et la connexion des comptes existants avant activation.
+- Contexte comptes : [VI-38](https://linear.app/vegainteligence/issue/VI-38). Aucun réglage distant modifié. Prochaine décision : attribution des trois places si une mise en œuvre est demandée.
+
+## Logo de la navbar : rotation et rechargement de l’accueil — 25 novembre 2026
+
+- Demande de Hugo : au clic sur l’astérisque, effectuer une rotation de 360° puis ouvrir l’accueil par un rechargement, y compris depuis l’accueil. Proposition : tour de 360 ms, accès immédiat si les animations sont réduites.
+- Aperçu validé. Livré sur `main` sous `f67fef94` et vérifié en production avec Chromium. Validation locale : E2E 10/10 sur les trois moteurs, site 1 026/1 026 et build réussi. Serveurs et worktree temporaires retirés. Preuves : `/Users/lemonnierhugo/.codex/visualizations/2026/11/25/01a2125d-5f78-7cf2-89b2-f12e7a7b5244/vega-logo-360-e2e/verification.md`.
+
+## Optimisations prioritaires — 25 novembre 2026
+
+- [PR #230](https://github.com/VegaInteligence/Vega-Sport/pull/230) fusionnée sur `main` au commit `6e48b6c7`. [Déploiement AWS](https://github.com/VegaInteligence/Vega-Sport/actions/runs/45692934572) réussi à 21 h 25 Paris. Cadrage Astra et Codex, implémentation Opus, revue Codex. La [version suivante](https://github.com/VegaInteligence/Vega-Sport/actions/runs/45701622867), `20dd78a9`, inclut cette correction.
+- [Favoris VI-158](https://linear.app/vegainteligence/issue/VI-158) vérifiés à 21 h 25 et 22 h 20 sur les identifiants de l’incident. Joueur 6/6 HTTP 200 (médiane 2,22 s), club + joueur 6/6 (2,25 s), club 6/6 (0,87 s). Tous les contenus sont valides.
+- [Cache VI-85](https://linear.app/vegainteligence/issue/VI-85) et [historique VI-77](https://linear.app/vegainteligence/issue/VI-77). Pour deux saisons archivées au point de présence parisien, HIT à 3 598 s, MISS juste après l’heure, puis HIT à 10 s. Les deux tickets restent ouverts pour les autres routes. [Rapport et mesures de production](</Users/lemonnierhugo/Downloads/Vega Sport - contre-audit du 25 novembre 2026/preuves/production-pr230-20261125/Validation-production.md>).
+- [Pilote VI-134](https://linear.app/vegainteligence/issue/VI-134). Rôle dédié appliqué en production. L’usage du pilote manuel nécessite encore sa propre clé fournisseur.
+
+## Contre-audit des optimisations — 25 novembre 2026
+
+- [Suivi GitHub #211](https://github.com/VegaInteligence/Vega-Sport/issues/211) mis à jour après la contre-expertise des 84 propositions et des 11 sujets de sécurité. Les 84 tickets initiaux sont ouverts et 11 ont reçu des rectifications en commentaire. [Revue du suivi GitHub](</Users/lemonnierhugo/Downloads/Vega Sport - contre-audit du 25 novembre 2026/Suivi-GitHub.md>) · [Fiches individuelles](</Users/lemonnierhugo/Downloads/Vega Sport - contre-audit du 25 novembre 2026/Analyse-point-par-point.md>).
+- [Bug favoris #220](https://github.com/VegaInteligence/Vega-Sport/issues/220) / [VI-158](https://linear.app/vegainteligence/issue/VI-158), rouvert le 25 novembre à 23 h 48 Paris. Les sondes ciblées ci-dessus passent, mais le [relevé CloudWatch ajouté au ticket](https://github.com/VegaInteligence/Vega-Sport/issues/220#issuecomment-7176812906) signale des 503 après le déploiement. Priorité revue le 26 novembre : diagnostiquer les sélections réalistes, élargir le contrôle de déploiement et le suivi par route (#202, #204), puis fiabiliser la reprise de collecte (#157, #158) et réduire les lectures de calendrier (#129).
+- Historique des ligues, 1 028 revalidations à quatre lectures SQL chacune. Fiche match terminé, huit pages de calendrier. Points de suivi restant à préciser, dont gains de CI, activité des aperçus et attribution AWS. Revue en consultation, aucun changement distant.
+
+## Navbar Safari / Dia — 25 novembre 2026
+
+- Diagnostic sur la même page de production. Le lien du logo fait 285 px dans Safari et 40 px dans Dia. Une largeur temporaire de 25 px sur `.brand-mark` ramène le lien Safari à 40 px et le début du menu de 337 à 92 px dans les deux thèmes.
+- Reproduction et mesures dans `/Users/lemonnierhugo/.codex/visualizations/2026/11/25/vega-navbar-safari/verification.md`. Correctif candidat si demandé : dimensionner explicitement `.brand-mark` et vérifier la régression sur les deux moteurs.
+
+## Fiche joueur d'un match : zéros affichés — 25 novembre 2026
+
+- [VI-153](https://linear.app/vegainteligence/issue/VI-153), [GitHub #213](https://github.com/VegaInteligence/Vega-Sport/issues/213). Maquette validée : les zéros établis apparaissent dans le tableau et la fiche détaillée, le reste se lit « Non renseigné ». Données du PostgreSQL de Vega via son API. Réalisation directe dans Codex demandée par Hugo.
+- Correctif fusionné et vérifié sur `origin/main` sous `c1b92abf` ([PR #214](https://github.com/VegaInteligence/Vega-Sport/pull/214)). Branche locale et distante supprimée. API 298/298 (dont familles 9/9), site 1 026/1 026, build OK, E2E navigateur 13/13 sur ordinateur et iPhone. Gvardiol 0/0, Doku 0 tir et 0,00 xG, zéro requête directe à PitchAPI.
+- Preuves : `/Users/lemonnierhugo/.codex/visualizations/2026/11/25/01a2123c-d1fe-7a83-a684-535439cd464c/VERIFICATION.md`. Fusion demandée sans attendre la CI. Prochaine étape : déploiement manuel de l’API et vérification du parcours en production. Pour les petits correctifs, Hugo demande de travailler directement sur main quand le dépôt le permet.
+
 ## No data in git — VI-45 (20–21 November 2026, done)
 
 - Goal: no data in the repository, history included. History rewritten without backup on the user's word, then force-pushed (every branch and the tag): old main 4844e92589 → 8f1b34522d, a clone drops from ~4.1 GB to 34 MB.
@@ -565,6 +605,15 @@
 - Tried and set aside: the style reading on every centre-forward slot (false nines). Classification is right (Dembélé 0.97, Kane 0.00) but attacking-midfielder weights sink scorers (Mbappé 5 → 35).
 - Found on the way: 3,415 player-matches of 729 outfield players in 2025/2026 are filed as goalkeeper with no keeper statistics (Challenger Pro League 1,822, a Serie A 1,566); v8 counts them as keeper matches. Separate fix proposed, not started.
 - Git: history rewritten by another session (VI-45, 20 Nov) and the local checkout realigned on it; the proposal and these notes were committed to main on 21 Nov (worklog merged with main's). Check `git status -sb` against origin/main before any commit; never merge the old history; never commit data.
+- 21 Nov: the user rejected the list of leftover limits (« tu devais trouver la solution »). New read-only study (`study11.py`, `study12.py`; § 13 of the proposal; Fable review first). Established:
+  - Cause of the failed false-nine reading: the announced weights price the same finishing 23.3 Elo per unit for a centre forward, 15.1 for a winger, 11.2 for an attacking midfielder; the three other blocks cost the same everywhere. Relabelling re-priced goals (Mbappé −12.1 against −5.7 on average).
+  - Fix: one unit and one price list for the attacking positions (finishing 17.6, creation 9.8, progression 5.5, defence 5.6): announced weights reproduced within 8 points (centre forward 42/25/18/15, winger 26/36/28/10); relabelling no longer sinks scorers. Market value 0.229 → 0.230, year to year 0.684 → 0.678.
+  - Within-player test (base MOC / AIL / MEX, 450+ minutes filed centre forward, value there minus at base): read as a centre forward +0.4 ± 0.8 alone, +1.0 ± 0.9 as front-two support; read as a support −5.2 ± 0.8 and −4.7 ± 0.9. So the support reading of 20 Nov over-corrected: **withdrawn**; every centre-forward slot is read as a centre forward (false nine included). Griezmann goes back from 847th towards ~280th at ψ = 24 (exact rank with the last run).
+  - Style reading checked on other matches where the sheet names the support: 93 % (294 pairings); front twos are not structured pairs.
+  - Wide midfielder of a flat four is a ninth position. Movers' gaps between positions ≤ 0.7 Elo where testable.
+  - Substitutes filed in goal: cause = line code 0 given to every substitute in two editions (Challenger Pro League 2025/26, a Serie A 2026), read as « goalkeeper » by `assign_roles` before the usual role. Handled in the simulation; live fix small, not started.
+  - Club weight on 5,991 transfers: 8.6 ± 0.4 Elo of own value per 400 Elo of club (up 7.3, down 10.0), far below 24; a floor (survivors only). World Cups 19 ± 11; accounting ceiling 38. At 8.6 second-division stars reach the world top 5.
+  - Not done: AWS login expired mid-run. Pending: output of the match test with nine positions (task b583f2565d8e427db78bc8276f493ccf, section 13), the final run `study13.py` (no support position; stars who move up; movers who stop playing; ranking at the transfer rate).
 - 23 Nov: the study by position was finished, read-only (`study12.py` to `study17.py`, same scratch folder; synthesis: [Score Vega v9 : étude par poste](https://claude.ai/artifact/XdihNNTSNEBtZe6LxfgQoP)).
   - ψ: transfers give 8.6 ± 0.4 Elo per 400 of club Elo (World Cup 19 ± 11); 10 recommended, the user's call. The match test cannot settle ψ (the club term cancels).
   - Eight positions do not beat the seven roles on match results (−34 ± 17 in validation). Without the support-striker case the forecast is the same and Griezmann goes 529 → 372.

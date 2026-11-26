@@ -2,7 +2,7 @@
 
 **Statut : proposition. Rien de ce qui suit n'est en service.** 20 novembre 2026, ticket [VI-42](https://linear.app/vegainteligence/issue/VI-42). Le score en service reste `power-ranking-v8` ([formules](../08-notes-vega/01-formules-et-raisons.md)).
 
-Toutes les mesures viennent de la base de production, lue en lecture seule. Les scripts, leurs sorties et la façon de les relancer sont dans `~/Agents/scratch/vega-score-sim-20261120/` (`study9.py` est le calcul final des sections 1 à 10, `study10_run2.py` celui de la section 11, `study14.py` à `study17.py` ceux de la section 12, `README.md` décrit la tâche de diagnostic).
+Toutes les mesures viennent de la base de production, lue en lecture seule. Les scripts, leurs sorties et la façon de les relancer sont dans `~/Agents/scratch/vega-score-sim-20261120/` (`study9.py` est le calcul final des sections 1 à 10, `study10_run2.py` celui de la section 11, `study14.py` à `study17.py` ceux de la section 12, `study12.py` celui de la section 13, `README.md` décrit la tâche de diagnostic).
 
 ## 1. En bref
 
@@ -279,13 +279,14 @@ Autres contrôles :
 | Poids des blocs par rôle | ceux de la méthode | choisis (inchangés) |
 | Conservation hors du score | | **à décider** : dehors (proposé), ou gardée |
 | Poids de l'année précédente | 0,5 | choisi, à régler |
-| ψ, poids du niveau du club | 24, entre 10 et 36 | **à décider** |
+| ψ, poids du niveau du club | 24, entre 10 et 36 ; les transferts donnent 8,6 ± 0,4 pour les joueurs qui rejouent (§ 13.6) | en cours de mesure |
 | Échelle du score | 36 points Elo pour dix contre un | choisi |
-| Postes | huit : l'ailier et le milieu offensif axial séparés (§ 11) | proposé |
+| Postes | neuf avec le gardien : avant-centre, milieu offensif axial, ailier, milieu de côté, milieu central, milieu défensif, latéral, défenseur central (§ 11 et § 13.4) | proposé |
 | Seuil d'un second poste | 450 minutes sur deux saisons | choisi ; 270 et 900 donnent presque le même classement |
 | Lien entre deux postes d'un même joueur | § 11.2 | mesuré |
-| Lecture du soutien d'une attaque à deux | sur le style, § 11.1 | proposé ; étendue à tous les avant-centres : essayée et écartée |
 | Bloc défense : attendus en contexte, échelle stabilisée, talent borné à ± 2 écarts-types | § 12 | retenu le 23 novembre 2026 ; la borne est gratuite mais non prouvée (§ 12.4) |
+| Lecture du soutien d'une attaque à deux | aucune : tout joueur aligné avant-centre est lu comme un avant-centre | retirée le 21 novembre, sur mesure (§ 13.3) |
+| Poids des trois postes offensifs | un seul barème de prix (§ 13.2) | proposé ; les poids annoncés en découlent à quelques points près |
 
 ## 9. Limites et étape 2
 
@@ -307,6 +308,8 @@ Autres contrôles :
 4. La bascule du site une fois ψ et la conservation décidés, avec la maquette des trois lectures validée avant.
 
 ## 11. Un niveau par poste (ajout du 20 novembre 2026, simulé)
+
+> Le § 13 corrige cette section sur un point : la lecture du soutien (règle 8, colonne V2 des tableaux) est retirée. Le reste tient.
 
 Demande : un poste de base par joueur, un second poste acquis après un certain nombre de minutes, un niveau par poste, la saison comme moyenne de ces niveaux pondérée par les minutes ; un joueur de champ qui finit dans le but n'est pas compté ; l'attaquant de soutien n'est plus lu comme un avant-centre. Tout ce qui suit a été simulé sur la base, en lecture seule. Rien n'est en service.
 
@@ -509,3 +512,112 @@ Prévision : écart apparié par match face au calcul des sections 4 et 11, mult
 3. **E, E_s et les λ** des sections 4 et 6 n'ont pas été réestimés sur la nouvelle échelle.
 4. **Le test des entraîneurs** ne lit que la saison précédente.
 5. **Le classement de 2026/2027** repose sur un tiers de saison : le rang d'un joueur à 1 248 minutes doit afficher sa marge (§ 4.6).
+
+## 13. Contrôles du 21 novembre 2026 : la cause, et ce que les mesures tranchent
+
+Tout est simulé sur la base en lecture seule. Deux résultats manquent encore et sont listés au § 13.8 : la connexion à la base a expiré avant le dernier passage.
+
+### 13.1 Pourquoi lire le faux 9 « sur son style » avait échoué (§ 11.5)
+
+Les poids annoncés, traduits en prix d'une même quantité de jeu (points Elo par unité commune aux postes offensifs) :
+
+| Poste | Finition | Création | Progression | Défense |
+| --- | ---: | ---: | ---: | ---: |
+| Avant-centre | 23,3 | 9,6 | 5,7 | 4,8 |
+| Ailier | 15,1 | 10,6 | 5,5 | 6,3 |
+| Milieu offensif axial | 11,2 | 8,1 | 5,1 | 6,1 |
+
+Trois blocs ont le même prix partout. La finition, elle, vaut deux fois plus chez l'avant-centre que chez le milieu offensif. Changer l'étiquette d'un joueur changeait donc le prix de ses buts : lu comme un soutien, avec les poids du milieu offensif, Mbappé perdait 12,1 points (2025/2026) quand un avant-centre moyen en perdait 5,7. Ce n'était pas le joueur qui était relu, c'était le barème.
+
+### 13.2 Une unité et un barème pour les postes offensifs
+
+- **Une unité.** Pour l'avant-centre, le milieu offensif axial, l'ailier et le milieu de côté, chaque statistique est mesurée contre la même attente et divisée par la même dispersion. Le poste ne fixe plus que la référence : ce que fait son joueur moyen.
+- **Un barème.** Un prix par bloc, le même pour ces postes, choisi pour approcher au mieux les poids annoncés : finition 17,6, création 9,8, progression 5,5, défense 5,6 points Elo par unité. Le poids d'un bloc à un poste est alors ce prix multiplié par ce qui sépare les joueurs du poste.
+
+| Poste | Finition | Création | Progression | Défense |
+| --- | ---: | ---: | ---: | ---: |
+| Avant-centre : obtenu (annoncé) | 42 (50) | 25 (22) | 18 (17) | 15 (11) |
+| Milieu offensif axial | 29 (22) | 38 (39) | 25 (28) | 8 (11) |
+| Ailier | 26 (22) | 36 (39) | 28 (28) | 10 (11) |
+| Milieu de côté | 26 (22) | 38 (39) | 26 (28) | 10 (11) |
+
+Un seul barème reproduit donc les poids annoncés à huit points près. Avec lui, changer l'étiquette ne punit plus les buteurs : Mbappé − 4,9, Kane − 4,8, Dembélé − 2,4, pour − 6,5 en moyenne.
+
+Contrôles (proposition du 20 novembre, puis ce barème) : accord avec la valeur marchande à club égal 0,229 puis 0,230 ; même joueur d'une saison à la suivante 0,684 puis 0,678. Rien ne se dégrade.
+
+Un second barème a été calculé, celui qui rend l'avant-centre moyen et le soutien moyen exactement échangeables : finition 28,4, création 6,4, progression 3,7, défense 5,1. Il donne 62 % à la finition de l'avant-centre et 45 % à celle de l'ailier. Il s'accorde mieux avec la valeur marchande des joueurs offensifs (0,313 contre 0,263) mais il est moins stable d'une saison à l'autre (0,642 contre 0,708) et s'éloigne sept fois plus des poids annoncés. Non retenu ; gardé comme option.
+
+### 13.3 Le soutien et le faux 9 : le test sur les mêmes joueurs
+
+La question de fond : un joueur aligné avant-centre alors qu'il joue comme un 10 est-il flatté par la comparaison avec les avant-centres ? Le test : des joueurs dont le poste de base est milieu offensif, ailier ou milieu de côté, et qui ont aussi 450 minutes ou plus alignés avant-centre. On compare leur valeur dans ces matchs à leur valeur à leur poste de base, sans réduction du bruit.
+
+| Matchs alignés avant-centre | Lus comme un avant-centre | Lus comme un soutien |
+| --- | ---: | ---: |
+| Seul en pointe (156 joueurs) | + 0,4 ± 0,8 | − 5,2 ± 0,8 |
+| Seul en pointe, style de 10 (24 joueurs) | + 1,7 ± 1,9 | − 3,8 ± 1,9 |
+| Attaque à deux, lu pointe par son style (120) | + 1,6 ± 0,8 | − 3,9 ± 0,8 |
+| Attaque à deux, lu soutien par son style (76) | + 1,0 ± 0,9 | − 4,7 ± 0,9 |
+
+Lu comme un avant-centre, un joueur retrouve son niveau habituel à un point près, qu'il soit seul en pointe ou soutien d'une attaque à deux. Lu comme un soutien, il perd cinq points. Deux conséquences :
+
+1. **Le faux 9 n'est pas flatté.** Quand un 10 ou un ailier passe en pointe, son jeu change avec la place : il crée et progresse moins qu'à son poste. Le comparer aux avant-centres est juste. Le « défaut » du § 11.5 n'en était pas un.
+2. **La lecture du soutien proposée le 20 novembre surcorrigeait.** Les soutiens sont de bons joueurs (+ 4,6 points à leur poste de base en moyenne) : les comparer entre eux les ramenait à zéro. La règle 8 du § 11.1 est retirée. Tout joueur aligné avant-centre est lu comme un avant-centre.
+
+Mesures annexes :
+
+- Le style dit bien qui est le soutien : sur 294 paires que la feuille nomme dans d'autres matchs (un avant-centre seul et un 10 derrière lui), il désigne le même homme 93 fois sur 100. Le contrôle « sur des matchs séparés » demandé au § 11.6 est fait.
+- Une attaque à deux n'est pas un couple pointe + soutien : les deux styles s'associent presque au hasard (un 9 avec un soutien × 0,84 ; deux soutiens × 0,16). Lire la paire n'apporte rien de plus que lire chaque joueur.
+- Les résultats d'équipe ne tranchent pas : dans un même club, quand l'avant-centre seul joue comme un 10, les occasions de l'équipe moins celles de l'adversaire bougent de − 16 ± 12 points Elo à valeur propre égale (358 matchs). L'écart n'est pas établi.
+
+**Griezmann.** Avec la lecture du soutien il était 847e (ψ = 24). Sans elle il revient vers le 280e rang du niveau par poste (§ 11.3, colonne V1) ; le rang exact vient avec le dernier passage. Sa valeur propre à Orlando est haute, et le test dit qu'elle n'est pas un artefact de son étiquette. Ce qui le place, c'est le poids donné à son club (§ 13.6).
+
+### 13.4 Les postes
+
+Le milieu de côté d'une ligne de quatre (rangs 6 et 7 de la feuille, défense à quatre) devient un poste, avec ses propres attentes : 14 128 matchs en 2025/2026, 195 joueurs dont c'est le poste de base. Il fait moins de finition et plus de défense qu'un ailier (− 0,37 et + 0,32, en écarts-types du talent d'un avant-centre). Sa dispersion en finition n'est pas mesurable et est prise à l'ailier.
+
+Le même joueur à deux postes, valeur au second moins valeur au premier, dans les deux sens : milieu central et milieu défensif + 0,7 ± 0,1 point d'écart entre les deux populations ; défenseur central et latéral + 0,6 ± 0,3 ; ailier et milieu offensif + 0,3 ± 0,4. La convention « le joueur moyen de chaque poste a le même niveau » tient à un point près là où elle est vérifiable. Entre l'avant-centre et les postes derrière lui l'écart est de 2,1 à 2,4 points (cohérent d'une paire à l'autre) ; il n'est pas appliqué, parce que ce qu'un avant-centre apporte hors statistiques n'est pas mesuré.
+
+Le lien entre les postes d'un même joueur contient peu le style du club : la part de talent commune aux joueurs d'un même club est de 2 % (finition), 3 % (création), 9 % (progression), 6 % (défense). La limite 6 du § 11.6 est sans effet pratique.
+
+### 13.5 Les remplaçants rangés au poste de gardien
+
+Cause trouvée. La feuille donne aux remplaçants un code de ligne (0 gardien, 1 défense, 2 milieu, 3 attaque). Dans deux éditions (Challenger Pro League 2025/2026 et une Serie A de 2026), tous les remplaçants ont le code 0 : 2 326 et 1 701 entrées, aucune avec une statistique de gardien. Ailleurs le code 0 désigne bien un gardien (594 entrées, dont 441 avec des statistiques de gardien). Le calcul en service lit ce code avant le poste habituel du joueur : 3 415 matchs de 729 joueurs de champ sont notés comme des matchs de gardien, et 167 joueurs n'ont que de telles entrées.
+
+Dans la simulation, ces matchs sont lus au poste habituel du joueur (68 544 minutes rendues). La correction du calcul en service est petite : ne lire le code 0 comme « gardien » que si le match porte une statistique de gardien ou si le joueur est gardien par ailleurs.
+
+### 13.6 Le poids du club, mesuré sur les transferts
+
+Nouvelle mesure : 19 545 joueurs ont un club principal dans deux saisons de suite ; 5 991 ont changé de club. On regarde ce que devient leur valeur propre (blocs et titularisations) quand le niveau du club change, à niveau de départ et âge égaux.
+
+| Mesure | Résultat |
+| --- | --- |
+| Valeur propre perdue pour 400 points Elo de club gagnés | 8,6 ± 0,4 points Elo |
+| Transferts vers le haut / vers le bas | 7,3 ± 0,8 / 10,0 ± 0,8 |
+| Dans un même championnat / d'un championnat à l'autre | 8,1 ± 0,8 / 9,2 ± 0,5 |
+| Club de départ et club d'arrivée pris à part | + 8,2 ± 0,5 et − 9,0 ± 0,5 |
+| En plus, pour un point de valeur propre avant le transfert | − 0,22 ± 0,07 par 400 points Elo : plus un joueur est haut, plus il perd en montant |
+| Part de la valeur propre gardée d'une année à l'autre | 0,76 ± 0,01 |
+| Joueurs restés : ce que le niveau de leur club dit de leur année suivante | − 0,8 ± 0,2 : rien de plus que leurs statistiques |
+| Valeur propre moyenne selon le niveau du club (12 929 joueurs) | − 1,5 ± 0,2 pour 400 points Elo : la même partout |
+
+Lecture. Le taux qui laisse le niveau d'un joueur inchangé quand il change de club est de 8,6, loin des 24 retenus et sous le bas de la fourchette du § 4.5. C'est un plancher : la mesure ne voit que ceux qui rejouent après le transfert, et un club qui recrute sait des choses que les statistiques ne disent pas. À l'autre bout, si l'Elo d'un club était la somme de ses onze joueurs, il faudrait 38. Les Coupes du monde donnent 19 ± 11.
+
+L'enjeu est visible : à 8,6, les vedettes de championnats faibles montent tout en haut du classement (un joueur de deuxième division espagnole 3e de 2025/2026) ; à 36, le haut ne contient que des joueurs de grands clubs. Deux contrôles sont écrits et attendent le dernier passage : ce que deviennent les joueurs très bien notés qui montent d'un cran (la règle de proportion tient-elle pour eux ?), et le compte de ceux qui ne jouent presque plus après leur transfert.
+
+### 13.7 Les limites du § 11.6, une par une
+
+| Limite | État |
+| --- | --- |
+| 1. Cas limites de l'attaque à deux (Álvarez) | sans objet : plus de lecture du soutien |
+| 2. Le faux 9 | tranché : lu comme un avant-centre, et le test dit que c'est juste (§ 13.3) |
+| 3. Le milieu de côté | traité : poste à part (§ 13.4) |
+| 4. E, E_s, ψ et test sur les matchs | ψ mesuré sur les transferts (§ 13.6) ; le test sur les matchs avec neuf postes a tourné, son résultat reste à lire (§ 13.8) |
+| 5. Style mesuré sur les mêmes matchs | contrôlé sur d'autres matchs : 93 % (§ 13.3) |
+| 6. Style du club dans le lien entre postes | mesuré : 2 à 9 %, sans effet pratique (§ 13.4) |
+| 7. Joueurs de championnats moyens en haut du classement | c'est ψ ; mesure en cours (§ 13.6) |
+
+### 13.8 Ce qui manque
+
+1. Le classement final avec ces règles (neuf postes, un barème, pas de poste de soutien), pour ψ = 24 et pour la valeur tirée des transferts. Le script est prêt (`study13.py`).
+2. Le test sur les résultats des matchs avec les neuf postes, et E réestimé. Le calcul a tourné (tâche `b583f2565d8e427db78bc8276f493ccf`), la sortie n'a pas pu être lue.
+3. Les deux contrôles sur ψ du § 13.6.
