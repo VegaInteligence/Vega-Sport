@@ -68,6 +68,7 @@ const common = {
   "../services/cup-matches.js": { matchForecast: () => null },
   "./BackLink.jsx": { __esModule: true, default: ({ href, label, prefix = "← ", onFallback, ...props }) => e("a", { href, ...props }, prefix, label) },
   "./Icon.jsx": { __esModule: true, default: () => null },
+  "./CompetitionPicker.jsx": { CompetitionPicker: () => null },
   "../hooks/FootballContext.jsx": { useFootball: () => ({ href: (url, params) => `${url}?${new URLSearchParams(params)}` }) },
   "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
   "../services/club-supported.js": supported,

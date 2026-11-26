@@ -22,6 +22,7 @@ import { useResource } from "../services/resources.js";
 import { orderedCompetitions } from "../services/competition-selector.js";
 import { AsyncState, Card, Empty, Pager } from "./UI.jsx";
 import { CompetitionPicker } from "./CompetitionPicker.jsx";
+import SeasonSelect from "./SeasonSelect.jsx";
 
 const PAGE_SIZE = 50;
 
@@ -287,28 +288,13 @@ function SeasonArchive({
   return (
     <Card title="Archives" className="archive-card">
       <div className="historical-archive-filters">
-        <label>
-          Saison{" "}
-          <select
-            aria-label="Saison des archives"
-            value={entry.id}
-            disabled={Boolean(indexState && !indexState.value)}
-            onChange={(event) =>
-              setParams({
-                as: event.target.value.replace("/", "-"),
-                ac: null,
-                ap: null,
-                av: null,
-              })
-            }
-          >
-            {seasons.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.id}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SeasonSelect
+          label="Saison des archives"
+          value={entry.id}
+          seasons={seasons.map(({ id }) => id)}
+          disabled={Boolean(indexState && !indexState.value)}
+          onChange={(season) => setParams({ as: season.replace("/", "-"), ac: null, ap: null, av: null })}
+        />
         <CompetitionPicker
           label="Compétition des archives"
           value={competition}

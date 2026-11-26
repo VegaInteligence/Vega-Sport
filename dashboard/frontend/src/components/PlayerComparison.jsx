@@ -37,6 +37,7 @@ import { MetricInfo, MetricPicker, ReportButton } from "./ResearchUI.jsx";
 import { COLORS } from "./ResearchCharts.jsx";
 import c from "./PlayerComparison.module.css";
 import { CompetitionPicker } from "./CompetitionPicker.jsx";
+import SeasonSelect from "./SeasonSelect.jsx";
 
 export async function comparisonSamples(f, entries, { signal } = {}) {
   const routing = await playerRoutes(
@@ -211,19 +212,12 @@ function PlayerCard({
         ×
       </button>
       <div className={c.picks}>
-        <select
-          aria-label={`Saison de ${entry.name} ${index + 1}`}
+        <SeasonSelect
+          label={`Saison de ${entry.name} ${index + 1}`}
           value={entry.season}
-          onChange={(e) =>
-            onChange({ season: e.target.value, scope: DEFAULT_SAMPLE })
-          }
-        >
-          {seasons.map((id) => (
-            <option key={id} value={id}>
-              {id}
-            </option>
-          ))}
-        </select>
+          seasons={seasons}
+          onChange={(season) => onChange({ season, scope: DEFAULT_SAMPLE })}
+        />
         <CompetitionPicker
           label={`Compétition de ${entry.name} ${index + 1}`}
           value={entry.scope.league}

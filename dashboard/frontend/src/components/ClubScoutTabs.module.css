@@ -84,21 +84,8 @@
   color: var(--muted);
   font-size: var(--text-sm);
 }
-/* The club's season, chosen in its sheet: the calendar says what it is, the label is read. */
 .season {
-  width: 172px;
   margin-top: 2px;
-}
-.season > label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-.season select {
-  min-height: 0;
-  height: 32px;
 }
 /* A card's link to the rest (« Tous les matchs »), level with its title. */
 .cardLink {

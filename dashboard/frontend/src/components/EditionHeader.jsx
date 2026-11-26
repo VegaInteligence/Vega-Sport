@@ -5,6 +5,7 @@
  * edition's attested emblem, else a logo that is no edition's); without one the slot stays empty, never initials. */
 import React from "react";
 import { Media } from "./UI.jsx";
+import SeasonSelect from "./SeasonSelect.jsx";
 
 export default function EditionHeader({ imageUrl, name, editions, season, onSeason, label = "Édition", heading = false, children }) {
   const index = editions.findIndex((edition) => edition.season === season);
@@ -17,13 +18,12 @@ export default function EditionHeader({ imageUrl, name, editions, season, onSeas
         <button type="button" aria-label="Édition précédente" disabled={index < 0 || index >= editions.length - 1} onClick={() => onSeason(editions[index + 1].season)}>
           ‹
         </button>
-        <select aria-label={label} value={season} onChange={(event) => onSeason(event.target.value)}>
-          {editions.map((edition) => (
-            <option key={edition.season} value={edition.season}>
-              {edition.label || edition.season}
-            </option>
-          ))}
-        </select>
+        <SeasonSelect
+          label={label}
+          value={season}
+          seasons={editions.map((edition) => ({ value: edition.season, label: edition.label || edition.season }))}
+          onChange={onSeason}
+        />
         <button type="button" aria-label="Édition suivante" disabled={index <= 0} onClick={() => onSeason(editions[index - 1].season)}>
           ›
         </button>

@@ -19,28 +19,6 @@
 .filters > * {
   flex: none;
 }
-.filters .season {
-  display: block;
-  flex: 0 0 172px;
-  min-width: 0;
-}
-/* The season's label is read, not shown: the calendar says what it is. */
-.filters .season > label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-/* Season and period stand as tall as the competition segments beside them (30 px). */
-.filters .season > div {
-  height: 30px;
-}
-.filters .season select {
-  min-height: 0;
-  height: 100%;
-  font-size: var(--text-sm);
-}
 .pill {
   display: inline-flex;
   align-items: center;
@@ -160,20 +138,6 @@
   }
   .filters::-webkit-scrollbar {
     display: none;
-  }
-  .filters .season {
-    flex: none;
-  }
-  .filters .season > div {
-    height: 40px;
-    border-radius: 0;
-  }
-  .filters .season select {
-    flex: none;
-    width: auto;
-    min-height: 0;
-    padding: 0 34px 0 14px;
-    field-sizing: content;
   }
   .pill {
     height: 40px;

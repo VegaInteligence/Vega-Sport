@@ -327,12 +327,14 @@ async function archiveFixture({
       },
     },
     "./UI.jsx": UI,
-    "./CompetitionOptions.jsx": {
+    "./CompetitionPicker.jsx": {
+      CompetitionPicker: ({ competitions, label, disabled, value }) =>
+        e("button", { "aria-label": label, disabled, "data-catalog": competitions.map(({ name }) => name).join(", ") },
+          competitions.find((competition) => competition.id === value)?.name || "Toutes les compétitions"),
+    },
+    "./SeasonSelect.jsx": {
       __esModule: true,
-      default: ({ competitions }) =>
-        competitions.map((c) =>
-          e("option", { key: c.id, value: c.id }, c.name),
-        ),
+      default: ({ label, disabled, value }) => e("button", { "aria-label": label, disabled }, value),
     },
   };
   const filename = path.join(

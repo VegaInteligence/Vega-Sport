@@ -746,6 +746,8 @@ html:has(.home-page) .modal-close:hover {
   position: fixed;
   inset: var(--picker-top, 12px) auto auto var(--picker-left, 12px);
   margin: 0;
+  padding: 0;
+  color: var(--ink);
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 24px);
   overflow-y: auto;
@@ -753,10 +755,17 @@ html:has(.home-page) .modal-close:hover {
 .settings-picker-panel::backdrop {
   background: transparent;
 }
+.home-settings-segment:disabled,
+.home-settings-season:disabled,
 .home-settings-tile:disabled,
 .home-settings-action:disabled {
   opacity: 0.5;
   cursor: default;
+}
+@media (min-width: 641px) {
+  .settings-picker-panel.home-settings-panel[data-pane="season"] {
+    max-height: min(535px, 65dvh);
+  }
 }
 @media (max-width: 640px) {
   .settings-picker-panel.home-settings-panel {

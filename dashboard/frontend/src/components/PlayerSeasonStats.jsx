@@ -1,6 +1,7 @@
 "use client";
 
 import { CompetitionPicker } from "./CompetitionPicker.jsx";
+import SeasonSelect from "./SeasonSelect.jsx";
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -629,9 +630,9 @@ export function PlayerPerformanceStats({ id, children }) {
       }),
     Boolean(validCompetition && season && (season !== "all" || routing.value)),
   );
-  const selectSeason = (event) => {
+  const selectSeason = (value) => {
     const url = new URL(window.location.href);
-    url.searchParams.set("performanceSeason", event.target.value);
+    url.searchParams.set("performanceSeason", value);
     window.history.replaceState(null, "", url);
   };
   const selectCompetition = (value) => {
@@ -656,25 +657,16 @@ export function PlayerPerformanceStats({ id, children }) {
               : competitionOptions}
             onChange={selectCompetition}
           />
-          <label className="player-performance-season">
-            Saison
-            <select value={season} onChange={selectSeason}>
-              <option value="all">Toutes les saisons</option>
-              {season && season !== "all" && !seasons.includes(season) && (
-                <option value={season}>{season}</option>
-              )}
-              {!season && (
-                <option value="" disabled>
-                  Saison indisponible
-                </option>
-              )}
-              {seasons.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SeasonSelect
+            value={season}
+            allLabel="Toutes les saisons"
+            seasons={[
+              ...(!season ? [{ value: "", label: "Saison indisponible", disabled: true }] : []),
+              ...(season && season !== "all" && !seasons.includes(season) ? [season] : []),
+              ...seasons,
+            ]}
+            onChange={selectSeason}
+          />
         </div>
       </PlayerProfileFilters>
       <div className="season-section-heading">

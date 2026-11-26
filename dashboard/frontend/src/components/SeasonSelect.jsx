@@ -1,10 +1,30 @@
-import React, { useId } from "react";
-import Icon from "./Icon.jsx";
+"use client";
 
-/**
- * Season drop-down with the site's select styling (calendar icon, chevron).
- * `allLabel` adds a first option for "every season" (value "all").
- */
+import SettingsPicker from "./SettingsPicker.jsx";
+
+const seasonOption = (season) =>
+  typeof season === "string" ? { value: season, label: season } : season;
+
+export function SeasonChoices({ options, value, onChange, label = "Saison" }) {
+  return (
+    <div className="home-settings-seasons" role="group" aria-label={label}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className="home-settings-season"
+          aria-pressed={option.value === value}
+          disabled={option.disabled}
+          data-value={option.value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function SeasonSelect({
   value,
   seasons,
@@ -12,27 +32,34 @@ export default function SeasonSelect({
   label = "Saison",
   allLabel,
   className = "",
+  disabled,
+  controlId,
 }) {
-  const id = useId();
+  const options = seasons.map(seasonOption);
+  if (allLabel) options.unshift({ value: "all", label: allLabel });
+  const selected = options.find((option) => option.value === value);
   return (
-    <div className={`filter-field season-select ${className}`.trim()}>
-      <label htmlFor={id}>{label}</label>
-      <div className="filter-input-wrap">
-        <Icon name="calendar" />
-        <select
-          id={id}
+    <SettingsPicker
+      pane="season"
+      icon="calendar"
+      label={label}
+      text={selected?.label || value || label}
+      className={className}
+      disabled={disabled || !options.length}
+      controlId={controlId}
+      value={value}
+    >
+      {(close) => (
+        <SeasonChoices
+          options={options}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
-        >
-          {allLabel && <option value="all">{allLabel}</option>}
-          {seasons.map((season) => (
-            <option key={season} value={season}>
-              {season}
-            </option>
-          ))}
-        </select>
-        <Icon name="chevron" className="select-chevron" />
-      </div>
-    </div>
+          label={label}
+          onChange={(next) => {
+            if (next !== value) onChange(next);
+            close();
+          }}
+        />
+      )}
+    </SettingsPicker>
   );
 }

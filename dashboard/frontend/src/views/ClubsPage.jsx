@@ -15,6 +15,7 @@ import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import ClubSkeleton from "../components/ClubSkeleton.jsx";
 import { CompetitionPicker } from "../components/CompetitionPicker.jsx";
+import SeasonSelect from "../components/SeasonSelect.jsx";
 import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
 import { Media, Pager, Empty, Skeleton } from "../components/UI.jsx";
 const ClubScoutProfile = lazy(
@@ -447,25 +448,16 @@ export default function ClubsPage() {
                 value={activeCompetitionId}
                 onChange={setCompetitionId}
               />
-              <label className="club-directory-select">
-                <span>Saison</span>
-                <select
-                  aria-label="Saison"
-                  value={f.season}
-                  onChange={(e) => {
-                    setQuery("");
-                    setCountry("all");
-                    setCompetitionId("all");
-                    f.changeSeason(e.target.value);
-                  }}
-                >
-                  {f.manifest.seasons.map((s) => (
-                    <option value={s.id} key={s.id}>
-                      {s.id}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SeasonSelect
+                value={f.season}
+                seasons={f.manifest.seasons.map(({ id }) => id)}
+                onChange={(season) => {
+                  setQuery("");
+                  setCountry("all");
+                  setCompetitionId("all");
+                  f.changeSeason(season);
+                }}
+              />
             </div>
           </div>
           <div

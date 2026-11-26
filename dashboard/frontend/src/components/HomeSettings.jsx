@@ -7,6 +7,7 @@ import {
   useHomeCompetitions,
 } from "./HomePreferences.jsx";
 import { CompetitionsPane } from "./CompetitionPicker.jsx";
+import { SeasonChoices } from "./SeasonSelect.jsx";
 
 // The home page's settings bar (FAILURE_MODES § 77, piste B of https://claude.ai/artifact/DPfYC6jW2ooKwPGzmaGsdD):
 // the season and the competitions in one track, and one panel under it that slides from one to the other, as the
@@ -17,22 +18,14 @@ const KEYS = ["season", "competitions"];
 
 function SeasonPane({ f, close }) {
   return (
-    <div className="home-settings-seasons" role="group" aria-label="Saison">
-      {f.manifest.seasons.map((season) => (
-        <button
-          key={season.id}
-          type="button"
-          className="home-settings-season"
-          aria-pressed={season.id === f.season}
-          onClick={() => {
-            if (season.id !== f.season) f.changeSeason(season.id);
-            close(true);
-          }}
-        >
-          {season.id}
-        </button>
-      ))}
-    </div>
+    <SeasonChoices
+      options={f.manifest.seasons.map(({ id }) => ({ value: id, label: id }))}
+      value={f.season}
+      onChange={(season) => {
+        if (season !== f.season) f.changeSeason(season);
+        close(true);
+      }}
+    />
   );
 }
 
