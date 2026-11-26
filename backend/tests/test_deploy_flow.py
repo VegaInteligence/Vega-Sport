@@ -207,7 +207,7 @@ class DeployFlowTest(unittest.TestCase):
             "account": ACCOUNT, "region": "us-east-2", "python": sys.executable, "images_dir": str(self.tmp / f"images-{self.scenarios:02d}"),
             "params": params,
             "stacks": {
-                "vega-v2-deploy-roles": stack({"DeployRoleArn": f"arn:aws:iam::{ACCOUNT}:role/vega-v2-deploy", "DeployGrants": "1"}),
+                "vega-v2-deploy-roles": stack({"DeployRoleArn": f"arn:aws:iam::{ACCOUNT}:role/vega-v2-deploy", "DeployGrants": "2"}),
                 "vega-v2-database": stack({"DatabaseEndpoint": ENDPOINT, "WorkerSecurityGroup": "sg-0worker", "ApiSecurityGroup": "sg-0api"}),
                 "vega-v2-worker": {**stack({"RepositoryUri": f"{ACCOUNT}.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker",
                                             "MigrationTaskDefinition": f"arn:aws:ecs:us-east-2:{ACCOUNT}:task-definition/vega-v2-migrate:1"}, worker_params),
@@ -377,6 +377,8 @@ class DeployFlowTest(unittest.TestCase):
         state = self.first_install_state()
         run = self.deploy(state, {"PITCHAPI_API_KEY": "pitch-key"})
         self.assert_done(run)
+        probe = next(c["argv"] for c in run.calls if c["tool"] == "node" and c["argv"][0] == "infra/aws/smoke-public-reads.mjs")
+        self.assertEqual(probe[-1], "--allow-empty")
         changes = run.worker_changes()
         self.assertEqual(changes[0][1], "deploy")
         self.assertEqual((changes[0][2]["DesiredCount"], changes[0][2]["BackfillDesiredCount"]), ("0", "0"))
@@ -1410,8 +1412,9 @@ class DeployFlowTest(unittest.TestCase):
         step = lines.index(next(l for l in lines if l.startswith("== 11b.")))
         self.assertRegex(lines[step + 1], r"^release: 200 ok, [a-f0-9]{12} served \(try 1 of 24\)$")
         self.assertRegex(lines[step + 2], r"^services: vega-v2-worker 1/1 on vega-v2-worker:\d+, vega-v2-backfill 1/1 on vega-v2-backfill:\d+ \(try 1 of 30\)$")
-        self.assertEqual(lines[step + 3], "== 12. The home's personal read (a club, a player, both)")
-        printed = [l for l in lines[step + 4:] if re.match(r"^favourites (club|player|both|many) 200 ", l)]
+        self.assertTrue(lines[step + 3].startswith("== 11c."), lines[step + 3])
+        self.assertEqual(lines[step + 4], "== 12. The home's personal read (a club, a player, both)")
+        printed = [l for l in lines[step + 5:] if re.match(r"^favourites (club|player|both|many) 200 ", l)]
         self.assertGreaterEqual(len(printed), 3, run.out)
         self.assertTrue(all(" checked: " in l for l in printed), printed)
         self.assertEqual(seen, ["/api/health", "/api/dashboard/manifest", "/api/read/home", *["/api/read/home-favourites"] * len(printed)])

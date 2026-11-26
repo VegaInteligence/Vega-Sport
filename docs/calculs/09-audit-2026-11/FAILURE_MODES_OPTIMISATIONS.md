@@ -1348,3 +1348,23 @@ c, d, g, i, m, n: `tests/season-fixtures.test.mjs`; h: `tests/resource-cache.tes
 `backend/api/test/partition.test.mjs`' inventory); l, o: `backend/api/test/fixtures-season.test.mjs`; e, f: `tests/e2e/page-reads.e2e.mjs` (the real read API on
 `tests/e2e/support/reads-dataset.py`'s base, a production build of the site; before and after). Not verifiable here: the
 production timings (the local base and its delays are ours); Vercel's and CloudFront's caching of the new read.
+
+## GH257. Public reads after the club substitutions timeouts
+
+RDS cancelled the decisive-substitute query after its 8 s statement timeout. The same profile join also serves the
+club's passing network and the photos on match line-ups. The read API keeps its timeout and its error contract.
+
+| Situation | Expected |
+|---|---|
+| First change at home while leading, away while trailing, or level | Count the points before and after the first change by event sequence. Only matches whose goals agree with the final score enter the impact and average minute. |
+| Finished match with incomplete events or without a change event | A substitute on the club's sheet with positive recorded minutes still counts for that player's totals. An appearance with zero or null minutes, a starter, an unknown starter flag, or a match still to play contributes nothing. The sheet identifies the team even if the statistics carry a different team. |
+| More than three decisive substitutes, including tied names and numbers | Count entries without goals or assists for decisive players. Sort by contributions, goals, minutes, name, then internal player key. Share the first three, with the existing public IDs and optional photos. Exclude other clubs and seasons. |
+| Invalid season format, unknown or uncovered team, held tag, or query cancelled | Return 400, 404, 304 or 503 respectively. A correction to a fact, name or photo invalidates the affected response. A photo correction can leave the match's sheet revision unchanged. Preserve line-up photos as null when absent and passing photos as optional. The full player profile still includes its biographical and contract fields. |
+| Unrelated seasons, teams, appearances and profiles grow | On the statements the real API runs, PostgreSQL's actual plan shows bounded rows and buffers for the selected match, season and identity lookups. A small sequential scan is legitimate. The three identity-only lookups do not execute the contract, fact observation or market history reads. |
+| A list of players selects one competition or one match of a season with other populated competitions and seasons | The complete data and pagination stay the same. Publish the other editions' actual rollups and check that one is readable. The observed plan for each selective GET keeps rows, loops and buffers bounded as both the appearance tables and rollups grow. |
+| A cold public scenario is erroneous, empty, conditional or lacks timings | The CI run fails with the family, status, timings and plan evidence. Each listed read checks values from the database fixture. A club panel added or renamed requires a case, or an explicit fixture reason and a checked absence. |
+| Deploy sees a wrong release, Invoke error, absent expected population, 304, 503, missing measurements, or an over-budget response | The origin gate fails without marking the deploy done. The worker, release and favourites probes still run. A fresh install with no published season can skip the data probes only on the new release's measured pending health response. |
+
+Here “cold” means a GET straight to the handler with no validator or cached HTTP body. PostgreSQL buffers can already
+be populated. The plan reports distinguish shared blocks hit and read. The API's summed SQL time has a 3 s budget;
+a statement still has its existing 8 s limit.

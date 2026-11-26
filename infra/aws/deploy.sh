@@ -160,9 +160,9 @@ account_preflight
 
 # --- The Deploy's grants and its own state (GH157, GH157.3) -----------------------------------------------------------
 # The roles of deploy-roles.yaml are the owner's (the workflow cannot update them): this Deploy needs their grants of
-# 26 November 2026 (the state's bucket and object, the edge logs, the alarms and the dashboard).
-[ "$(output vega-v2-deploy-roles DeployGrants)" = 1 ] || {
-  echo "deploy: stack vega-v2-deploy-roles: its output DeployGrants is not 1: the owner updates it from the Mac with infra/aws/deploy-roles.yaml (infra/aws/README.md, One-time setup); nothing is changed" >&2
+# the deploy state, observability and the scoped invocation of the read API (steps 11b and 11c).
+[ "$(output vega-v2-deploy-roles DeployGrants)" = 2 ] || {
+  echo "deploy: stack vega-v2-deploy-roles: its output DeployGrants is not 2: the owner updates it from the Mac with infra/aws/deploy-roles.yaml (infra/aws/README.md, One-time setup); nothing is changed" >&2
   exit 1
 }
 # Who deploys: a GitHub run (its run and attempt), else a workstation's: host:<this machine>:<its process>:<a token of its
@@ -580,6 +580,12 @@ if [ -z "$BACKFILL" ]; then
   else BACKFILL=${CUR_BACKFILL:-0}; fi
   case "$BACKFILL" in 0|1) ;; *) BACKFILL=0 ;; esac
 fi
+# Only a fresh database can opt out of the origin reads, and only before its first publication.
+public_read_flags=()
+if [ -z "$WORKER_STACK" ] && [ "$REPO" = absent ]; then
+  stack_status vega-v2-database "$AWS_REGION"
+  case "$STATUS" in ""|REVIEW_IN_PROGRESS) public_read_flags=(--allow-empty) ;; esac
+fi
 # --- end of the Deploy's state ---
 
 echo "== 1. Database vega-football-db-postgres (about 10 minutes the first time)"
@@ -832,14 +838,16 @@ fi
 # read is step 12's alone.
 echo "== 11b. The deployment as served: the read API's release, /api/health, the worker and the backfill"
 release=${key#releases/v2-api/}; release=${release%.zip}
-checks=ok
+failed_checks=
 node infra/aws/verify-deploy.mjs "$media" --release "$release" \
-  --services "vega-v2-worker=$COUNT@$(output vega-v2-worker WorkerTaskDefinition),vega-v2-backfill=$BACKFILL@$(output vega-v2-worker BackfillTaskDefinition)" || checks=failed
+  --services "vega-v2-worker=$COUNT@$(output vega-v2-worker WorkerTaskDefinition),vega-v2-backfill=$BACKFILL@$(output vega-v2-worker BackfillTaskDefinition)" || failed_checks=11b
+echo "== 11c. Public reads of the deployed Lambda (without CloudFront)"
+node infra/aws/smoke-public-reads.mjs --release "$release" ${public_read_flags[@]+"${public_read_flags[@]}"} || failed_checks="${failed_checks:+$failed_checks and }11c"
 # The home's personal read, as the site asks it, for a followed club, player and both, through the distribution
 # (FAILURE_MODES_OPTIMISATIONS.md, GH220.3): each answer 200, private, naming what it was asked to follow. Last, so that
 # a failure leaves everything above deployed; the run then ends here, without "done".
 echo "== 12. The home's personal read (a club, a player, both)"
 node infra/aws/smoke-favourites.mjs "$media" ${SMOKE_TEAM:+--team "$SMOKE_TEAM"} ${SMOKE_PLAYER:+--player "$SMOKE_PLAYER"}
-[ "$checks" = ok ] || { echo "deploy: FAILED the checks of step 11b above: everything is deployed; the run ends without done" >&2; exit 1; }
+[ -z "$failed_checks" ] || { echo "deploy: FAILED the checks of step $failed_checks above: everything is deployed; the run ends without done" >&2; exit 1; }
 release_state --done
 echo "done"

@@ -73,7 +73,7 @@ def base_state():
         "taskdefs": {f"arn:aws:ecs:us-east-2:{ACCOUNT}:task-definition/vega-v2-migrate:1": "ab" * 20},
         "faults": {},
         "stacks": {
-            "vega-v2-deploy-roles": stack({"DeployRoleArn": f"arn:aws:iam::{ACCOUNT}:role/vega-v2-deploy", "DeployGrants": "1"}),
+            "vega-v2-deploy-roles": stack({"DeployRoleArn": f"arn:aws:iam::{ACCOUNT}:role/vega-v2-deploy", "DeployGrants": "2"}),
             "vega-v2-database": stack({"DatabaseEndpoint": ENDPOINT, "WorkerSecurityGroup": "sg-0worker", "ApiSecurityGroup": "sg-0api"},
                                       {"InstanceClass": "db.t4g.medium"}),
             "vega-v2-worker": {**stack({"MigrationTaskDefinition": f"arn:aws:ecs:us-east-2:{ACCOUNT}:task-definition/vega-v2-migrate:1"}, worker),
@@ -261,6 +261,7 @@ TODAY = [
     # GH202: the deployment as served (the release /api/health names, the services), before step 12.
     ("node", f"infra/aws/verify-deploy.mjs https://d111111abcdef8.cloudfront.net --release {hashlib.sha256(b'api').hexdigest()} "
              "--services vega-v2-worker=1@<task definition>,vega-v2-backfill=0@<task definition>"),
+    ("node", f"infra/aws/smoke-public-reads.mjs --release {hashlib.sha256(b'api').hexdigest()}"),
     # FAILURE_MODES_OPTIMISATIONS.md, GH220-s: the check of the home's personal read, through the distribution, last.
     ("node", "infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"),
 ]
@@ -468,7 +469,7 @@ class AccountDeployTest(unittest.TestCase):
         self.assertLess(index("ssm put-parameter /vega/v2/account-database-url"), index("vega-v2-worker"))
         self.assertLess(index("vega-v2-worker"), index("ecs run-task vega-v2-migrate"))
         # The account is the last stack; the check of the home's personal read (GH220-s) follows it.
-        self.assertEqual(order[-3], "vega-v2-account")
+        self.assertEqual(order[-4], "vega-v2-account")
         self.assertEqual(order[-1], "node infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net")
         self.assertLess(index("vega-v2-alerts-edge"), index("vega-v2-account"))
         # The packages, built after `npm ci` of backend/account and uploaded under releases/v2-account/.
@@ -483,8 +484,7 @@ class AccountDeployTest(unittest.TestCase):
             ("deploy", "vega-v2-account", "FrontReleaseKey", "StoreReleaseKey", "AccountDatabaseUrl", "NeonAuthUrl", "SiteOrigins", "PassKeys",
              "PassKeyCurrent", "NeonApiKey", "NeonProjectId", "NeonBranchId"),
             # GH202 then GH220-s: the deployment as served, then the home's personal read, after the last stack.
-            TODAY[-2],
-            ("node", "infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"),
+            *TODAY[-3:],
         ])
         given, argv = run.overrides("vega-v2-account")
         self.assertEqual(argv[argv.index("--capabilities") + 1], "CAPABILITY_IAM")
@@ -561,8 +561,9 @@ class AccountDeployTest(unittest.TestCase):
                 state = base_state()
                 state["stacks"]["vega-v2-api"]["outputs"]["ApiOrigin"] = origin
                 run = self.deploy(state, extra={"FAKE_NODE_REAL": NODE})
-                self.assertEqual(run.writes()[:-2], TODAY[:-2], "every stack above the check deployed")
-                self.assertTrue(run.writes()[-2][1].startswith(f"infra/aws/verify-deploy.mjs {origin} "), "GH202's checks, before step 12")
+                self.assertEqual(run.writes()[:-3], TODAY[:-3], "every stack above the check deployed")
+                self.assertTrue(run.writes()[-3][1].startswith(f"infra/aws/verify-deploy.mjs {origin} "), "GH202's checks, before step 12")
+                self.assertEqual(run.writes()[-2], TODAY[-2])
                 self.assertEqual(run.writes()[-1], ("node", f"infra/aws/smoke-favourites.mjs {origin}"))
                 lines = run.out.splitlines()
                 step = lines.index("== 12. The home's personal read (a club, a player, both)")
@@ -606,6 +607,21 @@ class AccountDeployTest(unittest.TestCase):
         self.assertFalse({"--mix", "--teams", "--players"} & set(argv), argv)
         self.assertEqual([c["argv"] for c in mixed.calls if c["tool"] == "node" and c["argv"][:1] == ["infra/aws/smoke-favourites.mjs"]],
                          [["infra/aws/smoke-favourites.mjs", "https://d111111abcdef8.cloudfront.net"]])
+
+    def test_GH257_the_origin_check_and_favourites_run_even_if_one_fails(self):
+        run = self.deploy(base_state(), extra={"FAKE_NODE_FAIL": "infra/aws/smoke-public-reads.mjs"})
+        self.assertEqual(run.writes(), TODAY)
+        self.assertEqual(run.code, 1, run.log)
+        self.assertIn("FAILED the checks of step 11c", run.log)
+        self.assertNotIn("done", run.out.splitlines())
+
+    def test_GH257_the_old_deploy_role_stops_before_any_change(self):
+        state = base_state()
+        state["stacks"]["vega-v2-deploy-roles"]["outputs"]["DeployGrants"] = "1"
+        run = self.deploy(state)
+        self.assertNotEqual(run.code, 0, run.log)
+        self.assertEqual(run.writes(), [])
+        self.assertIn("DeployGrants is not 2", run.log)
 
     def test_w10_a_failed_migration_stops_before_the_account_stack(self):
         state = prepared(base_state())

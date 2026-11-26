@@ -475,7 +475,8 @@ class AlarmsOfGH204Test(unittest.TestCase):
         for needle in ("cloudwatch:PutDashboard", ":dashboard/vega-v2'", "cloudwatch:PutInsightRule", ":insight-rule/vega-v2-*",
                        "events:PutRule", ":rule/vega-v2-*"):
             self.assertIn(needle, block)
-        self.assertRegex(self.roles, r"\n  DeployGrants: \{Value: '1'\}")
+        grants = one(r"^  DeployGrants: \{Value: '(\d+)'\}$", self.roles, "the deployed grants version")
+        self.assertIn(f'[ "$(output vega-v2-deploy-roles DeployGrants)" = {grants} ]', self.deploy)
 
 
 if __name__ == "__main__":

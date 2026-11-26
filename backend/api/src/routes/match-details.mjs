@@ -35,9 +35,6 @@ const FAMILY = {
   "/advanced/network": "network", "/heatmaps": "heatmaps", "/h2h": "h2h",
 };
 const where = "WHERE season_id=$1 AND match_id=$2";
-// A family whose body changed shape without a new match revision: its ETag changes with it, so a client holding the
-// former body reads the new one (the line-ups' photos, FAILURE_MODES § 67).
-const SHAPE = { "/lineups": "photos" };
 const missing = () => reject(404, "Donnée indisponible.");
 
 // Reuse the publication's measured-zero policy without changing the raw family or the
@@ -104,7 +101,7 @@ async function body(read, f, suffix, params) {
         // Each player's photo (FAILURE_MODES § 67): read with the line-up, statistics or not.
         read(
           `SELECT l.*, pp.image_url FROM api.match_lineup_player_rows l
-           LEFT JOIN api.player_profiles pp ON pp.player_id = api.internal_id('player', l.player_id)
+           LEFT JOIN api.player_identities pp ON pp.player_key = api.internal_id('player', l.player_id)
            WHERE l.season_id=$1 AND l.match_id=$2`,
           at,
         ),
@@ -218,6 +215,13 @@ export const DISPLAY_SPEC = {
   former: (content) => `W/"match-display-${content}"`,
 };
 
+// A player's photo can be corrected independently of the match's revision.
+const LINEUPS_SPEC = {
+  family: "match-lineups", data: true, ttl: [60, 15], maxBytes: 2 * 1024 * 1024,
+  reads: ["api.fixtures", "api.match_family_coverage", "api.internal_id", "api.match_lineup_rows",
+    "api.match_lineup_player_rows", "api.player_identities"],
+};
+
 export function createMatchDetailRoute(read, { versioned = createDataVersions(read) } = {}) {
   return async (req, path, params) => {
     const m = path.match(ROUTE);
@@ -227,9 +231,10 @@ export function createMatchDetailRoute(read, { versioned = createDataVersions(re
     if (suffix === "/lineups/probable") return probable(read, req, id, params);
     if (params.has("frame") && !/^(acting_ltr|home_ltr)$/.test(params.get("frame"))) reject(400, "Paramètre invalide.");
     if (params.has("v") && !/^[\w.-]{1,200}$/.test(params.get("v"))) reject(400, "Paramètre invalide.");
-    // Published zeros can change after recalculation without a new raw match revision.
-    if (suffix === "/players/display")
-      return versioned(req, params, DISPLAY_SPEC, async (guarded) => {
+    // Display statistics and photos can change independently of the raw match revision.
+    const spec = suffix === "/lineups" ? LINEUPS_SPEC : suffix === "/players/display" ? DISPLAY_SPEC : null;
+    if (spec)
+      return versioned(req, params, spec, async (guarded) => {
         const [f] = await guarded(FIXTURE_SQL, [id]);
         if (!f) reject(404, "Match introuvable.");
         if (f[FAMILY[suffix]] !== "ok") missing();
@@ -239,8 +244,7 @@ export function createMatchDetailRoute(read, { versioned = createDataVersions(re
     if (!f) reject(404, "Match introuvable.");
     if (suffix && f[FAMILY[suffix]] !== "ok") missing();
     const url = new URL(req.url);
-    const shape = SHAPE[suffix] ? `|${SHAPE[suffix]}` : "";
-    const etag = `W/"match-v1-${createHash("sha256").update(`${url.pathname}|${params.get("frame") ?? ""}|${f.revision}${shape}`).digest("hex")}"`;
+    const etag = `W/"match-v1-${createHash("sha256").update(`${url.pathname}|${params.get("frame") ?? ""}|${f.revision}`).digest("hex")}"`;
     const ttl = f.status === "finished" ? 60 : 15;
     if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl });
     return send(req, { data: await body(read, f, suffix, params) }, 200, { etag, ttl, maxBytes: 2 * 1024 * 1024 });

@@ -3,10 +3,13 @@
 import { before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { appendFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createReader } from "../src/db.mjs";
 import { createHandler } from "../src/handler.mjs";
 import { entityTags } from "../src/http.mjs";
+import { routeFamily } from "../src/route-family.mjs";
+import { DB_BUDGET_MS, readTiming } from "../../../infra/aws/smoke-public-reads.mjs";
 
 const DSN = process.env.VEGA_V2_API_NODE_TEST_DSN;
 export const skip = !DSN && "requires VEGA_V2_API_NODE_TEST_DSN (local vega_v2_api_node_test)";
@@ -63,6 +66,18 @@ export async function get(path, headers = {}) {
   heldTag(headers, response);
   const text = response.status === 304 ? "" : await response.text();
   const conditional = Object.keys(headers).some((name) => name.toLowerCase() === "if-none-match");
+  const scenarios = process.env.VEGA_PUBLIC_READ_COVERAGE;
+  if (scenarios && !conditional) {
+    const timing = readTiming(response.headers.get("server-timing"));
+    appendFileSync(scenarios, JSON.stringify({
+      path, family: routeFamily(new URL(path, "https://api.test").pathname), status: response.status,
+      bytes: Buffer.byteLength(text), ...timing,
+    }) + "\n");
+    if (response.status === 200) {
+      assert.ok(timing, `${path}: Server-Timing missing`);
+      assert.ok(timing.dbMs <= DB_BUDGET_MS, `${path}: SQL budget of ${DB_BUDGET_MS} ms, measured ${timing.dbMs} ms`);
+    }
+  }
   if (response.status === 200 && VERSIONED.test(response.headers.get("etag") || "") && !conditional) await revalidated(path, headers, response);
   return { response, body: text ? JSON.parse(text) : null };
 }

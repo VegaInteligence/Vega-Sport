@@ -126,7 +126,9 @@ EVERY_STACK = [stack_arn(n) for n in STACKS_HERE] + [stack_arn(n, "us-east-1") f
 STATE_OBJECT = f"arn:aws:s3:::{STATE_BUCKET}/state.json"
 
 # (service, operation) as the scripts write it → [(actions, resources)], each pair to be granted.
+API_FUNCTION = f"arn:aws:lambda:{REGION}:{ACCOUNT}:function:vega-v2-api"
 CALLS = {
+    ('lambda', 'invoke'): [(['lambda:InvokeFunction'], [API_FUNCTION])],
     ("sts", "get-caller-identity"): [],  # no grant needed
     # Each stack's status before the first change (an operation a dead run left, GH157.3), and the outputs read.
     ("cloudformation", "describe-stacks"): [(["cloudformation:DescribeStacks"], EVERY_STACK + [stack_arn("vega-v2-deploy-roles")])],
@@ -160,7 +162,7 @@ CALLS = {
 KMS = [(["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey"], ["arn:aws:kms:us-east-2:361769570630:key/0000"])]
 
 SCRIPTS = {"deploy.sh": AWS / "deploy.sh", "ci/secrets.sh": AWS / "ci/secrets.sh", "deploy_state.py": AWS / "deploy_state.py",
-           "verify-deploy.mjs": AWS / "verify-deploy.mjs"}
+           "verify-deploy.mjs": AWS / "verify-deploy.mjs", "smoke-public-reads.mjs": AWS / "smoke-public-reads.mjs"}
 
 
 def shell_code(line):
@@ -227,6 +229,13 @@ class DeployRoleTest(unittest.TestCase):
                 if not [s for s in policy if action in s["actions"] and "ssm.${AWS::Region}.amazonaws.com" in s["condition"]]:
                     refused.append(f"{action} through SSM")
         self.assertEqual(refused, [])
+
+    def test_GH257_the_origin_probe_can_only_invoke_the_read_function(self):
+        policy = statements("DeployRole")
+        self.assertTrue(granted(policy, "lambda:InvokeFunction", API_FUNCTION))
+        self.assertFalse(granted(policy, "lambda:InvokeFunctionUrl", API_FUNCTION))
+        self.assertFalse(granted(policy, "lambda:InvokeFunction", API_FUNCTION.replace("vega-v2-api", "vega-v2-account-front")))
+        self.assertFalse(granted(policy, "lambda:InvokeFunction", API_FUNCTION + ":preview"))
 
     def test_GH157_q_the_us_east_1_calls_name_their_region(self):
         """A stack or a parameter of us-east-1 is granted there, not only in the role's own region."""

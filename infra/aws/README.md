@@ -107,6 +107,29 @@ The worker image keeps what its build resolved by itself (Debian's `nodejs`, pip
 
 At the end (step 11b, `verify-deploy.mjs`, GH202), before step 12: the release the distribution serves through `/api/health` (its `release`, the package's SHA-256, at most 24 tries 5 s apart), the worker and the backfill on the task definitions just deployed (desired, running, one deployment, `COMPLETED`; 30 tries 10 s apart). It asks nothing else: the home's personal read is step 12's probe's alone (`smoke-favourites.mjs`). A failure ends the run without `done` once step 12 has run.
 
+Step 11c (`smoke-public-reads.mjs`, GH257) checks the same release directly on the read function. A synchronous
+Invoke sends a Function URL GET event without a validator. It checks health, the 2026/2027 substitutions of Lille and
+Brentford, and the Lille profile. The workflow logs the status, body size, wall time, handler time, SQL time and
+query count. The three dataset reads each need a 200 with the requested club's data, SQL time at most 3 s, and
+handler time at most 5 s. Invoke is limited to 15 s and one attempt per request. There is no cache invalidation.
+A fresh installation that creates the database can skip the dataset reads when the origin confirms release, pending
+health and publication 0. The distribution's release and readiness checks and the favourites probe still run.
+
+If this installation uses another dataset, set both repository variables `V2_PUBLIC_SMOKE_SEASON` (a season such as
+`2026/2027`) and `V2_PUBLIC_SMOKE_TEAMS` (two distinct team IDs separated by a comma). Choose clubs whose season shows a
+nonempty decisive-substitute list. These variables are `SMOKE_PUBLIC_SEASON` and `SMOKE_PUBLIC_TEAMS` in a workstation's
+shell. A missing case in a populated database fails visibly, so the workflow cannot pass on an empty body or a 404.
+To run only the probe from that shell, with the Deploy role's scoped access or the owner's:
+
+```sh
+node infra/aws/smoke-public-reads.mjs --release <the deployed release sha256>
+```
+
+CI exercises more public readers through the real handler and the disposable PostgreSQL database. The
+`public-reads-evidence` artifact holds the scenario outcomes, captured SQL and actual plans before and after adding
+unrelated populations, and the paths, status codes and timings exercised by the shared contract tests. The origin
+probes cover a small sample after release. A direct Invoke does not flush PostgreSQL buffers.
+
 ### Takeover and first install (FAILURE_MODES_OPTIMISATIONS.md GH157.3)
 
 One run deploys at a time: the one holding `s3://vega-v2-deploy-state-<account>-us-east-2/state.json`, the one object of a private, versioned bucket the roles stack creates (One-time setup), so that a first install takes the same lock as any Deploy, before anything is created. Another run's state is never taken over for its age (a suspended workstation, a stalled job wake up), nor on a word alone: a Deploy takes it over when GitHub says that run's attempt `completed` (the workflow's token, `actions: read`; a hosted runner's machine is gone with its job), or, for a workstation's run (`host:<host>:<pid>:<token>`, the host being its short name and a digest of its machine identity, `python3 infra/aws/run_lock.py host`; a machine without one, or with a placeholder, deploys from GitHub Actions only), once its lock is found in this machine's lock directory and free: the run holds from its start a lock that every command it starts inherits (`/tmp/vega-deploy-<token>.lock`, `DEPLOY_LOCK_DIR`, `infra/aws/run_lock.py`; the empty file stays once the run ends), so a shell killed alone while its `aws cloudformation deploy` goes on (its change set created, then executed) still holds it. A lock not found there — the run of another machine (of any name, a clone), this machine's before a restart or a cleaning of /tmp — or a name without a token proves nothing: the owner attests the run dead once its processes are known gone (the machine off or restarted; or the run's shell and every command it started, `aws` among them, stopped), then runs the Deploy:
@@ -131,7 +154,9 @@ A first install is one where the worker stack and the repository are both missin
 
 ### The Deploy's grants (owner, once, before the next Deploy)
 
-The batch of 26 November 2026 needs new grants and a bucket: the roles stack creates `vega-v2-deploy-state-<account>-<region>` (the Deploy's state); the deploy role reads and writes its `state.json` alone, deploys `vega-v2-edge-logs` (us-east-1), asks whether the repository and the release bucket exist (`ecr:DescribeRepositories`, `s3:ListBucket` on that bucket) and lists the cluster's tasks; the CloudFormation role creates the edge logs' delivery and saved queries (us-east-1), the RDS log group, the dashboard, the Contributor Insights rule and the EventBridge rules of the alarms as their handlers do (their tags, the rules' targets), and may do to the two buckets what AWS's handlers do (the managed policy `vega-v2-cloudformation-buckets`). `backend/tests/test_deploy_grants.py` checks each call of the Deploy against the deploy role, and the buckets' grants against AWS's handler schemas (not against AWS itself). Until the owner deploys `vega-v2-deploy-roles` from the Mac (the command of One-time setup), its output `DeployGrants` is not `1` and every Deploy stops at its preflight, nothing changed.
+The batch of 26 November 2026 needs new grants and a bucket: the roles stack creates `vega-v2-deploy-state-<account>-<region>` (the Deploy's state); the deploy role reads and writes its `state.json` alone, deploys `vega-v2-edge-logs` (us-east-1), asks whether the repository and the release bucket exist (`ecr:DescribeRepositories`, `s3:ListBucket` on that bucket) and lists the cluster's tasks; the CloudFormation role creates the edge logs' delivery and saved queries (us-east-1), the RDS log group, the dashboard, the Contributor Insights rule and the EventBridge rules of the alarms as their handlers do (their tags, the rules' targets), and may do to the two buckets what AWS's handlers do (the managed policy `vega-v2-cloudformation-buckets`). `backend/tests/test_deploy_grants.py` checks each call of the Deploy against the deploy role, and the buckets' grants against AWS's handler schemas (not against AWS itself). GH257 adds only `lambda:InvokeFunction` on the unqualified ARN of `vega-v2-api` to the Deploy role. The owner applies
+`infra/aws/deploy-roles.yaml` using the One-time setup command before the next Deploy. The workflow's preflight
+requires `DeployGrants` to read `2` before making changes.
 
 The worker collects whatever fails around the collection: the planner, the calculator, the image copies and the daily pass log their error and the loop goes on (`planner error=…`, `calculator error=…`, `media error=…`, `daily step=<step> error=… retry_at=…`). A step of the daily pass that failed (`analyze`, `archives`, `due`, `sources`, `elo`, `season <id>`) is tried again an hour later, not at the next round. An error of ours shows as `WORKER_<CLASS>@<file>:<line>`, a database error as `DATABASE_<sqlstate>`.
 
@@ -165,7 +190,7 @@ What a point of presence may hold after a correction or a release: the copy made
 aws cloudfront create-invalidation --profile statarena --paths '/api/league-history*' --distribution-id "$(aws cloudformation describe-stacks --profile statarena --region us-east-2 --stack-name vega-v2-api --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)"
 ```
 
-An invalidation never reaches a browser's own copy. Most answers say `max-age=0` (the browser asks again, through the distribution), but `/api/status` says `max-age=3600` and an `/api/assets` redirection `max-age=86400`: browsers keep those whatever the distribution holds (as before GH145, which changes the distribution only). A change they must show sooner needs another address (a path, or a query parameter the site sends). When a kept copy is revalidated, a 304 depends on the route's validator: one that hashes the built body (`catalog-v1`, `support-v1`, `profile-v1`, `nations-v1`, `player-form-v1`, `worldcup-v1`, `archive-details-v1`, `match-display-`) confirms only the same bytes; `/api/league-history`'s names the release; one made of a data version alone (`core-v3`, `compact-v2`, `versioned-`, `archive-v2`, `search-v2`, `match-v1`, `players-profile-`) can confirm a body of a former shape after a release, unless the release changes the version string it hashes (as `SHAPE` in `match-details.mjs` or `manifestShape` do) or the paths are invalidated.
+An invalidation never reaches a browser's own copy. Most answers say `max-age=0` (the browser asks again, through the distribution), but `/api/status` says `max-age=3600` and an `/api/assets` redirection `max-age=86400`: browsers keep those whatever the distribution holds (as before GH145, which changes the distribution only). A change they must show sooner needs another address (a path, or a query parameter the site sends). When a kept copy is revalidated, a 304 depends on the route's validator: one that hashes the built body (`catalog-v1`, `support-v1`, `profile-v1`, `nations-v1`, `player-form-v1`, `worldcup-v1`, `archive-details-v1`, `match-display-`, `match-lineups-`) confirms only the same bytes; `/api/league-history`'s names the release; one made of a data version alone (`core-v3`, `compact-v2`, `versioned-`, `archive-v2`, `search-v2`, `match-v1`, `players-profile-`) can confirm a body of a former shape after a release, unless the release changes the version string it hashes (as `manifestShape` does) or the paths are invalidated.
 
 The function answers the revalidations of `/api/league-history` with the digest of its four reads, in one statement, without building the answer. The share of requests the distribution answers by itself is measured on its access logs (GH149, `edge-cache-report.mjs`), not set by these ceilings.
 
@@ -173,6 +198,16 @@ The function logs one line per request it receives (`{"request":"read","path":�
 
 ```
 filter request = "read" | stats count(*) as calls, sum(conditional) as revalidations, avg(ms), avg(db) by path | sort calls desc
+```
+
+Use the same origin logs to choose further cold-read scenarios from actual traffic. This groups 5xx responses and
+unconditional reads beyond the SQL budget by their existing route family (GH204).
+
+```
+filter request = "read"
+| stats count(*) as calls, sum(if(status >= 500 and status < 600, 1, 0)) as errors,
+    sum(if(conditional = false and db > 3000, 1, 0)) as over_sql_budget, pct(db, 95) as p95_sql_ms by route
+| sort errors desc, over_sql_budget desc
 ```
 
 <!-- BEGIN VI-35 web ACL -->
