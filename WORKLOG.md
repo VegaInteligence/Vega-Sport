@@ -16,6 +16,7 @@
 - `HomeSettings.jsx` : Saison · Compétitions dans une piste de 40 px, un panneau qui glisse entre les deux (saisons en pilules, compétitions en tuiles avec logo, Toutes / Top 7, recherche, Annuler / Appliquer), feuille du bas au téléphone. `HomePreferences.jsx` garde la fenêtre pour /compte et partage sa logique (`useHomeCompetitions`, `useCompetitionDraft`, `applyCompetitionDraft`) ; la ligne « Votre pays » en est retirée.
 - `home-pills.css` : résultats de la semaine en cartes de 22 px, liens, action principale, onglets de ligue, sélecteurs, plis, « i », bulles et fenêtres ouvertes depuis l'accueil. Répare aussi le menu Pays de Paramètres, sans cadre depuis f2d62a6.
 - Tests : `tests/e2e/home-buttons.e2e.mjs` H1 à H14 et X1, rouges sur 6fac550 (14/15), verts après (15/15) ; barre 21/21. `home-country.e2e.mjs` M1 réécrit (pays lu dans les préférences), non relancé ici : le rejeu du 24 nov. n'a pas `home-local`.
+- Retour de hugo à 17 h 02 (§ 77.1) : la recherche des compétitions, cliquée, s'affichait en deux morceaux (les règles génériques des champs peignaient le champ par-dessus l'anneau de la pilule). Le champ reste transparent, la pilule entière s'éclaire sans anneau. H15 rouge sur 8a89ac9, vert après ; accueil 16/16.
 
 ## Barre de navigation : piste B et panneau qui glisse en tuiles — FAILURE_MODES § 76 (26 novembre 2026, sur main depuis 6c75337)
 
