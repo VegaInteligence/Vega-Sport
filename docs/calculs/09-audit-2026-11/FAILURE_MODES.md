@@ -5952,16 +5952,16 @@ yet, read as « 02:00 ».
 
 ### 73.3 The window (hugo, 26 Nov 2026, 11 h 04 on the release, a Champions League screenshot: « le truc rectangulaire droit la ca va pas du tout » ; mock-up https://claude.ai/artifact/ENDVBWG9YzVEPxPaXKi6gL, piste A « La fenêtre arrondie » chosen at 11 h 08 « va avec A envoie dans main »)
 
-- The picker is no longer the site's square dialog: 20 px corners (28 px at first; hugo chose 20 px at 11 h 15 with the
-  mock-up's slider, « passe en 20px »), no frame, no line under the title, the competition's
+- The picker is no longer the site's square dialog: 10 px corners (28 px at first; 20 px at 11 h 15 with the mock-up's
+  slider; 10 px at 11 h 23 with the bubbles, § 74), no frame, no line under the title, the competition's
   logo before its name, the close button a round quiet pill (32 px) like the arrows; `:root dialog.picker` above the
   site's `.modal` whatever the stylesheets' order. On a phone it keeps 10 px around it and its corners, no longer edge to
   edge. Every other dialog of the site is unchanged.
 - The numbered pills are 44 px wide at most: the 8 rounds of the Champions League no longer stretch over the width.
-- **R49** (`match-tabs.e2e.mjs`, computer) the window's radius 20 px, border 0, the header's line 0, the close button
+- **R49** (`match-tabs.e2e.mjs`, computer) the window's radius 10 px, border 0, the header's line 0, the close button
   50 % without border, a logo in the header, the widest pill ≤ 44 px. Red on dadd055 (0 px, 1 px, 1 px, square, no logo,
   pills stretched to the width).
-- **R50** (phone) radius 20 px, border 0, at least 8 px between the window and the screen's edges. Red on dadd055.
+- **R50** (phone) radius 10 px, border 0, at least 8 px between the window and the screen's edges. Red on dadd055.
 
 ## 74. The figures' bubbles: the width of their tile, in the teams' colours (hugo, 26 Nov 2026, 11 h 16 « je veux que le hoover est la meme largeur que la case », 11 h 18 « pq les couleurs des equipes ne s'applique pas au hoover change cela »; written before the tests)
 
@@ -5974,8 +5974,9 @@ their colours (Lille red, Bayern blue in hugo's screenshot).
   260 px (a phone, two tiles a row) it takes its row's (the strip of figures), within the screen.
 - **The teams' colours go with every bubble:** `useHoverBubble` copies the element's `--home` / `--away` onto the bubble
   when it opens; outside the match page (no colours) nothing changes.
-- Rounded corners: shown in the mock-up https://claude.ai/artifact/J4Cs93Cx1uYs1i2pqDjeNV (a slider), not changed
-  until hugo chooses.
+- **10 px corners** for every bubble (`.bubble`), chosen by hugo with the mock-up's slider
+  (https://claude.ai/artifact/J4Cs93Cx1uYs1i2pqDjeNV) at 11 h 23, and the round picker's window brought to 10 px with
+  them (§ 73.3) « comme ca on harmonise les border radius ». R49, R50 now expect 10 px, R51 the bubble's 10 px.
 - **R51** (`match-tabs.e2e.mjs`, computer) the xG bubble's width and left edge those of its tile (±1 px), its teams'
   colours those of the tile. Red on 122022b (320 px for 278 px).
 - **R52** (phone) a tile under 260 px: the bubble the strip's width and left edge, the teams' colours the tile's. Red on

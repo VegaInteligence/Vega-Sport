@@ -4,7 +4,7 @@
 
 - Demandes de hugo (11 h 16 et 11 h 18, capture Lille – Bayern) : la bulle doit avoir la largeur de sa case, et les couleurs des équipes ne s'y appliquaient pas (bulle dessinée hors de la page, dans `body`).
 - `HoverCard` / `useHoverBubble` : option `fit` (largeur et bords de la case, de la bande sur téléphone sous 260 px), couleurs `--home` / `--away` de l'élément recopiées sur toutes les bulles. `MatchKpis` passe `fit`.
-- Arrondi : maquette avec curseur https://claude.ai/artifact/J4Cs93Cx1uYs1i2pqDjeNV, rien changé en attendant le choix de hugo.
+- Arrondi choisi par hugo au curseur de la maquette (https://claude.ai/artifact/J4Cs93Cx1uYs1i2pqDjeNV) : 10 px pour toutes les bulles, et la fenêtre du choix de journée ramenée de 20 à 10 px pour harmoniser.
 - R51 et R52 (`match-tabs.e2e.mjs`) rouges sur 122022b, verts après ; site 1 118/1 118, match-tabs 38/38.
 
 ## CI selon les fichiers changés (26 novembre 2026, branche `claude/ci-selon-fichiers` depuis main 2b7cfb4)
