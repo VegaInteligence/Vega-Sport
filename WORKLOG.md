@@ -1,5 +1,14 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## CI plus rapide : sept parts équilibrées, main jamais annulée (26 novembre 2026, branche `claude/ci-plus-rapide` depuis main 122022b)
+
+- Constat (run complet 45795996557) : Suites (deploy) 18 min 22 (1 070 s de tests), python 10 min 02 (572 s), api 5 min 20 (288 s). Et les 11 runs de main du 26 novembre ont tous été annulés : chaque fusion annulait le run complet en cours, main n'était jamais vérifiée en entier.
+- `cancel-in-progress` seulement hors de main : le run de main en cours finit, GitHub ne garde que la dernière fusion en attente.
+- Matrice « Suites » par parts (`changed_suites.PARTS`, sortie `parts`) : python-1, python-2, deploy-1 à deploy-4, api. `python_suites.py` répartit des unités entières (une méthode de `test_deploy_flow`, chacune indépendante : base clonée du modèle, dépôt à elle ; ailleurs un module entier), de la plus longue à la moins chargée des parts, par les durées de `backend/ci/durations.json` (tiré des journaux de CI par `backend/ci/durations.py` ; une unité inconnue pèse la médiane de son groupe), puis les lance dans l'ordre de la découverte. Projection : deploy 266-270 s par part, python 286 s, soit ~6 min avec la mise en place, contre 18 min.
+- Un module qui ne s'importe pas fait échouer chaque part avant tout test (avant, il comptait dans les deux suites).
+- Tests (`test_ci_zones.py` i2 à i6) : les parts = la découverte entière, chaque test une fois (Counter), aucune part vide, unités jamais coupées, ordre de la découverte, équilibre à 25 % près, durations.json à jour pour 80 % des unités, erreur d'import, lecture d'un journal.
+- Avis d'Astra (xhigh, `/mnt/project-files/ci-selon-fichiers/reponse_astra_ci2_resume.md`) : 4 parts Deploy, 2 Python, 1 API ; caches pip/npm inutiles (4 s) ; accélérer `test_deploy_flow` lui-même plus tard, après mesure.
+
 ## CI selon les fichiers changés (26 novembre 2026, branche `claude/ci-selon-fichiers` depuis main 2b7cfb4)
 
 - Constat (demande de hugo, 10 h 18) : la CI attendait 19 à 27 min depuis #241-#244, contre 10 à 16 min la veille ; `test_deploy_flow.py` seul ≈ 9 min (vrai `deploy.sh`, BuildKit, migrations), `test_account_deploy` 21 s → 96 s ; une PR du site seul attendait tout.
