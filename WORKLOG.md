@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Boutons en pilule sur la page match — FAILURE_MODES § 72 (26 novembre 2026, [#245](https://github.com/VegaInteligence/Vega-Sport/issues/245), branche `claude/boutons-pilule-page-match` depuis main 64ac3f9)
+
+- Demande de hugo : les boutons carrés à bordure grise remplacés par des pilules (modèle : « Rejoindre la liste d'attente »). Maquettes : page compétition (pistes A et B), puis page match en piste A, sans fond derrière les logos, sélecteurs un peu plus petits, blocs « Meilleure note » et repères inchangés ; validée avec « ok pour la page match envoie en prod ».
+- Code : `match-pills.css` (jetons `--pill-*` en sombre et en clair, règles `:root .match-detail …`, indépendantes de l'ordre des feuilles entre `next dev` et la build), `MatchNav.module.css` (retour, compétition, flèches rondes, tuiles arrondies, match affiché plein, plus de barre oblique), `MatchPlayerOpen.module.css` (puces des remplaçants), `analysis.css` (logos du tableau de score sans cadre ni fond).
+- Tests écrits d'abord : R41 (`match-head-style.test.mjs`), R42 à R44 (`match-tabs.e2e.mjs`, sur une build) rouges sur main, verts après ; R10 (notes jusqu'au pied de la carte des tirs) cassé par la pilule « Tous les joueurs », corrigé par le rembourrage du pied de carte. Le mock des pages de la saison de l'E2E répond maintenant la publication du manifeste (R15 à R19 échouaient sur main depuis GH129-m). Site 1 111/1 111 ; `match-tabs.e2e.mjs` 32/32. Preuves : `/mnt/project-files/design-boutons/page-match-prod/`.
+- Reste : la page compétition et le reste du site (en-tête, recherche) quand hugo le demandera.
+
 ## Favoris de l'accueil, « Vos joueurs » de la semaine — GH220.4 (26 novembre 2026, [#220](https://github.com/VegaInteligence/Vega-Sport/issues/220) rouverte, [VI-158](https://linear.app/vegainteligence/issue/VI-158), branche `claude/v2-favoris-vos-joueurs` depuis main e401480)
 
 - Alarme `vega-v2-api-5xx` du 25 nov. (20 h 50 UTC) : uniquement `/api/read/home-favourites`, 503 après 8 s (57014) ; 133 lectures sur 168 ce jour-là, après #230. Mesure en lecture seule sur la production (`EXPLAIN ANALYZE`, demandée par hugo) : clubs ~0,5 s, ~7 s par joueur suivi, presque tout dans `your_matches` (la vue `api.fixtures` de la saison reconstruite pour chaque apparition du joueur). Relu par Astra (gpt-6.2-astra, xhigh).

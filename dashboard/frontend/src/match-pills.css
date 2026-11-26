@@ -1,0 +1,282 @@
+/* The match page's buttons as pills (FAILURE_MODES § 72; piste A of the mock-up hugo approved on 26 Nov 2026,
+   https://claude.ai/artifact/2EA1PZszYAdkARJrbFo2eQ).
+   One shape for whatever is clicked: the pill. Filled (ivory on night in dark, night on ivory in light) for the main
+   action and the current choice; quiet (a light veil, no border) for the rest.
+   Every rule starts with `:root .match-detail`: the match page only, and two classes above the site's rules it replaces,
+   so the result does not depend on the order in which the stylesheets load (CSS modules come after the global sheets in
+   `next dev`, before them in a build). The head's own elements (MatchNav, the line-ups' chips) are in their modules. */
+
+html {
+  --pill-fill: #f4f1ea;
+  --pill-ink: #07080b;
+  --pill-quiet: rgb(255 255 255 / 0.07);
+  --pill-quiet-hover: rgb(255 255 255 / 0.13);
+  --pill-quiet-ink: #e9eaec;
+  --pill-track: rgb(255 255 255 / 0.05);
+  --pill-focus: #72beff;
+  --pill-h: 44px;
+  --pill-h-sm: 34px;
+  --pill-pad: 22px;
+  --pill-text: 14.5px;
+  --pill-text-sm: 13px;
+}
+html[data-theme="light"] {
+  --pill-fill: #0b0d0f;
+  --pill-ink: #f4f1ea;
+  --pill-quiet: rgb(11 13 15 / 0.06);
+  --pill-quiet-hover: rgb(11 13 15 / 0.11);
+  --pill-quiet-ink: #0b0d0f;
+  --pill-track: rgb(11 13 15 / 0.045);
+  --pill-focus: #1c5fa6;
+}
+@media (max-width: 640px) {
+  html {
+    --pill-h: 44px;
+    --pill-h-sm: 36px;
+    --pill-pad: 20px;
+    --pill-text: 15px;
+    --pill-text-sm: 14px;
+  }
+}
+
+/* ----------------------------------------------------------------- common */
+:root
+  .match-detail
+  :is(
+    .button,
+    .segmented-control,
+    .segmented-control button,
+    .edition-stepper,
+    .edition-stepper button,
+    .edition-stepper select,
+    .competition-highlights-more,
+    .phone-fold-toggle,
+    select
+  ) {
+  border-radius: 999px;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease,
+    opacity 0.16s ease;
+}
+:root
+  .match-detail
+  :is(
+    .button,
+    .segmented-control button,
+    .competition-highlights-more,
+    .phone-fold-toggle
+  ):active {
+  transform: scale(0.97);
+}
+:root
+  .match-detail
+  :is(
+    .button,
+    .segmented-control button,
+    .edition-stepper button,
+    .edition-stepper select,
+    .competition-highlights-more,
+    .phone-fold-toggle,
+    .match-head-back,
+    .inline-link,
+    select
+  ):focus-visible {
+  outline: 2px solid var(--pill-focus);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------- the head's top row */
+/* « Résultats » / « Matchs à venir ». */
+:root .match-detail .match-head-back {
+  height: var(--pill-h-sm);
+  padding: 0 16px 0 12px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text-sm);
+  transition: background-color 0.16s ease;
+}
+:root .match-detail .match-head-back:hover {
+  background: var(--pill-quiet-hover);
+  color: var(--pill-quiet-ink);
+}
+/* « Enregistrer » and every other button of the page: quiet. */
+:root .match-detail .button {
+  min-height: var(--pill-h);
+  padding: 0 var(--pill-pad);
+  gap: 8px;
+  border: 0;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+:root .match-detail .button:hover {
+  background: var(--pill-quiet-hover);
+  color: var(--pill-quiet-ink);
+}
+/* A saved match keeps its accent. */
+:root .match-detail .research-bookmark.is-saved {
+  color: var(--accent);
+}
+/* « Rapport du match », the main action: filled. */
+:root .match-detail :is(.match-report-link.button, .button-primary) {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+:root .match-detail :is(.match-report-link.button, .button-primary):hover {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+  opacity: 0.86;
+}
+
+/* The rounds' arrows, where a block of the competition page shows them: round. */
+:root .match-detail .button.matchday-arrow {
+  width: var(--pill-h);
+  min-width: var(--pill-h);
+  padding: 0;
+}
+
+/* -------------------------- the views' choices (Proba / xG / Domination, the halves…) */
+:root .match-detail .segmented-control {
+  gap: 2px;
+  padding: 2px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+:root .match-detail .segmented-control button {
+  min-height: 32px;
+  padding: 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+:root .match-detail .segmented-control button:hover {
+  color: var(--pill-quiet-ink);
+  background: var(--pill-quiet);
+}
+:root .match-detail .segmented-control button[aria-pressed="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+  box-shadow: none;
+}
+
+/* -------------------------------------- « Classement »: the season stepper, the lists */
+:root .match-detail .edition-stepper {
+  gap: 0;
+  padding: 3px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+:root .match-detail .edition-stepper button {
+  width: calc(var(--pill-h) - 6px);
+  height: calc(var(--pill-h) - 6px);
+  color: var(--pill-quiet-ink);
+  font-size: 16px;
+}
+:root .match-detail .edition-stepper button:not(:disabled):hover {
+  background: var(--pill-quiet-hover);
+}
+:root .match-detail .edition-stepper select {
+  height: calc(var(--pill-h) - 6px);
+  min-height: calc(var(--pill-h) - 6px);
+  padding: 0 30px 0 14px;
+  font-size: var(--pill-text);
+  background-position: right 10px center;
+}
+:root .match-detail select:not(.edition-stepper select) {
+  min-height: var(--pill-h-sm);
+  height: var(--pill-h-sm);
+  padding: 0 34px 0 16px;
+  border: 0;
+  background-color: var(--pill-quiet);
+  background-position: right 12px center;
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text-sm);
+  font-weight: 500;
+}
+:root .match-detail select:not(.edition-stepper select):hover {
+  background-color: var(--pill-quiet-hover);
+}
+:root .match-detail .competition-highlights-more {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--pill-h-sm);
+  padding: 0 14px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text-sm);
+  font-weight: 500;
+}
+:root .match-detail .competition-highlights-more:hover {
+  background: var(--pill-quiet-hover);
+  text-decoration: none;
+}
+
+/* ------------------ « Tous les joueurs », the line-ups' search, « Afficher plus » */
+:root .match-detail .inline-link {
+  min-height: var(--pill-h-sm);
+  padding: 0 14px 0 16px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text-sm);
+  transition: background-color 0.16s ease;
+}
+:root .match-detail .inline-link:hover {
+  background: var(--pill-quiet-hover);
+  color: var(--pill-quiet-ink);
+}
+:root .match-detail input[type="search"] {
+  min-height: var(--pill-h-sm);
+  padding: 0 16px 0 34px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+}
+:root .match-detail .phone-fold-toggle {
+  border: 0;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+}
+
+/* « Tous les joueurs » under the best grades: the pill takes the footer's padding, so that the rows still end with the
+   shot map beside them (§ 63.3, R10). */
+:root .match-detail .match-leaders-card .card-footer {
+  padding: 0 0 2px;
+}
+
+@media (max-width: 640px) {
+  :root .match-detail .segmented-control button {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+  :root
+    .match-detail
+    :is(.competition-detail-controls, .filter-rail)
+    .segmented-control,
+  :root
+    .match-detail
+    :is(.competition-detail-controls, .filter-rail)
+    .segmented-control
+    button {
+    border-radius: 999px;
+  }
+  :root
+    .match-detail
+    :is(.competition-detail-controls, .filter-rail)
+    .segmented-control
+    button {
+    min-height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root .match-detail * {
+    transition: none !important;
+  }
+}

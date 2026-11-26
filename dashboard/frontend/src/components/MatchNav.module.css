@@ -1,5 +1,5 @@
 /* The match page's head (MatchNav: FAILURE_MODES § 63.6, direction C): the top row, the thread of matches, the round
-   picker. */
+   picker. Pills since § 72 (the --pill-* tokens are in match-pills.css). */
 .top {
   display: flex;
   align-items: center;
@@ -26,10 +26,6 @@
 .crumbs > a :global(.icon) {
   width: 14px;
 }
-.slash {
-  flex: none;
-  color: var(--muted-light);
-}
 .actions {
   display: flex;
   flex: none;
@@ -41,27 +37,36 @@
 .thread {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: stretch;
+  align-items: center;
   gap: 8px;
   margin: 14px 0 16px;
 }
 .threadLoading {
   height: 76px;
   margin: 14px 0 16px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border-radius: 22px;
+  background: var(--pill-quiet);
 }
 .step {
   display: grid;
   place-items: center;
-  width: var(--control-h);
-  border: 1px solid var(--border-strong);
+  width: var(--pill-h);
+  height: var(--pill-h);
+  border: 0;
+  border-radius: 50%;
+  background: var(--pill-quiet);
   color: var(--ink);
   text-decoration: none;
+  transition:
+    background-color 0.16s ease,
+    transform 0.12s ease;
 }
 a.step:hover,
 a.step:focus-visible {
-  background: var(--surface-hover);
+  background: var(--pill-quiet-hover);
+}
+a.step:active {
+  transform: scale(0.94);
 }
 .stepOff {
   color: var(--muted-light);
@@ -107,20 +112,26 @@ a.step:focus-visible,
   width: 172px;
   height: 100%;
   box-sizing: border-box;
-  padding: 9px 12px 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  padding: 10px 16px 11px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--pill-quiet);
   color: var(--ink);
   text-decoration: none;
+  transition:
+    background-color 0.16s ease,
+    transform 0.12s ease;
 }
 .tile:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-hover);
+  background: var(--pill-quiet-hover);
 }
-/* The site's accent, not a team's colour (the page's --home is the home crest's, § 64). */
+.tile:active {
+  transform: scale(0.98);
+}
+/* The match shown: filled, not a team's colour (the page's --home is the home crest's, § 64). */
 .tile[aria-current="page"] {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  background: var(--pill-fill);
+  color: var(--pill-ink);
 }
 .tileHead {
   overflow: hidden;
@@ -132,8 +143,11 @@ a.step:focus-visible,
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.tile[aria-current="page"] :is(.tileHead, .score, .tileName, .kickoff) {
+  color: var(--pill-ink);
+}
 .tile[aria-current="page"] .tileHead {
-  color: var(--accent);
+  opacity: 0.6;
 }
 .tileSide {
   display: flex;
@@ -171,20 +185,26 @@ a.step:focus-visible,
   gap: 8px;
   min-width: 0;
   max-width: 100%;
-  height: var(--control-h);
-  padding: 0 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: 0;
-  background: var(--surface-raised);
+  min-height: var(--pill-h);
+  padding: 0 18px 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
   color: var(--ink);
   font: inherit;
-  font-size: var(--text-md);
+  font-size: var(--pill-text);
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    transform 0.12s ease;
 }
-.center:hover {
-  border-color: var(--muted-light);
+button.center:hover {
+  background: var(--pill-quiet-hover);
+}
+button.center:active {
+  transform: scale(0.98);
 }
 .center > svg {
   flex: none;
@@ -210,6 +230,7 @@ a.step:focus-visible,
   flex: none;
   width: var(--media-20);
   height: var(--media-20);
+  background: none;
 }
 
 /* ----------------------------------------------------------------------- picker */
@@ -395,12 +416,19 @@ a.step:focus-visible,
   font-size: var(--text-md);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .step,
+  .tile,
+  .center {
+    transition: none;
+  }
+}
+
 /* ------------------------------------------------------------------------ phone */
 @media (max-width: 640px) {
   .crumbs {
     gap: 6px;
   }
-  .slash,
   .centerSeason {
     display: none;
   }
@@ -416,10 +444,6 @@ a.step:focus-visible,
   }
   .kickoff {
     font-size: var(--text-xs);
-  }
-  .center {
-    padding: 0 10px;
-    font-size: var(--text-sm);
   }
   .picker {
     width: 100vw;
