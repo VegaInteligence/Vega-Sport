@@ -242,7 +242,7 @@ try {
       (actions.querySelector(".account-entry")?.closest(".account-menu-root, .account-entry") || actions.lastElementChild).replaceWith(root);
       const b = root.querySelector("button"), m = root.querySelector(".account-entry-monogram"), r = b.getBoundingClientRect(), cm = getComputedStyle(m), cb = getComputedStyle(b);
       return {
-        width: Math.round(r.width), height: Math.round(r.height), radius: cb.borderTopLeftRadius, bg: cb.backgroundColor,
+        width: Math.round(r.width), height: Math.round(r.height), radius: cb.borderTopLeftRadius, bg: cb.backgroundColor, ink: cb.color,
         monogram: { display: cm.display, width: Math.round(m.getBoundingClientRect().width), bg: cm.backgroundColor, radius: cm.borderTopLeftRadius },
         label: root.querySelector(".account-entry-label").getBoundingClientRect().width > 20,
       };
@@ -252,7 +252,9 @@ try {
     await p.context().close();
   }
   const [wideAccount, narrowAccount] = signed;
-  check("N14", "signed in: no square monogram; a pill « Mon compte » from 1024 px, a 40 px round with the initial under it (§ 76.2)", signed,
+  // hugo (26 Nov 2026, 15 h 50): « met le bouton mon compte en blanc », filled like « Se connecter » (ivory on night here, dark theme).
+  check("N14", "signed in: no square monogram; a white pill « Mon compte » from 1024 px, a 40 px round with the initial under it (§ 76.2, 76.3)", signed,
+    signed.every((s) => s.bg === "rgb(244, 241, 234)" && s.ink !== "rgb(244, 241, 234)") &&
     wideAccount.radius === "999px" && wideAccount.monogram.display === "none" && wideAccount.label &&
       narrowAccount.width === 40 && parseFloat(narrowAccount.radius) >= 20 && narrowAccount.monogram.display !== "none" &&
       (narrowAccount.monogram.bg === "rgba(0, 0, 0, 0)" || parseFloat(narrowAccount.monogram.radius) >= narrowAccount.monogram.width / 2 - 1));

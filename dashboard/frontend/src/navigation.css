@@ -179,8 +179,9 @@ button.nav-button {
     gap: 6px;
   }
 }
-/* The account (hugo, 26 Nov 2026, 15 h 14: no square, no icon): a pill at every width. Signed in, a quiet pill
-   « Mon compte » with no monogram; where the label does not fit (under 1024 px) a round holding the initial alone. */
+/* The account (hugo, 26 Nov 2026, 15 h 14: no square, no icon): a pill at every width. Signed in, a filled pill
+   « Mon compte » like « Se connecter » (hugo, 15 h 50: « en blanc »), with no monogram; where the label does not fit
+   (under 1024 px) a round holding the initial alone. */
 .topbar .account-entry {
   border-radius: 999px;
 }
@@ -194,15 +195,13 @@ button.nav-button {
   justify-content: center;
   padding: 0 16px;
   border-color: transparent;
-  background: var(--pill-quiet);
+  background: var(--account-cta);
+  color: var(--account-cta-ink);
 }
 .topbar .account-entry-in:hover {
   border-color: transparent;
-  background: var(--pill-quiet-hover);
-}
-.topbar .account-entry-in[data-current] {
-  background: var(--pill-fill);
-  color: var(--pill-ink);
+  background: color-mix(in srgb, var(--account-cta) 88%, var(--bg));
+  color: var(--account-cta-ink);
 }
 .topbar .account-entry-monogram {
   display: none;

@@ -6087,3 +6087,12 @@ https://claude.ai/artifact/GxP3vebwEg17Eo4Fk5wdFm (piste 1, the recommended one,
   to the account. `brand.e2e.mjs` turns the computer light or dark instead of pressing the button (its B5n, B12d, B12h
   « same document » fail because the logo's link reloads the page after its turn, as before this change; B10 needs
   ORION_API_ORIGIN). `accounts.e2e.mjs` changes the theme through the settings' choice (not run here: it needs Neon).
+
+### 76.3 The account's button filled (hugo, 26 Nov 2026, 15 h 50 « met le bouton mon compte en blanc »)
+
+- **Mode:** signed in, « Mon compte » was a quiet veil beside a filled « Se connecter » of the signed-out header,
+  so the button read as a section of the track rather than the account.
+- **Change:** `navigation.css` gives `.topbar .account-entry-in` the colours of « Se connecter » (`--account-cta`,
+  ivory on night in the dark theme, night on ivory in the light one) at every width, the round with the initial too.
+- **Test:** `navbar.e2e.mjs` N14 wants the ivory fill in the dark theme at 1440 and 900 px; red on 60d8a81, green after
+  (barre 21/21).
