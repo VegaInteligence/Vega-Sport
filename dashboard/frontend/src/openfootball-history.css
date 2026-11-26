@@ -13,15 +13,14 @@
   gap: 12px;
   margin: 14px 0;
 }
-.historical-archive-filters label {
+.historical-archive-filters > label {
   display: flex;
   flex-direction: column;
   gap: 5px;
   color: var(--muted);
   font-size: var(--text-sm);
 }
-.historical-archive-filters select,
-.historical-archive-filters input {
+.historical-archive-filters > label > input {
   min-width: min(260px, 100%);
 }
 .historical-archive-summary {
@@ -41,11 +40,10 @@
   white-space: nowrap;
 }
 @media (max-width: 600px) {
-  .historical-archive-filters label {
+  .historical-archive-filters > label {
     width: 100%;
   }
-  .historical-archive-filters select,
-  .historical-archive-filters input {
+  .historical-archive-filters > label > input {
     width: 100%;
   }
 }

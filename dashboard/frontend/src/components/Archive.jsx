@@ -248,6 +248,15 @@ function SeasonArchive({
         }
       : resource;
   const edition = bounded ? displayed.value?.data : displayed.value;
+  // These facets describe the whole edition, independently of search and pagination.
+  const facetVersion = readParams.version || generation;
+  const lastFacets = useRef(null);
+  useEffect(() => {
+    if (edition?.competitions)
+      lastFacets.current = { version: facetVersion, competitions: edition.competitions };
+  }, [edition?.competitions, facetVersion]);
+  const facets = edition?.competitions ||
+    (lastFacets.current?.version === facetVersion ? lastFacets.current?.competitions : undefined);
   const version = bounded ? displayed.value?.meta?.version : undefined;
   const matchHref = (match) => hrefWith({ m: match.key, av: version });
   if (matchKey)
@@ -284,7 +293,7 @@ function SeasonArchive({
         }}
       </AsyncState>
     );
-  const competitions = edition ? orderedCompetitions(edition.competitions) : [];
+  const competitions = facets ? orderedCompetitions(facets) : [];
   return (
     <Card title="Archives" className="archive-card">
       <div className="historical-archive-filters">
@@ -299,7 +308,7 @@ function SeasonArchive({
           label="Compétition des archives"
           value={competition}
           competitions={competitions}
-          disabled={!edition}
+          disabled={!facets}
           onChange={(id) => setParams({ ac: id, ap: null, av: null })}
         />
         <label>

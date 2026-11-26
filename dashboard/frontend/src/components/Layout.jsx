@@ -5,6 +5,7 @@ import { pages } from "../../../shared/pages.js";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
+import { recordPreselectionChange } from "../hooks/usePreselect.js";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
 import { AdvancedPanel, AdvancedToggle } from "./AdvancedFilters.jsx";
 import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
@@ -156,9 +157,12 @@ export function Filters({ kind = "performances" }) {
               onChange={(value) => {
                 const preset = value === "all" || value === EUROPE_SCOPE;
                 const focus = value === EUROPE_SCOPE ? "europe" : "all";
+                const league = preset ? "all" : value;
+                // A scope change can remount the view before its preselection effect observes the clear.
+                recordPreselectionChange(players ? "players" : "matches", league);
                 if (preset ? f.focus !== focus : !f.competitions.some((competition) => competition.id === value))
                   f.changeFocus(focus);
-                f.setFilters((v) => ({ ...v, league: preset ? "all" : value, leagues: [], match: "all" }));
+                f.setFilters((v) => ({ ...v, league, leagues: [], match: "all" }));
               }}
             />
           )}

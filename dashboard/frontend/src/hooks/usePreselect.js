@@ -20,6 +20,10 @@ function write(memory) {
   } catch {}
 }
 
+export function recordPreselectionChange(key, current) {
+  write(preselectMemory(read(), { key, current }));
+}
+
 /** `ready`: the preferences and the control's options are known; `current`: the control's value now. */
 export default function usePreselect(key, { ready, candidate, inUrl, options, current, apply }) {
   const done = useRef(false),
@@ -40,7 +44,7 @@ export default function usePreselect(key, { ready, candidate, inUrl, options, cu
     previous.current = current;
     if (applied.current === null || current === applied.current) return;
     // The visitor changed the preselected value: cleared for the visit.
-    write(preselectMemory(read(), { key, current }));
+    recordPreselectionChange(key, current);
     applied.current = null;
   }, [key, current]);
 }
