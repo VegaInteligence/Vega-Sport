@@ -364,6 +364,100 @@ GH137M-a–f: `backend/api/test/matchdays-lean.test.mjs` (with `reference.test.m
 evidence's `gh137/`). Not verifiable here: production's plan and time after the change (a Deploy, then the same
 24-hour count).
 
+## GH145. The edge keeps each answer as long as the read API says (GH #145, VI-85; 26 Nov 2026, base `6c753375`)
+
+Seen before this change (`infra/aws/api.yaml` of `6c753375`): the default cache policy `vega-v2-api` is `MinTTL` 0,
+`DefaultTTL` 0, `MaxTTL` 60, and CloudFront keeps the smaller of `s-maxage` and `MaxTTL`. The read API says longer for
+many answers: 300 s (profiles and similarities, nations, player form, Europe), 3600 s (`/api/status`, the World Cup
+archive, the archives' details), 86 400 s (the `/api/assets` redirection to an image copy). Each was asked of the
+function, per key and per point of presence, every minute. `LiveCache` (`live/*`) is `MinTTL` 0, `DefaultTTL` 2,
+`MaxTTL` 2: `/live/config` says 60 s and was kept 2 s (read in production on 26 Nov 2026 at 13:33 UTC: two `Miss`
+eleven seconds apart, the coordinator's `edge-before.jsonl`). `LeagueHistoryCache` (GH137) is `MinTTL` 0, `DefaultTTL`
+0, `MaxTTL` 3600, for exactly `api/league-history`.
+
+What an answer says besides its freshness (read in the code of `6c753375`, unchanged here): the transport
+(`infra/aws/transport.mjs`, `edgeCacheControl`) adds `stale-if-error=86400` to every public answer that does not say it
+itself and drops `must-revalidate` for the edge; the home reads (`/api/read/home`, `/api/read/home-local`) say
+`s-maxage=60, stale-while-revalidate=300, stale-if-error=86400` (`HOME_STALE`); the live function's answers go through
+the same transport (a live match: `s-maxage=2, stale-if-error=86400`). AWS's documentation of expiration
+(`Expiration.html`, "Serving stale (expired) content") describes that CloudFront serves an expired object while it asks
+the origin again (`stale-while-revalidate`) and when the origin answers 500–599 or cannot be reached
+(`stale-if-error`), and that the cache policy's maximum TTL also bounds these windows (as the review of 26 Nov 2026
+cites it; not re-read nor observed on the distribution here). So `MaxTTL` 60 bounded more than the freshness: the
+day of `stale-if-error` the transport says, and the five minutes of `stale-while-revalidate` of the home, could not
+outlast it.
+
+### GH145.1 Rules
+
+- **The origin decides, on the API.** `vega-v2-api`: `MaxTTL` 31 536 000 (a year: the longest freshness the read API's
+  helper can say, `cacheHeaders(…, { immutable: true })`), `MinTTL` 0 and `DefaultTTL` 0 unchanged: an answer without
+  a freshness is not kept (`transport.mjs` turns a missing `Cache-Control` into `no-store`). Its cache key (no cookie,
+  no header, every query string, gzip and brotli) does not change.
+- **Fresh, then stale, as each answer says (documented behaviour, not observed).** After the change a public API answer
+  is fresh for its own `s-maxage` (60, 300, 3600 or 86 400 s), not 60 s. Past that, while the origin answers, every
+  request goes to the origin again (a 304 or a 200), except the home reads, which CloudFront may answer from the
+  expired copy for up to 300 s while it asks (`stale-while-revalidate=300`). When the origin answers 500–599 or cannot
+  be reached, any public answer may be served from the expired copy for up to a day (`stale-if-error=86400`), instead
+  of at most what was left of 60 s before. That day is what `transport.mjs` (20 Nov 2026) and `infra/aws/README.md`
+  already said; the old ceiling cut it. Errors (`no-store`, `ErrorCachingMinTTL` 0), personal answers (`private`) and
+  answers without freshness are kept by no one, before and after.
+- **Live matches keep their two seconds; `/live/config` gets its minute.** One live policy at `MaxTTL` 60 would also
+  let a live match state (`s-maxage=2, stale-if-error=86400`) be served from an expired copy for up to about a minute
+  while the live function fails, against about 2 s before: a score a minute old shown as live. So `vega-v2-live` stays
+  `MinTTL` 0, `DefaultTTL` 2, `MaxTTL` 2 for `live/*`, and a behaviour for exactly `live/config`, listed before
+  `live/*`, takes its own policy `vega-v2-live-config` (`MinTTL` 0, `DefaultTTL` 2, `MaxTTL` 60; the live policy's key:
+  no query string, header or cookie; gzip and brotli) and otherwise `live/*`'s settings (origin `live`, HTTPS, methods,
+  compression, the family function, the response headers). `/live/config` says the stack's settings, which change
+  only with a stack update. The read API's `api/*` paths keep their behaviours.
+- **Nothing else moves.** `vega-v2-api-league-history` stays `MaxTTL` 3600 on exactly `api/league-history`;
+  `api/ops/*` keeps the managed `CachingDisabled` policy and its key header (`OpsHeaders`), `data/*` the managed
+  `CachingOptimized` one; no origin, origin request policy, response headers policy or error caching changes
+  (`ErrorCachingMinTTL` 0 for 400, 403, 404, 405, 500, 502, 503, 504). The tests that list the behaviours (GH149-g,
+  the security headers' count) gain `live/config`, with the family function and `ViewerHeaders`.
+- **Every freshness fits its behaviour, read from the real helpers and answers.** The largest `s-maxage` the read
+  API's helpers can produce (`cacheHeaders` with `immutable`, a year) is at most the default policy's `MaxTTL`; the
+  answers this section names (status, a profile, the archives' details, an asset redirection, a ranking, the home, a
+  match family of a finished and of a coming match, every error, a personal answer) are read through the real handler
+  and transport, and each `s-maxage` is at most its behaviour's `MaxTTL`; the live function's answers likewise
+  (`/live/config` 60 within `vega-v2-live-config`, a live match 2 within `vega-v2-live`). No source scan claims to
+  list every value.
+- **After a correction or a release.** A point of presence may answer from a copy made before it until the copy's
+  `s-maxage` ends (fresh), then from the expired copy during its stale windows above. An invalidation of the route's
+  paths (owner's operation, `infra/aws/README.md`) removes the edge's copies sooner; no Deploy step invalidates. It
+  never reaches a browser's own copy: most answers say `max-age=0` (a browser asks again, through the edge, each time),
+  but `/api/status` says `max-age=3600` and an `/api/assets` redirection `max-age=86400`, which browsers keep whatever
+  the edge does (as before this change: `MaxTTL` never bounded browsers). A change those two must show sooner needs
+  another address (a path or a query parameter). When a kept copy is revalidated, whether the new code answers 304
+  depends on the route's validator, unchanged here: a hash of the built body (`catalog-v1`, `support-v1`,
+  `profile-v1`, `nations-v1`, `player-form-v1`, `worldcup-v1`, `archive-details-v1`, `match-display-`) is a 304 only
+  for the same bytes of what it hashes; `league-history-v2` names the release; a tag made of a data version alone
+  (`core-v3`, `compact-v2`, `versioned-`, `archive-v2`, `search-v2`, `match-v1`, `players-profile-`) can confirm a body
+  of the former shape after a release, unless the release changes the version string it hashes (as `SHAPE` in
+  `match-details.mjs` or `manifestShape` do). That was so before this change, after 60 s; it is now after the route's
+  own `s-maxage`.
+- **What is not claimed.** The template sets ceilings. How many requests the edge then answers itself is measured on
+  the access logs (GH149, `edge-cache-report.mjs`) after a Deploy, not here.
+
+### GH145.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| GH145-a | `Cache` (`vega-v2-api`) | `MinTTL` 0, `DefaultTTL` 0, `MaxTTL` 31536000; its cache key as before |
+| GH145-b | `LiveCache` (`vega-v2-live`), a new `LiveConfigCache` (`vega-v2-live-config`) and the behaviour `live/config` | `LiveCache` unchanged (0, 2, 2); `LiveConfigCache` (0, 2, 60) with `LiveCache`'s key; one behaviour for exactly `live/config`, before `live/*`, `live/*`'s settings but the cache policy; no other behaviour uses `LiveConfigCache` |
+| GH145-c | `LeagueHistoryCache`, the other behaviours, the error responses, the origin request and response headers policies | unchanged: `MaxTTL` 3600 on exactly `api/league-history`; `data/*`, `live/*`, `api/ops/*` and the default behaviour with their policies, origins and origin request policies; every listed error code at `ErrorCachingMinTTL` 0; `live/config` carries `ViewerHeaders` and the family function |
+| GH145-d | The read API's helpers (`cacheHeaders` with and without `immutable`, `staleHeaders`, `send`'s ttl, personal and error cases) through `edgeCacheControl` | the largest freshness they produce (a year) at most `Cache`'s `MaxTTL`; `no-store` for errors and answers without freshness, `private` for personal ones, as before |
+| GH145-e | Real answers through the handler on PostgreSQL 18 and the transport: `/api/status`, a profile, `/api/archives/details`, an `/api/assets` redirection, `/api/rankings/index`, `/api/read/home`, a match family of a finished match (60) and of a coming one (15); the live handler's `/live/config` and a live match | each answer's `s-maxage` at most the `MaxTTL` of the behaviour its path takes; before the change, the 300, 3600 and 86 400 s answers and `/live/config` exceed their ceiling |
+| GH145-f | Live: a live match state behind `live/*` | its `s-maxage` 2 and its policy's `MaxTTL` 2: fresh 2 s and no stale window beyond the old bound; `/live/config` 60 s within its own policy |
+| GH145-g | Evidence (outside the repository): the same real answers, read with a model of the documented rule, before and after; `/api/ops/status` with a configured key, asked without it and with it; a live path the edge forwards and a live query the edge drops (an origin-only check, labelled) | the modelled fresh and stale windows of each (labelled a model, not CloudFront): the 300, 3600, 86 400 s answers fresh their own time instead of 60; the home's 300 s of `stale-while-revalidate` and every public answer's day of `stale-if-error` reachable; a live match 2 s and no stale window, as before; `/live/config` 60 s; errors, personal and ops answers 0 (ops: 401 then 200, both `no-store`) |
+| GH145-h | A correction or a release while copies are kept | the edge may answer from them for their fresh and stale windows; an invalidation removes the edge's, never a browser's (`/api/status` 1 h, `/api/assets` a day, unchanged); revalidation's 304 as each validator above |
+
+GH145-a–c: `backend/tests/test_api_cache_behaviors.py` (with `test_api_security_headers.py`, `test_edge_logs.py`
+GH149-g) and `cfn-lint`; d–f: `backend/api/test/edge-ttl.test.mjs` (the real helpers, handler, transport and live
+handler; the template's policies and behaviours read from `api.yaml`); g, h: the evidence's `gh145/` (outside the
+repository). Not verifiable here: CloudFront's own behaviour, its stale windows included (the template is checked, not
+deployed; the windows are AWS's documentation as cited, applied by a model), the hit shares after a Deploy (GH149's
+report).
+
 ## GH171. The statements' statistics, Performance Insights and the PostgreSQL log (GH #171, VI-111)
 
 Seen before this change (re-read on `e4014803`): `shared_preload_libraries: pg_stat_statements` is set

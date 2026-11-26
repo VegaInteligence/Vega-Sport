@@ -84,8 +84,9 @@ class EdgeLogsTemplateTest(unittest.TestCase):
         distribution = resource(self.api, "Distribution")
         behaviours = re.split(r"\n          - PathPattern: ", distribution.split("DefaultCacheBehavior:")[0])[1:]
         by_pattern = {b.split("\n", 1)[0]: b for b in behaviours}
-        self.assertEqual(sorted(by_pattern), ["api/league-history", "api/ops/*", "data/*", "live/*"])
-        for pattern in ("api/league-history", "api/ops/*", "live/*"):
+        # live/config: its own cache policy since GH145 (FAILURE_MODES_OPTIMISATIONS.md), the family function as live/*.
+        self.assertEqual(sorted(by_pattern), ["api/league-history", "api/ops/*", "data/*", "live/*", "live/config"])
+        for pattern in ("api/league-history", "api/ops/*", "live/*", "live/config"):
             self.assertIn(association, by_pattern[pattern], pattern)
         self.assertNotIn("FunctionAssociations", by_pattern["data/*"])
         self.assertIn(association, distribution.split("DefaultCacheBehavior:")[1])
