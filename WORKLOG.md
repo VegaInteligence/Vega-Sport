@@ -6,6 +6,9 @@
 - Job « Changed zones » (`backend/ci/changed_suites.py`) : liste des fichiers de la PR ou de la poussée par l'API GitHub, zones site, python, deploy, api, image, package. Sur main, en lancement manuel, si ci.yml ou `backend/ci/` change, ou si la liste manque : tout.
 - Job « Suites » en matrice, côte à côte : python (backend/tests sauf le Deploy), deploy (`test_deploy_flow`, `test_account_deploy`, `test_deploy_grants`), api (suites Node de l'API et des comptes). `backend/ci/python_suites.py` découpe la même découverte que `unittest discover -s backend/tests -v`.
 - Tests : `backend/tests/test_ci_zones.py` (zones, les deux parties = toute la découverte, ci.yml) ; GH171-l suit la nouvelle commande.
+- Mesure sur la PR (tout lancé, ci.yml changé) : verte en 14 min 50 (deploy 14 min 40, python 12 min, api 6 min 40), contre 19 à 27 min.
+- Avis d'Astra (xhigh, `/mnt/project-files/ci-selon-fichiers/reponse_astra_ci_resume.md`) : garder cette version ; corrigé ensuite : un fichier qu'un test nomme dans une chaîne lance la suite de ce test (README d'infra, fixtures, pilot.yml, planner.py lu par ops.test.mjs, CSV de docs/, ancien chemin d'un composant renommé), chemin inconnu ou liste vide → tout, diff git local (`--no-renames -z`), plus de filtre `paths`, annulation seulement pour une PR et main, sortie vérifiée.
+
 ## Boutons en pilule sur la page match — FAILURE_MODES § 72 (26 novembre 2026, [#245](https://github.com/VegaInteligence/Vega-Sport/issues/245), branche `claude/boutons-pilule-page-match` depuis main 64ac3f9)
 
 - Demande de hugo : les boutons carrés à bordure grise remplacés par des pilules (modèle : « Rejoindre la liste d'attente »). Maquettes : page compétition (pistes A et B), puis page match en piste A, sans fond derrière les logos, sélecteurs un peu plus petits, blocs « Meilleure note » et repères inchangés ; validée avec « ok pour la page match envoie en prod ».

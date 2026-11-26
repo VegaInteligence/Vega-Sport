@@ -1,57 +1,65 @@
 name: CI
 # The suites of the backend, the infrastructure templates, the worker image, the read API package and the site's tests
 # and build. A pull request or a branch push runs only the jobs its files can break (job « Changed zones »,
-# backend/ci/changed_suites.py: a site-only change runs no Python, Deploy or API suite); a push to main and a manual
-# run run everything. No secret and no AWS access: deployment is deploy.yml; real-data runs are pilot.yml.
+# backend/ci/changed_suites.py: a site-only change runs no Python, Deploy or API suite; a path no rule knows runs
+# everything); a push to main and a manual run run everything. No secret and no AWS access: deployment is deploy.yml; real-data runs are pilot.yml.
 on:
+  # No paths filter: every change is classified by « Changed zones » (a docs/ file a test reads must run it).
   push:
     branches: [main, 'claude/v2-*']
-    paths: ['backend/**', 'infra/aws/**', 'dashboard/**', 'tests/**', '.github/workflows/*.yml']
   pull_request:
-    paths: ['backend/**', 'infra/aws/**', 'dashboard/**', 'tests/**', '.github/workflows/*.yml']
   workflow_dispatch:
 permissions:
   contents: read
+# A pull request's or main's newer run replaces the older one (a PR's diff is cumulative; main runs everything). A
+# branch push or a manual run keeps its own run: a later push may need fewer suites than the one it would cancel.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && github.ref || github.run_id }}
   cancel-in-progress: true
 jobs:
   changes:
     name: Changed zones
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions: {contents: read, pull-requests: read}
     outputs:
       suites: ${{ steps.zones.outputs.suites }}
       site: ${{ steps.zones.outputs.site }}
+      infra: ${{ steps.zones.outputs.infra }}
       image: ${{ steps.zones.outputs.image }}
       package: ${{ steps.zones.outputs.package }}
     steps:
+      # A pull request's tested commit is its merge commit: its first parent is the base it was merged onto.
       - uses: actions/checkout@v7
-      # The changed files from the API (no history needed); any failure, a new branch or a list GitHub cuts short
-      # (300 files for a push) runs everything.
+        with: {fetch-depth: 2}
+      # The changed files from git (both sides of a rename); a new branch, a forced push, a base git cannot fetch or
+      # an empty list runs everything; a missing or malformed output fails the job.
       - id: zones
         env:
-          GH_TOKEN: ${{ github.token }}
-          FULL: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+          FULL: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.event.forced == true }}
           EVENT: ${{ github.event_name }}
-          PR: ${{ github.event.pull_request.number }}
           BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.sha }}
         run: |
-          files="$RUNNER_TEMP/changed.txt"
+          files="$RUNNER_TEMP/changed"
           if [ "$FULL" = true ]; then
-            echo FULL > "$files"
+            base=
           elif [ "$EVENT" = pull_request ]; then
-            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)' > "$files" || echo FULL > "$files"
-          elif [ -n "$BEFORE" ] && [ -n "${BEFORE//0/}" ]; then
-            gh api "repos/$GITHUB_REPOSITORY/compare/$BEFORE...$AFTER" --jq 'if (.files | length) >= 300 then "FULL" else (.files[] | .filename, (.previous_filename // empty)) end' > "$files" || echo FULL > "$files"
+            base=$(git rev-parse HEAD^1)
+          elif [ -n "$BEFORE" ] && [ -n "${BEFORE//0/}" ] && git fetch --no-tags --depth=1 origin "$BEFORE"; then
+            base=$BEFORE
           else
-            echo FULL > "$files"
+            base=
           fi
-          echo "changed files: $(wc -l < "$files")"; head -50 "$files"
-          if grep -qx FULL "$files"; then zones=$(python3 backend/ci/changed_suites.py --full); else zones=$(python3 backend/ci/changed_suites.py < "$files"); fi
-          echo "$zones"; echo "$zones" >> "$GITHUB_OUTPUT"
+          if [ -n "$base" ] && git diff --name-only --no-renames -z "$base" HEAD > "$files" && [ -s "$files" ]; then
+            echo "changed files since $base:"; tr '\0' '\n' < "$files" | sed -n '1,100p'
+            zones=$(python3 backend/ci/changed_suites.py -z < "$files")
+          else
+            echo "every zone (main, manual run, forced or new branch, or no comparable base)"
+            zones=$(python3 backend/ci/changed_suites.py --full)
+          fi
+          echo "$zones"
+          grep -qE '^suites=\[("(python|deploy|api)",?)*\]$' <<< "$zones"
+          for flag in site infra image package; do grep -qE "^$flag=(true|false)$" <<< "$zones"; done
+          echo "$zones" >> "$GITHUB_OUTPUT"
   # One entry per part of the suites, side by side: python (backend/tests but the Deploy's), deploy (the Deploy's
   # end-to-end runs, test_deploy_flow.py: the real deploy.sh, BuildKit, the real migrations, about ten minutes), api
   # (the read API's and the account API's Node suites).
@@ -139,6 +147,8 @@ jobs:
           NEXT_PUBLIC_API_ORIGIN: https://dngp6kh9jx2bl.cloudfront.net
   infra:
     name: Infrastructure templates
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

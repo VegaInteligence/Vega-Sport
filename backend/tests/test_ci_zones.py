@@ -5,6 +5,9 @@ Failure modes guarded here:
 - a site file the backend imports (src/services/, shared/, app/api/, the manifest) skips the backend's suites;
 - a change to the read API or the SQL skips the API's own suites, or a Deploy file skips the Deploy's suites;
 - a change to the CI itself, a push to main or a manual run skips anything;
+- a file a test reads by name (README, fixture, workflow, Python module read by a Node test, a renamed component)
+  skips that test's suite (Astra's review of #247, eight cases);
+- a path no rule knows, or an empty list, skips anything; notes nobody reads start a suite;
 - the two parts of the Python suites miss a test of the whole discovery, or run one twice;
 - ci.yml no longer feeds the zones to its jobs.
 """
@@ -65,7 +68,7 @@ class ZonesTest(unittest.TestCase):
                      ".github/workflows/deploy.yml", "backend/tests/test_deploy_flow.py", "backend/tests/deploy_repo.py"):
             with self.subTest(path):
                 self.assertIn("deploy", needed(path))
-        self.assertEqual(needed("infra/aws/deploy.sh"), {"python", "deploy"})
+        self.assertEqual(needed("infra/aws/deploy.sh") & {"site", "api", "package", "image"}, set())
 
     def test_f2_the_api_s_inputs_outside_backend_run_its_suites_and_package(self):
         # Codex's review of #247: infra/aws/transport.mjs is bundled by api-index.mjs and tested by edge.test.mjs.
@@ -80,10 +83,39 @@ class ZonesTest(unittest.TestCase):
         self.assertEqual(needed("backend/ci/test_databases.py"), everything)
         self.assertEqual(needed(full=True), everything)
         self.assertEqual(changed_suites.outputs(everything),
-                         'suites=["python","deploy","api"]\nsite=true\nimage=true\npackage=true')
+                         'suites=["python","deploy","api"]\nsite=true\ninfra=true\nimage=true\npackage=true')
+        self.assertEqual(needed(), everything)
+        self.assertEqual(needed("", " "), everything)
 
-    def test_h_documentation_runs_nothing(self):
-        self.assertEqual(needed("backend/README.md", "infra/aws/README.md", "dashboard/README.md"), set())
+    def test_h_notes_nobody_reads_run_nothing(self):
+        self.assertEqual(needed("WORKLOG.md", "docs/calculs/09-audit-2026-11/FAILURE_MODES_OPTIMISATIONS.md",
+                                "docs/calculs/09-audit-2026-11/reviews/ci-zones.txt"), set())
+
+    def test_h2_a_file_a_test_reads_by_name_runs_that_test_s_suite(self):
+        # Astra's review of #247 (fddd7fd): each change below broke a test whose suite did not run.
+        cases = {
+            "infra/aws/README.md": {"python", "deploy"},           # test_cost_caps.py:159, test_deploy_grants.py:356
+            "backend/tests/fixtures/cfn-handlers.json": {"deploy"},  # test_deploy_grants.py:267
+            "dashboard/frontend/AGENTS.md": {"site"},                # tests/media-initials.test.mjs:80
+            ".github/workflows/pilot.yml": {"python"},               # test_pilot_bounds.py:207
+            "backend/vega/planner.py": {"api"},                      # backend/api/test/ops.test.mjs:166
+            "backend/tests/fixtures/match_m_08LEIz/players_halves.json": {"api"},  # player-halves-real.test.mjs:36
+            "docs/audits/2026-11-17/controles/verification-integree/identites-838-registre.csv": {"python"},
+            "dashboard/frontend/src/components/MatchNav.jsx": {"python", "deploy"},  # renamed: the old path
+        }
+        for path, zones in cases.items():
+            with self.subTest(path):
+                self.assertTrue(zones <= needed(path), needed(path))
+
+    def test_h3_a_path_no_rule_knows_runs_everything(self):
+        self.assertEqual(needed("dashboard/frontend/src/styles.css", "Makefile"), set(changed_suites.ZONES))
+        self.assertEqual(needed(".gitignore"), set(changed_suites.ZONES))
+
+    def test_h4_the_cli_reads_git_s_nul_separated_list(self):
+        import subprocess
+        out = subprocess.run([sys.executable, str(ROOT / "backend/ci/changed_suites.py"), "-z"], capture_output=True,
+                             text=True, input="dashboard/frontend/src/styles.css\0tests/a b.test.mjs\0", check=True).stdout
+        self.assertEqual(out.splitlines(), ["suites=[]", "site=true", "infra=false", "image=false", "package=false"])
 
     def test_i_the_two_parts_are_the_whole_discovery_once(self):
         ids = lambda part: [t.id() for t in python_suites.tests(python_suites.part(part))]
@@ -97,10 +129,15 @@ class ZonesTest(unittest.TestCase):
 class WorkflowTest(unittest.TestCase):
     def test_j_ci_yml_feeds_the_zones_to_its_jobs(self):
         self.assertIn("python3 backend/ci/changed_suites.py", CI)
+        self.assertIn("git diff --name-only --no-renames -z", CI)
         self.assertRegex(CI, r"github\.ref == 'refs/heads/main'")
+        # Every change is classified (no workflow-level paths filter); only a PR's or main's older run is cancelled.
+        self.assertNotRegex(CI, r"\n    paths:")
+        self.assertIn("cancel-in-progress: true", CI)
+        self.assertIn("github.run_id", CI)
         self.assertIn("suite: ${{ fromJSON(needs.changes.outputs.suites) }}", CI)
         self.assertIn("if: needs.changes.outputs.suites != '[]'", CI)
-        for zone in ("site", "image", "package"):
+        for zone in ("site", "infra", "image", "package"):
             self.assertIn(f"if: needs.changes.outputs.{zone} == 'true'", CI)
         self.assertIn("run: python backend/ci/python_suites.py ${{ matrix.suite }}", CI)
         self.assertEqual(set(json.loads(re.search(r'suites=(\[.*\])', changed_suites.outputs(set(changed_suites.ZONES))).group(1))),
