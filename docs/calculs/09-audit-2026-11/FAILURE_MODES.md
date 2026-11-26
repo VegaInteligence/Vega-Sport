@@ -5989,12 +5989,15 @@ hugo's screenshots: the hovered figure under the score (Possession) lit as a squ
 thread's cards at 22 px. Mock-up https://claude.ai/artifact/Sf5wRw5NTSV8wrNr4jzhQL, piste B « Cinq cases pleines, sans
 traits gris » chosen with the thread's cards at 10 px.
 
-- **The strip of figures** (`.match-kpis`, the finished match's five and the live strip; `match-pills.css`): no line
-  above it, no grey line between the tiles or the rows; each tile filled with the pills' veil, 10 px corners, 6 px apart;
-  the tile whose bubble is open (hover, focus) keeps its fill and takes a 1 px inner ring instead of a lighter square.
-  `.match-kpis.match-kpis` outranks the module's per-column lines (§ 74 layout: 5, 3, then 2 a row) in either load order.
+- **The strip of figures** (`.match-kpis`, the finished match's five and the live strip; `match-pills.css`): first
+  released as five filled tiles (8ce15ca); hugo at 11 h 36: « c'est horrible … tout la ligne garde le design d'avant
+  juste ajoute des arrondis sur les 2 extrémités ». The strip is back as it was (its line above, the lines between the
+  tiles, the lit tile on hover); only its ends are rounded 10 px: the first tile's left corners, the last tile's right
+  ones; on several rows (900 px and under) the first tile's top left and the last tile's bottom right, both bottom
+  corners on a phone where the fifth tile spans the row.
 - **The thread's cards** (`MatchNav.module.css` `.tile`, `.threadLoading`): 10 px instead of 22 px; the current card
   still filled, the crests unchanged.
 - The bubbles keep § 74 (the tile's width; the strip's under 260 px).
-- **R53** (computer) five tiles, each 10 px, four borders 0, the pills' veil; the strip's gap 6 px, no line above.
-  **R54** (phone) the same, 6 px between the rows. **R42** the thread's cards now expect 10 px. Red on 5f63f03.
+- **R53** (computer) the ends 10 px, the three middle tiles square, the lines between the tiles and above the strip
+  kept (1 px). **R54** (phone) the first tile's top left and the fifth's bottom corners, the others square.
+  **R42** the thread's cards now expect 10 px. Red on 5f63f03 (R42, R53, R54) and R53 red on 8ce15ca.

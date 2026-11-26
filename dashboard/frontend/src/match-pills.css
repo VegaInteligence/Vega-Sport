@@ -253,22 +253,29 @@ html[data-theme="light"] {
 }
 
 /* ------------------------------------------------------------ figures strip */
-/* Five filled tiles, no grey lines (piste B of the 10 px mock-up hugo approved on 26 Nov 2026, 11 h 31,
-   https://claude.ai/artifact/Sf5wRw5NTSV8wrNr4jzhQL; FAILURE_MODES § 75). `.match-kpis.match-kpis` outranks the
-   module's `.match-kpis.fiveKpis > div:nth-child(n)` lines whatever order the sheets load in. */
-:root .match-detail .match-kpis.match-kpis {
-  gap: 6px;
-  border: 0;
+/* The strip keeps its look (lines, lit tile); only its two ends are rounded, 10 px (hugo, 26 Nov 2026, 11 h 36, after
+   trying filled tiles: « tout la ligne garde le design d'avant juste ajoute des arrondis sur les 2 extrémités »;
+   FAILURE_MODES § 75). */
+:root .match-detail .match-kpis > div:first-child {
+  border-radius: 10px 0 0 10px;
 }
-:root .match-detail .match-kpis.match-kpis > div {
-  border: 0;
-  border-radius: 10px;
-  background: var(--pill-quiet);
-  transition: box-shadow 0.15s ease;
+:root .match-detail .match-kpis > div:last-child {
+  border-radius: 0 10px 10px 0;
 }
-:root .match-detail .match-kpis.match-kpis > :is(div:hover, div:focus-visible, div[aria-expanded="true"]) {
-  background: var(--pill-quiet);
-  box-shadow: inset 0 0 0 1px var(--border-strong);
+/* On several rows the strip's corners are the first tile's top left and the last tile's bottom right (both bottom
+   corners on a phone, where the last tile spans the row). */
+@media (max-width: 900px) {
+  :root .match-detail .match-kpis > div:first-child {
+    border-radius: 10px 0 0 0;
+  }
+  :root .match-detail .match-kpis > div:last-child {
+    border-radius: 0 0 10px 0;
+  }
+}
+@media (max-width: 480px) {
+  :root .match-detail .match-kpis > div:nth-child(5):last-child {
+    border-radius: 0 0 10px 10px;
+  }
 }
 
 @media (max-width: 640px) {

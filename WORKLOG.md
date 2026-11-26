@@ -3,7 +3,8 @@
 ## Cases des chiffres pleines et cartes du fil à 10 px — FAILURE_MODES § 75 (26 novembre 2026, sur main depuis 5f63f03)
 
 - Demande de hugo (11 h 28, captures Possession et fil de la Ligue des champions) : ces deux endroits à 10 px. Maquette https://claude.ai/artifact/Sf5wRw5NTSV8wrNr4jzhQL ; hugo a pris la piste B (cinq cases pleines sans traits gris) et les cartes du fil à 10 px, « tu peux tout push dans main » (11 h 31).
-- `match-pills.css` : `.match-kpis` sans trait, cases pleines (voile des pilules), 10 px, écart 6 px, case survolée cernée d'un filet. `MatchNav.module.css` : cartes du fil et leur attente 22 → 10 px.
+- `MatchNav.module.css` : cartes du fil et leur attente 22 → 10 px (8ce15ca).
+- Cases pleines d'abord poussées (8ce15ca), puis refusées par hugo à 11 h 36 (« c'est horrible ») : la bande reprend son allure d'avant (traits, case allumée) et seuls ses deux bouts sont arrondis à 10 px (`match-pills.css`), coins de la bande sur plusieurs lignes.
 - R53 et R54 (`match-tabs.e2e.mjs`) et R42 mis à 10 px, rouges sur 5f63f03, verts après.
 
 ## CI plus rapide : sept parts équilibrées, main jamais annulée (26 novembre 2026, branche `claude/ci-plus-rapide` depuis main 122022b)

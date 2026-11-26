@@ -23,8 +23,8 @@
 // window rounded, R50 on a phone with a margin.
 // § 74 (hugo, 26 Nov 11 h 16 and 11 h 18): R51 a figure's bubble the width of its tile, in the teams' colours · R52 on a phone
 // the strip's width.
-// § 75 (hugo, 26 Nov 11 h 31, piste B of the 10 px mock-up): R53 the figures as five filled tiles, 10 px, no grey line ·
-// R54 on a phone · R42 the thread's cards at 10 px.
+// § 75 (hugo, 26 Nov 11 h 31 and 11 h 36): R42 the thread's cards at 10 px · R53 the strip of figures as before, its two
+// ends rounded 10 px · R54 on a phone, its corners.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -198,24 +198,17 @@ async function check(name, expected, run) {
 }
 
 /** § 74: a figure's bubble against its tile: their boxes and the teams' colours in each (the tile's first figure). */
-// § 75: the strip of figures as filled tiles: each tile's corners, four borders, fill; the strip's gap and line.
+// § 75: the strip of figures keeps its look (lines between the tiles), only its two ends rounded.
 async function kpiTiles(page) {
   await page.locator(".match-kpis > *").first().waitFor();
   return page.evaluate(() => {
     const strip = document.querySelector(".match-kpis"), cs = getComputedStyle(strip);
     const tiles = [...strip.children].map((t) => {
       const c = getComputedStyle(t);
-      return { radius: c.borderTopLeftRadius, borders: [c.borderTopWidth, c.borderRightWidth, c.borderBottomWidth, c.borderLeftWidth].join(" "), bg: c.backgroundColor };
+      return { radius: [c.borderTopLeftRadius, c.borderTopRightRadius, c.borderBottomRightRadius, c.borderBottomLeftRadius].join(" "), right: c.borderRightWidth, bg: c.backgroundColor };
     });
-    return { tiles, gap: cs.columnGap, rowGap: cs.rowGap, line: cs.borderTopWidth };
+    return { tiles, gap: cs.columnGap, line: cs.borderTopWidth };
   });
-}
-function filledTiles(got, quiet) {
-  assert.equal(got.tiles.length, 5, "five tiles");
-  for (const [i, t] of got.tiles.entries()) {
-    assert.deepEqual([t.radius, t.borders, t.bg], ["10px", "0px 0px 0px 0px", quiet], "tile " + i);
-  }
-  assert.deepEqual([got.gap, got.line], ["6px", "0px"], "the strip's gap and line");
 }
 
 async function kpiBubble(page, index = 0) {
@@ -493,10 +486,17 @@ try {
         return got;
       });
 
-      await check("R53 the figures as five filled tiles, 10 px corners, no grey line", { radius: "10px", borders: "0", fill: "the pills' veil", gap: "6px" }, async () => {
+      await check("R53 the strip of figures as before (its line, the lines between the tiles), its two ends rounded 10 px", { ends: "10 px", middle: "0", lines: "1 px" }, async () => {
         const got = await kpiTiles(page);
+        await page.locator(".match-kpis > *").nth(0).hover();
         await page.locator(".match-kpis").screenshot({ path: join(out, "cases-chiffres-bureau.png") });
-        filledTiles(got, "rgba(255, 255, 255, 0.07)");
+        await page.mouse.move(0, 0);
+        const r = got.tiles.map((t) => t.radius);
+        assert.equal(r.length, 5, "five tiles");
+        assert.deepEqual([r[0], r[4]], ["10px 0px 0px 10px", "0px 10px 10px 0px"], "the two ends");
+        assert.deepEqual(r.slice(1, 4), Array(3).fill("0px 0px 0px 0px"), "the middle tiles square");
+        assert.deepEqual(got.tiles.slice(0, 4).map((t) => t.right), Array(4).fill("1px"), "the lines between the tiles");
+        assert.deepEqual([got.gap, got.line], ["normal", "1px"], "no gap, the line above kept");
         return got;
       });
 
@@ -962,11 +962,13 @@ try {
         return got;
       });
 
-      await check("R54 phone: the figures as filled tiles too, no grey line between the rows", { radius: "10px", borders: "0", gap: "6px" }, async () => {
+      await check("R54 phone: the strip on three rows, its corners rounded (first tile top left, last tile across the bottom)", { first: "top left", last: "bottom" }, async () => {
         const got = await kpiTiles(f.page);
         await f.page.locator(".match-kpis").screenshot({ path: join(out, "cases-chiffres-telephone.png") });
-        filledTiles(got, "rgba(255, 255, 255, 0.07)");
-        assert.equal(got.rowGap, "6px", "rows' gap");
+        const r = got.tiles.map((t) => t.radius);
+        assert.deepEqual([r[0], r[4]], ["10px 0px 0px 0px", "0px 0px 10px 10px"], "the strip's corners");
+        assert.deepEqual(r.slice(1, 4), Array(3).fill("0px 0px 0px 0px"), "the others square");
+        assert.equal(got.line, "1px", "the line above kept");
         return got;
       });
     } finally {
