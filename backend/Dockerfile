@@ -1,14 +1,31 @@
 # Vega worker image. Build from the repository root:
-#   docker build --platform linux/arm64 -f backend/Dockerfile -t vega-v2-worker:<sha> .
-FROM python:3.14-slim
+#   docker build --platform linux/arm64 -f backend/Dockerfile -t vega-v2-worker:<identity> .
+# Its tag is its identity (infra/aws/image_identity.py, FAILURE_MODES_OPTIMISATIONS.md GH158): the platform, this file,
+# its .dockerignore and every file of the build context below. A Deploy builds an image only for an identity the
+# registry does not hold.
+#
+# What the build resolves by itself is not in the identity: Debian's nodejs (apt-get) and pip's unpinned dependencies of
+# boto3. An image keeps the versions it was built with until one of its inputs changes. To take newer ones (a security
+# update) without a code change, change VEGA_DEPS_REFRESH below (a new identity, one rebuild, one restart of the worker
+# and the backfill), or the base image's digest. apt's and pip's layers read it, so that a builder holding them in its
+# cache runs them again (a comment is in no layer's cache key: GH158-g); a Deploy that leaves it reuses them.
+
+# The build context as BuildKit sends it (this file's .dockerignore applied): what the image is made of. Built only when
+# asked (--target context --output type=local), never part of the image.
+FROM scratch AS context
+COPY . /
+
+# python:3.14-slim (3.14.10, Debian trixie) of 24 November 2026, by digest: a new base is a new identity.
+FROM python:3.14-slim@sha256:22eafb370920ad8b429e0aec3fff433e0669968519f5d60469d83729c138b28b
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     VEGA_ARCHIVE_SCRIPTS=/app/backend/archives/builders VEGA_ARCHIVE_EDITION=/app/backend/archives/edition.mjs \
     VEGA_SOURCE_BRIDGE=/app/backend/sources/bridge.mjs VEGA_SHARED_DIR=/app/dashboard/shared
 WORKDIR /app
+ARG VEGA_DEPS_REFRESH=2026-11-26
 # Node runs main's shared/archive.js for the archive import (vega/archives.py).
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs && rm -rf /var/lib/apt/lists/*
+RUN echo "dependencies of $VEGA_DEPS_REFRESH" && apt-get update && apt-get install -y --no-install-recommends nodejs && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN echo "dependencies of $VEGA_DEPS_REFRESH" && pip install --no-cache-dir -r requirements.txt
 COPY backend/vega vega
 COPY backend/sql sql
 # The account's tables, applied by the migrate task apart from the football schemas, only once the
