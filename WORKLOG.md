@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Lectures à froid et remplacements en fiche club — 26 novembre 2026
+
+- [GitHub #257](https://github.com/VegaInteligence/Vega-Sport/issues/257) et [Linear VI-170](https://linear.app/vegainteligence/issue/VI-170). Branche `codex/lectures-club-durables`. Objectif : rendre les données complètes de Lille et Brentford en saison 2026/27 et détecter les régressions de coût sur plusieurs familles de lectures avant déploiement. Le 503 de ce panneau correspond à 14 annulations de la même requête PostgreSQL.
+- Cadrage avec Astra et Codex. Le compte Opus a atteint sa limite hebdomadaire. Réalisation et tests par Sol, revue indépendante Codex avant fusion. L’oracle de production relit les matchs, les événements, les compositions et les statistiques de joueurs en transaction en lecture seule. Il trouve 15 matchs exploitables pour Lille, 11 pour Brentford. Les preuves et le protocole de comparaison sont conservés dans le dossier `vega-lectures-club-durables`.
+
+- Diagnostic RDS en lecture seule avec le rôle de l’API. Les requêtes d’impact puis de classement prennent 22 et 15 ms pour Lille, 15 et 12 ms pour Brentford. L’oracle servira à valider chaque champ sur la version livrée après la CI et la revue.
+
 ## Absents gardés sur la page d'un match après le coup d'envoi — FAILURE_MODES § 79 (26 novembre 2026, GitHub #252, branche `claude/absents-apres-match`)
 
 - Demande de hugo (15 h 55, après Sabah – Barcelone) : ne plus enlever les absents de la page d'un match, pour savoir qui était blessé ou suspendu ce jour-là.
