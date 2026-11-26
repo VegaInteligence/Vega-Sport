@@ -120,6 +120,8 @@ const profileModule = load("components/PlayerSeasonProfile.jsx", {
   "../services/actor-reads.js": { actorReadParams: () => ({}) },
   "../services/compact-reads.js": { compactGeneration: () => "g", readCompact: async () => ({}) },
   "../services/resources.js": { cachedResource: () => undefined, primeResource: () => {}, useResource: () => ({ value: undefined }) },
+  // The published record's key and loader (GH129): the profile reads it through useResource, stubbed above.
+  "../services/player-prefetch.js": { playerRecordResource: (id) => [`player-record:${id}`, async () => null] },
   "../services/club-scout.js": { levelPeerClubs: () => null, useEuropeLevels: () => ({ status: "idle" }) },
   "../services/ballon-dor.js": { breakoutSignal: () => null, usePlayerPower: () => undefined, vegaParts: () => null },
   "../services/national-flags.js": { nationalFlagCode: () => null },

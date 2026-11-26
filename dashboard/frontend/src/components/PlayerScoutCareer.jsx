@@ -1,4 +1,5 @@
 "use client";
+import { currentPlayerSeason } from "../services/actor-reads.js";
 import React, { useMemo } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
@@ -79,8 +80,9 @@ export default function PlayerScoutCareer({
     Boolean(id) && marketServed,
   );
   const valuation = latestMarketEstimate(values, playerFacts(record).value);
+  // The same key as the rail's history: the same loader, the page's season taken as it is (GH129).
   const history = useResource(playerHistoryKey(f.manifest, id), ({ signal }) =>
-    loadPlayerHistory(f.manifest, id, { signal }),
+    loadPlayerHistory(f.manifest, id, { signal, cachedSeason: (value) => currentPlayerSeason(f, id, value) }),
   );
   const seasons = useMemo(
     () =>

@@ -69,6 +69,7 @@ import { directoryCSV } from "../services/player-directory.js";
 import { enrichSeasonCompetitions } from "../services/competition-identity.js";
 import { clubDataTeam, loadClubSeason } from "../services/scouting-history.js";
 import { actorReadKey, actorReadParams } from "../services/actor-reads.js";
+import { prefetchPlayerPage } from "../services/player-prefetch.js";
 import {
   holdExplicitPublication,
   onPublicationChanged,
@@ -548,6 +549,18 @@ export function FootballProvider({ children, loadData = true, initialState }) {
           : emptySeason,
     !deferSeason,
   );
+  // GH129: a player page's reads that need only his id start with his season's read (player-prefetch.js), on the
+  // default view, where each of them is read; they waited for it before. The page holds them: leaving it (another
+  // player, view or page) lets them go, and a read no block holds is cancelled (GH129-j).
+  const prefetchedPlayer =
+    compactActor && compactKind === "player" && (initial.get("playerView") || "overview") === "overview" ? actorId : null;
+  const prefetchManifest = manifest.value;
+  useEffect(() => {
+    if (!prefetchedPlayer || !prefetchManifest || !chosen) return undefined;
+    return prefetchPlayerPage({ manifest: prefetchManifest, season: chosen }, prefetchedPlayer);
+    // The manifest's publication, not its object: a re-read of the same publication keeps the reads held.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefetchedPlayer, prefetchManifest?.publicationVersion, chosen]);
   const currentSnapshot = {
     key: seasonKey,
     intent: dataIntent,

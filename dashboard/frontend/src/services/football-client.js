@@ -70,7 +70,7 @@ export class FootballDataClient {
   }
   async request(path, { signal } = {}) {
     const scope = fixtureScope(path);
-    if (scope) return { data: { matches: await completeFixtures(scope, { signal }) } };
+    if (scope) return { data: { matches: await completeFixtures(scope, { signal, manifest: this.manifest }) } };
     const endpoint = path.startsWith("matches/") ? `/api/${path}` : `/api/pitchapi/${path}`;
     const response = await publicApiFetch(apiUrl(endpoint), {
       headers: { Accept: "application/json" },
@@ -163,7 +163,7 @@ export class FootballDataClient {
           throw new Error("Les données en direct ne sont pas disponibles.");
         const matches = await completeFixtures(
           browseMode === "day" ? { day } : { league: league.id, season },
-          { signal },
+          { signal, manifest: this.manifest },
         );
         result = {
           matches:
@@ -239,6 +239,15 @@ export class FootballDataClient {
         if (![404, 405, 501].includes(error.status) || signal?.aborted)
           throw error;
         apiError = error;
+      }
+      // A manifest that says every family has its route (the read API's matchFamilyRoutes): a 404 is a family this
+      // match does not have, and the legacy archive shard (/api/archive/matches) is no route of it: not asked
+      // (FAILURE_MODES_OPTIMISATIONS.md GH129-g). Without it (an older server) the archive is read as before.
+      if (apiError.status === 404 && this.manifest?.capabilities?.matchFamilyRoutes === true) {
+        const absent = new Error(apiError.message || "Ces données ne sont pas disponibles pour ce match.");
+        absent.code = apiError.code || "NOT_COLLECTED";
+        absent.status = 404;
+        throw absent;
       }
     }
     const shard = await this.loadShard(match.id, { signal, force });

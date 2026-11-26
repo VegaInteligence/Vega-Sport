@@ -10,12 +10,15 @@ const missing = (error) => (/\bHTTP 404\b/.test(error?.message || "") ? null : P
 const DAY = 86400000;
 const parse = (iso) => Date.parse(`${iso}T00:00:00Z`);
 
+/** The injuries' read: its key and loader, shared by the hook and the page's first reads (player-prefetch.js); its
+ * request ends with its last holder (the cache's signal: GH129-j). */
+export const playerInjuriesResource = (id) => [
+  `player-injuries:${id || "none"}`,
+  ({ signal } = {}) => json(`/api/players/${id}/injuries`, { signal }).then((body) => body?.data?.injuries || []).catch(missing),
+];
+
 export function usePlayerInjuries(id) {
-  return useResource(
-    `player-injuries:${id || "none"}`,
-    () => json(`/api/players/${id}/injuries`).then((body) => body?.data?.injuries || []).catch(missing),
-    Boolean(id),
-  );
+  return useResource(...playerInjuriesResource(id), Boolean(id));
 }
 
 export function usePowerHistory(id) {

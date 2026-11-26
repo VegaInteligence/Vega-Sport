@@ -2,7 +2,7 @@
 import { Skeleton } from "./UI.jsx";
 import React, { useState } from "react";
 import { useResource } from "../services/resources.js";
-import { loadPlayerHonours } from "../services/player-honours.js";
+import { playerHonoursResource } from "../services/player-honours.js";
 import { trophyArt } from "../services/trophy-art.js";
 import Icon from "./Icon.jsx";
 import scout from "./PlayerScout.module.css";
@@ -10,11 +10,7 @@ import st from "./PlayerHonours.module.css";
 
 export function usePlayerHonours(id, name) {
   const enabled = /^p_[A-Za-z0-9]{6}$/.test(id || "");
-  const result = useResource(
-    `player-honours:${id}`,
-    () => loadPlayerHonours(id, name),
-    enabled,
-  );
+  const result = useResource(...playerHonoursResource(id, name), enabled);
   return enabled ? result : { ...result, loading: false };
 }
 

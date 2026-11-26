@@ -454,3 +454,107 @@ RDS itself is not verified here. GH171-i, j:
 `backend/tests/test_statement_statistics.py` (template) and `cfn-lint`. Not verifiable here: RDS's own application of
 the group (dynamic parameters apply at once; checked after a Deploy with the commands of `infra/aws/README.md`),
 Performance Insights' screens, the export's first lines.
+
+## GH129. The match page's season read once; the player page's reads without waste (GH #129, VI-69)
+
+Seen in production on 25 Nov 2026 (`optimisations-suite-2611/reference/lectures.log`): Brentford–Everton opened at
+1365 × 900 and 390 × 844 read the API 19 times each, eight of them `/api/fixtures` (one page of 50, then seven cursors,
+one after the other) and one `/api/matchdays`; Christos Tzolis's page 21 and 19 times, among them seven
+`/api/read/player`, a 404 of `/api/matches/{id}/players/halves` and a 404 of `/api/archive/matches/{id}`. Read in the
+code (`e4014803`): the match page's head (`MatchNav.jsx`, `services/match-nav.js`) pages the competition season's
+fixtures by 50 (`completeFixtures`, `season_data.js` `readPages`) and then asks `/api/matchdays` when a fixture has no
+round, though `api.match_rounds` is made of the fixtures that have one (022): it can name no round a fixture lacks; the
+match's « Classement » reads the same season again through the football client when the table is missing
+(`MatchStandings.jsx`). On the player page, a family a match does not have (404) is followed by the legacy archive
+shard (`football-client.js` `endpointResponse`), a route this API has never served; and the rail's history
+(`PlayerScoutRail.jsx`) reads the current season again though the page has just read it.
+
+### GH129.1 Rules
+
+- **The season in one read.** `GET /api/fixtures/season?league=l_…&season=…`: every fixture of one competition's season,
+  the rows of `/api/fixtures` (same columns and forecast, same order: day, then id), with the publication's
+  `generation`; 1 000 fixtures at most, more is a 413 (`SEASON_TOO_LARGE`) and the site reads the pages as before:
+  never a silently shorter season. The validator and the 30 s edge time of `/api/fixtures`. The manifest advertises it
+  (`capabilities.seasonFixtures`); `/api/fixtures`' paging is unchanged (its limit 100, its cursors). A `HEAD` and the
+  conditional GETs (`If-None-Match`, `*` included) answer as the GET (review of 26 Nov 2026, 04 h 05: they gave 200
+  cacheable, and 304 for `*`, on the 1 001-fixture season the GET refuses): a selection of more than 1 000 fixtures is
+  the same 413 `no-store`, never a 200 nor a 304. The same for the answer's bytes (counter-review of 26 Nov 2026,
+  04 h 25): a season within 1 000 fixtures whose answer passes 4 MiB is the GET's 413 (`PAGE_TOO_LARGE`, `no-store`)
+  for a HEAD and every conditional GET too (`*`, its own validator). Its bytes are known only from the answer, so a
+  HEAD or a conditional GET reads the season as the GET does, rows included, and is answered from it: the shortcut that
+  read the publication alone (then counted the selection) is gone, and a revalidation costs the GET's statement.
+- **Pinned to the manifest's publication** (review of 26 Nov 2026: an answer of another generation was kept under the
+  manifest's). The site asks `&generation=<the manifest's publicationVersion>` (the publication's generation, as
+  `/api/fixtures` and the manifest name it: one value, `api.publication`): the edge keeps each generation's answer
+  apart, and the API answers 409 (`PUBLICATION_CHANGED`) for any other than its current one. An answer is kept only
+  under the generation it carries and the URL asked; a 409, or an answer of another generation, keeps nothing: the
+  site re-reads its manifest (`publication-change.js`) and reads the pages.
+- **The pages pinned too** (review of 26 Nov 2026, 04 h 04: after a 409 or a 413 the pages could be of N+1, and their
+  callers kept them under N, `match-nav:…:N` and the football client's fixtures). Whenever `completeFixtures` is given
+  the read API's manifest N (`storage` `aws-relational`, its `publicationVersion`), its pages are all of N, whatever
+  led to them (a 409, a 413, an answer of another generation, an older API without the season's read, a day's
+  fixtures): a page of another publication, at the first page or between two (a cursor refused, the first page read
+  again of N+1), fails the read as `PUBLICATION_CHANGED` and nothing of it is returned, so that no caller keeps it
+  under N. A current visitor's site is told to re-read its manifest; its reads then name N+1. A publication asked for
+  by the link (`?v=N`, `publication-change.js`) is shown or fails: never read again at another, nor any re-read of the
+  manifest asked. Without a manifest (the cup snapshot's worker), the pages are read as before. Limits: a page's URL
+  names no publication, so an edge's copy of a first page older than the manifest (at most its 30 s after a
+  publication) fails the read the same way, with no newer manifest to move to (the base commit failed there too for a
+  season of more than one page, its cursor refused twice, and returned the older rows for a single page); and a re-read
+  of the manifest that still gives N (its own 15 s at the edge) leaves N's failed reads as they are until the site's next
+  check (four minutes) or the next page. The season's read names its publication and has neither.
+- **One read shared.** `completeFixtures` of a league's season reads it once when the manifest advertises it, through
+  one cache of the site keyed by the publication, the league and the season: the head's thread and picker, the
+  « Classement »'s table when the API has none, the competition pages share it (one request in flight, the last reader
+  leaving cancels it); otherwise, and on a 413, the pages as before. A day's fixtures (`from`/`to`) stay paged.
+- **No round from `/api/matchdays` for the native API's rows** in the head: a row that carries `round_name` (null for a
+  fixture without a round) stays out of the thread when it has none, as it does today (the rounds the read cannot name
+  are the ones `/api/matchdays` cannot name either). A row without the field (the snapshot of `FootballDataClient`'s
+  `localFixtures()`, an older server's pages) takes its round from `/api/matchdays` as before (review of 26 Nov 2026,
+  04 h 05: a first version dropped it for every row, and the thread, its neighbours and the search with it).
+- **Kept.** Previous and next across a round's boundary, the thread of six before and six after, the current match, a
+  match to come with its time, the picker's every round and its search over the whole season, the « Classement » built
+  from the fixtures when the API has no table, a publication change (409) restarting the read, cancellation, the
+  approved views (desktop and mobile) unchanged.
+- **Player page.** A family the API answers 404 is absent: no archive shard asked when the manifest says so
+  (`capabilities.matchFamilyRoutes`, the read API's since this change: every family has its route, no
+  `/api/archive/matches`); a server that does not say it keeps the archive's fallback after a 404, 405 or 501, its
+  sharing and its cancellation, as before (review of 26 Nov 2026: a first version skipped it for every native client,
+  `remote-match.test.mjs`); the rail's history takes the season the page already read instead of reading it again; the reads that
+  need only the player's id (identity, injuries, market values, ranking, the seasons' routes) start with the page, not
+  after another answer. The same tabs, states, blocks and privacy; the same requests' bounds (three seasons at a time).
+- **A read started early is read once.** One of them failing (a 404 of the market values) before the blocks that show
+  it mount stands for them as the failure of their own read would: the same error shown, no second request; for 10 s
+  (the page's first readers), after which a block mounting reads again as before. « Réessayer » (a forced read) always
+  reads again; a block's own read keeps today's rule (a failure is read again by the next block that asks).
+- **Held by the navigation** (review of 26 Nov 2026: the reads started early were retained beyond the page). The
+  player's page (`FootballContext`, for that player and the default view) holds each read it started as a
+  subscription, and releases them when it leaves (another player, another view, another page): a read no block holds
+  then is cancelled (the cache's last leaver); one a block holds goes on for it.
+
+### GH129.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| GH129-a | `/api/fixtures/season` for the base's Ligue 1 2025/2026 (386 fixtures), against `/api/fixtures`' eight pages | the same rows in the same order, the same generation; one statement for the fixtures and the publication |
+| GH129-b | A season of more than 1 000 fixtures; a league or season malformed, unknown; `If-None-Match` of its answer; a parameter of `/api/fixtures` it does not take | 413 `SEASON_TOO_LARGE`; 400, empty list; 304; 400 |
+| GH129-c | The site with the capability, a season of 386 fixtures | one request; the 386 matches in the order of the pages; without the capability, or on a 413: the pages as before |
+| GH129-d | The head and the « Classement » of one match (no table served), together | one request between them; the last leaving cancels it |
+| GH129-e | Browser, the match page (desktop, mobile; each answer 120 ms later) | no `/api/fixtures` page and no `/api/matchdays` (M1, against eight and one before); the thread with the current match, previous and next (M2); the picker's 38 rounds and a club's 38 matches found (M3) |
+| GH129-f | Browser, the player page (desktop, mobile; the identity 600 ms later) | no `/api/archive/matches` (P1); no player season read twice (P2); the identity, injuries, market values, ranking and routes started with the first read (P3); the heading and blocks as before (P4) |
+| GH129-g | A family that answers 404 with the manifest's `matchFamilyRoutes`; without it (an older server), a 404, 405 or 501 | « not available for this match », no archive read; the archive read as before, shared and cancelled as before (`remote-match.test.mjs`) |
+| GH129-h | A read started early failing before its two blocks mount, then both asking; a forced read; a block asking 10 s later; an abort; a block's own read failing, then another block asking | one request, both get its error; read again; read again; nothing kept; read again (as before) |
+| GH129-i | Manifest N: the API at N; an edge answering N−1 for the season, the API's pages at N; the API at N+1 (a 409, its pages at N+1); then a manifest N+1 | one request pinned `generation=N`, kept under N; N−1: nothing kept, the manifest re-read, N's pages; 409: the manifest re-read, the read fails (`PUBLICATION_CHANGED`), nothing kept under N; then a request pinned N+1, kept under N+1, never N's data |
+| GH129-j | Player A's page starts its reads (each slow); before they answer, player B's page; a block of A's still holding one; B's reads | A's reads no block holds are cancelled, the held one goes on; B's each asked once and answered; in the browser (A→B through the search), A's reads aborted and B's answered once each |
+| GH129-k | `/api/fixtures/season` with `generation` the current one, another, malformed; the manifest | 200; 409 `PUBLICATION_CHANGED`; 400; `capabilities.matchFamilyRoutes: true` |
+| GH129-l | The 1 001-fixture season: `HEAD`, `If-None-Match` with the ETag a smaller season's answer carries, `If-None-Match: *`, each also pinned to the current generation; Ligue 1 (126) the same | each 413 `SEASON_TOO_LARGE`, `no-store`, no ETag, as its GET; Ligue 1: `HEAD` 200 with the GET's ETag, 304, 304 |
+| GH129-o | A season of 900 fixtures (within 1 000) whose answer passes 4 MiB (two clubs' names of 2 600 characters, local and synthetic): GET, `HEAD`, `If-None-Match` with its URL's validator, `If-None-Match: *`, each also pinned to the current generation | each the GET's 413 `PAGE_TOO_LARGE`, `no-store`, no ETag; Ligue 1 as GH129-l |
+| GH129-m | Manifest N, the API at N+1: the season's read refused (409), too long (413), not served (an older API), each followed by pages of N+1; pages of N then N+1 (a cursor refused); a day's fixtures at N+1; the same under a link's `?v=N`; the real callers: the head's resource `match-nav:<league>:<season>:N`, the football client's fixtures (`loadFixtures`) and its `request` | each read fails `PUBLICATION_CHANGED`, no row of N+1 returned; the site told to re-read its manifest, but not for `?v=N`; read again, asked again (nothing kept); the head's resource keeps nothing under N; the client's fixtures hold N's own snapshot, no row of N+1; pages all of N: returned and kept; a manifest N+1 then: read and kept |
+| GH129-n | The head on rows without `round_name` (an older server's pages; a client's snapshot, `localFixtures()`), two matches, `/api/matchdays` naming their rounds; the native API's rows (the field present, null for one fixture) | `/api/matchdays` asked once, both matches in the thread with their neighbours, in the picker and found by the search; native rows: no `/api/matchdays`, the one season read |
+
+GH129-a, b: `backend/api/test/fixtures-season.test.mjs` (the real handler on the API seed and a base of 1 001 fixtures);
+c, d, g, i, m, n: `tests/season-fixtures.test.mjs`; h: `tests/resource-cache.test.mjs`; j: `tests/player-prefetch.test.mjs` and
+`tests/e2e/page-reads.e2e.mjs` (A→B); k: `backend/api/test/fixtures-season.test.mjs` (the manifest's capabilities also in
+`backend/api/test/partition.test.mjs`' inventory); l, o: `backend/api/test/fixtures-season.test.mjs`; e, f: `tests/e2e/page-reads.e2e.mjs` (the real read API on
+`tests/e2e/support/reads-dataset.py`'s base, a production build of the site; before and after). Not verifiable here: the
+production timings (the local base and its delays are ours); Vercel's and CloudFront's caching of the new read.

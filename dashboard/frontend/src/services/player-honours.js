@@ -14,12 +14,19 @@ function wikipediaUrl(value) {
   }
 }
 
-export async function loadPlayerHonours(id, _name, fetcher = fetch) {
+/** The honours' read: its key and loader, shared by the hook and the page's first reads (player-prefetch.js). */
+export const playerHonoursResource = (id, name) => [
+  `player-honours:${id}`,
+  ({ signal } = {}) => loadPlayerHonours(id, name, fetch, { signal }),
+];
+
+/** The honours' read; `signal` ends its request with its last holder (GH129-j). */
+export async function loadPlayerHonours(id, _name, fetcher = fetch, { signal } = {}) {
   if (!/^p_[A-Za-z0-9]{6}$/.test(id || ""))
     return { groups: [], partial: true };
   const response = await publicApiFetch(
     apiUrl("/api/player-honours?id=" + encodeURIComponent(id)),
-    undefined,
+    { signal },
     fetcher,
   );
   if (response.status === 404) return { groups: [], partial: true };

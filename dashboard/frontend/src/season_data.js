@@ -203,8 +203,9 @@ export async function readPages(
       // digest. This check also prevents combining competitions from different
       // publications while a season load is in flight.
       if (expectedGeneration != null && current !== expectedGeneration)
-        throw new Error(
-          "Les données publiées ont changé. Actualisez la saison.",
+        throw Object.assign(
+          new Error("Les données publiées ont changé. Actualisez la saison."),
+          { code: "PUBLICATION_CHANGED" },
         );
       if (generation !== undefined && generation !== current) {
         if (restarted)

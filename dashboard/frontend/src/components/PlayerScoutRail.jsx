@@ -4,7 +4,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import useActorRead from "../hooks/useActorRead.js";
 import { useResource } from "../services/resources.js";
-import { actorReadParams } from "../services/actor-reads.js";
+import { actorReadParams, currentPlayerSeason } from "../services/actor-reads.js";
 import {
   compactGeneration,
   supportsCompactRead,
@@ -137,9 +137,10 @@ export default function PlayerScoutRail({
   );
   const market = marketServed ? marketRead : MARKET_VALUES_UNSERVED;
   const valuation = latestMarketEstimate(market.value?.history, publishedValue);
+  // The season the page has just read is not read again (GH129): the history takes it, as PlayerSeasonStats does.
   const history = useResource(
     playerHistoryKey(f.manifest, id),
-    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal }),
+    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal, cachedSeason: (value) => currentPlayerSeason(f, id, value) }),
     Boolean(id && f.manifest),
   );
   const nation = useMemo(() => selection(history.value), [history.value]);

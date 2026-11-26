@@ -39,6 +39,8 @@ export const COMPACT_READS = { home: true, "home-local": true, players: true, cl
 export const CAPABILITIES = {
   boundedSearch: true, // /api/search
   fixturePaginationOrder: true, // /api/fixtures: order, cursor
+  seasonFixtures: true, // /api/fixtures/season: a competition's season in one read (GH129)
+  matchFamilyRoutes: true, // every match family has its route, a 404 is the family's absence; no /api/archive/matches (GH129-g)
   versionedPartitions: true, // /api/seasons/partition: v
   playerGradeRanking: true, // /api/read/players: ranking=grade
   actorSummary: true, // /api/read/player and /api/read/club: detail=summary

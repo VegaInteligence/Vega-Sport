@@ -25,16 +25,18 @@ export function useBallonDorRanking(season) {
  * { score, role, position, roleRank, roleCount, … }; null for a player or a season
  * without one, undefined while it loads.
  */
+/** The player's ranking read of a season: its key and loader, shared by the hook and the page's first reads. */
+export const playerPowerResource = (season, id) => [
+  `power-ranking:player:${season || "none"}:${id || "none"}`,
+  ({ signal } = {}) =>
+    json("/api/rankings/power/player?" + new URLSearchParams({ season, player: id }), { signal })
+      .then((body) => body.player || null)
+      .catch((error) => (/\bHTTP 404\b/.test(error?.message || "") ? null : Promise.reject(error))),
+];
+
 export function usePlayerPower(season, id) {
   const enabled = Boolean(season && /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/.test(id || ""));
-  const resource = useResource(
-    `power-ranking:player:${season || "none"}:${id || "none"}`,
-    () =>
-      json("/api/rankings/power/player?" + new URLSearchParams({ season, player: id }))
-        .then((body) => body.player || null)
-        .catch((error) => (/\bHTTP 404\b/.test(error?.message || "") ? null : Promise.reject(error))),
-    enabled,
-  );
+  const resource = useResource(...playerPowerResource(season, id), enabled);
   if (!enabled || resource.error) return null;
   return resource.value === undefined ? undefined : resource.value;
 }
