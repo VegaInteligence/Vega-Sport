@@ -169,9 +169,18 @@
   color: var(--muted);
   font-size: var(--text-xs);
 }
-button.chip:hover {
-  border-color: var(--border-strong);
-  color: var(--ink-strong);
+/* A substitute who opens his performance or his page: a quiet pill (§ 72). */
+.open.chip {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  transition: background-color 0.16s ease;
+}
+.open.chip:hover {
+  background: var(--pill-quiet-hover);
+  color: var(--pill-quiet-ink);
 }
 /* The marker of a starter is a button: its photo, number and grade, nothing else. */
 .marker {

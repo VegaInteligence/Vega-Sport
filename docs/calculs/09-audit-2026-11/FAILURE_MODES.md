@@ -5863,3 +5863,45 @@ pour un gardien, un défenseur, un milieu, un attaquant ».
   450 min » from a mocked season read holding the match itself and a bench appearance; on a computer, moving into the
   bubble and clicking the player keep it open; Escape closes it; its link opens `/joueurs?…id=…`; no « Performance du
   joueur » window. Red on main (both checks), green after.
+
+## 72. The match page's buttons as pills (hugo, 26 Nov 2026; piste A of the mock-up https://claude.ai/artifact/2EA1PZszYAdkARJrbFo2eQ, approved with « ok pour la page match envoie en prod »; issue #245; written before the tests)
+
+hugo hates the site's buttons (square, a grey border, 32 px) and gave as the model a pill, filled night on beige with
+ivory text. He chose piste A of the mock-up on the match page, then asked for two retouches: no dark ground behind the
+clubs' crests, and slightly smaller choices (Probabilité de victoire / xG cumulés / Domination, Match / 1re mi-temps…);
+« Meilleure note du match » and the three leaders keep today's look.
+
+### 72.1 Rules
+
+- **One shape: the pill.** On the match page (`.match-detail`) whatever is clicked is a pill: radius 999 px, no border.
+- **Filled for the main action and the current choice.** « Rapport du match », the pressed choice of a segmented
+  control and the match shown in the thread of matches take `--pill-fill` on `--pill-ink`: ivory #f4f1ea on #07080b in
+  dark, #0b0d0f on #f4f1ea in light.
+- **Quiet for the rest.** « Résultats » / « Matchs à venir », the competition's button, « Enregistrer », the thread's
+  arrows (round), its other tiles (radius 22 px), « Tous les joueurs », the line-ups' search and the substitutes' chips,
+  the lists, the season stepper and « Voir tout » of « Classement »: `--pill-quiet` (white 7 % in dark, night 6 % in
+  light), a darker veil on hover. A saved match keeps its accent on « Enregistrer ».
+- **Sizes.** The head's pills 44 px (the back link 34 px, 36 px on a phone); a choice 32 px, 13 px text (36 px, 14 px
+  on a phone). « Tous les joueurs » takes the footer's padding so that the best grades still end with the shot map
+  (§ 63.3, R10).
+- **No slash** between the back link and the competition's button. **No frame, no fill** behind the scoreboard's crests.
+- **Unchanged:** the six tabs (the selected one's colour and line), the logos, « Meilleure note du match » and the three
+  leaders, the site's header and search, the phone's tab bar, every other page.
+- **Independent of the stylesheets' order.** `next dev` loads the modules after the global sheets, a build before them;
+  every global rule is `:root .match-detail …`, two classes above the rule it replaces, and the head's own elements are
+  changed in their modules (`MatchNav.module.css`, `MatchPlayerOpen.module.css`).
+
+### 72.2 Failure modes and expected outcomes
+
+- **R41** (`tests/match-head-style.test.mjs`) every selector of `match-pills.css` starts with `:root .match-detail`
+  (tokens aside), each token is set in dark and light, the layout imports the sheet; the crests have `border: 0` and
+  `background: none`; MatchNav has no slash. Red on main (no sheet).
+- **R42** (`tests/e2e/match-tabs.e2e.mjs`, computer, dark, a build) back link, competition, report and bookmark are
+  pills without border; no slash; competition and report 44 px; the report filled, the others quiet; round 44 px
+  arrows; the current tile filled, another quiet, radius 22 px; both crests `0px` and transparent; the choices' track
+  round, the pressed choice filled and 32 px; the selected tab, its line and the best grade's block exactly as main
+  draws them (read on main 64ac3f9 in a build). Red on main.
+- **R43** (same page, light) the filled ones night on ivory, the quiet ones night 6 %. Red on main.
+- **R44** (phone) competition and report 44 px, a choice 36 px, the report round. Red on main.
+- The E2E's season pages now answer the publication the API's manifest names (GH129-m pins them to it): with « e2e »
+  the head's thread and button were never drawn and R15–R19 failed on main before § 72.

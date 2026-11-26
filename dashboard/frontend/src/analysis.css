@@ -1069,9 +1069,10 @@ select optgroup {
   width: var(--media-64);
   height: var(--media-64);
   padding: 8px;
-  border: 1px solid var(--border);
+  /* No frame or fill behind the clubs' crests (hugo, 26 Nov; § 72). */
+  border: 0;
   border-radius: 0;
-  background: var(--surface-subtle);
+  background: none;
 }
 .scoreboard-team > div {
   min-width: 0;
@@ -1092,10 +1093,6 @@ select optgroup {
 }
 .scoreboard-away {
   flex-direction: row-reverse;
-}
-.scoreboard-away > .crest {
-  border-color: var(--border);
-  background: var(--surface-subtle);
 }
 .scoreboard-away > div {
   text-align: right;

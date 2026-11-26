@@ -16,6 +16,7 @@ import "../src/research.css";
 import "../src/player-profile-redesign.css";
 import "../src/home.css";
 import "../src/phone.css";
+import "../src/match-pills.css";
 import "../src/navigation.css";
 import "../src/account.css";
 import "../src/legal.css";
