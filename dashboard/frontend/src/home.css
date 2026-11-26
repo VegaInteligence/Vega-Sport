@@ -449,7 +449,7 @@ html[data-theme="light"] {
   text-transform: uppercase;
 }
 .home-verdict {
-  margin: 0 18px;
+  margin: 0;
   padding: 8px 10px;
   border-radius: 0;
   background: var(--surface-subtle);
@@ -1631,9 +1631,6 @@ html[data-theme="light"] {
   .home-motw-content {
     padding-right: 14px;
     padding-left: 14px;
-  }
-  .home-verdict {
-    margin: 0 14px;
   }
   /* The label column holds the longest label on one line, down to 360px. */
   .home-stat-bar {
