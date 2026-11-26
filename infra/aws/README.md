@@ -343,7 +343,7 @@ The private status page (repository VegaInteligence/Vega-Status, its own Vercel 
 
 | Workflow | When | What |
 |---|---|---|
-| `ci.yml` (CI) | every change to `backend`, `infra/aws`, the site or its tests | every Python and API suite on a disposable PostgreSQL 18 with pgvector (the engine of `vega-football-db-postgres`), `cfn-lint` of the stacks, the worker image built natively on linux/arm64 and its tools started, the read API package, the site's tests and its build; no secret, no AWS access |
+| `ci.yml` (CI) | every change to `backend`, `infra/aws`, the site or its tests; a pull request or a branch push runs only the jobs its files can break (`backend/ci/changed_suites.py`), main and a manual run run everything | every Python and API suite (three parts side by side: python, deploy, api) on a disposable PostgreSQL 18 with pgvector (the engine of `vega-football-db-postgres`), `cfn-lint` of the stacks, the worker image built natively on linux/arm64 and its tools started, the read API package, the site's tests and its build; no secret, no AWS access |
 | `pilot.yml` (Isolated pilot) | by hand only, from `main` | real PitchAPI data into a throwaway PostgreSQL 18: the pilot collection (1 to 306 matches, 1 by default; the four old regression fixtures on request), then 0 to 700 worker jobs on the real J−1..J+7 calendars and the other sources, at 0.5 s and within a budget of attempts per command; its own key `/vega/v2/pitchapi-pilot-key` (role `vega-v2-pilot`, never the worker's key); only measurements leave the runner |
 | `deploy.yml` (Deploy) | by hand, environment `v2-production` | `deploy.sh` with the `vega-v2-deploy` role |
 

@@ -1,5 +1,14 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## CI selon les fichiers changés (26 novembre 2026, branche `claude/ci-selon-fichiers` depuis main 2b7cfb4)
+
+- Constat (demande de hugo, 10 h 18) : la CI attendait 19 à 27 min depuis #241-#244, contre 10 à 16 min la veille ; `test_deploy_flow.py` seul ≈ 9 min (vrai `deploy.sh`, BuildKit, migrations), `test_account_deploy` 21 s → 96 s ; une PR du site seul attendait tout.
+- Job « Changed zones » (`backend/ci/changed_suites.py`) : liste des fichiers de la PR ou de la poussée par l'API GitHub, zones site, python, deploy, api, image, package. Sur main, en lancement manuel, si ci.yml ou `backend/ci/` change, ou si la liste manque : tout.
+- Job « Suites » en matrice, côte à côte : python (backend/tests sauf le Deploy), deploy (`test_deploy_flow`, `test_account_deploy`, `test_deploy_grants`), api (suites Node de l'API et des comptes). `backend/ci/python_suites.py` découpe la même découverte que `unittest discover -s backend/tests -v`.
+- Tests : `backend/tests/test_ci_zones.py` (zones, les deux parties = toute la découverte, ci.yml) ; GH171-l suit la nouvelle commande.
+- Mesure sur la PR (tout lancé, ci.yml changé) : verte en 14 min 50 (deploy 14 min 40, python 12 min, api 6 min 40), contre 19 à 27 min.
+- Avis d'Astra (xhigh, `/mnt/project-files/ci-selon-fichiers/reponse_astra_ci_resume.md`) : garder cette version ; corrigé ensuite : un fichier qu'un test nomme dans une chaîne lance la suite de ce test (README d'infra, fixtures, pilot.yml, planner.py lu par ops.test.mjs, CSV de docs/, ancien chemin d'un composant renommé), chemin inconnu ou liste vide → tout, diff git local (`--no-renames -z`), plus de filtre `paths`, annulation seulement pour une PR et main, sortie vérifiée.
+
 ## Choix de la journée : les 34 journées numérotées — FAILURE_MODES § 73 (26 novembre 2026, branche `claude/choix-journee` depuis main 287c5ac)
 
 - hugo trouvait la fenêtre du choix de journée mauvaise. Maquette à trois pistes (https://claude.ai/artifact/UEAvpQrYfJ5VqQafWT9jJC) : il a pris la piste A en demandant des numéros 1, 2, 3…, puis a validé la version 2 (« ok super envoie en main »).
