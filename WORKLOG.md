@@ -1,5 +1,11 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Cases des chiffres pleines et cartes du fil à 10 px — FAILURE_MODES § 75 (26 novembre 2026, sur main depuis 5f63f03)
+
+- Demande de hugo (11 h 28, captures Possession et fil de la Ligue des champions) : ces deux endroits à 10 px. Maquette https://claude.ai/artifact/Sf5wRw5NTSV8wrNr4jzhQL ; hugo a pris la piste B (cinq cases pleines sans traits gris) et les cartes du fil à 10 px, « tu peux tout push dans main » (11 h 31).
+- `match-pills.css` : `.match-kpis` sans trait, cases pleines (voile des pilules), 10 px, écart 6 px, case survolée cernée d'un filet. `MatchNav.module.css` : cartes du fil et leur attente 22 → 10 px.
+- R53 et R54 (`match-tabs.e2e.mjs`) et R42 mis à 10 px, rouges sur 5f63f03, verts après.
+
 ## CI plus rapide : sept parts équilibrées, main jamais annulée (26 novembre 2026, branche `claude/ci-plus-rapide` depuis main 122022b)
 
 - Constat (run complet 45795996557) : Suites (deploy) 18 min 22 (1 070 s de tests), python 10 min 02 (572 s), api 5 min 20 (288 s). Et les 11 runs de main du 26 novembre ont tous été annulés : chaque fusion annulait le run complet en cours, main n'était jamais vérifiée en entier.

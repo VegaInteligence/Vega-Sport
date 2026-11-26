@@ -23,6 +23,8 @@
 // window rounded, R50 on a phone with a margin.
 // § 74 (hugo, 26 Nov 11 h 16 and 11 h 18): R51 a figure's bubble the width of its tile, in the teams' colours · R52 on a phone
 // the strip's width.
+// § 75 (hugo, 26 Nov 11 h 31, piste B of the 10 px mock-up): R53 the figures as five filled tiles, 10 px, no grey line ·
+// R54 on a phone · R42 the thread's cards at 10 px.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -196,6 +198,26 @@ async function check(name, expected, run) {
 }
 
 /** § 74: a figure's bubble against its tile: their boxes and the teams' colours in each (the tile's first figure). */
+// § 75: the strip of figures as filled tiles: each tile's corners, four borders, fill; the strip's gap and line.
+async function kpiTiles(page) {
+  await page.locator(".match-kpis > *").first().waitFor();
+  return page.evaluate(() => {
+    const strip = document.querySelector(".match-kpis"), cs = getComputedStyle(strip);
+    const tiles = [...strip.children].map((t) => {
+      const c = getComputedStyle(t);
+      return { radius: c.borderTopLeftRadius, borders: [c.borderTopWidth, c.borderRightWidth, c.borderBottomWidth, c.borderLeftWidth].join(" "), bg: c.backgroundColor };
+    });
+    return { tiles, gap: cs.columnGap, rowGap: cs.rowGap, line: cs.borderTopWidth };
+  });
+}
+function filledTiles(got, quiet) {
+  assert.equal(got.tiles.length, 5, "five tiles");
+  for (const [i, t] of got.tiles.entries()) {
+    assert.deepEqual([t.radius, t.borders, t.bg], ["10px", "0px 0px 0px 0px", quiet], "tile " + i);
+  }
+  assert.deepEqual([got.gap, got.line], ["6px", "0px"], "the strip's gap and line");
+}
+
 async function kpiBubble(page, index = 0) {
   const tile = page.locator(".match-kpis > *").nth(index);
   await tile.focus();
@@ -419,8 +441,8 @@ try {
           assert.deepEqual([got.report.bg, got.report.color, got.report.h], [fill, ink, 32], "report filled");
           assert.deepEqual([got.back.bg, got.bookmark.bg, got.competition.bg], [quiet, quiet, quiet], "quiet pills");
           assert.deepEqual([got.step.radius, got.step.border, got.step.w, got.step.h], ["50%", "0px", 44, 44], "round steps");
-          assert.deepEqual([got.current.bg, got.current.color, got.current.radius, got.current.border], [fill, ink, "22px", "0px"], "current tile");
-          assert.deepEqual([got.other.bg, got.other.radius], [quiet, "22px"], "other tile");
+          assert.deepEqual([got.current.bg, got.current.color, got.current.radius, got.current.border], [fill, ink, "10px", "0px"], "current tile");
+          assert.deepEqual([got.other.bg, got.other.radius], [quiet, "10px"], "other tile");
           assert.deepEqual(got.crests, ["0px rgba(0, 0, 0, 0)", "0px rgba(0, 0, 0, 0)"], "crests without frame or fill");
           assert.equal(got.segments.radius, "999px", "choices' track");
           assert.deepEqual([got.pressed.bg, got.pressed.color, got.pressed.radius, got.pressed.h], [fill, ink, "999px", 32], "the current choice");
@@ -468,6 +490,13 @@ try {
         assert.ok(Math.abs(got.bubble.left - got.tile.left) <= 1, `bubble at ${got.bubble.left}px, tile at ${got.tile.left}px`);
         assert.equal(got.radius, "10px", "the bubble's corners");
         assert.deepEqual([got.bubbleHome, got.bubbleAway], [got.tileHome, got.tileAway], "the teams' colours");
+        return got;
+      });
+
+      await check("R53 the figures as five filled tiles, 10 px corners, no grey line", { radius: "10px", borders: "0", fill: "the pills' veil", gap: "6px" }, async () => {
+        const got = await kpiTiles(page);
+        await page.locator(".match-kpis").screenshot({ path: join(out, "cases-chiffres-bureau.png") });
+        filledTiles(got, "rgba(255, 255, 255, 0.07)");
         return got;
       });
 
@@ -930,6 +959,14 @@ try {
         assert.ok(Math.abs(got.bubble.width - got.strip.width) <= 1, `bubble ${got.bubble.width}px, strip ${got.strip.width}px`);
         assert.ok(Math.abs(got.bubble.left - got.strip.left) <= 1, `bubble at ${got.bubble.left}px, strip at ${got.strip.left}px`);
         assert.deepEqual([got.bubbleHome, got.bubbleAway], [got.tileHome, got.tileAway], "the teams' colours");
+        return got;
+      });
+
+      await check("R54 phone: the figures as filled tiles too, no grey line between the rows", { radius: "10px", borders: "0", gap: "6px" }, async () => {
+        const got = await kpiTiles(f.page);
+        await f.page.locator(".match-kpis").screenshot({ path: join(out, "cases-chiffres-telephone.png") });
+        filledTiles(got, "rgba(255, 255, 255, 0.07)");
+        assert.equal(got.rowGap, "6px", "rows' gap");
         return got;
       });
     } finally {

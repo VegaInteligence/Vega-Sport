@@ -44,7 +44,7 @@
 .threadLoading {
   height: 76px;
   margin: 14px 0 16px;
-  border-radius: 22px;
+  border-radius: 10px;
   background: var(--pill-quiet);
 }
 .step {
@@ -120,7 +120,7 @@ a.step:focus-visible,
   box-sizing: border-box;
   padding: 10px 16px 11px;
   border: 0;
-  border-radius: 22px;
+  border-radius: 10px; /* 10 px like the window and the bubbles (hugo, 26 Nov 11 h 31, § 75). */
   background: var(--pill-quiet);
   color: var(--ink);
   text-decoration: none;
