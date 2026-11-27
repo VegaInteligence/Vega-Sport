@@ -129,10 +129,21 @@ await run("competition page", async () => {
       // under the table and its legend (its bottom padding taken off).
       empty: standings?.lastElementChild && Math.round(standings.getBoundingClientRect().bottom -
         Number.parseFloat(getComputedStyle(standings).paddingBottom) - standings.lastElementChild.getBoundingClientRect().bottom),
+      // hugo, 17 h 04 « remplis »: no empty strip under the last result either (the card's rest goes to its rows).
+      resultsEmpty: (() => {
+        const results = side?.querySelector(".competition-highlights-results");
+        const body = results?.querySelector(".card-body");
+        const rows = body ? [...body.querySelectorAll(".competition-highlight-match")] : [];
+        if (!rows.length) return null;
+        const pad = Number.parseFloat(getComputedStyle(results).paddingBottom) + Number.parseFloat(getComputedStyle(body).paddingBottom);
+        return Math.round(results.getBoundingClientRect().bottom - pad - rows[rows.length - 1].getBoundingClientRect().bottom);
+      })(),
+      results: side?.querySelectorAll(".competition-highlights-results .competition-highlight-match").length,
     };
   });
-  check("C3 card height", "the card's and the veil's foot on the column's (±2), no empty space under the table (≤ 2)", heights,
-    heights.card && heights.side && near(heights.card, heights.side) && near(heights.veil, heights.side) && heights.empty <= 2);
+  check("C3 card height", "the card's and the veil's foot on the column's (±2), no empty space under the table (≤ 2) nor under the last result (≤ 2)", heights,
+    heights.card && heights.side && near(heights.card, heights.side) && near(heights.veil, heights.side) && heights.empty <= 2 &&
+      heights.results >= 2 && heights.resultsEmpty !== null && heights.resultsEmpty <= 2);
   await page.screenshot({ path: join(out, "competition-ordinateur.png"), fullPage: true });
 
   await page.locator(".edition-bar .settings-picker").nth(0).locator("button").click();

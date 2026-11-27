@@ -10,9 +10,8 @@ import {
   highlightKickoff,
   highlightScore,
   highlightTeam,
-  nextUpcomingLimit,
+  upcomingLimitFor,
   recentResultCapacity,
-  recentResultRoom,
 } from "../services/competition-highlights.js";
 import { leagueStrength, useLeagueLevels } from "../services/league-levels.js";
 import LeagueStrengthCard from "./LeagueStrengthCard.jsx";
@@ -63,6 +62,16 @@ function tableHeight(card) {
   return height - Math.max(0, veil.getBoundingClientRect().height - content);
 }
 
+// A result row's own height: on /competitions the rows share the card's rest (§ 80d), so their box is taller than
+// their content and would shrink the count at each measure.
+function rowHeight(row) {
+  const first = row.firstElementChild, last = row.lastElementChild;
+  if (!first || !last) return row.getBoundingClientRect().height;
+  const style = window.getComputedStyle(row);
+  return last.getBoundingClientRect().bottom - first.getBoundingClientRect().top
+    + ["paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"].reduce((sum, key) => sum + (Number.parseFloat(style[key]) || 0), 0);
+}
+
 export default function CompetitionHighlights({ matches, competition, season, onShowMatches }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -77,6 +86,7 @@ export default function CompetitionHighlights({ matches, competition, season, on
     [matches, now, recentLimit],
   );
   const upcoming = allUpcoming.slice(0, upcomingLimit);
+  const upcomingCount = allUpcoming.length;
   const recent = allRecent.slice(0, recentLimit);
   const levels = useLeagueLevels();
   const strength = useMemo(() => leagueStrength(levels, competition.id), [levels, competition.id]);
@@ -102,15 +112,16 @@ export default function CompetitionHighlights({ matches, competition, season, on
         // The league's level card stands above the two others: its height and its gap are theirs to give.
         upcomingHeight: nextCard.getBoundingClientRect().height + (levelCard ? levelCard.getBoundingClientRect().height + gap : 0),
         headerHeight: header.getBoundingClientRect().height,
-        rowHeight: row.getBoundingClientRect().height,
+        rowHeight: rowHeight(row),
         gap,
       };
       // A short table (18 clubs, or fewer): fewer next matches before the column runs past it.
       const nextRow = nextCard.querySelector(".competition-highlight-match");
-      setUpcomingLimit((previous) => nextUpcomingLimit({
-        limit: previous, room: recentResultRoom(sizes),
-        upcomingRow: nextRow?.getBoundingClientRect().height, resultRow: sizes.rowHeight,
-      }));
+      const upcomingLimit = upcomingLimitFor({
+        sizes, shown: nextCard.querySelectorAll(".competition-highlight-match").length,
+        upcomingRow: nextRow?.getBoundingClientRect().height, available: upcomingCount,
+      });
+      if (upcomingLimit !== null) setUpcomingLimit((previous) => previous === upcomingLimit ? previous : upcomingLimit);
       const limit = recentResultCapacity(sizes);
       setRecentLimit((previous) => previous === limit ? previous : limit);
     };
@@ -124,7 +135,7 @@ export default function CompetitionHighlights({ matches, competition, season, on
     window.addEventListener("resize", update);
     update();
     return () => { observer?.disconnect(); window.removeEventListener("resize", update); };
-  }, [competition.id, season, matches, upcoming.length, upcomingLimit, Boolean(strength)]);
+  }, [competition.id, season, matches, upcoming.length, upcomingCount, upcomingLimit, Boolean(strength)]);
   return (
     <aside ref={highlightsRef} className={"competition-highlights" + (strength ? " competition-highlights--level" : "")} aria-label="Matchs de la compétition">
       <LeagueStrengthCard strength={strength} />

@@ -75,3 +75,18 @@ export function nextUpcomingLimit({ limit, room, upcomingRow, resultRow, most = 
   if (limit < most && room >= 2 + Math.ceil(upcomingRow / resultRow)) return limit + 1;
   return limit;
 }
+
+/**
+ * The next matches to show beside the table, from the sizes alone: the most (up to four) that still leave room for
+ * two results. Worked out in one go, so the column ends the same way whatever it showed before (the step by step
+ * {@link nextUpcomingLimit} could stop at 1 + 3 or 2 + 2 on the same page, 27 Nov 2026). Null without a next row.
+ */
+export function upcomingLimitFor({ sizes, shown, upcomingRow, available = Infinity, most = 4 }) {
+  if (!(shown > 0) || !(upcomingRow > 0)) return null;
+  for (let limit = most; limit > 1; limit -= 1) {
+    const rows = Math.min(limit, available);
+    const room = recentResultRoom({ ...sizes, upcomingHeight: sizes.upcomingHeight + (rows - shown) * upcomingRow });
+    if (room !== null && room >= 2) return limit;
+  }
+  return 1;
+}

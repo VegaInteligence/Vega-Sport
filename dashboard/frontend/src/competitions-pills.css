@@ -257,7 +257,20 @@ html[data-theme="dark"]
 }
 :root .competitions-page .competition-detail-layout--overview .competition-highlights-results.card {
   /* The trimmed column ends within a result row of the table: its last card takes the rest, both feet meet. */
+  display: flex;
   flex: 1 1 auto;
+  flex-direction: column;
+}
+/* hugo, 27 Nov 2026, 17 h 04 « remplis, la y'en a 2 mais y'a un gap »: the rest goes to the results' rows, shared
+   evenly, each one centred in its share, so no empty strip stays under the last one. */
+:root .competitions-page .competition-detail-layout--overview .competition-highlights-results.card > .card-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+:root .competitions-page .competition-detail-layout--overview .competition-highlights-results .competition-highlight-match {
+  flex: 1 0 auto;
+  align-content: center;
 }
 :root .competitions-page .competition-highlights-card.card {
   margin: 0;
