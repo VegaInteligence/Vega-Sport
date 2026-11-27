@@ -357,7 +357,7 @@ export function PreviewAbsences({ absents }) {
                     <strong>{a.player.name}</strong>
                     <small>
                       <span className={s.previewClub} data-absent-club="">
-                        <ClubCrest club={team} size={16} />
+                        <ClubCrest club={team} size={16} label />
                       </span>
                       <AbsenceGlyph kind={kind} />
                       {absenceReason(a)}

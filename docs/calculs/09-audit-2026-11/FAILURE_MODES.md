@@ -6301,4 +6301,16 @@ Cases (`tests/e2e/match-preview.e2e.mjs`, on the replay of Forest – Chelsea, r
   « Absents » card (in « Compositions » from the kick-off, 79.7).
 - **P12** both line-ups confirmed: the forecast that read them, each eleven, the table with and without them, the foot's
   « Compositions confirmées » (written with the code, as the card of § 70 it replaces had its unit test, R34, which goes
-  with `MatchForecast.jsx`).
+  with `MatchForecast.jsx`). The scoreboard's strip reads that same forecast (Codex on #263).
+
+Codex's review of #263 (four findings, all real, each red before its fix and green after):
+- **80b** (API) the model of a forecast is found in SQL (`api.match_forecasts` joined to `api.forecast_models`), never
+  by sending its `fitted_at` back: `now()` gives microseconds, which the JavaScript Date of the pg driver drops, and the
+  equality then finds no model, so production forecasts would come without their grid. The seed's fit now has
+  microseconds (`.123456`): 80a red before, green after.
+- **P12** (strip) with both line-ups confirmed, the strip's « Victoire » is the line-ups' forecast (50 % – 24 %), as on
+  the model's card; it read the forecast without them.
+- **P13** a crest with no name beside it is named (`label`, `dashboard/frontend/AGENTS.md`): the opponents of the form
+  chart, the club of each absent, the grid's corner.
+- **P14** no player graded (300 minutes or more) on either side: no notes card, and the form card takes the whole row
+  (the pair knows the notes before it is laid out; a component returning null still counted as a second card).

@@ -48,7 +48,8 @@ function Pills({ club }) {
 
 /** The scoreboard's strip (§ 80.2): the same look as the match played's. */
 export function PreviewStrip({ match }) {
-  const forecast = useMatchForecast(match.id)?.forecast;
+  // The forecast the model card shows: with the confirmed line-ups once both are in (§ 80.2).
+  const forecast = matchForecastReading(useMatchForecast(match.id), match.home?.name || "Domicile", match.away?.name || "Extérieur")?.forecast;
   const clubs = useClubs(match);
   const tiles = [];
   const pair = (home, away) => (
@@ -338,8 +339,8 @@ function ScoreGrid({ match, grid, reading }) {
   return (
     <div className={s.grid} role="table" aria-label="Probabilité de chaque score">
       <span className={s.corner} role="presentation" title={`${match.home.name} en lignes, ${match.away.name} en colonnes`}>
-        <ClubCrest club={match.away} size={16} />
-        <ClubCrest club={match.home} size={16} />
+        <ClubCrest club={match.away} size={16} label />
+        <ClubCrest club={match.home} size={16} label />
       </span>
       {grid[0].map((_, j) => (
         <span key={"a" + j} className={`${s.axis} ${k.awayText}`}>
@@ -433,7 +434,7 @@ function FormCard({ match, clubs }) {
                     <i className={s.pill} data-result={m.result}>
                       {m.scoreFor}–{m.scoreAgainst}
                     </i>
-                    <ClubCrest club={m.opponent} size={16} className={s.opponent} />
+                    <ClubCrest club={m.opponent} size={16} className={s.opponent} label />
                   </div>
                 ))}
               </div>
@@ -448,10 +449,9 @@ function FormCard({ match, clubs }) {
 }
 
 /** « Meilleures notes de la saison » (§ 80.5): the three best of each club, the six by grade. */
-function NotesCard({ match, clubs, absents }) {
-  const f = useFootball();
-  const out = new Set(["home", "away"].flatMap((side) => (absents[side].view?.rows || []).map((a) => a.player.id)));
-  const rows = ["home", "away"]
+/** The three best season grades of each club (300 minutes or more), best first (§ 80.5). */
+function bestNotes(clubs) {
+  return ["home", "away"]
     .flatMap((side) =>
       clubSquad(clubs.value.data, clubs[side])
         .profiles.filter((p) => p.minutes >= SEASON_MINUTES && isNumber(p.grade))
@@ -460,7 +460,11 @@ function NotesCard({ match, clubs, absents }) {
         .map((p) => ({ side, p })),
     )
     .sort((a, b) => b.p.grade - a.p.grade);
-  if (!rows.length) return null;
+}
+
+function NotesCard({ match, rows, absents }) {
+  const f = useFootball();
+  const out = new Set(["home", "away"].flatMap((side) => (absents[side].view?.rows || []).map((a) => a.player.id)));
   return (
     <Card title="Meilleures notes de la saison" className={s.notes} data-preview="notes">
       <ol>
@@ -669,6 +673,8 @@ export default function MatchPreview({ match }) {
   const absents = useUpcomingAbsences(match);
   const table = useCompetitionTable(match);
   const ready = Boolean(clubs.value);
+  // Known before the pair is laid out: without notes the form card takes the whole row (§ 80.5).
+  const notes = ready ? bestNotes(clubs) : [];
   return (
     <div className={s.preview}>
       <Heroes match={match} reading={reading} clubs={clubs} absents={absents} />
@@ -678,7 +684,7 @@ export default function MatchPreview({ match }) {
         <>
           <Pair wide>
             <FormCard match={match} clubs={clubs} />
-            <NotesCard match={match} clubs={clubs} absents={absents} />
+            {notes.length > 0 && <NotesCard match={match} rows={notes} absents={absents} />}
           </Pair>
           <Pair>
             {(clubs.home.matches > 0 || clubs.away.matches > 0) && (

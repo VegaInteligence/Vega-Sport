@@ -59,7 +59,7 @@ async function check(name, expected, run) {
 
 /** A page on the match. `plan`: { grid, standings, played, view }. */
 async function open(label, device, plan = {}) {
-  const { grid: withGrid = true, standings = true, played = false, lineups = false, view } = plan;
+  const { grid: withGrid = true, standings = true, played = false, lineups = false, grades = true, view } = plan;
   const context = await browser.newContext({ ...device, locale: "fr-FR", colorScheme: "dark", timezoneId: "Europe/Paris" });
   const page = await context.newPage();
   const run = { label, plan, errors: [], misses: [] };
@@ -67,6 +67,8 @@ async function open(label, device, plan = {}) {
   page.setDefaultTimeout(20000);
   await page.addInitScript(() => localStorage.setItem("vega.consent.v1", JSON.stringify({ measurement: false, at: "2026-11-25T12:00:00Z" })));
   page.on("pageerror", (error) => run.errors.push(error.message));
+  // A render error the page's boundary catches shows only in the console (« Chargement impossible »).
+  page.on("console", (message) => message.type() === "error" && /\b\w*Error: /.test(message.text()) && run.errors.push(message.text().split("\n")[0]));
   // The public origin's reads go to the replay (pages, images).
   await context.route(/dngp6kh9jx2bl\.cloudfront\.net/, async (route) => {
     const url = route.request().url().replace(/^https:\/\/dngp6kh9jx2bl\.cloudfront\.net/, replay);
@@ -95,6 +97,15 @@ async function open(label, device, plan = {}) {
         home: { deviation: 0.31, elo: 13.9 }, away: { deviation: -0.72, elo: -32.3 }, computedAt: "2026-11-27T19:05:00.000Z" };
     return route.fulfill({ status: 200, json: body, headers: { "access-control-allow-origin": "*" } });
   });
+  // No grade read for any player (early in a season): the clubs' reads without them (P14).
+  if (!grades)
+    await context.route(/\/api\/read\/club\?/, async (route) => {
+      const url = route.request().url().replace(/^https:\/\/dngp6kh9jx2bl\.cloudfront\.net/, replay);
+      const response = await route.fetch({ url });
+      const body = await response.json();
+      for (const row of body.data?.appearances || []) Object.assign(row, { grade: null, gradeZ: null });
+      return route.fulfill({ status: response.status(), json: body, headers: { "access-control-allow-origin": "*" } });
+    });
   if (!standings) await context.route(/\/api\/standings\?/, (route) => route.fulfill({ status: 404, json: { error: "Donnée indisponible." } }));
   if (played)
     await context.route(new RegExp("/api/matches/" + id + "/summary"), async (route) => {
@@ -260,6 +271,16 @@ try {
         return { n, columns, crests, head, width, panelWidth };
       });
 
+      await check("P13 blasons seuls nommés : forme (adversaires), absents, coin de la grille", { form: 20, absents: 5 }, async () => {
+        const form = await card(page, "form").locator('[role="img"][aria-label]').count();
+        const hidden = await card(page, "form").locator('[data-result] ~ [aria-hidden="true"]').count();
+        const absents = await card(page, "absents").locator('[data-absent-club] [role="img"][aria-label]').count();
+        assert.ok(form >= 20, "form " + form);
+        assert.equal(hidden, 0);
+        assert.equal(absents, 5);
+        return { form, hidden, absents };
+      });
+
       await check("P7 confrontations : 2 · 3 · 3, six cases", { record: [2, 3, 3], tiles: 6 }, async () => {
         const h2h = card(page, "h2h");
         const record = (await h2h.locator("[data-record] b").allInnerTexts()).map(Number);
@@ -337,9 +358,31 @@ try {
         assert.match(whole, /Avec les compositions 50 % 25 % 24 %/);
         assert.match(whole, /Sans les compositions 45 % 26 % 29 %/);
         assert.ok(read.includes("Compositions confirmées") && !read.includes("Onze probable"), read.join(" | "));
+        // The scoreboard's strip reads the same forecast as the card (Codex on #263).
+        const strip = await text(page.locator(".match-scoreboard [data-upcoming]"));
+        assert.match(strip, /Victoire\s*50 %\s*–\s*24 %/, strip);
         assert.deepEqual(run.errors, []);
         await model.screenshot({ path: join(out, "ordinateur-compositions.png") });
         return { read, elevens };
+      });
+    } finally {
+      await close();
+    }
+  }
+
+  // ------------------------------------------------------------------ no grade read
+  {
+    const { page, run, close } = await open("sans notes", desktop, { grades: false });
+    try {
+      await check("P14 sans notes : la forme seule sur sa ligne, pas de colonne vide", { notes: 0, formAlone: true }, async () => {
+        await card(page, "form").waitFor({ timeout: 60000 });
+        await page.waitForTimeout(1500);
+        const notes = await card(page, "notes").count();
+        const form = await box(card(page, "form")), p = await box(panel(page));
+        assert.equal(notes, 0);
+        assert.ok(form.w >= p.w - 40, `${form.w} / ${p.w}`);
+        assert.deepEqual(run.errors, []);
+        return { notes, form, panel: p };
       });
     } finally {
       await close();

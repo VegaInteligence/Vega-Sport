@@ -331,13 +331,15 @@ async function matchForecast(read, params) {
   validateParams(params, ["match"]);
   const id = params.get("match");
   if (!MATCH.test(id || "")) reject(400, "Paramètre invalide.");
-  const [[r], [l]] = await Promise.all([
+  // The model the forecast names, for its rho: the grid of scores (FAILURE_MODES § 80.1); none without it. Found in SQL:
+  // a fit's time has microseconds, which a JavaScript Date sent back would lose (80b).
+  const [[r], [l], [fitted]] = await Promise.all([
     read("SELECT * FROM api.match_forecasts WHERE match_key=api.internal_id('match',$1)", [id]),
     read("SELECT * FROM api.match_lineup_forecasts WHERE match_key=api.internal_id('match',$1)", [id]),
+    read(`SELECT m.rho FROM api.match_forecasts f JOIN api.forecast_models m ON m.version=f.model_version AND m.fitted_at=f.fitted_at
+          WHERE f.match_key=api.internal_id('match',$1) ORDER BY m.id DESC LIMIT 1`, [id]),
   ]);
   if (!r) reject(404, "Donnée indisponible.");
-  // The model the forecast names, for its rho: the grid of scores (FAILURE_MODES § 80.1); none without it.
-  const [fitted] = await read("SELECT rho FROM api.forecast_models WHERE version=$1 AND fitted_at=$2 ORDER BY id DESC LIMIT 1", [r.model_version, r.fitted_at]);
   const grid = (f) => Number.isFinite(fitted?.rho) && f.home_goals > 0 && f.away_goals > 0
     ? { grid: scoreGrid(f.home_goals, f.away_goals, fitted.rho).map((row) => row.map((v) => round(v, 4))) } : {};
   const shares = (f) => ({ home: round(f.home_win, 4), draw: round(f.draw, 4), away: round(f.away_win, 4),

@@ -17,7 +17,8 @@
 - Site : tableau d'affichage avec rang et points sous chaque nom et compte à rebours ; bande de cinq chiffres ; quatre cartes (favori, un joueur en forme par club, grand absent) ; « Le match selon le modèle » en trois vues ; forme sur 10 matchs en barres xG ; meilleures notes de la saison ; face-à-face (les sept lignes de « Repères de la saison ») et enjeu au classement par paires de même hauteur ; Absents en une liste sur deux colonnes (mêmes données, mêmes règles que § 59 et § 79) ; confrontations en six cases. Après le coup d'envoi, l'Avant-match reste comme avant.
 - Retirés : `MatchForecast.jsx` et son test R34 (remplacés par le cas P12), la ligne technique du pronostic, « Joueurs les plus utilisés » avant le match (remplacé par les meilleures notes).
 - Tests : API `rankings.test.mjs` cas 80a rouge sur main, 19/19 après ; site 1 117/1 117 ; E2E `tests/e2e/match-preview.e2e.mjs` (rejeu de la production du 27 nov. sur Nottingham Forest – Chelsea, grille posée par le test) 10 échecs sur main, 13/13 sur le build. `match-before-kickoff.e2e.mjs` et `match-tabs.e2e.mjs` non relancés : ils lisent l'API publique, fermée depuis ce conteneur. Preuves : `/mnt/project-files/avant-match-refonte/`.
-- Reste : accord de hugo avant fusion, puis Deploy du backend pour la grille.
+- Relecture Codex de #263 (quatre remarques, toutes justes, chacune rouge avant et verte après) : le modèle du pronostic est retrouvé en SQL (un `fitted_at` repassé par un Date JavaScript perd ses microsecondes, et la grille n'aurait jamais été renvoyée en production ; 80b) ; la bande du haut lit le pronostic avec compositions comme la carte du modèle (P12) ; blasons seuls nommés (P13) ; sans notes, la forme prend toute la ligne (P14). E2E 15/15 ; preuves rouges dans `e2e-codex-rouge/` et `api-80b-rouge.txt`.
+- Accord de hugo (27 nov., 16 h 57) pour la fusion et le Deploy.
 
 ## Lectures à froid et remplacements en fiche club — 26 novembre 2026
 
