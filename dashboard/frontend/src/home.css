@@ -1514,59 +1514,6 @@ html[data-theme="light"] {
   font-size: var(--text-sm);
   font-weight: 400;
 }
-.home-rail {
-  display: flex;
-  gap: 12px;
-  padding-bottom: 6px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-}
-.home-rail-card {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  gap: 8px;
-  width: 220px;
-  padding: 14px;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  scroll-snap-align: start;
-  cursor: pointer;
-}
-.home-rail-card:hover {
-  border-color: var(--border-strong);
-}
-.home-rail-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-.home-rail-top b {
-  color: var(--ink-strong);
-  font-size: 24px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-.home-rail-card strong {
-  display: block;
-  color: var(--ink-strong);
-}
-.home-rail-card small {
-  color: var(--muted);
-  font-size: 11.5px;
-}
-.home-rail-line {
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.home-rail-line b {
-  color: var(--ink-strong);
-}
-
 @media (max-width: 1180px) {
   .home-span-4,
   .home-span-5,

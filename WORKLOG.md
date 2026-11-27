@@ -1,5 +1,11 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Accueil : « Vos joueurs » et « Ils ont aussi brillé » en listes classées — FAILURE_MODES § 80 (27 novembre 2026)
+
+- Demande de hugo (16 h 50) : la dernière partie de la Vue d'ensemble « pas belle et forcée ». Maquette https://claude.ai/artifact/7m8xpqAU3o9U9ndvf2xYKb, piste B choisie (16 h 58).
+- `HomePlayers.jsx` : chaque section est une seule carte de 22 px avec une liste en deux colonnes (une sous 1 100 px), numérotée pour « Ils ont aussi brillé » ; la note est une pastille, verte à partir de 70 (GRADE_HIGH des compositions) sur le nombre affiché, « – » sans match ; buts et passes seulement s'il y en a ; sur téléphone cinq joueurs puis « Voir les N joueurs ». Les rails (`.home-rail*`) sont retirés de `home.css`.
+- Tests : `tests/home-players-render.test.mjs` 2/2 (rouge 0/2 sur 11f3ce1) ; E2E `home-buttons.e2e.mjs` H16, H17 nouveaux, H12 adapté, rouges sur 11f3ce1, 18/18 après. Captures : `/mnt/project-files/design-boutons/vue-d-ensemble/joueurs/captures/`.
+
 ## Accueil : plus de « · résultats provisoires » sous « Semaine en cours » (27 novembre 2026)
 
 - Demande de hugo (16 h 50) : « tout en haut enleve · résultats provisoires ». L'en-tête de la semaine en cours ne donne plus que ses dates. Test de rendu (overview-featured-render) rouge avant, 11/11 après.

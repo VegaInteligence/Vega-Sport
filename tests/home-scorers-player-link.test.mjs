@@ -28,6 +28,7 @@ const { SeasonScorers } = await compile("components/HomePlayers.jsx", {
   "./HomeCommon.jsx": { Kicker: ({ children }) => h("span", null, children), lastName: String, matchHref: () => "", relativeDay: String, shortDay: String },
   "../services/player-leaderboard.js": { playerLeaderboardHref: () => "/joueurs/" },
   "../services/home-insights.js": { matchDay: () => "", weekPeriodLabel: () => "" },
+  "../services/grades.js": { GRADE_HIGH: 70 },
 });
 
 const leader = (playerId, goals) => ({ playerId, lastId: `m_last:${playerId}`, name: playerId, team: "Club", goals, assists: 1, xg: goals - 1, xa: 1, apps: 10 });

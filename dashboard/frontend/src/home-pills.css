@@ -778,3 +778,197 @@ html:has(.home-page) .modal-close:hover {
     background: var(--backdrop, rgb(0 0 0 / 0.45));
   }
 }
+
+/* ----------------------------------------------------------------- « Vos joueurs » and « Ils ont aussi brillé »
+   Piste B of https://claude.ai/artifact/7m8xpqAU3o9U9ndvf2xYKb (hugo, 27 Nov 2026, FAILURE_MODES § 80): one 22 px card per
+   section on the veil, a list in two columns, no grey line; the grade a pill, green from 70 as in the lineups. */
+:root .home-page .home-list-card {
+  padding: 8px;
+  border-radius: 22px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+:root .home-page .home-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+:root .home-page .home-list > li {
+  min-width: 0;
+}
+:root .home-page .home-list-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.16s ease;
+}
+:root .home-page .home-list.is-ranked .home-list-row {
+  grid-template-columns: 18px auto minmax(0, 1fr) auto;
+}
+:root .home-page .home-list-row:hover {
+  background: var(--pill-quiet);
+}
+:root .home-page .home-list-row:focus-visible {
+  outline: 2px solid var(--pill-focus);
+  outline-offset: 0;
+}
+:root .home-page .home-list-rank {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+:root .home-page .home-list-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--pill-quiet);
+}
+:root .home-page .home-list-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+:root .home-page .home-list-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+:root .home-page .home-list-name strong {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .home-page .home-list-name small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .home-page .home-list-line {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+:root .home-page .home-list-line > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:root .home-page .home-list-line > span + span::before,
+:root .home-page .home-list-group > span + span::before {
+  content: "·";
+  margin: 0 6px;
+}
+:root .home-page .home-list-group {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+:root .home-page .home-list-group > span {
+  flex: none;
+}
+/* Only the opponent's name gives way: the day and the figures are never cut. */
+:root .home-page .home-list-group > .home-list-opponent {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:root .home-page .home-list-group > .home-list-score {
+  flex: none;
+  margin-left: 0.3em;
+}
+:root .home-page .home-list-line.is-next > span::before {
+  content: none;
+}
+:root .home-page .home-list-line b {
+  color: var(--ink-strong);
+  font-weight: 700;
+}
+:root .home-page .home-list-line.is-next {
+  gap: 6px;
+  font-size: 12px;
+}
+:root .home-page .home-list-line.is-next svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+:root .home-page .home-grade {
+  display: inline-grid;
+  place-items: center;
+  min-width: 42px;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+:root .home-page .home-grade[data-high] {
+  background: light-dark(#0f8a5f, #34d399);
+  color: light-dark(#fff, #052e1f);
+}
+:root .home-page .home-list-card > .phone-fold-toggle {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+@media (max-width: 1100px) {
+  :root .home-page .home-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  :root .home-page .home-list-card {
+    padding: 6px;
+  }
+  :root .home-page .home-list-row {
+    padding: 10px 8px;
+  }
+  :root .home-page .home-list-name {
+    display: grid;
+    gap: 0;
+  }
+  /* A week's line is too long for a phone: the match, then its figures under it. */
+  :root .home-page .home-list-line.is-week {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  :root .home-page .home-list-line.is-week > .home-list-group + .home-list-group::before {
+    content: none;
+  }
+  :root .home-page .home-list-line.is-week > .home-list-group {
+    max-width: 100%;
+  }
+}

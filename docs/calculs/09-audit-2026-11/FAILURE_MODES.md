@@ -6209,3 +6209,10 @@ match ou apres ca doit etre dans compisition »). Before the kick-off: « Avant-
 under the lineups, above the players' board. E2E (`tests/e2e/match-page.e2e.mjs`): K6, K6b, K6c read « Compositions »;
 K6d a finished match's « Avant-match » has no « Absents » card. Red before (the card in « Avant-match », none in
 « Compositions »), green after.
+
+## 80. « Vos joueurs » and « Ils ont aussi brillé » as ranked lists (hugo, 27 Nov 2026, 16 h 50 « sur la page vue d'ensemble il faut voir pour la derniere partie car la c'est pas beau et forcé », with a capture; mock-up https://claude.ai/artifact/7m8xpqAU3o9U9ndvf2xYKb, 16 h 58 « B »; written before the tests)
+
+- What was there: both sections were a sideways rail of 220 px cards with a grey line above each card and between its lines, cut at the right edge on a desktop (« Ils ont aussi brillé ») or filling half the row (four players), the grade a 24 px number far from the player, and « 0 but · 0 passe » on most cards.
+- Rule: each section is one 22 px card on the veil with no border, holding a list in two columns (one under 1 100 px); rows without lines, a 16 px veil on hover. « Ils ont aussi brillé » is numbered from 1. The grade is a pill, green from GRADE_HIGH (70) as in the lineups, judged on the number shown (a 69.6 reads 70 and is green; found by H16 on the replay), neutral under, « – » when a followed player did not play. Goals and assists show only when there are some. « Vos joueurs » keeps each match of the week and the next match, its day with a capital. A phone shows five players, the rest behind « Voir les N joueurs ». On a phone a week's line is too long for one row: the match (day, opponent, score) then its figures (minutes, goals, assists) under it; only the opponent's name may be cut, never the day, the score or the figures (an ellipsis on « mar. 24… » then on « 5–… » were seen on the 390 px capture).
+- Tests: `tests/home-players-render.test.mjs` (red on 11f3ce1, 2/2 after); `tests/e2e/home-buttons.e2e.mjs` H16 and H17, H12 now opens a player from the list.
+
