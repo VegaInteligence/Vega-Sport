@@ -8,6 +8,7 @@ import { json, useResource } from "../services/resources.js";
 import {
   defaultMatchday,
   matchdayGroups,
+  matchdaySummary,
   nearestUntried,
   withNextMatchday,
 } from "../services/competition-matchdays.js";
@@ -163,7 +164,12 @@ export default function MatchdaySchedule({
   if (competition.id && season && resource.loading && !resource.value)
     return (
       <section className="matchday-schedule" aria-label="Matchs par journée">
-        <Skeleton data-page-loading="" label="Chargement des journées…" kind="table" lines={9} />
+        <Skeleton
+          data-page-loading=""
+          label="Chargement des journées…"
+          kind="table"
+          lines={9}
+        />
       </section>
     );
   return (
@@ -171,75 +177,90 @@ export default function MatchdaySchedule({
       {resource.loading && (
         <Skeleton label="Chargement des journées…" lines={2} />
       )}
-      <div className="matchday-toolbar">
-        <h3 className="matchday-heading" aria-live="polite">
-          {selected.label}
-        </h3>
-        <nav
-          className="matchday-navigation"
-          aria-label="Navigation entre les journées"
-        >
-          <button
-            type="button"
-            className="button button-secondary matchday-arrow"
-            aria-label="Journée précédente"
-            disabled={position <= 0}
-            onClick={() => choose(groups[position - 1].key)}
+      {/* The chosen matchday on its own card, the next one on another (§ 83). */}
+      <div className="matchday-current">
+        <div className="matchday-toolbar">
+          <div className="matchday-title">
+            <h3 className="matchday-heading" aria-live="polite">
+              {selected.label}
+            </h3>
+            <small className="matchday-summary">
+              {matchdaySummary(selected)}
+            </small>
+          </div>
+          <nav
+            className="matchday-navigation"
+            aria-label="Navigation entre les journées"
           >
-            <Icon name="back" />
-          </button>
-          <label className="sr-only" htmlFor="matchday-choice">
-            Choisir une journée
-          </label>
-          <select
-            id="matchday-choice"
-            value={selected.key}
-            onChange={(event) => choose(event.target.value)}
-          >
-            {groups.map((group) => (
-              <option key={group.key} value={group.key}>
-                {group.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="button button-secondary matchday-arrow"
-            aria-label="Journée suivante"
-            disabled={position >= groups.length - 1}
-            onClick={() => choose(groups[position + 1].key)}
-          >
-            <Icon name="arrow" />
-          </button>
-        </nav>
+            <button
+              type="button"
+              className="button button-secondary matchday-arrow"
+              aria-label="Journée précédente"
+              disabled={position <= 0}
+              onClick={() => choose(groups[position - 1].key)}
+            >
+              <Icon name="back" />
+            </button>
+            <label className="sr-only" htmlFor="matchday-choice">
+              Choisir une journée
+            </label>
+            <select
+              id="matchday-choice"
+              value={selected.key}
+              onChange={(event) => choose(event.target.value)}
+            >
+              {groups.map((group) => (
+                <option key={group.key} value={group.key}>
+                  {group.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="button button-secondary matchday-arrow"
+              aria-label="Journée suivante"
+              disabled={position >= groups.length - 1}
+              onClick={() => choose(groups[position + 1].key)}
+            >
+              <Icon name="arrow" />
+            </button>
+          </nav>
+        </div>
+        {selected.matches.some((match) => match.fixtureIdentityUncertain) && (
+          <p className="matchday-note">
+            Certaines rencontres apparaissent plusieurs fois dans les données ;
+            leur fiche et leur horaire restent à confirmer.
+          </p>
+        )}
+        {selected.key === "unknown" && (
+          <p className="matchday-note">
+            {loadingMore
+              ? "Recherche des journées en cours…"
+              : "La journée de ces rencontres n’est pas précisée. Elles restent accessibles par date."}
+          </p>
+        )}
+        {selected.matches
+          .slice((current - 1) * 30, current * 30)
+          .map((match) => (
+            <MatchLink key={match.id} match={match} showKickoff />
+          ))}
+        <Pager
+          page={current}
+          total={pages}
+          onChange={setPage}
+          label="Pagination des matchs de la journée"
+        />
       </div>
-      {selected.matches.some((match) => match.fixtureIdentityUncertain) && (
-        <p className="matchday-note">
-          Certaines rencontres apparaissent plusieurs fois dans les données ; leur
-          fiche et leur horaire restent à confirmer.
-        </p>
-      )}
-      {selected.key === "unknown" && (
-        <p className="matchday-note">
-          {loadingMore
-            ? "Recherche des journées en cours…"
-            : "La journée de ces rencontres n’est pas précisée. Elles restent accessibles par date."}
-        </p>
-      )}
-      {selected.matches.slice((current - 1) * 30, current * 30).map((match) => (
-        <MatchLink key={match.id} match={match} showKickoff />
-      ))}
-      <Pager
-        page={current}
-        total={pages}
-        onChange={setPage}
-        label="Pagination des matchs de la journée"
-      />
       {following && (
         <section className="matchday-next" aria-labelledby={nextHeading}>
-          <h3 id={nextHeading} className="matchday-next-heading">
-            {following.label}
-          </h3>
+          <div className="matchday-next-title">
+            <h3 id={nextHeading} className="matchday-next-heading">
+              {following.label}
+            </h3>
+            <small className="matchday-summary">
+              {matchdaySummary(following)}
+            </small>
+          </div>
           {following.matches.map((match) => (
             <MatchLink key={match.id} match={match} showKickoff />
           ))}

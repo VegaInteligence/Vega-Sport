@@ -1038,3 +1038,11 @@
 - Mock-up on the real pages: https://claude.ai/artifact/8DpjahVVH1hHCaZ7oviEHW. Approved direction (27 Nov, 16 h 24): piste B, with the standings' card as tall as the column beside it and a season menu that holds twenty seasons; seasons version A (16 h 38), on every season selector of the site (16 h 47).
 - Excluded: the page of a match to come (§ 70), the absent players (§ 79), the logos.
 - Tests: `tests/e2e/competitions-archives.e2e.mjs` (replay of production reads, `next build` + `next start`), unit tests updated where the directory page and the old row were asserted.
+
+## Competition page: Matchs, Projection and Joueurs views redone, whole race of the closed rounds (27 Nov 2026, FAILURE_MODES § 83)
+
+- Request (hugo, 27 Nov, 18 h 08): the Matchs, Projection and Joueurs views still had the old square boxes, and Joueurs listed ten players.
+- Cause of the ten: production stored ten rows for every round closed before VI-44 went live (23 Nov); hugo chose to complete them (decision card, 18 h 22). `rounds.complete_races` in the daily rounds pass; needs the worker's Deploy after the merge.
+- Look: no mock-up; same rules as § 82 (22 px veil cards, pills), screenshots sent to hugo before the merge.
+- Tests: `tests/e2e/competition-views.e2e.mjs` 7/7 (2/7 on main), `competitions-archives.e2e.mjs` 12/12, site unit tests, `test_models` + `test_rounds` 84/84 against a local PostgreSQL 18. Evidence in `/mnt/project-files/design-boutons/competitions-archives/e2e-vues-*` (outside git).
+

@@ -25,7 +25,18 @@ const ROUNDS = [
 export function Heat({ value, tone, first }) {
   return (
     <td className="projection-heat" data-tone={tone} data-first={first || undefined} style={{ "--p": value }}>
-      {share(value)}
+      <span>{share(value)}</span>
+    </td>
+  );
+}
+
+/** A league's share as a pill shaded by its size (§ 83): title and top four in the accent, the bottom three in red. */
+function Share({ value, tone }) {
+  return (
+    <td className="projection-share">
+      <span data-tone={tone} style={{ "--p": Number.isFinite(value) ? value : 0 }}>
+        {share(value)}
+      </span>
     </td>
   );
 }
@@ -35,7 +46,7 @@ function KnockoutProjection({ projection }) {
   const { rows, current, rounds } = knockoutRows(projection);
   if (!rows.length || !current) return null;
   return (
-    <>
+    <div className="season-projection-view">
       <div className="table-scroll standings-scroll" role="region" aria-label="Projection de la coupe" tabIndex={0}>
         <table className="data-table standings-table season-projection">
           <caption className="sr-only">Chances de chaque club à chaque tour de la coupe</caption>
@@ -78,7 +89,7 @@ function KnockoutProjection({ projection }) {
         Les tours restants sont rejoués {number(projection.model?.replays || 0)} fois d’après la force de chaque club (son Elo) ; le
         tirage de chaque tour est fait au hasard, une prolongation vaut un tiers de match et les tirs au but sont à 50/50.
       </p>
-    </>
+    </div>
   );
 }
 
@@ -107,7 +118,7 @@ function LeagueProjection({ projection, competition, season }) {
   const coming = !cup && rows.some((row) => row.next);
   const ordinal = (rank) => (rank === 1 ? "1er" : `${rank}e`);
   return (
-    <>
+    <div className="season-projection-view">
       <div className="table-scroll standings-scroll" role="region" aria-label="Projection de fin de saison" tabIndex={0}>
         <table className="data-table standings-table season-projection">
           <caption className="sr-only">Projection de fin de saison de chaque club</caption>
@@ -177,11 +188,11 @@ function LeagueProjection({ projection, competition, season }) {
                   </>
                 ) : (
                   <>
-                    <td>{share(row.title)}</td>
-                    <td>{share(row.topFour)}</td>
+                    <Share value={row.title} />
+                    <Share value={row.topFour} />
                   </>
                 )}
-                {relegation && <td>{share(row.bottomThree)}</td>}
+                {relegation && <Share value={row.bottomThree} tone="out" />}
                 {coming && (
                   <td
                     title={
@@ -210,6 +221,6 @@ function LeagueProjection({ projection, competition, season }) {
         {coming &&
           " « Adv. à venir » : le niveau moyen des cinq prochains adversaires de championnat, et le rang de ce calendrier (1er pour le plus dur)."}
       </p>
-    </>
+    </div>
   );
 }

@@ -48,6 +48,9 @@ PRIOR_MINUTES = 450
 SEASON_MATCH_MINUTES = 20
 RACE_SHARE = 0.5
 RACE_MATCHES = 3
+# Before VI-44 a closed round kept its race's first ten only (RACE_KEPT). A round still holding
+# exactly this many rows gets the rest of its race once (complete_races, FAILURE_MODES § 83).
+LEGACY_RACE = 10
 
 # Formations, by their roles (slot, accepted roles). The order breaks ties.
 SLOT_ROLES = {
@@ -312,7 +315,36 @@ def refresh(conn, season, now=None):
                              updated_at = now() WHERE competition_season_id = %s AND round_key = %s""",
                         (played, end - MATCH_LENGTH, edition, key),
                     )
+    complete_races(conn, season)
     return closed_now
+
+
+def complete_races(conn, season):
+    """The races a round closed before VI-44 kept to its first ten (LEGACY_RACE rows): the rest
+    of the race after that round is appended once, ranked from 11 on, the ten published players
+    and their order untouched (FAILURE_MODES § 83). A round whose whole race holds ten players
+    or fewer is read again and left as it is. Returns {(edition, round_key): rows added}."""
+    added = {}
+    for edition, key in conn.execute(
+        """SELECT r.competition_season_id, r.round_key FROM agg.league_rounds r
+           JOIN agg.round_season_race s ON s.competition_season_id = r.competition_season_id AND s.round_key = r.round_key
+           WHERE r.season_id = %s AND r.status <> 'open'
+           GROUP BY 1, 2 HAVING count(*) = %s AND max(s.rank) = %s ORDER BY 1, 2""",
+        (season, LEGACY_RACE, LEGACY_RACE),
+    ).fetchall():
+        kept = {p for (p,) in conn.execute(
+            "SELECT player_id FROM agg.round_season_race WHERE competition_season_id = %s AND round_key = %s", (edition, key)).fetchall()}
+        rest = [r for r in race_after(conn, edition, key, season) if r[0] not in kept]
+        if not rest:
+            continue
+        with conn.transaction():
+            with conn.cursor().copy(
+                "COPY agg.round_season_race(competition_season_id, round_key, rank, player_id, team_id, z, matches, minutes) FROM STDIN"
+            ) as copy:
+                for rank, (player, team, z, matches, minutes) in enumerate(rest, LEGACY_RACE + 1):
+                    copy.write_row((edition, key, rank, player, team, z, matches, minutes))
+        added[(edition, key)] = len(rest)
+    return added
 
 
 def publish(conn, season, edition, key, played):

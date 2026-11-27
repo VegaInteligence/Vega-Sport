@@ -96,6 +96,34 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(self.one("SELECT count(*) FROM agg.round_season_race WHERE competition_season_id = 1")[0], len(race))
         self.assertEqual(rounds.open_league_matches(self.db, 2025), set())
 
+    def test_a_race_kept_to_ten_before_vi44_gets_its_rest_once(self):
+        """FAILURE_MODES § 83: a round closed before VI-44 kept its race's first ten; the rest is appended once,
+        ranked from 11, the ten published players and their order untouched."""
+        from vega import rounds
+
+        rounds.refresh(self.db, 2025)
+        key = self.one("SELECT round_key FROM agg.league_rounds WHERE competition_season_id = 1")[0]
+        whole = [r[0] for r in rounds.race_after(self.db, 1, key, 2025)]
+        self.assertGreater(len(whole), rounds.LEGACY_RACE)
+        # The round as production holds it: ten rows, published with the second and the first the other way round.
+        with self.db.transaction():
+            self.db.execute("DELETE FROM agg.round_season_race WHERE competition_season_id = 1 AND rank > %s", (rounds.LEGACY_RACE,))
+            self.db.execute("UPDATE agg.round_season_race SET rank = 3 - rank + 100 WHERE competition_season_id = 1 AND rank IN (1, 2)")
+            self.db.execute("UPDATE agg.round_season_race SET rank = rank - 100 WHERE competition_season_id = 1 AND rank > 100")
+        published = [r[0] for r in self.db.execute(
+            "SELECT player_id FROM agg.round_season_race WHERE competition_season_id = 1 ORDER BY rank").fetchall()]
+        self.assertEqual(published, [whole[1], whole[0]] + whole[2:10])
+        added = rounds.complete_races(self.db, 2025)
+        self.assertEqual(added, {(1, key): len(whole) - rounds.LEGACY_RACE})
+        stored = self.db.execute("SELECT rank, player_id FROM agg.round_season_race WHERE competition_season_id = 1 ORDER BY rank").fetchall()
+        self.assertEqual([r[0] for r in stored], list(range(1, len(whole) + 1)))
+        self.assertEqual([r[1] for r in stored], published + whole[10:])
+        self.assertEqual(self.one("SELECT count(*) FROM api.round_season_race WHERE competition_season_id = 1")[0], len(whole))
+        # Once whole, nothing is added again; the daily pass (refresh) runs it and adds nothing either.
+        self.assertEqual(rounds.complete_races(self.db, 2025), {})
+        rounds.refresh(self.db, 2025)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.round_season_race WHERE competition_season_id = 1")[0], len(whole))
+
     def test_power_rankings_of_clubs(self):
         rows = self.db.execute("SELECT team_id, elo, rank, matches, scope FROM agg.team_power WHERE season_id=2025 ORDER BY rank").fetchall()
         self.assertEqual(len(rows), 8)
