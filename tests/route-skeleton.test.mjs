@@ -10,7 +10,16 @@ test("each redesigned page has its own loading skeleton", () => {
   assert.equal(routeSkeleton("/matchs/", "?id=m_0BcQYa"), "match");
   // The calendar (no id) keeps the logo; so does a page without a skeleton of its own.
   assert.equal(routeSkeleton("/matchs/", "?tab=results"), "");
-  assert.equal(routeSkeleton("/joueurs/", ""), "");
+  assert.equal(routeSkeleton("/compte/", ""), "");
+});
+
+// § 87: the rankings and the players' pages too; the players' directory and a player's page each in their shape.
+test("the rankings and the players open on their skeletons", () => {
+  assert.equal(routeSkeleton("/classement-joueurs/", ""), "ballon");
+  assert.equal(routeSkeleton("/power-ranking/", "?tab=clubs"), "power");
+  assert.equal(routeSkeleton("/joueurs/", ""), "players");
+  assert.equal(routeSkeleton("/joueurs/", "?season=2026%2F2027"), "players");
+  assert.equal(routeSkeleton("/joueurs/", "?id=p_217YMB"), "player");
 });
 
 test("the head script flags the same skeleton before the first paint", () => {
@@ -27,4 +36,8 @@ test("the head script flags the same skeleton before the first paint", () => {
   assert.equal(flag("/matchs/", "?id=m_0BcQYa"), "match");
   assert.equal(flag("/matchs/", ""), "");
   assert.equal(flag("/competitions/", "?id=l_3FJFUl"), "competition");
+  assert.equal(flag("/classement-joueurs/", ""), "ballon");
+  assert.equal(flag("/power-ranking", ""), "power");
+  assert.equal(flag("/joueurs/", "?season=2026%2F2027"), "players");
+  assert.equal(flag("/joueurs/", "?season=2026%2F2027&id=p_217YMB"), "player");
 });

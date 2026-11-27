@@ -169,3 +169,27 @@
     padding: 0 var(--page-gutter);
   }
 }
+
+/* § 87: the bar on the title's line, beside « ← Joueurs »: one track of the home, no margin of its own. */
+.onTitle {
+  margin: 0;
+  padding: 0;
+}
+.track {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.track > :global(.settings-picker) {
+  min-width: 0;
+}
+.period b {
+  color: inherit;
+  font-weight: 500;
+}
+.period > span {
+  color: var(--muted);
+}
+.period[data-active] {
+  background: var(--pill-quiet);
+}

@@ -12,6 +12,8 @@ import CompetitionSkeleton from "./CompetitionSkeleton.jsx";
 import HomeSkeleton from "./HomeSkeleton.jsx";
 import MatchSkeleton from "./MatchSkeleton.jsx";
 import NationSkeleton from "./NationSkeleton.jsx";
+import PlayersSkeleton from "./PlayersSkeleton.jsx";
+import RankingSkeleton from "./RankingSkeleton.jsx";
 import { routeSkeleton } from "../services/route-skeleton.js";
 /** One skeleton per kind of services/route-skeleton.js. */
 const SKELETONS = {
@@ -20,6 +22,10 @@ const SKELETONS = {
   home: <HomeSkeleton />,
   match: <MatchSkeleton />,
   nation: <NationSkeleton />,
+  ballon: <RankingSkeleton kind="ballon" />,
+  power: <RankingSkeleton kind="power" />,
+  players: <PlayersSkeleton />,
+  player: <PlayersSkeleton player />,
 };
 export default function LoadingPage({ href }) {
   const path = usePathname();
@@ -31,7 +37,16 @@ export default function LoadingPage({ href }) {
       crossOrigin: "anonymous",
     });
   // The route's skeleton is rendered beside the logo; the flag shows one of them.
-  const skeleton = SKELETONS[routeSkeleton(path, "id")];
+  // Both shapes of a route with an item page of its own (the players) are drawn: the flag shows the right one.
+  const skeleton =
+    path.replace(/\/$/, "") === "/joueurs" ? (
+      <>
+        <div className="route-skeleton-variant" data-route-variant="players">{SKELETONS.players}</div>
+        <div className="route-skeleton-variant" data-route-variant="player">{SKELETONS.player}</div>
+      </>
+    ) : (
+      SKELETONS[routeSkeleton(path, "id")]
+    );
   // Keep the head script's flag right after a client-side navigation too.
   useLayoutEffect(() => {
     const kind = routeSkeleton(path, window.location.search);

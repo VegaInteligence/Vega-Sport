@@ -206,11 +206,12 @@ test("Yamal's Liga and Euro are listed in the rail with their club and seasons",
     id,
     bootstrap,
   );
-  // The palmarès sits in the identity rail, one row per trophy: art, title, club and
-  // seasons, number of titles.
+  // The palmarès, one row per trophy: art, title, club and seasons, number of titles. § 87: no identity column any
+  // more, it is the overview's last band, under the head card.
   const shelf = html.indexOf('aria-label="Palmarès de Lamine Yamal"');
   assert.ok(shelf > html.indexOf('aria-label="Identité du joueur"'));
-  assert.ok(shelf < html.indexOf("</aside>"));
+  assert.ok(shelf > html.indexOf('class="player-honours-band"'));
+  assert.ok(html.indexOf('class="player-honours-band"') > 0);
   assert.match(html, /src="\/trophies\/liga-current\.webp"/);
   assert.match(html, /<b>Liga<\/b><small>FC Barcelone · 2025–26, 2024–25, 2022–23<\/small><\/span><em>×3<\/em>/);
   assert.match(html, /src="\/trophies\/euro-modern\.webp"/);

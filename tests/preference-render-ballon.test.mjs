@@ -23,6 +23,7 @@ test("R6 the Ballon d'Or marks the favourite players' places", async () => {
       "../components/UI.jsx": { Media: () => null },
       "../components/Hint.jsx": { Term: ({ children }) => children },
       "../components/SeasonSelect.jsx": { __esModule: true, default: () => null },
+      "../components/RankingSkeleton.jsx": { __esModule: true, default: () => null },
       "../hooks/FootballContext.jsx": { useFootball: () => ({ href: (u) => u, season: "2026/2027", manifest: { seasons: [] } }) },
       "../hooks/useFavourites.js": favouritesHook([], players),
       "../services/format.js": { number: String },

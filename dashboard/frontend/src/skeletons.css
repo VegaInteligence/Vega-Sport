@@ -464,3 +464,229 @@
     height: 180px;
   }
 }
+
+/* ------------------------------------------------------------------- the rankings and the players (§ 87, piste B) */
+.ranking-skeleton,
+.players-skeleton {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.ranking-skeleton-heading,
+.players-skeleton-heading,
+.players-skeleton-tabs-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+.ranking-skeleton-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.ranking-skeleton-trophy {
+  flex: none;
+  width: 34px;
+  height: 40px;
+  border-radius: 10px;
+}
+.ranking-skeleton-bar,
+.players-skeleton-bar {
+  width: 150px;
+  max-width: 100%;
+  height: 40px;
+}
+.ranking-skeleton-bar.is-wide {
+  width: 320px;
+}
+.players-skeleton-bar {
+  width: 690px;
+}
+.players-skeleton-bar.is-wide {
+  width: 590px;
+}
+.ranking-skeleton-views,
+.players-skeleton-tabs {
+  width: 160px;
+  max-width: 100%;
+  height: 40px;
+}
+.players-skeleton-tabs {
+  width: 330px;
+}
+.players-skeleton--player .players-skeleton-tabs {
+  width: 740px;
+}
+.players-skeleton-search {
+  width: 320px;
+  max-width: 100%;
+  height: 40px;
+}
+.players-skeleton-back {
+  width: 104px;
+  height: 32px;
+}
+.ranking-skeleton-une {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-rows: 1fr 1fr;
+  gap: 14px;
+}
+.ranking-skeleton-top3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.ranking-skeleton-card,
+.ranking-skeleton-board,
+.players-skeleton-card {
+  min-width: 0;
+  border-radius: 22px;
+  background: var(--veil);
+}
+.ranking-skeleton-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 76px;
+  padding: 14px 20px;
+}
+.ranking-skeleton-une .ranking-skeleton-place-1 {
+  grid-row: 1 / span 2;
+  gap: 28px;
+  padding: 26px 30px;
+}
+.ranking-skeleton-avatar {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+.ranking-skeleton-une .ranking-skeleton-place-1 .ranking-skeleton-avatar {
+  width: 96px;
+  height: 96px;
+}
+.ranking-skeleton-lines,
+.players-skeleton-lines {
+  display: grid;
+  flex: 1;
+  gap: 10px;
+  min-width: 0;
+}
+.ranking-skeleton-score {
+  width: 180px;
+  height: 40px;
+}
+.ranking-skeleton-board,
+.players-skeleton-table {
+  padding: 8px 18px;
+}
+.ranking-skeleton-row,
+.players-skeleton-row {
+  display: grid;
+  grid-template-columns: 24px 28px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  border-bottom: 1px solid var(--veil-line);
+}
+.players-skeleton-row {
+  grid-template-columns: 28px minmax(0, 1.4fr) 48px minmax(0, 0.6fr) minmax(0, 0.6fr);
+}
+.ranking-skeleton-row:last-child,
+.players-skeleton-row:last-child {
+  border-bottom: 0;
+}
+.ranking-skeleton-dot,
+.players-skeleton-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+.ranking-skeleton-pill,
+.players-skeleton-pill {
+  width: 48px;
+  height: 26px;
+}
+.players-skeleton-head {
+  display: grid;
+  gap: 18px;
+  padding: 22px 24px 20px;
+}
+.players-skeleton-identity {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.players-skeleton-portrait {
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+}
+.players-skeleton-facts {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.players-skeleton-fact {
+  height: 58px;
+  border-radius: 14px;
+}
+.players-skeleton-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.players-skeleton-tile {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 150px;
+  padding: 16px;
+}
+@media (max-width: 1000px) {
+  .ranking-skeleton-une,
+  .ranking-skeleton-top3 {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+  .ranking-skeleton-une .ranking-skeleton-place-1 {
+    grid-row: auto;
+  }
+  .players-skeleton-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .players-skeleton-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .ranking-skeleton-bar,
+  .ranking-skeleton-bar.is-wide,
+  .players-skeleton-bar,
+  .players-skeleton-bar.is-wide,
+  .players-skeleton-tabs,
+  .players-skeleton--player .players-skeleton-tabs,
+  .players-skeleton-search {
+    width: 100%;
+  }
+  .players-skeleton-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .players-skeleton-tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ranking-skeleton-board,
+  .players-skeleton-table {
+    padding-inline: 10px;
+  }
+}
+/* The players' route draws both its shapes before the page's code: the head script's flag keeps one. */
+html:not([data-route-skeleton="players"]) [data-route-variant="players"],
+html:not([data-route-skeleton="player"]) [data-route-variant="player"] {
+  display: none;
+}

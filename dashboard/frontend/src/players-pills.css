@@ -1,0 +1,792 @@
+/* The players' pages and the rankings (FAILURE_MODES § 87; piste B of the mock-up
+   https://claude.ai/artifact/QoP4LsHw9q64zrwcvyzhYK, chosen by hugo on 27 Nov 2026, 20 h 56 « je suis d'accord avec
+   tous les choix recommandés », with the player's bar on the title's line, never on a second line under the tabs).
+   The rules of the match page (match-pills.css, § 72), the home (home-pills.css, § 77) and the competition page
+   (competitions-pills.css, § 82): a pill for whatever is clicked, filled for the current choice; bars 40 px tall on
+   the title's line; cards of the veil with 22 px corners and no grey line.
+   Every rule starts with `:root .ranking-page`, `:root .power-ranking-page` or `:root .players-page` (or `:is()` of
+   them), so it does not depend on the order in which the sheets load. */
+
+/* ----------------------------------------------------------------- the head: the title at the left, the bar at its right */
+:root :is(.ranking-page, .power-ranking-page, .players-page) > .page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin: 4px 0 18px;
+  text-align: left;
+}
+:root :is(.ranking-page, .power-ranking-page, .players-page) > .page-heading .page-heading-copy {
+  min-width: 0;
+}
+:root .ranking-page .page-title {
+  justify-content: flex-start;
+}
+:root .ranking-page .page-title .ballon-dor-icon {
+  width: 34px;
+  height: 40px;
+}
+:root :is(.ranking-page, .power-ranking-page, .players-page) > .page-heading > .heading-actions {
+  flex-wrap: nowrap;
+  max-width: 100%;
+  margin-left: auto;
+}
+:root :is(.ranking-page, .power-ranking-page, .players-page) .heading-actions .home-settings {
+  max-width: 100%;
+}
+:root :is(.ranking-page, .power-ranking-page, .players-page) .heading-actions .home-settings > .settings-picker {
+  min-width: 0;
+}
+
+/* The views in the home's track (Joueurs / Clubs, Performances / Remplaçant / Mes listes, a player's tabs). */
+:root :is(.power-ranking-page .power-tabs, .players-page) .segmented-control,
+:root .players-page .research-tabs {
+  display: inline-flex;
+  gap: 2px;
+  max-width: 100%;
+  height: auto;
+  padding: 3px;
+  overflow-x: auto;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+  scrollbar-width: none;
+}
+:root :is(.power-ranking-page .power-tabs, .players-page) .segmented-control button,
+:root .players-page .research-tabs button {
+  flex: none;
+  height: 34px;
+  min-height: 0;
+  margin: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: var(--pill-text);
+  font-weight: 500;
+  white-space: nowrap;
+}
+:root :is(.power-ranking-page .power-tabs, .players-page) .segmented-control button:hover,
+:root .players-page .research-tabs button:hover {
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+}
+:root :is(.power-ranking-page .power-tabs, .players-page) .segmented-control button[aria-pressed="true"],
+:root .players-page .research-tabs button[aria-selected="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+:root .players-page .research-tabs::after,
+:root .players-page .research-tabs .research-tabs-indicator {
+  display: none;
+}
+
+/* Cards of the veil. */
+:root :is(.ranking-page, .power-ranking-page, .players-page) .card {
+  margin: 0 0 14px;
+  padding: 4px 18px 10px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--veil);
+  overflow: hidden;
+}
+:root :is(.ranking-page, .power-ranking-page, .players-page) .card > .card-header {
+  min-height: 44px;
+  padding: 10px 0 2px;
+  border-bottom: 0;
+}
+:root :is(.ranking-page, .power-ranking-page, .players-page) .card-note {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+:root :is(.power-ranking-page, .players-page) .data-table :is(th, td) {
+  border-bottom-color: var(--veil-line);
+  background-color: transparent;
+}
+:root :is(.power-ranking-page, .players-page) .data-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+:root :is(.power-ranking-page, .players-page) .data-table tbody tr:hover > * {
+  background-color: var(--pill-track);
+}
+
+/* Pages: « Précédents » and « Suivants » as pills, the count between them. */
+:root :is(.power-ranking-page, .players-page) .pagination {
+  justify-content: center;
+  margin: 12px 0 2px;
+}
+:root :is(.power-ranking-page, .players-page) .pagination .button {
+  height: var(--pill-h);
+  min-height: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  box-shadow: none;
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text);
+}
+:root :is(.power-ranking-page, .players-page) .pagination .button:hover:not(:disabled) {
+  background: var(--pill-quiet-hover);
+}
+:root :is(.power-ranking-page, .players-page) .pagination .button:disabled {
+  opacity: 0.4;
+}
+
+/* Grades: a pill, green from 70 as on the home and in the line-ups. */
+:root .players-page .rating-pill {
+  min-width: 42px;
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+  font-size: 13.5px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+:root .players-page .rating-pill.rating-high {
+  background: light-dark(#0f8a5f, #34d399);
+  color: light-dark(#fff, #052e1f);
+}
+
+/* ----------------------------------------------------------------- Ballon d'Or: « la une » */
+:root .ranking-page .podium {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-rows: 1fr 1fr;
+  align-items: stretch;
+  gap: 14px;
+  margin: 0 0 14px;
+}
+:root .ranking-page .podium-place {
+  display: grid;
+  grid-template-columns: 34px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 0;
+  margin: 0;
+  padding: 14px 20px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--veil);
+  text-align: left;
+}
+:root .ranking-page .podium-place .podium-rank {
+  font-size: 30px;
+  text-align: center;
+}
+:root .ranking-page .podium-place .podium-avatar {
+  width: var(--media-48);
+  height: var(--media-48);
+}
+:root .ranking-page .podium-identity strong {
+  overflow: hidden;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .ranking-page .podium-identity > span:not(.podium-kicker) {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .ranking-page .podium-score {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 12px;
+}
+:root .ranking-page .podium-score b {
+  font-size: 20px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+/* The leader: the wide card over both rows, his portrait, the kicker, the score in a filled pill, the lead. */
+.ranking-page .podium-gold {
+  position: relative;
+}
+:root .ranking-page .podium-gold {
+  grid-row: 1 / span 2;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  column-gap: 28px;
+  row-gap: 14px;
+  padding: 26px 30px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 55%),
+    var(--veil);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 35%, transparent);
+}
+:root .ranking-page .podium-gold .podium-rank {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+:root .ranking-page .podium-gold > :is(.podium-photo, .podium-avatar) {
+  position: relative;
+  grid-row: 1 / span 3;
+  align-self: center;
+}
+:root .ranking-page .podium-gold .podium-avatar {
+  width: var(--media-96);
+  height: var(--media-96);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 70%, transparent);
+}
+:root .ranking-page .podium-gold .podium-photo::after {
+  content: "1";
+  position: absolute;
+  right: -6px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #241703;
+  font: 750 20px / 1 var(--font-display);
+}
+:root .ranking-page .podium-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+:root .ranking-page .podium-gold .podium-identity strong {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  white-space: normal;
+}
+:root .ranking-page .podium-gold .podium-identity > span:not(.podium-kicker) {
+  margin-top: 6px;
+  font-size: 14px;
+}
+:root .ranking-page .podium-gold .podium-score {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 8px 0 16px;
+  border-radius: 999px;
+  background: var(--pill-fill);
+  color: color-mix(in srgb, var(--pill-ink) 70%, transparent);
+  font-size: 12.5px;
+}
+:root .ranking-page .podium-gold .podium-score b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 52px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pill-ink) 10%, transparent);
+  color: var(--pill-ink);
+  font-size: 18px;
+}
+:root .ranking-page .podium-gold .podium-score .hint {
+  border-color: currentColor;
+  color: inherit;
+}
+:root .ranking-page .podium-lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+:root .ranking-page .podium-lead b {
+  color: var(--gold);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+:root .ranking-page .podium-silver .podium-rank {
+  color: var(--silver);
+}
+:root .ranking-page .podium-bronze .podium-rank {
+  color: var(--bronze);
+}
+
+/* Ranks 4 to 30 and the breakouts: one card, two columns, a gauge of the gap to the leader. */
+:root .ranking-page .rank-board {
+  margin: 0 0 14px;
+  padding: 14px 18px 10px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:root .ranking-page .rank-board h2,
+:root .ranking-page .award-method h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+:root .ranking-page .rank-board .standings-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+:root .ranking-page .rank-columns {
+  gap: 0 28px;
+}
+:root .ranking-page .rank-column {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+:root .ranking-page .rank-head {
+  border-bottom-color: var(--veil-line);
+}
+:root .ranking-page .rank-row {
+  min-height: 52px;
+  border-bottom-color: var(--veil-line);
+}
+:root .ranking-page .rank-column--gauged :is(.rank-head, .rank-row) {
+  grid-template-columns: 26px minmax(0, 1.7fr) minmax(0, 0.8fr) minmax(0, 1.1fr) 72px 48px;
+}
+:root .ranking-page .rank-column--gauged .rank-head span:nth-child(5) {
+  /* The gauge's column needs no word: the score beside it says it. */
+  visibility: hidden;
+}
+:root .ranking-page .rank-gap {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+}
+:root .ranking-page .rank-gap i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gold) 80%, transparent);
+}
+:root .ranking-page .rank-score {
+  font-variant-numeric: tabular-nums;
+}
+:root .ranking-page .rank-bar {
+  border-radius: 999px;
+  background: var(--pill-quiet);
+}
+
+/* The method: four tiles of one height on a card. */
+:root .ranking-page .award-method {
+  margin: 0 0 14px;
+  padding: 14px 18px 18px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:root .ranking-page .award-method h2 {
+  margin-bottom: 12px;
+}
+:root .ranking-page .award-method ol {
+  gap: 10px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+:root .ranking-page .award-method li {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--pill-track);
+}
+:root .ranking-page .award-step {
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+}
+
+/* ----------------------------------------------------------------- Power Ranking */
+:root .power-ranking-page .power-tabs {
+  margin: 0 0 14px;
+}
+:root .power-ranking-page .power-top3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 14px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+:root .power-ranking-page .power-top3-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:root .power-ranking-page .power-top3-1 {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 40%, transparent);
+}
+:root .power-ranking-page .power-top3-rank {
+  font: 700 30px / 1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+:root .power-ranking-page .power-top3-1 .power-top3-rank {
+  color: var(--gold);
+}
+:root .power-ranking-page .power-top3-2 .power-top3-rank {
+  color: var(--silver);
+}
+:root .power-ranking-page .power-top3-3 .power-top3-rank {
+  color: var(--bronze);
+}
+:root .power-ranking-page .power-top3-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+:root .power-ranking-page .power-top3-who > :is(.player-avatar, .crest) {
+  flex: none;
+  width: var(--media-48);
+  height: var(--media-48);
+}
+:root .power-ranking-page .power-top3-who > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+:root .power-ranking-page .power-top3-who strong {
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .power-ranking-page .power-top3-who small {
+  display: block;
+  text-overflow: ellipsis;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+:root .power-ranking-page .power-top3-who small .crest {
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: -3px;
+  width: var(--media-16);
+  height: var(--media-16);
+}
+:root .power-ranking-page .power-score {
+  display: inline-grid;
+  place-items: center;
+  min-width: 48px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+  font-size: 13.5px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+:root .power-ranking-page .power-score.is-high {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+:root .power-ranking-page .power-top3-card .power-score {
+  height: 32px;
+  font-size: 16px;
+}
+:root .power-ranking-page .power-ranking-table td {
+  height: 52px;
+}
+:root .power-ranking-page .power-rank,
+:root .power-ranking-page .power-muted {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+:root .power-ranking-page .power-club > :is(a, .crest) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+}
+:root .power-ranking-page .power-club .crest {
+  flex: none;
+  width: var(--media-20);
+  height: var(--media-20);
+}
+:root .power-ranking-page .power-ranking-name small {
+  justify-self: start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  font-size: 11.5px;
+}
+
+/* ----------------------------------------------------------------- phone */
+@media (max-width: 1000px) {
+  :root .ranking-page .podium {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+  :root .ranking-page .podium-gold {
+    grid-row: auto;
+  }
+  :root .power-ranking-page .power-top3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  :root :is(.ranking-page, .power-ranking-page, .players-page) > .page-heading > .heading-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+  :root :is(.ranking-page, .power-ranking-page, .players-page) .heading-actions .home-settings {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  :root :is(.ranking-page, .power-ranking-page, .players-page) .heading-actions .home-settings > :is(.settings-picker, .home-settings-segment) {
+    /* Grown to share the width, never shrunk under their words: a bar too long for the phone scrolls. */
+    flex: 1 0 auto;
+  }
+  :root :is(.ranking-page, .power-ranking-page, .players-page) .heading-actions .home-settings .home-settings-segment {
+    width: 100%;
+    justify-content: center;
+  }
+  :root .ranking-page .podium-gold {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 18px;
+    column-gap: 16px;
+  }
+  :root .ranking-page .podium-gold .podium-avatar {
+    width: var(--media-64);
+    height: var(--media-64);
+  }
+  :root .ranking-page .podium-gold .podium-identity strong {
+    font-size: 26px;
+  }
+  :root .ranking-page .podium-gold .podium-score {
+    grid-column: 1 / -1;
+  }
+  :root .ranking-page .podium-lead {
+    grid-column: 1 / -1;
+  }
+  :root .ranking-page .podium-place:not(.podium-gold) .podium-score span {
+    display: none;
+  }
+  :root .ranking-page .rank-board {
+    padding: 12px 12px 6px;
+    border-radius: 18px;
+  }
+  :root .ranking-page .rank-column--gauged :is(.rank-head, .rank-row) {
+    grid-template-columns: 24px minmax(0, 1.6fr) minmax(0, 1fr) 44px;
+  }
+  :root .ranking-page .rank-column--gauged :is(.rank-gap, .rank-head span:nth-child(5)) {
+    display: none;
+  }
+  :root .power-ranking-page .card,
+  :root .players-page .card {
+    padding: 4px 10px 8px;
+    border-radius: 18px;
+  }
+}
+
+/* ----------------------------------------------------------------- Joueurs: the directory */
+:root .players-page .players-bar .advanced-toggle {
+  border: 0;
+  box-shadow: none;
+}
+:root .players-page .players-bar .advanced-toggle[aria-expanded="true"],
+:root .players-page .players-bar .advanced-toggle[aria-pressed="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+:root .players-page .players-bar .advanced-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  font-size: 11px;
+  font-weight: 700;
+}
+:root .players-page .players-filter-body {
+  margin: -4px 0 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+:root .players-page .players-filter-body .advanced-panel {
+  margin: 0 0 10px;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:root .players-page .players-filter-body .filter-panel-footer {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+:root .players-page .filter-chip,
+:root .players-page .players-filter-body .filter-reset-button {
+  height: var(--pill-h);
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text);
+}
+:root .players-page .players-tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  margin: 0 0 14px;
+}
+:root .players-page .players-tabs-row .research-tabs {
+  margin: 0;
+}
+:root .players-page .players-search {
+  flex: 0 1 320px;
+  height: 40px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+@media (max-width: 640px) {
+  :root .players-page .players-search {
+    flex: 1 1 100%;
+  }
+}
+/* The table's own toolbar: the ranking a quiet pill, the calculation and the form in tracks, its actions pills. */
+:root .players-page .player-directory-toolbar {
+  padding: 10px 0 6px;
+}
+:root .players-page .player-ranking-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+:root .players-page .player-ranking-field select {
+  height: var(--pill-h);
+  min-height: 0;
+  padding: 0 32px 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background-color: var(--pill-quiet);
+  box-shadow: none;
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text);
+}
+:root .players-page :is(.player-directory-actions, .research-toolbar) .button,
+:root .players-page .player-directory-actions > * > .button {
+  height: var(--pill-h);
+  min-height: 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  box-shadow: none;
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text);
+}
+:root .players-page :is(.player-directory-actions, .research-toolbar) .button:hover {
+  background: var(--pill-quiet-hover);
+}
+:root .players-page .player-form-filter-label {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+:root .players-page .player-directory-table input[type="checkbox"] {
+  border-radius: 6px;
+}
+
+/* ----------------------------------------------------------------- a player: the bar on the title's line */
+:root .players-page .player-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin: 4px 0 14px;
+}
+:root .players-page .player-back {
+  display: inline-flex;
+  align-items: center;
+  height: var(--pill-h);
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+:root .players-page .player-back:hover {
+  background: var(--pill-quiet-hover);
+}
+:root .players-page .player-top > :not(.player-back) {
+  min-width: 0;
+  max-width: 100%;
+  margin-left: auto;
+}
+:root .players-page .player-main > [role="tablist"] {
+  margin: 0 0 16px;
+}
+:root .players-page .player-honours-band {
+  margin: 16px 0 0;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+@media (max-width: 640px) {
+  :root .players-page .player-top > :not(.player-back) {
+    width: 100%;
+    margin-left: 0;
+  }
+  :root .players-page .player-top .player-bar {
+    display: flex;
+    width: 100%;
+  }
+  :root .players-page .player-top .player-bar > * {
+    flex: 1 0 auto;
+  }
+  :root .players-page .player-top .player-bar .home-settings-segment {
+    width: 100%;
+    justify-content: center;
+  }
+}
