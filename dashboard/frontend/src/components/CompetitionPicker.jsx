@@ -12,7 +12,7 @@ import {
   useHomeCompetitions,
 } from "./HomePreferences.jsx";
 import { competitionCountryLabel, competitionGroups } from "../services/competition-selector.js";
-import { normalizeText } from "../model.js";
+import { competitionSearchText, normalizeCompetitionQuery } from "../services/cup-catalog.js";
 
 export const EUROPE_SCOPE = "europe";
 
@@ -252,13 +252,14 @@ function SwitcherPane({ lists, current, onPick }) {
     () => (lists.find((entry) => entry.competitions.some((competition) => competition.id === current?.id)) || lists[0]).key,
   );
   const [query, setQuery] = useState("");
-  const search = normalizeText(query).trim();
+  const search = normalizeCompetitionQuery(query).trim();
   const shown = lists.find((entry) => entry.key === list) || lists[0];
   const every = lists[lists.length - 1];
   // A search looks through every competition, whatever list is shown.
   const found = search
     ? every.competitions.filter((competition) =>
-        normalizeText([competition.name, competition.country, competitionCountryLabel(competition)].filter(Boolean).join(" ")).includes(search),
+        // Same search as the former directory: the other names too (Carabao Cup, Copa del Rey, Mondial), Codex on #262.
+        competitionSearchText(competition, competitionCountryLabel(competition)).includes(search),
       )
     : null;
   const groups = !found && shown.grouped ? competitionGroups(shown.competitions) : null;

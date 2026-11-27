@@ -177,14 +177,18 @@ await run("competition page", async () => {
   await page.locator('dialog[data-pane="competitions"] input[type="search"]').fill("liga");
   await page.waitForTimeout(300);
   const found = await page.locator('dialog[data-pane="competitions"] .home-settings-tile strong').allTextContents();
+  // Codex on #262: the other names of a competition are searched too, as in the former directory.
+  await page.locator('dialog[data-pane="competitions"] input[type="search"]').fill("mondial");
+  await page.waitForTimeout(300);
+  const alias = await page.locator('dialog[data-pane="competitions"] .home-settings-tile strong').allTextContents();
   await page.locator('dialog[data-pane="competitions"] input[type="search"]').fill("");
   await page.locator('dialog[data-pane="competitions"] .home-settings-presets button', { hasText: "À la une" }).click();
   await page.locator('dialog[data-pane="competitions"] .home-settings-tile', { hasText: "Premier League" }).click();
   await page.waitForFunction(() => document.querySelector(".edition-head--page h1")?.textContent.trim() === "Premier League", null, { timeout: 60000 }).catch(() => {});
   const after = { url: page.url(), title: await page.locator(".edition-head--page h1").textContent().catch(() => null) };
-  check("C5 competitions", "À la une pressed + Toutes, 10 tiles, Ligue 1 pressed, 22 px; Toutes ≥ 5 countries; « liga » → LaLiga; PL opens", { panel, countries, found, after },
+  check("C5 competitions", "À la une pressed + Toutes, 10 tiles, Ligue 1 pressed, 22 px; Toutes ≥ 5 countries; « liga » → LaLiga; « mondial » → Coupe du monde; PL opens", { panel, countries, found, alias, after },
     panel.presets.length === 2 && panel.presets[0][0] === "À la une" && panel.presets[0][1] === "true" && panel.presets[1][0] === "Toutes" &&
-      panel.tiles === 10 && panel.pressed.join() === "Ligue 1" && panel.radius === "22px" && countries >= 5 && found.includes("LaLiga") &&
+      panel.tiles === 10 && panel.pressed.join() === "Ligue 1" && panel.radius === "22px" && countries >= 5 && found.includes("LaLiga") && alias.includes("Coupe du monde") &&
       /[?&]id=l_4WFCIZ/.test(after.url) && after.title?.trim() === "Premier League");
   await context.close();
 });
