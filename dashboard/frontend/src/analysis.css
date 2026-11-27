@@ -1406,6 +1406,8 @@ select optgroup {
 }
 .match-table-view {
   display: grid;
+  /* One column as wide as the tab, not as the widest table (800 px): the table slides inside its card (§ 85). */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   min-width: 0;
 }

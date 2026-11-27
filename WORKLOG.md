@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Onglet « Classement » d'un match comme la page Compétition, menu des saisons réparé — FAILURE_MODES § 85 (27 novembre 2026, branche `fix/match-tabs-seasons`)
+
+- Demande de hugo (20 h 43, captures de l'onglet Classement d'un match à venir) : Projection, Matchs… n'ont pas le même design ; bug du choix de saison (rond blanc sur le bouton, ronds gris derrière chaque saison, saisons coupées).
+- Cause du menu : la règle `.edition-stepper button` de `match-pills.css` (§ 72) visait tous les boutons du sélecteur, donc aussi le bouton de la saison et les saisons de son menu. Elle ne vise plus que les flèches (`> button`) ; la saison rejoint la piste du sélecteur (`SeasonSelect bare`).
+- Les règles des vues de la page Compétition (§ 82 et § 83) s'appliquent aussi dans `.match-table-view` ; les deux équipes du match gardent leur teinte dans le tableau. Sur téléphone, l'onglet faisait 800 px de large (colonne de grille à la taille du tableau) : une colonne `minmax(0, 1fr)` et les quatre vues sur la largeur de la carte.
+- Tests : E2E `match-classement-views.e2e.mjs` 3/10 sur main (08223d9), 10/10 après ; tests unitaires liés 118/118. Rien côté backend, pas de Deploy.
+
 ## Reçus de lecture retirés, image du worker rendue à ses seuls fichiers — FAILURE_MODES_OPTIMISATIONS GH137R.3 (27 novembre 2026, GitHub #137 et #158, branche `claude/retrait-recus-137-158`)
 
 - Demande de hugo (17 h 07, après la revue des correctifs de l'audit) : « reprend les 2 tickets ». Choix de hugo à 17 h 29 : retirer les reçus plutôt que les réparer.
