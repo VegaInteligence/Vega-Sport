@@ -25,7 +25,14 @@ export default function LeagueRace({ competition, season }) {
   return (
     <div className="league-race-view">
       <div className="league-race-view-head">
-        <p className="card-note">{body ? `Après la ${roundLabel(body.round).toLowerCase()} · note Vega moyenne de ses matchs, resserrée vers 50 tant qu’il a peu joué` : " "}</p>
+        <div className="league-race-title">
+          <h3 className="league-race-heading">{body ? `Après la ${roundLabel(body.round).toLowerCase()}` : "Joueur de la saison"}</h3>
+          <p className="card-note">
+            {body
+              ? `${number(body.raceTotal ?? body.race?.length ?? 0)} joueurs classés · note Vega moyenne de ses matchs, resserrée vers 50 tant qu’il a peu joué`
+              : " "}
+          </p>
+        </div>
         <RoundSelect
           closed={closed}
           value={key}

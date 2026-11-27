@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   defaultMatchday,
   matchdayGroups,
+  matchdaySummary,
   nearestUntried,
   roundLabel,
 } from "../dashboard/frontend/src/services/competition-matchdays.js";
@@ -112,4 +113,14 @@ test("R22 a league phase round named « 3 » and « League Stage - Round 3 » is
       ["regular:4", "4", "4ᵉ journée", ["c"]],
     ],
   );
+});
+
+test("a matchday's line gives its days in Paris and its state (§ 83)", () => {
+  const at = (date, status = "finished") => ({ date, status });
+  assert.equal(matchdaySummary({ matches: [at("2026-11-20T19:45:00Z"), at("2026-11-22T19:45:00Z")] }), "20 – 22 nov. · 2 matchs joués");
+  assert.equal(matchdaySummary({ matches: [at("2026-11-30T19:45:00Z"), at("2026-12-01T19:45:00Z", "not_started")] }), "30 nov. – 1 déc. · 1 joué sur 2");
+  assert.equal(matchdaySummary({ matches: [at("2026-11-28T19:45:00Z", "not_started")] }), "28 nov. · 1 match à venir");
+  // A kick-off at 23:30 UTC is the next day in Paris.
+  assert.equal(matchdaySummary({ matches: [at("2026-11-28T23:30:00Z", "not_started"), at("2026-11-29T15:00:00Z", "not_started")] }), "29 nov. · 2 matchs à venir");
+  assert.equal(matchdaySummary({ matches: [] }), "");
 });

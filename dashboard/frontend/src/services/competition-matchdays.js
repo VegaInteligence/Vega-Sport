@@ -164,3 +164,37 @@ export function withNextMatchday(groups, now = Date.now()) {
   };
   return [...named, next, ...(rest.length ? [{ ...unknown, matches: rest }] : [])];
 }
+
+const parisDay = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "numeric", month: "short" });
+const parisParts = (time) => {
+  const parts = Object.fromEntries(parisDay.formatToParts(new Date(time)).map((p) => [p.type, p.value]));
+  return { day: parts.day, month: parts.month };
+};
+
+/** A matchday's line under its title (§ 83): its days in Paris, « 20 – 22 nov. », then « 9 matchs joués »,
+ *  « 3 joués sur 9 » or « 9 matchs à venir ». */
+export function matchdaySummary(group) {
+  const matches = group?.matches || [];
+  if (!matches.length) return "";
+  const times = matches.map(instant).filter((time) => time != null);
+  let days = "";
+  if (times.length) {
+    const first = parisParts(Math.min(...times));
+    const last = parisParts(Math.max(...times));
+    days =
+      first.day === last.day && first.month === last.month
+        ? `${first.day} ${first.month}`
+        : first.month === last.month
+          ? `${first.day} – ${last.day} ${last.month}`
+          : `${first.day} ${first.month} – ${last.day} ${last.month}`;
+  }
+  const n = matches.length;
+  const played = matches.filter(isPlayed).length;
+  const state =
+    played === n
+      ? `${n} ${n > 1 ? "matchs joués" : "match joué"}`
+      : played
+        ? `${played} ${played > 1 ? "joués" : "joué"} sur ${n}`
+        : `${n} ${n > 1 ? "matchs à venir" : "match à venir"}`;
+  return days ? `${days} · ${state}` : state;
+}
