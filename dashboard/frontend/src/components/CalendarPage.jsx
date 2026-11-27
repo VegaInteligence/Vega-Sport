@@ -31,6 +31,7 @@ import {
   shortWeekday,
   weekFilters,
   weekTitle,
+  DAY_PAGES,
 } from "../services/calendar-week.js";
 import Icon from "./Icon.jsx";
 import { Media } from "./UI.jsx";
@@ -372,10 +373,14 @@ export default function CalendarPage({ saved = false }) {
     read && day && !coveredDay(day, read) ? weekFilters({ ...scope, range: { start: day, end: day } }) : null;
   const dayResource = useResource(
     `calendar-day:${publication}:${JSON.stringify(dayFilters)}:${attempt}`,
-    ({ signal } = {}) => readWeek(dayFilters, { signal }),
+    ({ signal } = {}) => readWeek(dayFilters, { signal, pages: DAY_PAGES }),
     Boolean(dayFilters),
   );
   const dayRead = dayFilters ? dayResource.value : null;
+  const dayError = dayFilters && dayResource.error && !dayRead ? dayResource.error : null;
+  const dayUnsettled = Boolean(dayRead?.publicationUnsettled);
+  // The day itself longer than its pages: what was read is shown, said to be cut (never as the whole day).
+  const dayCut = Boolean(dayRead && !dayRead.publicationUnsettled && !dayRead.complete);
   const entries = dayFilters
     ? dayRead && !dayRead.publicationUnsettled
       ? byDay(dayRead.matches, { start: day, end: day }).get(day) || []
@@ -408,7 +413,16 @@ export default function CalendarPage({ saved = false }) {
         </button>
       </div>
     );
-  else if (!read && unsettled)
+  else if (dayError)
+    body = (
+      <div role="alert" className="notice notice-warning calendar-error">
+        {dayError}{" "}
+        <button className="button button-secondary" onClick={dayResource.retry}>
+          Réessayer
+        </button>
+      </div>
+    );
+  else if ((!read && unsettled) || dayUnsettled)
     body = (
       <p role="status" className="calendar-notice">
         Les matchs de cette semaine se mettent à jour.{" "}
@@ -418,7 +432,7 @@ export default function CalendarPage({ saved = false }) {
       </p>
     );
   else if (!read || !day || entries === null) body = <CalendarBodySkeleton />;
-  else if (!entries.length) {
+  else if (!entries.length && !dayCut) {
     const later = weekDays.find((d) => d > day && days.get(d)?.length),
       earlier = [...weekDays].reverse().find((d) => d < day && days.get(d)?.length),
       target = later || earlier;
@@ -452,7 +466,11 @@ export default function CalendarPage({ saved = false }) {
         <div className="calendar-day-head">
           <h2>{dayTitle(day, today)}</h2>
           <span className="calendar-day-summary">
-            {plural(entries.length, "match")}
+            {dayCut
+              ? entries.length
+                ? `Au moins ${plural(entries.length, "match")}`
+                : "Liste incomplète"
+              : plural(entries.length, "match")}
             {live ? ` · ${live} en direct` : ""}
             {over && over < entries.length ? ` · ${plural(over, "terminé")}` : ""}
             {" · heure de Paris"}
@@ -466,7 +484,12 @@ export default function CalendarPage({ saved = false }) {
             </button>
           </p>
         )}
-        <DayCard entries={entries} now={now} day={day} />
+        {dayCut && (
+          <p role="status" className="calendar-notice">
+            Ce jour compte trop de matchs pour les montrer tous : choisissez une compétition ou cherchez un club.
+          </p>
+        )}
+        {entries.length > 0 && <DayCard entries={entries} now={now} day={day} />}
       </>
     );
   }

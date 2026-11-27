@@ -16,7 +16,9 @@
 // /api/fixtures (league|leagues, season, status all|played|upcoming, from/to on the provider's day, q, order, limit ≤ 50,
 // cursor = base64url {scope, generation, offset}; a match to come carries `forecast`), /api/matches/{id}/summary
 // (the match a row opens); anything else 404, logged. `state.delay` (ms) holds every fixtures answer that long.
-// GET /__control?delay=… sets it by hand. Every request is logged in `log` with its path, query and status.
+// `state.pad` {date, count}: that many more Ligue 1 matches, all over, on that provider's day (a week, or a day, longer
+// than its pages). `state.failDay`: a read of one day on its own (from = the day before to) answers 503.
+// GET /__control?delay=… sets the delay by hand. Every request is logged in `log` with its path, query and status.
 import http from "node:http";
 
 export const NOW = "2026-11-27T19:40:00Z";
@@ -172,7 +174,16 @@ const unb64 = (s) => {
 const fold = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 export async function startCalendarApi({ port = 0, now = Date.parse(NOW), matches = makeMatches(now), manifest: served = manifest(now - 60_000) } = {}) {
-  const state = { delay: 0, generation: served.publicationVersion || "G1" };
+  const state = { delay: 0, generation: served.publicationVersion || "G1", pad: null, failDay: false };
+  const padding = (pad) =>
+    Array.from({ length: pad?.count || 0 }, (_, i) => ({
+      id: `m_pad_${String(i).padStart(4, "0")}`, season: SEASON, date: pad.date, time_utc: `${pad.date}T12:00:00Z`,
+      status: "finished", round_name: "13", has_playoff: false,
+      home_team: { id: `t_pad_${i}_h`, name: `Pad ${i} A`, image_url: null },
+      away_team: { id: `t_pad_${i}_a`, name: `Pad ${i} B`, image_url: null },
+      league: { id: "l_3FJFUl", name: byId.get("l_3FJFUl").name, image_url: null },
+      score_home: 1, score_away: 0, score_penalty_home: null, score_penalty_away: null,
+    }));
   const log = [];
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://stub");
@@ -208,10 +219,12 @@ export async function startCalendarApi({ port = 0, now = Date.parse(NOW), matche
         status = q.get("status") || "all",
         from = q.get("from"),
         to = q.get("to"),
+        oneDay = from && to && Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`) === 86_400_000,
         text = fold(q.get("q")),
         order = q.get("order") || "asc",
         limit = Math.min(50, Number(q.get("limit") || 50));
       const scope = [...q.entries()].filter(([k]) => k !== "cursor").sort().map((e) => e.join("=")).join("&");
+      if (state.failDay && oneDay) return send(503, { error: { message: "Service indisponible." } });
       let offset = 0;
       if (q.has("cursor")) {
         const cursor = unb64(q.get("cursor"));
@@ -219,7 +232,7 @@ export async function startCalendarApi({ port = 0, now = Date.parse(NOW), matche
         if (cursor.generation !== g) return send(409, { error: { code: "PUBLICATION_CHANGED", message: "Les données ont été actualisées. Rechargez la première page.", retry: true } });
         offset = cursor.offset;
       }
-      const rows = matches
+      const rows = [...matches, ...padding(state.pad)]
         .filter((m) => (!leagues.length || leagues.includes(m.league.id)) && (!q.get("season") || m.season === q.get("season")))
         .filter((m) => status === "all" || (status === "played" ? m.status === "finished" : m.status === "not_started"))
         .filter((m) => (!from || m.date >= from) && (!to || m.date <= to))

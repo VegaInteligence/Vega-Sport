@@ -11,6 +11,8 @@ import { LIVE_SPAN_MS } from "./live-client.js";
 /** Pages of a week read before it is taken as cut (8 × 50 = 400 matches). */
 export const WEEK_PAGES = 8;
 export const WEEK_LIMIT = 50;
+/** Pages of one day read on its own (a week cut before it): 20 × 50 = 1 000 matches, the previous UTC day included. */
+export const DAY_PAGES = 20;
 
 /** The first and last days of a season by its chunks (startDate, endDate), or null. */
 export function seasonBounds(manifest, season) {

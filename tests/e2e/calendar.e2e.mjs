@@ -43,6 +43,11 @@
 //      under the other at the left of the pill; the search open stays within the bar and the phone's width.
 //  K16 Logos drawn in black (Ligue 1, Premier League, Champions League): filter brightness(0) invert(0.92) in the dark
 //      theme, none in the light one; the card's veil differs from the page's background in both.
+//  K17 A week longer than its pages (400 more matches on Monday 23), today read on its own, and that read failing (503):
+//      an alert with « Réessayer », not an endless skeleton; once the API answers again, « Réessayer » shows the day.
+//  K18 The day read on its own longer than its 20 pages (Codex on PR #274): with 1 000 more matches the day before
+//      (UTC), « Liste incomplète » and the notice, no card and no skeleton; with 960, the 4 matches read of today
+//      under « Au moins 4 matchs » and the notice, never as the whole day.
 //  X1  No page error.
 //
 // Setup: the site built against the double's origin, then started:
@@ -555,6 +560,60 @@ await run("phone", async () => {
   await hideConsent(lp.page);
   await lp.page.screenshot({ path: path.join(out, "today-phone-light.png"), fullPage: true });
   await lp.context.close();
+});
+
+// ---------- K17, K18: the day read on its own ----------
+await run("day read", async () => {
+  api.state.pad = { date: "2026-11-23", count: 400 };
+  api.state.failDay = true;
+  const { context, page } = await open("/matchs/");
+  await ready(page);
+  await hideConsent(page);
+  const alert = page.locator(".calendar-page .calendar-error[role=alert]");
+  await alert.waitFor({ timeout: 60000 });
+  const failed = { alert: (await alert.textContent()).replace(/\s+/g, " ").trim(), skeleton: await page.locator(".calendar-page .calendar-skeleton-body").count() };
+  api.state.failDay = false;
+  await alert.getByRole("button", { name: "Réessayer" }).click();
+  await rowsReady(page);
+  const back = await snapshot(page);
+  check(
+    "K17 day read failing",
+    "an alert naming the failure with « Réessayer » (no skeleton); after it, today's eight matches",
+    { failed, title: back.title, summary: back.summary, rows: back.rows?.length },
+    /HTTP 503/.test(failed.alert) && /Réessayer/.test(failed.alert) && failed.skeleton === 0 && back.title === "Aujourd’hui 27 novembre" && /^8 matchs/.test(back.summary || ""),
+  );
+  await context.close();
+  const cutRead = async (count) => {
+    api.state.pad = { date: "2026-11-26", count };
+    const opened = await open("/matchs/");
+    await ready(opened.page);
+    await hideConsent(opened.page);
+    await opened.page.locator(".calendar-page .calendar-day-head").waitFor({ timeout: 60000 });
+    await opened.page.waitForTimeout(400);
+    const seen = await opened.page.evaluate(() => {
+      const text = (n) => n?.textContent.replace(/\s+/g, " ").trim() || null;
+      return {
+        summary: text(document.querySelector(".calendar-day-summary")),
+        notice: text(document.querySelector(".calendar-page .calendar-notice")),
+        rows: document.querySelectorAll(".calendar-card .calendar-row").length,
+        cards: document.querySelectorAll(".calendar-card").length,
+        skeleton: document.querySelectorAll(".calendar-page .calendar-skeleton-body").length,
+      };
+    });
+    await opened.page.screenshot({ path: path.join(out, `day-cut-${count}.png`), fullPage: true });
+    await opened.context.close();
+    return seen;
+  };
+  const none = await cutRead(1000),
+    some = await cutRead(960);
+  check(
+    "K18 day read cut",
+    "1 000 the day before: « Liste incomplète », the notice, no card; 960: « Au moins 4 matchs », the notice, 4 rows",
+    { none, some },
+    /^Liste incomplète/.test(none.summary || "") && /trop de matchs/.test(none.notice || "") && none.cards === 0 && none.skeleton === 0 &&
+      /^Au moins 4 matchs/.test(some.summary || "") && /trop de matchs/.test(some.notice || "") && some.rows === 4,
+  );
+  api.state.pad = null;
 });
 
 check("X1 no page error", "no uncaught exception in any run", errors, errors.length === 0);

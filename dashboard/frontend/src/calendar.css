@@ -285,8 +285,8 @@ html[data-theme="light"] .calendar-page {
 }
 :root .calendar-page .calendar-group-logo {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: var(--media-24);
+  height: var(--media-24);
 }
 :root .calendar-page .calendar-group-name {
   color: var(--ink-strong);
@@ -355,8 +355,8 @@ html[data-theme="dark"]
 }
 :root .calendar-page .calendar-crest {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: var(--media-24);
+  height: var(--media-24);
 }
 :root .calendar-page .calendar-team.is-lost {
   color: var(--muted);
@@ -513,8 +513,8 @@ html[data-theme="dark"]
   padding: 0 4px;
 }
 .calendar-skeleton-logo {
-  width: 24px;
-  height: 24px;
+  width: var(--media-24);
+  height: var(--media-24);
   border-radius: 8px;
 }
 .calendar-skeleton-row {
