@@ -663,7 +663,8 @@ export default function MatchDetail({ match }) {
             }
           >
             {upcoming && <MatchForecast match={match} />}
-            <MatchAbsences match={match} started={!upcoming} />
+            {/* From the kick-off the card moves to « Compositions » (FAILURE_MODES § 79.7). */}
+            {upcoming && <MatchAbsences match={match} />}
             {upcoming && <MatchOdds match={match} />}
             <MatchContext match={match} />
           </Suspense>
@@ -678,6 +679,7 @@ export default function MatchDetail({ match }) {
               before={upcoming}
               now={now}
             />
+            {!upcoming && <MatchAbsences match={match} started />}
             {!upcoming && (
               <MatchPlayersBoard key={`${match.id}:players`} match={match} />
             )}

@@ -6184,7 +6184,7 @@ one.
 **79.5 The sheet wins.** A player named on the match's sheet (core.lineup_players of that match, any team) or who played
 in it is never out, whatever the episode says (he came back, or the dates are approximate).
 
-**79.6 The page.** From the kick-off the « Avant-match » tab keeps its « Absents » card, read from this route (same card,
+**79.6 The page.** From the kick-off the « Absents » card moves to « Compositions » (79.7), read from this route (same card,
 same rows); a return date shows no « dans N j » (the match is past). Before the kick-off: unchanged.
 A side with no member read (79.2) is « Non renseignés » unless the route returns episodes for it (an end known over
 the day): those are shown (Codex on #253; E2E K6c). No card when neither side has a member read nor an episode.
@@ -6202,3 +6202,10 @@ Cases (`backend/api/test/match-absences.test.mjs`, red before the migration):
   another of our clubs: neither counted nor shown.
 - **79g** a club without its season's squad: the season before's; a side with no link: 0 / 0 and no absence.
 - **79h** `squad` and `asOf` from the reads no older than 45 days before the match day.
+
+**79.7 Where the card sits** (hugo, 27 Nov 2026, 16 h 11 « je les veux dans avant match dans l'avant match mais pendant le
+match ou apres ca doit etre dans compisition »). Before the kick-off: « Avant-match », as before (59). From the kick-off
+(the page's own switch, `upcoming` false: live or finished): « Avant-match » no longer shows it; « Compositions » shows it
+under the lineups, above the players' board. E2E (`tests/e2e/match-page.e2e.mjs`): K6, K6b, K6c read « Compositions »;
+K6d a finished match's « Avant-match » has no « Absents » card. Red before (the card in « Avant-match », none in
+« Compositions »), green after.

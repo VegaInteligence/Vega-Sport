@@ -1,5 +1,11 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Absents d'un match commencé : dans l'onglet Compositions — FAILURE_MODES § 79.7 (27 novembre 2026, branche `claude/absents-compositions`)
+
+- Demande de hugo (16 h 11) : les absents dans l'Avant-match avant le coup d'envoi, mais pendant et après le match dans Compositions.
+- `MatchDetail.jsx` : la carte « Absents » ne s'affiche dans Avant-match que tant que le match est à venir ; une fois commencé, elle est dans Compositions, sous les compositions et au-dessus du tableau des joueurs. Même carte, même route (`/api/matches/{id}/absences`), rien côté backend, pas de Deploy.
+- Tests : E2E K6, K6b, K6c lus dans Compositions, K6d nouveau (plus de carte dans Avant-match) : K6, K6c, K6d rouges avant, verts après (`/mnt/project-files/absents-apres-match/e2e-compositions-rouge/` et `e2e-compositions/`) ; site 1 119/1 119.
+
 ## Lectures à froid et remplacements en fiche club — 26 novembre 2026
 
 - [GitHub #257](https://github.com/VegaInteligence/Vega-Sport/issues/257) et [Linear VI-170](https://linear.app/vegainteligence/issue/VI-170). Branche `codex/lectures-club-durables`. Objectif : rendre les données complètes de Lille et Brentford en saison 2026/27 et détecter les régressions de coût sur plusieurs familles de lectures avant déploiement. Le 503 de ce panneau correspond à 14 annulations de la même requête PostgreSQL.
