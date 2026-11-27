@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Lecteur Transfermarkt mort en boucle sur une suspension — FAILURE_MODES § 59.I (27 novembre 2026, GitHub #264, branche `claude/transfermarkt-ecriture-refusee`)
+
+- Constat (journaux `/ecs/vega-v2-worker`) : depuis le 26 nov. à 1 h 36 UTC, `smallint out of range` à l'INSERT de `write_suspensions`, 313 morts au 27 nov. 16 h 15 UTC ; blessés, suspendus, valeurs et transferts presque plus lus.
+- `parse_suspensions` : une durée calculée hors de 0 à 32 767 jours est `NULL` (59ap). `Reader.read` : une `DataError` ou `IntegrityError` à l'écriture d'une unité la fait échouer (`WRITE_REFUSED`, attente exponentielle, ligne `transfermarkt write_refused`) sans arrêter le lecteur (59aq).
+- Tests : 59ap et 59aq rouges avant (la même `NumericValueOutOfRange` que la production), verts après ; `test_transfermarkt_absences.py` 34/34 (5 sautés : Node), `test_transfermarkt.py` + `test_transfermarkt_history.py` 53/53 (6 sautés).
+- Reste : fusion et Deploy avec l'accord de hugo, puis relire les journaux.
+
 ## Accueil : « Vos joueurs » et « Ils ont aussi brillé » en listes classées — FAILURE_MODES § 80 (27 novembre 2026)
 
 - Demande de hugo (16 h 50) : la dernière partie de la Vue d'ensemble « pas belle et forcée ». Maquette https://claude.ai/artifact/7m8xpqAU3o9U9ndvf2xYKb, piste B choisie (16 h 58).

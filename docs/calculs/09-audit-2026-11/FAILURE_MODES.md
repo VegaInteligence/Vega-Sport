@@ -4649,6 +4649,30 @@ lendemain), 1 sur 26 à Lorient. Deux causes.
   la plus ancienne de ces lectures de blessures. Les suspensions affichées et leur fraîcheur ne changent pas (59y, 59aa).
   Attendus : le PSG du 24 Nov au soir, ses blessures lues et ses suspensions pas encore, n'affiche plus « 0 / 25 ».
 
+### 59.I. Le lecteur mort en boucle sur une suspension (GitHub #264 ; journaux du worker du 26 au 27 Nov 2026, écrit avant le correctif)
+
+Constat (journaux `/ecs/vega-v2-worker`) : depuis le 26 Nov 2026 à 1 h 36 UTC (2 h 36 à Paris), le processus `--transfermarkt process`
+meurt sur `smallint out of range` (`NumericValueOutOfRange`) dans `write_suspensions`, à l'INSERT dans
+`core.player_suspensions` ; il redémarre toutes les 5 minutes et relit la même unité en premier, intacte (313 morts au 27 Nov à 16 h 15 UTC, toutes cette trace ; la plupart moins d'une
+minute après le démarrage). Blessés,
+suspendus, valeurs marchandes et transferts ne sont presque plus mis à jour. Même schéma que 59am : une erreur de la base
+qui n'est pas un `Failed` tue le processus.
+
+- **59ap Une durée hors de la colonne.** `days` (smallint, −32 768 à 32 767) est calculé à partir des dates (fin − début
+  + 1), sans borne : des colonnes smallint de la table, c'est la seule que rien ne borne (matchs : 0 à 1 000, saison :
+  1900 à 2100). Une fin à plus de 89 ans du début (suspension à vie, date de fin factice) la dépasse. Le joueur en cause
+  n'est pas dans les journaux (le lecteur n'y écrit aucune clé d'unité). Attendus : une durée calculée hors de 0 à 32 767 jours est inconnue (`NULL`, comme une durée non donnée) ;
+  la suspension est écrite avec ses autres faits (dates, matchs, compétition, saison) tels quels ; les autres suspensions
+  de la réponse aussi ; le rejeu ne change rien (59d).
+- **59aq Une écriture refusée par la base n'arrête pas le lecteur.** Quelle que soit l'unité (profils, valeurs,
+  transferts, blessures, suspensions, effectifs, clubs, recherche), une erreur de données ou d'intégrité levée par la base
+  pendant son écriture (`psycopg.errors.DataError`, `IntegrityError` : valeur hors plage, contrainte CHECK, clé étrangère,
+  doublon) annule toute la transaction de l'unité (rien d'écrit, ni ligne ni file), puis l'unité échoue comme un refus :
+  `error_code` = `WRITE_REFUSED`, `last_http_status` = le statut de la réponse lue (200), `attempts` + 1, attente
+  exponentielle (`failed`), une ligne de journal `transfermarkt write_refused kind=… key=… sqlstate=…`. `Reader.read`
+  rend `failed` et le lecteur passe à l'unité suivante, qui s'écrit normalement. Les autres erreurs (connexion perdue,
+  `lock_timeout`, erreur du code) se propagent comme avant : le processus redémarre, la lecture n'est pas perdue.
+
 ### 59.Hypothèses non vérifiées
 
 - **H1** Aucune suspension EN COURS n'a été observée (sonde du 2026-11-24, fichier `07-…`) : on suppose qu'elle a la forme
