@@ -1,0 +1,614 @@
+/* The club and nation pages (FAILURE_MODES § 86; piste B of the mock-up https://claude.ai/artifact/FV91Edw3nwSudoP9sTx5yS,
+   chosen by hugo on 27 Nov 2026, 20 h 50, with « Favoris » for « Enregistrer » and the tabs centred).
+   The identity column becomes a head across the page; the rules of the pages already redone (match-pills.css § 72,
+   home-pills.css § 77, competitions-pills.css § 82): a pill for whatever is clicked, filled for the current choice and
+   the main action, 22 px cards on the veil and no grey line. Every rule starts with `:root .team-page` (the two
+   pages' workspace), so it does not depend on the order in which the sheets load. The cards of the club's modules
+   are restyled in their modules (ClubScout.module.css, Nations.module.css, ClubScoutTabs.module.css). */
+
+html {
+  --veil-2: color-mix(in srgb, var(--bg), #fff 6.5%);
+  --team-tint: #2a4a8a;
+}
+html[data-theme="light"] {
+  --veil-2: color-mix(in srgb, var(--bg), #000 5.5%);
+  --team-tint: #2f62b3;
+}
+
+:root .team-page {
+  --border: var(--veil-line);
+}
+:root .team-page .team-layout {
+  max-width: var(--profile-max, 1600px);
+  margin-inline: auto;
+  padding-bottom: 48px;
+}
+
+/* ----------------------------------------------------------------- the head */
+:root .team-page .team-hero {
+  position: relative;
+  isolation: isolate;
+  margin: 4px 0 16px;
+  padding: 22px 24px 18px;
+  border-radius: 22px;
+  background:
+    radial-gradient(90% 140% at 0% 0%, color-mix(in srgb, var(--team-tint) 30%, transparent), transparent 62%),
+    var(--veil);
+}
+:root[data-theme="light"] .team-page .team-hero {
+  background:
+    radial-gradient(90% 140% at 0% 0%, color-mix(in srgb, var(--team-tint) 16%, transparent), transparent 62%),
+    var(--veil);
+}
+:root .team-page .team-hero-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px 24px;
+}
+:root .team-page .team-hero-who {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+:root .team-page .team-hero-mark {
+  display: grid;
+  flex: 0 0 var(--media-64);
+  place-items: center;
+  width: var(--media-64);
+  height: var(--media-64);
+}
+:root .team-page .team-hero-mark > * {
+  width: var(--media-64) !important;
+  height: var(--media-64) !important;
+  flex-basis: var(--media-64) !important;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:root .team-page .team-hero-words {
+  min-width: 0;
+}
+:root .team-page .team-hero-name {
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -0.028em;
+  line-height: 1.08;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Every part opens on its dot; the line is drawn 18 px to the left and that strip is cut, so a line never starts on
+   one, even when the parts wrap on a phone. */
+:root .team-page .team-hero-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 6px 0 0 -18px;
+  clip-path: inset(0 0 0 18px);
+  color: var(--muted);
+  font-size: 14px;
+}
+:root .team-page .team-hero-sub > span::before {
+  content: "·";
+  display: inline-block;
+  width: 18px;
+  text-align: center;
+  opacity: 0.5;
+}
+
+/* The bar: the home's track (the season, « Comparer à »), then « Favoris » and « Rapport ». */
+:root .team-page .team-hero-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+:root .team-page .team-hero-track > .settings-picker {
+  width: auto;
+  min-width: 0;
+}
+:root .team-page .team-hero-track .home-settings-segment + .home-settings-segment,
+:root .team-page .team-hero-track > .settings-picker + .settings-picker .home-settings-segment {
+  box-shadow: -1px 0 0 var(--pill-quiet);
+}
+:root .team-page .team-hero-bar .research-bookmark,
+:root .team-page .team-hero-bar .team-hero-report {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--pill-h);
+  min-height: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: var(--pill-text);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+:root .team-page .team-hero-bar .research-bookmark {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+:root .team-page .team-hero-bar .research-bookmark.is-saved,
+:root .team-page .team-hero-bar .team-hero-report {
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-weight: 500;
+}
+:root .team-page .team-hero-bar .research-bookmark.is-saved:hover,
+:root .team-page .team-hero-bar .team-hero-report:hover {
+  background: var(--pill-quiet-hover);
+}
+:root .team-page .team-hero-bar .research-bookmark svg {
+  display: none;
+}
+
+/* The six figures: what the column said first. */
+:root .team-page .team-hero-figs {
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr repeat(4, minmax(0, 1fr));
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--veil-line);
+}
+:root .team-page .team-fig {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 16px;
+}
+:root .team-page .team-fig:first-child {
+  padding-left: 0;
+}
+:root .team-page .team-fig + .team-fig {
+  border-left: 1px solid var(--veil-line);
+}
+:root .team-page .team-fig dt {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+:root .team-page .team-fig dd {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+:root .team-page .team-fig-lead dd {
+  font-family: var(--font-display);
+  font-size: 34px;
+  letter-spacing: -0.03em;
+}
+:root .team-page .team-fig-form dd {
+  padding-top: 6px;
+  line-height: 1;
+}
+:root .team-page .team-fig small {
+  color: var(--muted);
+  font-size: 12px;
+}
+:root .team-page .team-fig small.team-fig-up {
+  color: light-dark(#13804c, #47c98a);
+}
+:root .team-page .team-fig small.team-fig-down {
+  color: light-dark(#c0272d, #f06a6e);
+}
+
+/* ----------------------------------------------------------------- the tabs: the home's track, centred */
+:root .team-page .research-tabs {
+  display: flex;
+  gap: 2px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 16px;
+  padding: 3px;
+  overflow-x: auto;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+  scrollbar-width: none;
+}
+:root .team-page .research-tabs::-webkit-scrollbar {
+  display: none;
+}
+:root .team-page .research-tabs button {
+  flex: none;
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: var(--pill-text);
+  font-weight: 500;
+}
+:root .team-page .research-tabs button:hover {
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+}
+:root .team-page .research-tabs button[aria-selected="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+:root .team-page .research-tabs .research-tabs-indicator {
+  display: none;
+}
+
+/* ----------------------------------------------------------------- the site's cards inside the pages (UI.jsx) */
+:root .team-page .card {
+  border: 0;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:root .team-page .card > .card-header {
+  padding: 18px 22px 4px;
+  border-bottom: 0;
+  background: transparent;
+}
+:root .team-page .card > .card-body {
+  padding: 6px 22px 20px;
+}
+:root .team-page .data-table :is(th, td) {
+  border-color: var(--veil-line);
+  background-color: transparent;
+}
+:root .team-page .segmented-control {
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+:root .team-page .segmented-control button {
+  height: 30px;
+  min-height: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+}
+:root .team-page .segmented-control button[aria-pressed="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+:root .team-page .stadium-link {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+/* The overview's last row: « Le club en bref » (with the squad) and « Compétitions et rang européen », one height. */
+:root .team-page .club-overview-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+:root .team-page .club-overview-info > .card {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  margin: 0;
+}
+:root .team-page .club-overview-info > .card > .card-body {
+  flex: 1 1 auto;
+}
+:root .team-page .club-facts-card > .card-body {
+  display: flex;
+  flex-direction: column;
+}
+:root .team-page .club-facts-grid {
+  flex: 1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: space-evenly;
+  gap: 18px 16px;
+}
+:root .team-page .club-facts-grid > * {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+:root .team-page .club-facts-grid .club-coach {
+  grid-column: auto;
+}
+:root .team-page .team-comps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+:root .team-page .team-comps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--veil-2);
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+:root .team-page .team-comps li > :first-child {
+  flex: none;
+  width: var(--media-28);
+  height: var(--media-28);
+}
+:root .team-page .team-comps li span {
+  min-width: 0;
+}
+:root .team-page .team-comps small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* ----------------------------------------------------------------- the skeletons in the head's shape */
+.team-skeleton {
+  max-width: var(--profile-max, 1600px);
+  margin-inline: auto;
+}
+.team-skeleton .team-hero {
+  margin: 4px 0 16px;
+  padding: 22px 24px 18px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+.team-skeleton .team-hero-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px 24px;
+}
+.team-skeleton .team-hero-who {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+.team-skeleton .team-hero-who .skeleton-line {
+  max-width: 100%;
+}
+.team-skeleton .team-hero-mark-skeleton {
+  flex: 0 0 var(--media-64);
+  width: var(--media-64);
+  height: var(--media-64);
+  border-radius: 999px;
+}
+.team-skeleton .team-hero-mark {
+  display: grid;
+  flex: 0 0 var(--media-64);
+  place-items: center;
+  width: var(--media-64);
+  height: var(--media-64);
+}
+.team-skeleton .team-hero-mark > * {
+  width: var(--media-64) !important;
+  height: var(--media-64) !important;
+}
+.team-skeleton .team-hero-name {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -0.028em;
+  line-height: 1.08;
+}
+.team-skeleton .team-hero-sub {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.team-skeleton .team-hero-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.team-skeleton .team-hero-figs {
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr repeat(4, minmax(0, 1fr));
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--veil-line);
+}
+.team-skeleton .team-fig {
+  padding: 0 16px;
+}
+.team-skeleton .team-fig:first-child {
+  padding-left: 0;
+}
+.team-skeleton .team-fig .skeleton-line {
+  max-width: 100%;
+}
+.team-skeleton-tabs {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 16px;
+}
+.team-skeleton-track {
+  display: flex;
+  gap: 2px;
+  max-width: 100%;
+  padding: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--pill-track);
+}
+.team-skeleton-track .skeleton-line {
+  flex: none;
+  opacity: 0.6;
+}
+.team-skeleton-cards {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.team-skeleton-card {
+  padding: 20px 22px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+.team-skeleton-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+}
+.team-skeleton-kpis > div,
+.team-skeleton-chart {
+  display: grid;
+  gap: 8px;
+}
+.team-skeleton-chart > div {
+  display: grid;
+  grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+}
+.team-skeleton-chart > div > div {
+  display: grid;
+  gap: 14px;
+}
+.team-skeleton .skeleton-line {
+  border-radius: 6px;
+}
+.team-skeleton .skeleton-pill {
+  border-radius: 999px;
+}
+
+/* ----------------------------------------------------------------- phone */
+@media (max-width: 1100px) {
+  :root .team-page .club-overview-info {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  :root .team-page .team-hero-top,
+  .team-skeleton .team-hero-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :root .team-page .team-hero-bar {
+    justify-content: flex-start;
+  }
+  :root .team-page .team-hero-figs,
+  .team-skeleton .team-hero-figs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 14px;
+  }
+  :root .team-page .team-hero-figs .team-fig:nth-child(3n + 1) {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+@media (max-width: 640px) {
+  :root .team-page .team-hero {
+    margin: 0 0 12px;
+    padding: 18px 16px 14px;
+  }
+  :root .team-page .team-hero-mark,
+  :root .team-page .team-hero-mark > * {
+    flex-basis: var(--media-48) !important;
+    width: var(--media-48) !important;
+    height: var(--media-48) !important;
+  }
+  :root .team-page .team-hero-name {
+    font-size: 26px;
+    white-space: normal;
+  }
+  :root .team-page .team-hero-sub {
+    font-size: 13px;
+  }
+  /* The track on its own row across the head, then « Favoris » and « Rapport » half and half. */
+  :root .team-page .team-hero-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  :root .team-page .team-hero-bar > :only-child,
+  :root .team-page .team-hero-track,
+  :root .team-page .team-hero-bar > :last-child:nth-child(2) {
+    grid-column: 1 / -1;
+  }
+  :root .team-page .team-hero-track {
+    display: flex;
+    width: 100%;
+  }
+  :root .team-page .team-hero-track > .settings-picker {
+    flex: 1 1 0;
+  }
+  :root .team-page .team-hero-track .home-settings-segment {
+    width: 100%;
+    justify-content: center;
+  }
+  :root .team-page .team-hero-figs,
+  .team-skeleton .team-hero-figs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  :root .team-page .team-hero-figs .team-fig {
+    padding: 0 12px;
+    border-left: 0;
+  }
+  :root .team-page .team-hero-figs .team-fig:nth-child(odd) {
+    padding-left: 0;
+  }
+  :root .team-page .team-hero-figs .team-fig:nth-child(even) {
+    padding-left: 12px;
+    border-left: 1px solid var(--veil-line);
+  }
+  :root .team-page .team-fig dd {
+    font-size: 20px;
+  }
+  :root .team-page .team-fig-lead dd {
+    font-size: 28px;
+  }
+  :root .team-page .research-tabs {
+    width: 100%;
+  }
+  :root .team-page .card > .card-header {
+    padding: 16px 14px 4px;
+  }
+  :root .team-page .card > .card-body {
+    padding: 6px 14px 18px;
+  }
+  :root .team-page .club-facts-grid,
+  :root .team-page .team-comps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .team-skeleton .team-hero-bar > :first-child {
+    flex: 1 1 auto;
+  }
+  .team-skeleton-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .team-skeleton-chart > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  /* « Europe » alone in the bar on a phone: the level is in its panel and its name. */
+  :root .team-page .team-hero-track .team-wide {
+    display: none;
+  }
+}

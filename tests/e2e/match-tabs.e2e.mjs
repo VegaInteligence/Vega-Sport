@@ -357,7 +357,7 @@ const pills = (page) => page.evaluate(() => {
     slash: [...head.querySelectorAll('[aria-hidden="true"]')].filter((x) => x.textContent.trim() === "/").length,
     competition: look(head.querySelector("button[data-match-picker]")),
     report: look([...head.querySelectorAll("a")].find((a) => a.textContent.includes("Rapport du match"))),
-    bookmark: look([...head.querySelectorAll("button")].find((b) => /Enregistrer/.test(b.textContent + (b.getAttribute("aria-label") || "")))),
+    bookmark: look([...head.querySelectorAll("button")].find((b) => /Favoris|favoris/.test(b.textContent + (b.getAttribute("aria-label") || "")))),
     step: look(nav && nav.firstElementChild),
     current: look(nav && nav.querySelector('[data-match-tile][aria-current="page"]')),
     other: look(nav && nav.querySelector('[data-match-tile]:not([aria-current="page"])')),
@@ -397,7 +397,7 @@ try {
             back: (await head.locator("a").first().textContent()).replace(/[←\s]+/g, " ").trim(),
             competition: ["Ligue 1", "2026/2027", "14ᵉ journée"].filter((t) => name.includes(t)),
             report: await head.getByRole("link", { name: "Rapport du match" }).count(),
-            bookmark: await head.getByRole("button", { name: /Enregistrer/ }).count(),
+            bookmark: await head.getByRole("button", { name: /favoris/ }).count(),
             oldRows: await page.locator(".match-breadcrumb-row, .scoreboard-meta").count(),
             status: ((await page.locator(".match-scoreboard .match-status").textContent()) || "").replace(/\s+/g, " ").trim().slice(0, 22),
           };

@@ -4,7 +4,6 @@ import { CompetitionPicker } from "./CompetitionPicker.jsx";
 /* Club profile tabs: identity rail and the overview, statistics, style,
  * matches and squad tabs (the player profile adapted to a club). */
 import React, { useMemo, useState } from "react";
-import BackLink from "./BackLink.jsx";
 import Link from "next/link";
 import { Segments, Skeleton } from "./UI.jsx";
 import { BookmarkButton } from "./ResearchUI.jsx";
@@ -23,6 +22,7 @@ import { json, useResource } from "../services/resources.js";
 import { share, useMatchForecast } from "../services/forecasts.js";
 import { matchForecast } from "../services/cup-matches.js";
 import ClubInformation from "./ClubInformation.jsx";
+import TeamHero from "./TeamHero.jsx";
 import { PercentilePizza } from "./PlayerScoutCharts.jsx";
 import {
   FAMILIES,
@@ -102,150 +102,54 @@ function competitionRecords(dossier) {
 }
 
 /**
- * The top of the identity column: the way back, the crest, the name, the league and season,
- * the coach and stadium. `club` is the dossier, or what the page's read of the club gives
- * before it (clubEarly): the column starts the same either way. `season`: the season's
- * selector (ClubSeasonSelect), else the season in text.
+ * The head's crest and name (FAILURE_MODES § 86). `club` is the dossier, or what the page's read of the club gives
+ * before it (clubEarly): the head starts the same either way.
  */
-export function RailHead({ club, backHref, season }) {
+export function ClubHeroWho({ club }) {
   return (
-    <>
-      {backHref && (
-        <BackLink
-          className={`inline-link ${s.railBack}`}
-          href={backHref}
-          label="Tous les clubs"
-        />
-      )}
-      <div className={s.identity}>
-        <Crest club={club} className={`crest ${s.bigCrest}`} />
-        <h1 className={s.name}>{club.name}</h1>
-        {club.league?.name && <p className={s.sub}>{club.league.name}</p>}
-        {season || <p className={s.sub}>{club.season}</p>}
-        <div className={s.chips}>
-          {club.coach && (
-            <span className={s.chip}>Entraîneur · {club.coach}</span>
-          )}
-          {club.stadium && <span className={s.chip}>{club.stadium}</span>}
-        </div>
+    <div className="team-hero-who">
+      <div className="team-hero-mark">
+        <Crest club={club} className="crest team-hero-crest" />
       </div>
-    </>
+      <div className="team-hero-words">
+        <h1 className="team-hero-name">{club.name}</h1>
+        {club.league?.name && (
+          <p className="team-hero-sub">
+            <span>{club.league.name}</span>
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
-export function IdentityRail({ dossier, onTab, backHref, season }) {
+/**
+ * The club's head (FAILURE_MODES § 86, piste B): what the identity column said first, across the page. `segments`:
+ * the bar's season and referential; then « Favoris » and « Rapport »; under them the league's rank, the Vega index,
+ * the record, the goals, the xPts and the form.
+ */
+export function ClubHero({ dossier, segments }) {
   const f = useFootball();
   const self = dossier.self,
     r = self.record;
   // Points and xPts of the same matches (club-supported.js).
   const paired = pairedPoints(self);
   const gap = paired.delta;
-  // On a phone the header opens on the identity and the standing.
-  const more = usePhoneFold();
+  const form = Math.min(5, dossier.allRows.length);
   return (
-    <aside className={s.rail} aria-label="Identité du club" {...more.fold}>
-      <RailHead club={dossier} backHref={backHref} season={season} />
-      <div className={s.railSection}>
-        <div className={s.railTitle}>
-          <div className={s.railName}>
-            <Term>Classement</Term>
-          </div>{" "}
-          <span>{dossier.league?.name}</span>
-        </div>
-        <div className={s.position}>
-          <strong>{ordinal(self.position)}</strong>
-          <span>
-            {r.points} pts · {r.matches} matchs
-            <small>{ordinal(self.xptsPosition)} aux points attendus</small>
-          </span>
-        </div>
-        <dl className={c.facts}>
-          <div>
-            <dt>
-              <Term>Bilan</Term>
-            </dt>
-            <dd>
-              {r.w}-{r.d}-{r.l}
-            </dd>
-          </div>
-          <div>
-            <dt>
-              <Term hint="Buts marqués et encaissés.">Buts</Term>
-            </dt>
-            <dd>
-              {r.gf}–{r.ga}
-            </dd>
-          </div>
-          <div>
-            <dt>
-              <Term>xPts</Term>
-            </dt>
-            <dd>{fmtNum(paired.expected, 1)}</dd>
-            {Number.isFinite(gap) && (
-              <small className={gap >= 0 ? c.up : c.down}>
-                {fmtNum(gap, 1, true)} pts vs attendu
-                {paired.matches < r.matches &&
-                  ` · sur ${paired.matches} match${paired.matches > 1 ? "s" : ""}`}
-              </small>
-            )}
-          </div>
-          <div>
-            <dt>
-              <Term>Forme</Term>
-            </dt>
-            <dd>
-              <FormStrip rows={dossier.allRows} />
-            </dd>
-          </div>
-        </dl>
-      </div>
-      <div className={`${s.railSection} phone-fold-row`}>
-        <PhoneFoldToggle
-          {...more.toggle}
-          label="Indice Vega, compétitions et effectif"
-        />
-      </div>
-      <div className={`${s.railSection} phone-fold-part`}>
-        <div className={s.railTitle}>
-          <div className={s.railName}>
-            <Term>Indice Vega club</Term>
-          </div>{" "}
-          <span>sur 100</span>
-        </div>
-        <div className={s.index}>
-          <strong>{self.vegaIndex ?? "—"}</strong>
-          <span>
-            {ordinal(self.vegaRank)} du championnat
-            <small>moyenne pondérée des centiles par phase de jeu</small>
-          </span>
-        </div>
-        <PhaseBars dossier={dossier} phases={PHASES} base />
-        <button className={s.railLink} onClick={() => onTab("stats")}>
-          Détail des indicateurs →
-        </button>
-      </div>
-      <div className={`${s.railSection} phone-fold-part`}>
-        <div className={s.railTitle}>
-          <Term>Toutes compétitions</Term>
-        </div>
-        <ul className={s.comps}>
-          {competitionRecords(dossier).map((comp) => (
-            <li key={comp.id}>
-              <Crest club={comp} />
-              <span>
-                {comp.name}
-                <small>
-                  {comp.matches} m · {comp.w}-{comp.d}-{comp.l} · {comp.gf}–
-                  {comp.ga}
-                </small>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <SquadFacts dossier={dossier} />
-      <div className={s.railSection}>
-        <div className={`research-toolbar ${s.railActions}`}>
+    <TeamHero
+      label="Identité du club"
+      tintOf={dossier}
+      mark={<Crest club={dossier} className="crest team-hero-crest" />}
+      name={dossier.name}
+      sub={[
+        dossier.league?.name,
+        dossier.coach && `Entraîneur · ${dossier.coach}`,
+        dossier.stadium,
+      ]}
+      segments={segments}
+      actions={
+        <>
           <BookmarkButton
             kind="clubs"
             id={dossier.id}
@@ -254,32 +158,87 @@ export function IdentityRail({ dossier, onTab, backHref, season }) {
             season={dossier.season}
           />
           <Link
-            className="button button-secondary"
+            className="button button-secondary team-hero-report"
             href={f.href("/rapport/", { id: dossier.id })}
           >
-            <Icon name="eye" />
             Rapport
           </Link>
-        </div>
-      </div>
-    </aside>
+        </>
+      }
+      figures={[
+        {
+          key: "rank",
+          label: dossier.league?.name || "Classement",
+          value: ordinal(self.position),
+          note: `${r.points} pts · ${r.matches} matchs`,
+          lead: true,
+        },
+        {
+          key: "index",
+          label: "Indice Vega",
+          value: self.vegaIndex ?? "—",
+          note: self.vegaRank ? `${ordinal(self.vegaRank)} du championnat` : null,
+          lead: true,
+        },
+        { key: "record", label: "Bilan", value: `${r.w}-${r.d}-${r.l}`, note: "V · N · D" },
+        { key: "goals", label: "Buts", value: `${r.gf}–${r.ga}`, note: "pour – contre" },
+        {
+          key: "xpts",
+          label: "xPts",
+          value: fmtNum(paired.expected, 1),
+          note: Number.isFinite(gap)
+            ? `${fmtNum(gap, 1, true)} pts vs attendu${
+                paired.matches < r.matches
+                  ? ` · sur ${paired.matches} match${paired.matches > 1 ? "s" : ""}`
+                  : ""
+              }`
+            : null,
+          tone: Number.isFinite(gap) ? (gap >= 0 ? "up" : "down") : undefined,
+        },
+        {
+          key: "form",
+          label: "Forme",
+          value: <FormStrip rows={dossier.allRows} />,
+          note: form ? `${form} dernier${form > 1 ? "s" : ""} match${form > 1 ? "s" : ""}` : null,
+          form: true,
+        },
+      ]}
+    />
+  );
+}
+
+/** The competitions the club played this season: matches, record, goals (the column's list, § 86). */
+export function ClubCompetitions({ dossier }) {
+  return (
+    <ul className="team-comps">
+      {competitionRecords(dossier).map((comp) => (
+        <li key={comp.id}>
+          <Crest club={comp} />
+          <span>
+            {comp.name}
+            <small>
+              {comp.matches} m · {comp.w}-{comp.d}-{comp.l} · {comp.gf}–{comp.ga}
+            </small>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
 /**
- * The rail's squad: its value and average age as the club's record gives them today (shown
- * for the season in progress only), and the age weighted by the minutes played when the
- * ages known cover enough of them.
+ * The squad's value and average age as the club's record gives them today (shown for the season in progress only),
+ * and the age weighted by the minutes played when the ages known cover enough of them. « Le club en bref » shows
+ * them (§ 86; the identity column did before).
  */
-function SquadFacts({ dossier }) {
+function useSquadFacts(dossier) {
   const f = useFootball();
   const current =
     Boolean(dossier.season) && dossier.season === f?.manifest?.defaultSeason;
   const squad = useClubSquad(dossier.id, dossier.season, current).value;
   const ages = useAgeProfile(dossier.id, dossier.season).value;
   const weighted = weightedAge(ages?.minutesByAge);
-  if (!(current && squad) && !weighted) return null;
-  const facts = [
+  return [
     current &&
       squad && {
         label: "Valeur estimée",
@@ -306,34 +265,6 @@ function SquadFacts({ dossier }) {
       note: "par minutes jouées",
     },
   ].filter(Boolean);
-  return (
-    <div className={`${s.railSection} phone-fold-part`}>
-      <div className={s.railTitle}>
-        <div className={s.railName}>
-          <Term>Effectif</Term>
-        </div>{" "}
-        {current && squad && <span>au {readDay(squad.readOn)}</span>}
-      </div>
-      <dl className={c.facts}>
-        {facts.map((fact, i) => (
-          <div
-            key={fact.label}
-            style={
-              facts.length % 2 && i === facts.length - 1
-                ? { gridColumn: "1 / -1" }
-                : undefined
-            }
-          >
-            <dt>
-              <Term>{fact.label}</Term>
-            </dt>
-            <dd>{fact.value}</dd>
-            {fact.note && <small>{fact.note}</small>}
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
 }
 
 /* --------------------------------------------------------- overview */
@@ -441,6 +372,7 @@ export function Overview({ dossier, onTab, base = dossier }) {
   // xG for minus against on the matches that know both (club-supported.js).
   const xgPaired = pairedXg(self);
   const { strengths, weaknesses } = readings(dossier);
+  const squad = useSquadFacts(base);
   const pizza = PERFORMANCE_KEYS.map((key) => ({
     key,
     label: METRICS[key].label
@@ -541,7 +473,7 @@ export function Overview({ dossier, onTab, base = dossier }) {
             ))}
           </div>
           <button className={s.railLink} onClick={() => onTab("style")}>
-            Voir le style de jeu →
+            Voir le style de jeu
           </button>
         </div>
       </Card>
@@ -552,7 +484,7 @@ export function Overview({ dossier, onTab, base = dossier }) {
           text="Toutes compétitions · barres : xG pour (bleu) et contre (orange)"
           action={
             <button className={s.cardLink} onClick={() => onTab("matches")}>
-              Tous les matchs →
+              Tous les matchs
             </button>
           }
         >
@@ -565,7 +497,11 @@ export function Overview({ dossier, onTab, base = dossier }) {
           <Upcoming dossier={base} />
         </Card>
       </div>
-      <ClubInformation dossier={base} />
+      <ClubInformation
+        dossier={base}
+        squad={squad}
+        competitions={<ClubCompetitions dossier={base} />}
+      />
     </div>
   );
 }

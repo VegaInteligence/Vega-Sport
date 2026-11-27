@@ -638,3 +638,62 @@ a.run:focus-visible {
   justify-content: center;
   width: 100%;
 }
+
+/* ------------------------------------------------------------------ the nation's page (FAILURE_MODES § 86)
+   As the club's (ClubScout.module.css): the results round, the match tiles and the runs on the veil. */
+:global(.team-page) .record b,
+:global(.team-page) .form b,
+:global(.team-page) .result {
+  min-width: 22px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+}
+:global(.team-page) .record b[data-r="V"],
+:global(.team-page) .form b[data-r="V"],
+:global(.team-page) .result[data-r="V"] {
+  background: color-mix(in srgb, #2fb172 24%, transparent);
+  color: light-dark(#13804c, #47c98a);
+}
+:global(.team-page) .record b[data-r="D"],
+:global(.team-page) .form b[data-r="D"],
+:global(.team-page) .result[data-r="D"] {
+  background: color-mix(in srgb, #e5484d 24%, transparent);
+  color: light-dark(#c0272d, #f06a6e);
+}
+:global(.team-page) .tile {
+  border-radius: 16px;
+  background: var(--veil-2);
+}
+:global(.team-page) .groupLabel,
+:global(.team-page) .match {
+  border-color: var(--veil-line);
+}
+:global(.team-page) .run {
+  border: 0;
+  border-radius: 14px;
+  background: var(--veil-2);
+}
+:global(.team-page) .run[data-tone] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 38%, transparent);
+}
+:global(.team-page) .link {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+:global(.team-page) .link:hover {
+  background: var(--pill-quiet-hover);
+}
+:global(.team-page) .bigMark {
+  width: var(--media-64);
+  height: var(--media-64);
+}

@@ -213,6 +213,7 @@ const tabs = await load("ClubScoutTabs.jsx", {
   "../services/profile-blocks.js": { euros: () => "", readDay: () => "", useClubSquad: () => null, weightedAge: () => null },
   "../services/resources.js": { json: async () => ({}), useResource: () => ({}) },
   "./ClubInformation.jsx": { __esModule: true, default: () => null },
+  "./TeamHero.jsx": { __esModule: true, default: () => null },
   "./PlayerScoutCharts.jsx": { PercentilePizza: () => null },
   // Today's service: an opponent of the reference without a measured centile still comes back.
   "../services/club-scout.js": { FAMILIES: {}, METRICS: {}, PERFORMANCE_KEYS: [], PHASES: [], formatMetric: () => "",

@@ -249,3 +249,10 @@
     white-space: nowrap;
   }
 }
+
+/* The club's page (FAILURE_MODES § 86): the results round, as its form. */
+:global(.team-page) .result {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+}

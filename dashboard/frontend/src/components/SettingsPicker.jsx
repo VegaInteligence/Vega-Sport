@@ -4,7 +4,8 @@ import { useId, useLayoutEffect, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 
 // `bare`: the trigger joins a track its parent draws (the competition page's bar, § 82) instead of its own.
-export default function SettingsPicker({ pane, icon, label, text, disabled, triggerClassName, controlId, value, className = "", bare = false, children }) {
+// `display`: what the trigger shows when it differs from `text` (a shorter word on a phone); `text` stays its name.
+export default function SettingsPicker({ pane, icon, label, text, display, disabled, triggerClassName, controlId, value, className = "", bare = false, children }) {
   const id = useId();
   const trigger = useRef(null);
   const dialog = useRef(null);
@@ -52,7 +53,7 @@ export default function SettingsPicker({ pane, icon, label, text, disabled, trig
       onClick={() => setOpen(true)}
     >
       {!triggerClassName && <Icon name={icon} />}
-      <span>{text}</span>
+      <span>{display ?? text}</span>
       {!triggerClassName && <Icon name="chevron" className="home-settings-chevron" />}
     </button>
   );
