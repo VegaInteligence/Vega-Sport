@@ -6420,3 +6420,11 @@ Codex's second review (on f856ef3, two findings, both real, red before and green
 - **Failure modes and expected outcomes**: the head's figures differ from the column's (same functions, same values: the E2E reads them against the overview's own numbers); « Comparer à » lost (the four reference choices and any competition stay reachable, its reading shown in the segment); a tab moving while the reference is read (no line inserted above the tabs); two cards of one row of different heights or a void under one (± 2 px); a crest that cannot be read (CORS, no colour): the head keeps the theme's blue, never a broken image; a phone scrolling sideways, a word of the bar cut; the back link: the column's « ← » leaves with it, as on the competition page (the navigation's « Équipes » and the browser's back stay).
 - Unchanged: the data and the reads, every tab's content and charts, the tabs' names and their address (`clubView`, `nationView`), the report, the absent players (§ 59, § 79).
 - Tests: `tests/e2e/team-pages.e2e.mjs` (written before the code, red on main), `club-page.e2e.mjs` and `nation-page.e2e.mjs` adapted where they read the column.
+
+### 86.1 The club's name cut at a laptop's width (found on the site after the merge, 27 Nov 2026)
+
+- **What was there**: the head's top row was a grid, the name in a shrinking column and the bar beside it down to 900 px. At 1024 px the bar left the name 257 px of its 304: « Paris Saint-Ger… ».
+- **Now**: the top row wraps. The name keeps its whole width; when the bar does not fit beside it, the bar goes under it, at the right. Under 900 px and on a phone, as before.
+- Failure mode: a long name cut, the bar over the name, the page scrolling sideways at a laptop's width.
+- Test: `team-pages.e2e.mjs` H11 at 1024, 1180 and 1280 (red on main f04c07b at 1024, green after).
+

@@ -21,6 +21,8 @@
 //  H9  No link or button ending in « → » in the page (a chart's axis keeps its arrow).
 //  H10 Phone (390 × 844): no sideways scroll; the head's bar spans the head (±2) and cuts no word; the figures in two
 //      columns; the tabs' track scrolls inside itself.
+//  H11 Laptop widths (1024, 1180, 1280): the club's name is never cut (its whole width shown), the bar beside it or
+//      under it, nothing scrolls sideways (§ 86.1: at 1024 the bar cut « Paris Saint-Ger… »).
 //  N1  /nations/?id=t_2ysHaw: the same head (h1 « France », a flag), six figures (« Classement Vega », « Elo Vega »,
 //      « Bilan », « Buts », « Forme », then the last tournament); the overview no longer opens on the strip of key
 //      figures (no « Rang Vega » cell); no identity column.
@@ -196,6 +198,26 @@ await run("club", async () => {
   check("H9 arrows", "no link or button with « → »", cards.arrows, cards.arrows === 0);
   await page.screenshot({ path: join(out, "club-ordinateur-bas.png"), fullPage: true });
   await context.close();
+});
+
+// ------------------------------------------------------------------ the club, laptop widths
+await run("club widths", async () => {
+  const seen = [];
+  for (const width of [1024, 1180, 1280]) {
+    const { context, page } = await open(`/clubs/?id=${CLUB}`, { viewport: { width, height: 800 }, colorScheme: "dark" });
+    await page.locator("header.team-hero .team-hero-name").waitFor({ timeout: 90000 });
+    await page.waitForTimeout(2500);
+    seen.push(await page.evaluate((w) => {
+      const name = document.querySelector(".team-hero-name"), bar = document.querySelector(".team-hero-bar");
+      const n = name.getBoundingClientRect(), b = bar.getBoundingClientRect();
+      return { width: w, cut: name.scrollWidth > name.clientWidth + 1, overlap: b.top < n.bottom - 1 && b.left < n.right - 1,
+        sideways: document.documentElement.scrollWidth > window.innerWidth + 1 };
+    }, width));
+    if (width === 1024) await page.screenshot({ path: join(out, "club-1024.png") });
+    await context.close();
+  }
+  check("H11 widths", "the name whole at 1024, 1180 and 1280, the bar never over it, no sideways scroll", seen,
+    seen.length === 3 && seen.every((x) => !x.cut && !x.overlap && !x.sideways));
 });
 
 // ------------------------------------------------------------------ the club, phone
