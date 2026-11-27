@@ -36,6 +36,18 @@ export function tau(i, j, lh, la, rho) {
   return 1;
 }
 
+/**
+ * A match's grid of scores (FAILURE_MODES § 81.1): rows the home side's goals 0 to `top`, columns the away side's, the
+ * last row and column `top` goals or more; Dixon and Coles' law with the model's rho, cells below zero at zero, the grid
+ * normalised. As vega/forecast.py score_grid, cut at `top`.
+ */
+export function scoreGrid(lh, la, rho = 0, top = 5) {
+  const ph = poisson(lh, top), pa = poisson(la, top);
+  const grid = ph.map((x, i) => pa.map((y, j) => Math.max(0, x * y * tau(i, j, lh, la, rho))));
+  const total = grid.flat().reduce((a, b) => a + b, 0);
+  return total > 0 ? grid.map((row) => row.map((v) => v / total)) : grid;
+}
+
 /** The expected goals of each side from the two strengths and the forecast's coefficients. */
 export function rates(model, eloHome, eloAway, neutral = false) {
   const d = (eloHome + (neutral ? 0 : ELO_HOME) - eloAway) / 400;
