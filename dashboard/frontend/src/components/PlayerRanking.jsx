@@ -8,27 +8,44 @@ import { SCOUT_METRICS } from "../services/scouting.js";
 import { percentile } from "../services/player-profile.js";
 import { number } from "../services/format.js";
 import { RankingDialog } from "./RankingDialog.jsx";
-import { FilterGroup } from "./PlayerProfileFilters.jsx";
+import SettingsPicker from "./SettingsPicker.jsx";
 import s from "./PlayerRanking.module.css";
 
 /** « Comparer à » in the player's bar: peers from clubs of a comparable level, or
- *  from every club. */
+ *  from every club. A segment of the bar's track (§ 87) whose menu holds the two pills. */
 export function PlayerLevelGroup({ level, onLevel }) {
+  const choices = [
+    [true, "Niveau comparable"],
+    [false, "Tous les clubs"],
+  ];
   return (
-    <FilterGroup label="Comparer à" end>
-      <div
-        className="segmented-control"
-        role="group"
-        aria-label="Niveau des clubs des joueurs comparés"
-      >
-        <button aria-pressed={level} onClick={() => onLevel(true)}>
-          Niveau comparable
-        </button>
-        <button aria-pressed={!level} onClick={() => onLevel(false)}>
-          Tous les clubs
-        </button>
-      </div>
-    </FilterGroup>
+    <SettingsPicker
+      pane="level"
+      icon="compare"
+      label="Comparer à"
+      text={`Comparer à · ${level ? "Niveau comparable" : "Tous les clubs"}`}
+      value={String(level)}
+      bare
+    >
+      {(close) => (
+        <div className="home-settings-seasons" role="group" aria-label="Niveau des clubs des joueurs comparés">
+          {choices.map(([value, label]) => (
+            <button
+              key={label}
+              type="button"
+              className="home-settings-season"
+              aria-pressed={level === value}
+              onClick={() => {
+                onLevel(value);
+                close();
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </SettingsPicker>
   );
 }
 

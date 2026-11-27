@@ -40,10 +40,18 @@ import {
   ResearchTabs,
 } from "./ResearchUI.jsx";
 import Icon from "./Icon.jsx";
-import { usePlayerHonours } from "./PlayerHonours.jsx";
+import PlayerHonours, { usePlayerHonours } from "./PlayerHonours.jsx";
 import PlayerOverviewRadar from "./PlayerOverviewRadar.jsx";
 import PlayerProfileFilters, { FilterGroup } from "./PlayerProfileFilters.jsx";
-import PlayerScoutRail, { PlayerScoutStrip } from "./PlayerScoutRail.jsx";
+import PlayerScoutRail, {
+  PlayerScoutExtras,
+  PlayerScoutExtrasHonours,
+  PlayerScoutExtrasTiles,
+  PlayerScoutStrip,
+  PlayerScoutTiles,
+  usePlayerScoutData,
+} from "./PlayerScoutRail.jsx";
+import BackLink from "./BackLink.jsx";
 import PlayerAdvancedStats from "./PlayerAdvancedStats.jsx";
 import PlayerScoutOverview, {
   PlayerGames,
@@ -218,7 +226,8 @@ export function PlayerMetricTable({ profile, keys, mode, cohorts }) {
     </div>
   );
 }
-/** Identity rail beside the tabbed analysis, plus its compact scrolling strip. */
+/** The player's page (§ 87, piste B): « ← Joueurs » and the bar of choices on the title's line, the head card across
+ *  the page (no identity column any more), then the tabbed analysis; the tiles and the honours go to the overview. */
 function ProfileLayout({
   id,
   backHref,
@@ -233,11 +242,21 @@ function ProfileLayout({
   actions,
   stripActions,
   onTab,
+  bar,
   children,
 }) {
   const railRef = useRef(null);
   const fallbackUrl = id === MESSI_ID ? MESSI_PORTRAIT : undefined;
   const showIdentity = Boolean(identity.name);
+  const data = usePlayerScoutData({ id, profile, record, season, team, playingTime });
+  const extras = {
+    tiles: <PlayerScoutTiles data={data} vega={vega} season={season} profile={profile} onTab={onTab} />,
+    honours: honours ? (
+      <section className="player-honours-band">
+        <PlayerHonours name={identity.name || undefined} result={honours} />
+      </section>
+    ) : null,
+  };
   return (
     <>
       {showIdentity && (
@@ -249,27 +268,29 @@ function ProfileLayout({
           actions={stripActions}
         />
       )}
-      <div className={scout.layout}>
-        <div ref={railRef}>
-          <PlayerScoutRail
-            id={id}
-            backHref={backHref}
-            identity={identity}
-            fallbackUrl={fallbackUrl}
-            showIdentity={showIdentity}
-            profile={profile}
-            record={record}
-            season={season}
-            team={team}
-            playingTime={playingTime}
-            vega={vega}
-            honours={honours}
-            actions={actions}
-            onTab={onTab}
-          />
-        </div>
-        <div className={scout.main}>{children}</div>
+      <div className="player-top">
+        {backHref && <BackLink className="player-back" href={backHref} label="Joueurs" />}
+        {bar}
       </div>
+      <div ref={railRef}>
+        <PlayerScoutRail
+          id={id}
+          data={data}
+          identity={identity}
+          fallbackUrl={fallbackUrl}
+          showIdentity={showIdentity}
+          profile={profile}
+          record={record}
+          season={season}
+          team={team}
+          playingTime={playingTime}
+          vega={vega}
+          actions={actions}
+        />
+      </div>
+      <PlayerScoutExtras value={extras}>
+        <div className="player-main">{children}</div>
+      </PlayerScoutExtras>
     </>
   );
 }
@@ -551,6 +572,7 @@ export default function PlayerSeasonProfile({
   );
   const historyOverview = (
     <div className="player-overview">
+      <PlayerScoutExtrasTiles />
       <Suspense fallback={historyLoading}>
         <SeasonStats id={id} season={f.season} />
       </Suspense>
@@ -568,6 +590,7 @@ export default function PlayerSeasonProfile({
           <CareerStats id={id} season={f.season} overview />
         </Suspense>
       </div>
+      <PlayerScoutExtrasHonours />
     </div>
   );
   const overview = (
@@ -601,6 +624,7 @@ export default function PlayerSeasonProfile({
           playingTime={playingTime}
           honours={honours}
           onTab={change}
+          bar={historyView === "overview" ? <PlayerProfileFilters /> : null}
         >
           <ResearchTabs
             animated
@@ -617,7 +641,6 @@ export default function PlayerSeasonProfile({
               historyView === "stats" ? "Statistiques" : "Vue d’ensemble"
             }
           >
-            {historyView === "overview" && <PlayerProfileFilters />}
             {historyView === "stats" ? (
               <>
                 <Suspense fallback={historyLoading}>
@@ -687,6 +710,44 @@ export default function PlayerSeasonProfile({
       </Link>
     </div>
   );
+  // The player's bar on the title's line, beside « ← Joueurs » (§ 87: never a second line under the tabs).
+  const profileBar = (
+    <PlayerProfileFilters
+      period={!UNFILTERED_VIEWS.has(view)}
+      after={
+        (view === "overview" && competitions.length > 1) ||
+        COHORT_VIEWS.has(view) ? (
+          <>
+            {view === "overview" && competitions.length > 1 && (
+              <FilterGroup>
+                <CompetitionPicker
+                  bare
+                  value={competition}
+                  onChange={(value) =>
+                    setOverviewScope({ key: scopeKey, competition: value })
+                  }
+                  competitions={competitions.slice(0, 4).map((name) => ({ id: name, name }))}
+                />
+              </FilterGroup>
+            )}
+            {COHORT_VIEWS.has(view) && (
+              <PlayerLevelGroup level={level} onLevel={setLevel} />
+            )}
+          </>
+        ) : null
+      }
+      status={
+        COHORT_VIEWS.has(view) && (
+          <PlayerLevelStatus
+            level={level}
+            state={level ? europe : { status: "ready" }}
+            peers={levelPeers}
+            team={team}
+          />
+        )
+      }
+    />
+  );
   return (
     <RankingProvider value={comparisonsReady ? openRanking : null}>
     <article
@@ -705,6 +766,7 @@ export default function PlayerSeasonProfile({
         vega={vega}
         honours={honours}
         onTab={change}
+        bar={profileBar}
         actions={playerActions}
         stripActions={
           <div className="research-toolbar">
@@ -725,40 +787,6 @@ export default function PlayerSeasonProfile({
           role="tabpanel"
           aria-label={TABS.find(([key]) => key === view)[1]}
         >
-          <PlayerProfileFilters
-            period={!UNFILTERED_VIEWS.has(view)}
-            after={
-              (view === "overview" && competitions.length > 1) ||
-              COHORT_VIEWS.has(view) ? (
-                <>
-                  {view === "overview" && competitions.length > 1 && (
-                    <FilterGroup>
-                      <CompetitionPicker
-                        value={competition}
-                        onChange={(value) =>
-                          setOverviewScope({ key: scopeKey, competition: value })
-                        }
-                        competitions={competitions.slice(0, 4).map((name) => ({ id: name, name }))}
-                      />
-                    </FilterGroup>
-                  )}
-                  {COHORT_VIEWS.has(view) && (
-                    <PlayerLevelGroup level={level} onLevel={setLevel} />
-                  )}
-                </>
-              ) : null
-            }
-            status={
-              COHORT_VIEWS.has(view) && (
-                <PlayerLevelStatus
-                  level={level}
-                  state={level ? europe : { status: "ready" }}
-                  peers={levelPeers}
-                  team={team}
-                />
-              )
-            }
-          />
           {view === "similar" && cohortControls}
           <Suspense
             fallback={

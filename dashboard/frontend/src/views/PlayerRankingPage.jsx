@@ -7,14 +7,16 @@ import BallonDorIcon from "../components/BallonDorIcon.jsx";
 import { Media } from "../components/UI.jsx";
 import { Term } from "../components/Hint.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
+import RankingSkeleton from "../components/RankingSkeleton.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useFavourites from "../hooks/useFavourites.js";
 import { number } from "../services/format.js";
 import { useBallonDorRanking, useBreakouts } from "../services/ballon-dor.js";
 
+// « La une » (§ 87, piste B): the leader first on a wide card, the second and the third stacked beside it.
 const PODIUM = [
-  { rank: 2, medal: "silver" },
   { rank: 1, medal: "gold" },
+  { rank: 2, medal: "silver" },
   { rank: 3, medal: "bronze" },
 ];
 const STEPS = [
@@ -77,7 +79,7 @@ function Cell({ href, className, children, ...props }) {
   );
 }
 
-function PodiumPlace({ rank, medal, entry }) {
+function PodiumPlace({ rank, medal, entry, second }) {
   const links = useEntryLinks(entry),
     // Effect 6: a favourite player keeps the standings' highlight of saved clubs.
     followed = useFavourites().players.has(entry?.playerId);
@@ -109,6 +111,7 @@ function PodiumPlace({ rank, medal, entry }) {
         <Avatar entry={entry} className="podium-avatar" />
       )}
       <div className="podium-identity">
+        {rank === 1 && <span className="podium-kicker">En tête de la course</span>}
         {entry ? (
           <>
             <strong>
@@ -131,11 +134,16 @@ function PodiumPlace({ rank, medal, entry }) {
         </span>
         <b>{entry ? number(entry.score, 1) : "—"}</b>
       </div>
+      {rank === 1 && entry && second && entry.score != null && second.score != null && (
+        <p className="podium-lead">
+          <b>+{number(entry.score - second.score, 1)}</b> d’avance sur {second.name}
+        </p>
+      )}
     </li>
   );
 }
 
-function RankRow({ rank, entry }) {
+function RankRow({ rank, entry, leader }) {
   const links = useEntryLinks(entry),
     followed = useFavourites().players.has(entry?.playerId);
   return (
@@ -173,6 +181,12 @@ function RankRow({ rank, entry }) {
           <Bar w={width(rank, 2)} />
         )}
       </Cell>
+      {leader !== undefined && (
+        // The row's place between the leader (full) and the 30th (a fifth); nothing read aloud, the score says it.
+        <span className="rank-gap" aria-hidden="true">
+          <i style={{ width: entry && leader ? `${Math.max(4, Math.min(100, 100 - (leader.score - entry.score) * leader.scale))}%` : 0 }} />
+        </span>
+      )}
       <span className="rank-score" aria-hidden={!entry}>
         {entry ? number(entry.score, 1) : <Bar w="70%" />}
       </span>
@@ -181,13 +195,18 @@ function RankRow({ rank, entry }) {
 }
 
 function RankColumn({ from, to, ranking }) {
+  // The gauge spans the race: full at the leader's score, a fifth at the 30th's.
+  const first = ranking?.find((e) => e.rank === 1)?.score,
+    last = ranking?.reduce((low, e) => (e.score != null && e.score < low ? e.score : low), Infinity),
+    leader = first != null && Number.isFinite(last) ? { score: first, scale: first > last ? 80 / (first - last) : 0 } : null;
   return (
-    <div className="rank-column">
+    <div className="rank-column rank-column--gauged">
       <div className="rank-head">
         <span>Rang</span>
         <span>Joueur</span>
         <span>Poste</span>
         <span>Club</span>
+        <span>Écart au premier</span>
         <span>
           <Term hint="Score Vega sur 100 de cette saison seule, sans la saison précédente : c’est lui qui départage la course au Ballon d’Or.">Score</Term>
         </span>
@@ -199,6 +218,7 @@ function RankColumn({ from, to, ranking }) {
               key={rank}
               rank={rank}
               entry={ranking?.find((e) => e.rank === rank)}
+              leader={leader}
             />
           ),
         )}
@@ -259,9 +279,9 @@ export default function PlayerRankingPage() {
       title="Classement Ballon d’Or"
       titleIcon={<BallonDorIcon />}
       className="ranking-page"
-    >
-      {seasons.length > 1 && (
-        <div className="award-intro">
+      loader={<RankingSkeleton kind="ballon" />}
+      actions={
+        seasons.length > 1 && (
           <SeasonSelect
             label="Saison du classement"
             className="award-season"
@@ -269,15 +289,16 @@ export default function PlayerRankingPage() {
             seasons={seasons.map((s) => s.id)}
             onChange={f.changeSeason}
           />
-        </div>
-      )}
-
+        )
+      }
+    >
       <ol className="podium" role="list" aria-label="Podium">
         {PODIUM.map((place) => (
           <PodiumPlace
             key={place.rank}
             {...place}
             entry={ranking?.find((e) => e.rank === place.rank)}
+            second={place.rank === 1 ? ranking?.find((e) => e.rank === 2) : undefined}
           />
         ))}
       </ol>

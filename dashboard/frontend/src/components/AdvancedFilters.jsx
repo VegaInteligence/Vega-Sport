@@ -35,20 +35,20 @@ function NumberField({ value, onChange, ...props }) {
   );
 }
 
-export function AdvancedToggle({ open, onToggle, controls }) {
+export function AdvancedToggle({ open, onToggle, controls, className = "competition-scope-button advanced-toggle" }) {
   const f = useFootball(),
     count = countAdvanced(f.filters.advanced);
   return (
     <button
       type="button"
-      className="competition-scope-button advanced-toggle"
+      className={className}
       aria-expanded={open}
       aria-controls={controls}
       aria-pressed={count > 0}
       onClick={onToggle}
     >
       <Icon name="filters" />
-      Filtres avancés
+      <span>Filtres avancés</span>
       {count > 0 && <span className="advanced-count">{count}</span>}
     </button>
   );

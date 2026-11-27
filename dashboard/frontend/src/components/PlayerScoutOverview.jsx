@@ -38,6 +38,7 @@ import { explain } from "../services/glossary.js";
 import { seasonShort } from "../services/previous-season.js";
 import usePreviousSeason from "../hooks/usePreviousSeason.js";
 import { RankingTrigger } from "./RankingDialog.jsx";
+import { PlayerScoutExtrasHonours, PlayerScoutExtrasTiles } from "./PlayerScoutRail.jsx";
 import PlayerSwap from "./PlayerSwap.jsx";
 import FormBars from "./FormBars.jsx";
 import s from "./PlayerScout.module.css";
@@ -599,6 +600,10 @@ export default function PlayerScoutOverview({
         season={season}
         scope={competition}
       />
+      {/* § 87: the value, the Vega index, the positions and the availability, out of the former column. */}
+      <div className={s.block}>
+        <PlayerScoutExtrasTiles />
+      </div>
       <div className={s.block} ref={comparisonRef}>
         <Card
           title="Profil statistique"
@@ -690,6 +695,7 @@ export default function PlayerScoutOverview({
       <div className={s.block}>
         <RecentForm profile={profile} matches={matches} onTab={onTab} />
       </div>
+      <PlayerScoutExtrasHonours />
     </div>
   );
 }

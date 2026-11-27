@@ -15,6 +15,7 @@ const PlayerSeasonProfile = lazy(
   () => import("../components/PlayerSeasonProfile.jsx"),
 );
 import PlayerWorkspace from "../components/PlayerWorkspace.jsx";
+import PlayersSkeleton from "../components/PlayersSkeleton.jsx";
 import PlayerMatchesPage from "./PlayerMatchesPage.jsx";
 import { ResearchComparisonTray } from "../components/ResearchUI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
@@ -313,6 +314,8 @@ export default function PlayersPage() {
         filters={!id}
         hideHeading={Boolean(id)}
         filterKind="players"
+        className={id ? "players-page player-page" : "players-page"}
+        loader={<PlayersSkeleton player={Boolean(id)} />}
         performanceComparison={Boolean(id)}
       >
         {id && !overview && cohortTab && needsCohort && cohort.loading && (
