@@ -70,7 +70,8 @@
 //  K3 The forecast's sentence is unchanged (« le modèle ne connaît ni les compositions ni les absents »).
 //  K4 Lorient not known (404): its half reads « Non renseignés », PSG's keeps its rows.
 //  K5 Neither side known (404), or both reads failing: no card, « Probabilités » still there, no page error.
-//  K6 The same match finished (its detail answered as finished, 2–1; FAILURE_MODES.md § 79): the « Absents » card stays,
+//  K6 The same match finished (its detail answered as finished, 2–1; FAILURE_MODES.md § 79): the « Absents » card is in
+//     « Compositions » (79.7; K6d: no longer in « Avant-match »),
 //     read from GET /api/matches/{id}/absences (its match day), not from the teams' absences of today: PSG Pacho and
 //     Kvaratskhelia, Lorient Makengo; a return date without « dans N j ». The route answering 404 or failing: no card.
 //  K7 Phone (393 px): the halves stacked, no sideways page scroll.
@@ -126,7 +127,7 @@ const skip = (cid, expected, reason) => {
 const ABSENT_MATCH = process.env.ABSENT_MATCH || id;
 async function absentChecks(browser) {
   const IGNORE = /Failed to load resource|WebSocket|live\.invalid|ERR_NAME_NOT_RESOLVED/;
-  const openContext = async (contextOptions, plan, finished = false, matchPlan = {}) => {
+  const openContext = async (contextOptions, plan, finished = false, matchPlan = {}, view = "context") => {
     const ctx = await browser.newContext({ locale: "fr-FR", ...contextOptions });
     await ctx.route(/va\.vercel-scripts\.com/, (r) => r.abort());
     if (finished) await ctx.route(new RegExp(`/api/matches/${ABSENT_MATCH}/summary(\\?|$)`), async (route) => {
@@ -143,7 +144,7 @@ async function absentChecks(browser) {
     const before = consoleLog.length;
     page.on("console", (m) => m.type() === "error" && !IGNORE.test(m.text()) && consoleLog.push(`[absents] ${m.text().slice(0, 300)}`));
     page.on("pageerror", (e) => consoleLog.push(`[absents] pageerror ${e.message}`));
-    await page.goto(`${base}/matchs?${new URLSearchParams({ id: ABSENT_MATCH, view: "context" })}`, { waitUntil: "domcontentloaded", timeout: 120000 });
+    await page.goto(`${base}/matchs?${new URLSearchParams({ id: ABSENT_MATCH, view })}`, { waitUntil: "domcontentloaded", timeout: 120000 });
     await page.locator("h2.card-title").first().waitFor({ timeout: 90000 }).catch(() => {});
     await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(2500);
@@ -204,21 +205,30 @@ async function absentChecks(browser) {
     Object.values(none).every((v) => !v.card && v.forecast && !v.errors.length));
 
   const matchPlan = { answer: matchDayAnswer(ABSENT_MATCH) };
-  k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true, matchPlan);
+  k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true, matchPlan, "lineups");
   got = await read(k.page);
   await shotOf(k.page, "absents-match-finished");
   const finishedHome = ["Khvicha Kvaratskhelia", "Willian Pacho"], finishedAway = ["Jean-Victor Makengo"];
   const backs = got.sides.flatMap((side) => side.rows.map((r) => r.back));
-  check("K6 a finished match: the « Absents » card of its day, from /api/matches/{id}/absences, no « dans N j »",
+  check("K6 a finished match: the « Absents » card of its day in « Compositions », from /api/matches/{id}/absences, no « dans N j »",
     { card: true, home: finishedHome, away: finishedAway, matchReads: 1, teamReads: 0, distance: false },
     { card: got.card, home: names(got.sides[0]), away: names(got.sides[1]), matchReads: matchPlan.requests.length, teamReads: k.plan.requests.length, backs },
     got.card && JSON.stringify(names(got.sides[0])) === JSON.stringify(finishedHome) && JSON.stringify(names(got.sides[1])) === JSON.stringify(finishedAway)
       && matchPlan.requests.length >= 1 && k.plan.requests.length === 0 && !backs.some((b) => /dans /.test(b || "")));
   await k.page.close();
   await k.ctx.close();
+  // K6d: once kicked off, the card leaves « Avant-match » (hugo, 27 Nov 2026): only « Compositions » shows it.
+  const contextPlan = { answer: matchDayAnswer(ABSENT_MATCH) };
+  k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true, contextPlan, "context");
+  got = await read(k.page);
+  await shotOf(k.page, "absents-match-finished-context");
+  check("K6d a finished match: no « Absents » card in « Avant-match »", { card: false, errors: [] }, { card: got.card, titles: got.titles, errors: k.errors() },
+    !got.card && !k.errors().length);
+  await k.page.close();
+  await k.ctx.close();
   const finishedNone = {};
   for (const [label, entry] of [["404", 404], ["failure", "abort"]]) {
-    k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true, { answer: entry });
+    k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true, { answer: entry }, "lineups");
     got = await read(k.page);
     finishedNone[label] = { card: got.card, errors: k.errors() };
     await k.page.close();
@@ -228,7 +238,7 @@ async function absentChecks(browser) {
   const stale = matchDayAnswer(ABSENT_MATCH);
   stale.home = { ...stale.home, asOf: null, squad: { players: 25, read: 0 }, absences: [] };
   stale.away = { ...stale.away, asOf: null, squad: { players: 26, read: 0 } };
-  k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true, { answer: stale });
+  k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true, { answer: stale }, "lineups");
   got = await read(k.page);
   const staleSides = { card: got.card, home: names(got.sides[0] || { rows: [] }), homeText: got.sides[0]?.empty, away: names(got.sides[1] || { rows: [] }) };
   check("K6c a side read 0 with dated absences of the day: shown; a side read 0 without: « Non renseignés »",
