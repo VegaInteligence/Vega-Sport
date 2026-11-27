@@ -255,6 +255,10 @@ html[data-theme="dark"]
 :root .competitions-page .competition-highlights {
   gap: 12px;
 }
+:root .competitions-page .competition-detail-layout--overview .competition-highlights-results.card {
+  /* The trimmed column ends within a result row of the table: its last card takes the rest, both feet meet. */
+  flex: 1 1 auto;
+}
 :root .competitions-page .competition-highlights-card.card {
   margin: 0;
   padding: 4px 18px 10px;

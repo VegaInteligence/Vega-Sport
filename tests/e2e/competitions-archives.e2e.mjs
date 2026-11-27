@@ -125,10 +125,14 @@ await run("competition page", async () => {
       card: card && Math.round(card.getBoundingClientRect().bottom),
       side: side && Math.round(side.getBoundingClientRect().bottom),
       veil: standings && Math.round(standings.getBoundingClientRect().bottom),
+      // hugo, 27 Nov 2026, 16 h 59: « le super gap que tu as laissé sous le classement ». The empty space in the veil
+      // under the table and its legend (its bottom padding taken off).
+      empty: standings?.lastElementChild && Math.round(standings.getBoundingClientRect().bottom -
+        Number.parseFloat(getComputedStyle(standings).paddingBottom) - standings.lastElementChild.getBoundingClientRect().bottom),
     };
   });
-  check("C3 card height", "the card's and the veil's foot on the column's (±2)", heights,
-    heights.card && heights.side && near(heights.card, heights.side) && near(heights.veil, heights.side));
+  check("C3 card height", "the card's and the veil's foot on the column's (±2), no empty space under the table (≤ 2)", heights,
+    heights.card && heights.side && near(heights.card, heights.side) && near(heights.veil, heights.side) && heights.empty <= 2);
   await page.screenshot({ path: join(out, "competition-ordinateur.png"), fullPage: true });
 
   await page.locator(".edition-bar .settings-picker").nth(0).locator("button").click();

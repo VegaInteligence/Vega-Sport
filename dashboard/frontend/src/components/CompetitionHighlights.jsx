@@ -49,6 +49,20 @@ function HighlightMatch({ match, competition, season, upcoming }) {
   );
 }
 
+// The standings card's own height, table and legend: on /competitions the card stretches to the column's foot
+// (§ 80), so its box would only give back the column's height and nothing would ever be trimmed (hugo, 27 Nov
+// 2026: « le super gap que tu as laissé sous le classement »). The veil's stretch is taken off.
+function tableHeight(card) {
+  const height = card.getBoundingClientRect().height;
+  const veil = card.querySelector(".competition-standings");
+  const first = veil?.firstElementChild, last = veil?.lastElementChild;
+  if (!first || !last) return height;
+  const style = window.getComputedStyle(veil);
+  const content = last.getBoundingClientRect().bottom - first.getBoundingClientRect().top
+    + (Number.parseFloat(style.paddingTop) || 0) + (Number.parseFloat(style.paddingBottom) || 0);
+  return height - Math.max(0, veil.getBoundingClientRect().height - content);
+}
+
 export default function CompetitionHighlights({ matches, competition, season, onShowMatches }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -84,7 +98,7 @@ export default function CompetitionHighlights({ matches, competition, season, on
       if (!row) return;
       const gap = Number.parseFloat(window.getComputedStyle(aside).rowGap) || 0;
       const sizes = {
-        standingsHeight: standings.getBoundingClientRect().height,
+        standingsHeight: tableHeight(standings),
         // The league's level card stands above the two others: its height and its gap are theirs to give.
         upcomingHeight: nextCard.getBoundingClientRect().height + (levelCard ? levelCard.getBoundingClientRect().height + gap : 0),
         headerHeight: header.getBoundingClientRect().height,
@@ -102,6 +116,8 @@ export default function CompetitionHighlights({ matches, competition, season, on
     };
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
     observer?.observe(standings);
+    const table = standings.querySelector(".competition-standings")?.firstElementChild;
+    if (table) observer?.observe(table);
     observer?.observe(nextCard);
     if (levelCard) observer?.observe(levelCard);
     observer?.observe(header);
