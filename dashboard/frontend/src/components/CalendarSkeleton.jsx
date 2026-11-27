@@ -35,7 +35,7 @@ export function CalendarBodySkeleton({ label = "Chargement des matchs…" }) {
 }
 
 /**
- * The calendar before its code arrives (§ 86, LoadingPage): the title and the bar Saison · Compétition · search, the
+ * The calendar before its code arrives (§ 87, LoadingPage): the title and the bar Saison · Compétition · search, the
  * strip of the week's seven days between its arrows, then the day's card.
  */
 export default function CalendarSkeleton({ label = "Chargement du calendrier…" }) {

@@ -46,7 +46,7 @@ export default function MatchesPage() {
     id = search.get("id") || archived,
     hasSaved = useHasSaved("matches"),
     tab = search.get("tab"),
-    // The calendar (§ 86, the matches read by pages) opens on its day; « Mes matchs » only when asked for.
+    // The calendar (§ 87, the matches read by pages) opens on its day; « Mes matchs » only when asked for.
     calendar = !id && f.pagedMatches,
     saved = tab === "saved" || (!tab && hasSaved && !calendar),
     upcoming = !saved && tab !== "results",

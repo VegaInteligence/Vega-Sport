@@ -8,7 +8,7 @@ import { clubRoster, ROSTER_GROUPS } from "../services/club-roster.js";
 import { date, normalizeText, number } from "../services/format.js";
 import StadiumDialog from "./StadiumDialog.jsx";
 
-export function ClubFacts({ club, matches }) {
+export function ClubFacts({ club, matches, more = [] }) {
   const [stadiumOpen, setStadiumOpen] = useState(false);
   const finished = matches
     .filter((m) => m.status === "finished")
@@ -105,6 +105,13 @@ export function ClubFacts({ club, matches }) {
               <strong>{wiki?.founded || "Non renseignée"}</strong>
               {!wiki?.founded && <small>Aucune donnée disponible</small>}
             </div>
+            {more.map((fact) => (
+              <div key={fact.label} className="club-fact">
+                <span className="club-fact-label">{fact.label}</span>
+                <strong>{fact.value}</strong>
+                {fact.note && <small>{fact.note}</small>}
+              </div>
+            ))}
           </div>
           {stadiumOpen && stadium && (
             <StadiumDialog

@@ -1,7 +1,7 @@
 /**
  * Routes that open on a skeleton of their own shape instead of the logo.
  * `needsId`: only the item page (`?id=`) has that shape; the directory keeps the logo, or shows `directory` (the
- * calendar, § 86, under /matchs) unless the address names one of `unless` (an archived World Cup match, `cdm`).
+ * calendar, § 87, under /matchs) unless the address names one of `unless` (an archived World Cup match, `cdm`).
  * The head script (app/layout.jsx) and LoadingPage both read this table.
  */
 export const ROUTE_SKELETONS = {

@@ -506,3 +506,25 @@ dl.factsLine {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* The club's page (FAILURE_MODES § 86): a card's link to the rest is a quiet pill, without « → ». */
+:global(.team-page) .cardLink,
+:global(.team-page) .railLink {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  margin: 0;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+:global(.team-page) .cardLink:hover,
+:global(.team-page) .railLink:hover {
+  background: var(--pill-quiet-hover);
+}
+:global(.team-page) .profileTags {
+  border-top-color: var(--veil-line);
+}

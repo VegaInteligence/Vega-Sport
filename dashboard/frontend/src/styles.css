@@ -3360,7 +3360,7 @@ html[data-route-skeleton] .route-logo,
 html:not([data-route-skeleton]) .route-skeleton {
   display: none;
 }
-/* /matchs has two: a match's and the calendar's (§ 86); the flag names the one to show. */
+/* /matchs has two: a match's and the calendar's (§ 87); the flag names the one to show. */
 html[data-route-skeleton="match"] .route-skeleton[data-skeleton-kind="calendar"],
 html[data-route-skeleton="calendar"] .route-skeleton[data-skeleton-kind="match"] {
   display: none;

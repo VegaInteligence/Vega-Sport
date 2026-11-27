@@ -20,6 +20,7 @@ import "../src/match-pills.css";
 import "../src/navigation.css";
 import "../src/home-pills.css";
 import "../src/competitions-pills.css";
+import "../src/team-pages.css";
 import "../src/skeletons.css";
 import "../src/calendar.css";
 import "../src/account.css";

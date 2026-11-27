@@ -33,7 +33,7 @@ export default function LoadingPage({ href }) {
       crossOrigin: "anonymous",
     });
   // The route's skeletons are rendered beside the logo; the flag shows one of them. A route has up to two: its item
-  // page's (`?id=`) and its directory's (/matchs: a match and the calendar, § 86), told apart by the flag's value.
+  // page's (`?id=`) and its directory's (/matchs: a match and the calendar, § 87), told apart by the flag's value.
   const kinds = [...new Set([routeSkeleton(path, "id"), routeSkeleton(path, "")])].filter((kind) => SKELETONS[kind]);
   // Keep the head script's flag right after a client-side navigation too.
   useLayoutEffect(() => {

@@ -8,7 +8,7 @@ test("each redesigned page has its own loading skeleton", () => {
   assert.equal(routeSkeleton("/", ""), "home");
   assert.equal(routeSkeleton("/competitions/", ""), "competition");
   assert.equal(routeSkeleton("/matchs/", "?id=m_0BcQYa"), "match");
-  // The calendar (no id) has its own since § 86; an archived World Cup match (cdm) keeps the logo, as does a page
+  // The calendar (no id) has its own since § 87; an archived World Cup match (cdm) keeps the logo, as does a page
   // without a skeleton of its own.
   assert.equal(routeSkeleton("/matchs/", "?tab=results"), "calendar");
   assert.equal(routeSkeleton("/matchs/", ""), "calendar");
