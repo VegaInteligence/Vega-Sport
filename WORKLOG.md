@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Lecteur Transfermarkt mort en boucle sur une suspension — FAILURE_MODES § 59.I (27 novembre 2026, GitHub #264, branche `claude/transfermarkt-ecriture-refusee`)
+
+- Constat (journaux `/ecs/vega-v2-worker`) : depuis le 26 nov. à 1 h 36 UTC, `smallint out of range` à l'INSERT de `write_suspensions`, 313 morts au 27 nov. 16 h 15 UTC ; blessés, suspendus, valeurs et transferts presque plus lus.
+- `parse_suspensions` : une durée calculée hors de 0 à 32 767 jours est `NULL` (59ap). `Reader.read` : une `DataError` ou `IntegrityError` à l'écriture d'une unité la fait échouer (`WRITE_REFUSED`, attente exponentielle, ligne `transfermarkt write_refused`) sans arrêter le lecteur (59aq).
+- Tests : 59ap et 59aq rouges avant (la même `NumericValueOutOfRange` que la production), verts après ; `test_transfermarkt_absences.py` 34/34 (5 sautés : Node), `test_transfermarkt.py` + `test_transfermarkt_history.py` 53/53 (6 sautés).
+- Reste : fusion et Deploy avec l'accord de hugo, puis relire les journaux.
+
 ## Accueil : « Vos joueurs » et « Ils ont aussi brillé » en listes classées — FAILURE_MODES § 80 (27 novembre 2026)
 
 - Demande de hugo (16 h 50) : la dernière partie de la Vue d'ensemble « pas belle et forcée ». Maquette https://claude.ai/artifact/7m8xpqAU3o9U9ndvf2xYKb, piste B choisie (16 h 58).
@@ -15,6 +22,16 @@
 - Demande de hugo (16 h 11) : les absents dans l'Avant-match avant le coup d'envoi, mais pendant et après le match dans Compositions.
 - `MatchDetail.jsx` : la carte « Absents » ne s'affiche dans Avant-match que tant que le match est à venir ; une fois commencé, elle est dans Compositions, sous les compositions et au-dessus du tableau des joueurs. Même carte, même route (`/api/matches/{id}/absences`), rien côté backend, pas de Deploy.
 - Tests : E2E K6, K6b, K6c lus dans Compositions, K6d nouveau (plus de carte dans Avant-match) : K6, K6c, K6d rouges avant, verts après (`/mnt/project-files/absents-apres-match/e2e-compositions-rouge/` et `e2e-compositions/`) ; site 1 119/1 119.
+
+## La page d'un match à venir, comme celle d'un match joué — FAILURE_MODES § 81 (27 novembre 2026, GitHub #259, branche `claude/avant-match-refonte`)
+
+- Demande de hugo (26 nov., 17 h 34) : la page d'un match pas encore commencé est « bof ». Revue et maquette à deux pistes (https://claude.ai/artifact/EqAeUKgG3TLJSKbcF7bQeV) ; piste A choisie le 27 nov. avec trois retouches (pas d'icônes inutiles, pas de grand vide sous un bloc, jamais deux cartes de hauteurs différentes sur une ligne), v2 validée (« super »). Linear VI-171.
+- API : `/api/forecasts/match` renvoie aussi `grid`, la grille 6×6 des scores (5+ en dernière ligne et colonne, quatre décimales), tirée des buts attendus stockés et du rho du modèle (`api.forecast_models`), par `scoreGrid` de `dashboard/shared/inplay.js`. Les parts stockées ne changent pas. Sans Deploy, la page cache ce qui dépend de la grille (Score exact, Buts, +2,5 buts, les deux marquent).
+- Site : tableau d'affichage avec rang et points sous chaque nom et compte à rebours ; bande de cinq chiffres ; quatre cartes (favori, un joueur en forme par club, grand absent) ; « Le match selon le modèle » en trois vues ; forme sur 10 matchs en barres xG ; meilleures notes de la saison ; face-à-face (les sept lignes de « Repères de la saison ») et enjeu au classement par paires de même hauteur ; Absents en une liste sur deux colonnes (mêmes données, mêmes règles que § 59 et § 79) ; confrontations en six cases. Après le coup d'envoi, l'Avant-match reste comme avant.
+- Retirés : `MatchForecast.jsx` et son test R34 (remplacés par le cas P12), la ligne technique du pronostic, « Joueurs les plus utilisés » avant le match (remplacé par les meilleures notes).
+- Tests : API `rankings.test.mjs` cas 81a rouge sur main, 19/19 après ; site 1 117/1 117 ; E2E `tests/e2e/match-preview.e2e.mjs` (rejeu de la production du 27 nov. sur Nottingham Forest – Chelsea, grille posée par le test) 10 échecs sur main, 13/13 sur le build. `match-before-kickoff.e2e.mjs` et `match-tabs.e2e.mjs` non relancés : ils lisent l'API publique, fermée depuis ce conteneur. Preuves : `/mnt/project-files/avant-match-refonte/`.
+- Relecture Codex de #263 (cinq remarques, toutes justes, chacune rouge avant et verte après) : le modèle du pronostic est retrouvé en SQL (un `fitted_at` repassé par un Date JavaScript perd ses microsecondes, et la grille n'aurait jamais été renvoyée en production ; 81b) ; la bande du haut lit le pronostic avec compositions comme la carte du modèle (P12) ; blasons seuls nommés (P13) ; sans notes, la forme prend toute la ligne (P14). Cinquième : le classement calculé depuis les résultats d'un championnat à play-offs n'est plus montré sous les noms ni dans l'enjeu, comme dans l'onglet Classement (T1–T3, `tests/match-preview-table.test.mjs`). Deuxième relecture (deux remarques, justes) : liens des joueurs sur la saison du match sans filtre de compétition repris de la page (P15) ; xG des matchs aux statistiques non fiables retirés du graphique de forme (P16). E2E 17/17. E2E 15/15 ; preuves rouges dans `e2e-codex-rouge/` et `api-81b-rouge.txt`.
+- Accord de hugo (27 nov., 16 h 57) pour la fusion et le Deploy.
 
 ## Lectures à froid et remplacements en fiche club — 26 novembre 2026
 
@@ -1004,7 +1021,7 @@
 - Known limits: Lyon 2010/11 lacks its Champions League colour (engsoccerdata « Olympique Lyon » vs openfootball's European « Olympique Lyonnais (FRA) », a row never merged); European archive rows with a country tag stay unmerged; deductions sourced for Serie A only.
 - Done. Worktree and branch removed.
 
-## Competition page and archives redesigned (27 Nov 2026, GitHub #261, FAILURE_MODES § 81)
+## Competition page and archives redesigned (27 Nov 2026, GitHub #261, FAILURE_MODES § 82)
 
 - Request (hugo, 26 Nov, 16 h 34): redo the competition page and the archives like the match page and the home.
 - Mock-up on the real pages: https://claude.ai/artifact/8DpjahVVH1hHCaZ7oviEHW. Approved direction (27 Nov, 16 h 24): piste B, with the standings' card as tall as the column beside it and a season menu that holds twenty seasons; seasons version A (16 h 38), on every season selector of the site (16 h 47).

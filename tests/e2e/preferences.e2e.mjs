@@ -77,7 +77,7 @@ async function visit(pathname, { preferences = {}, favourites = [], session = nu
 }
 const shot = (page, name, selector) =>
   (selector ? page.locator(selector).first().screenshot({ path: path.join(out, `${name}.png`) }) : page.screenshot({ path: path.join(out, `${name}.png`) })).catch(() => {});
-// § 81: the competition the page opens on is its title (the row of cards gave way to the bar).
+// § 82: the competition the page opens on is its title (the row of cards gave way to the bar).
 const spotlight = (page) => page.locator(".edition-head--page h1.edition-name").first().textContent({ timeout: 30000 }).then((t) => t.trim()).catch(() => null);
 
 // ---------- P4 / P11: the competition the page opens on ----------

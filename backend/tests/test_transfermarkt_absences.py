@@ -31,6 +31,7 @@ except ImportError:
     psycopg = None
 
 DSN = os.environ.get("VEGA_V2_ABSENCES_TEST_DSN")
+PARSE = tm.parse_suspensions  # the real parse, kept before a test replaces it (59aq)
 NODE = shutil.which("node")
 HTTP_READY = bool(NODE) and (ROOT / "api" / "node_modules" / "pg").is_dir()
 
@@ -295,6 +296,61 @@ class SuspensionsReplayTest(AbsencesBase):
         # An injuries list with episodes, read while suspensions are held: their absent_since never set by it.
         self.assertEqual(self.read(injuries, "injuries", self.INJURIES_PATH), "ok")
         self.assertEqual(self.x("SELECT count(*) FROM core.player_suspensions WHERE absent_since IS NULL").fetchone()[0], 1)
+
+    def test_59ap_a_duration_beyond_the_column_is_unknown_and_the_rest_written(self):
+        # 59ap (production, 26 Nov 2026): an end some 90 years after the start made days 32 768 or more, a smallint's
+        # overflow that killed the reader at every restart. A negative one is no duration either.
+        answer = {"absences": [absence("2026-02-01", "2120-02-01", "Red card suspension", "CL", 1, 5, days=None),
+                               absence("2026-04-10", "2026-04-01", "Yellow card suspension", "FR1", 1, 1),
+                               absence("2026-03-01", "2026-03-08", "Red card suspension", "FR1", 2, 2, days=7)]}
+        self.assertEqual(self.read(answer), "ok")
+        self.assertEqual([f[:7] for f in self.facts()], [
+            ("Red card suspension", date(2026, 2, 1), date(2120, 2, 1), None, 1, 5, "CL"),
+            ("Red card suspension", date(2026, 3, 1), date(2026, 3, 8), 8, 2, 2, "FR1"),
+            ("Yellow card suspension", date(2026, 4, 10), date(2026, 4, 1), None, 1, 1, "FR1"),
+        ])
+        self.assertEqual(self.unit()[:4], (True, None, 200, 3))
+        accepted, ids = self.rows(), self.ids()
+        self.assertEqual(self.read(answer), "ok")
+        self.assertEqual((self.rows(), self.ids(), self.unit()[3]), (accepted, ids, 0))
+        # The last day a smallint holds is still a duration.
+        self.assertEqual([s["days"] for s in tm.parse_suspensions({"absences": [
+            absence("2026-01-01", (date(2026, 1, 1) + timedelta(days=32766)).isoformat()),
+            absence("2026-01-01", (date(2026, 1, 1) + timedelta(days=32767)).isoformat())]})], [32767, None])
+
+    def test_59aq_a_write_the_base_refuses_fails_the_unit_and_the_reader_goes_on(self):
+        lines = []
+        self.reader.log = lambda *a, **k: lines.append(" ".join(map(str, a)))
+        self.assertEqual(self.read(ABSENCES), "ok")
+        accepted = self.rows()
+        before = self.x("SELECT read_at, attempts FROM ops.transfermarkt_reads WHERE kind = 'suspensions' AND provider_key = '342229'").fetchone()
+        # Any value the parse lets through and the base refuses (here a duration beyond smallint, bypassing 59ap's guard).
+        overflow = lambda data: [dict(s, days=40000) for s in PARSE(data)]
+        moved = {"absences": [absence("2026-03-01", "2026-03-09", "Red card suspension", "FR1", 2, 2), *ABSENCES["absences"][1:]]}
+        with mock.patch.object(tm, "parse_suspensions", overflow):
+            self.assertEqual(self.read(moved), "failed")
+        self.assertEqual(self.rows(), accepted)  # the whole unit rolled back, the updated row too
+        after = self.x("""SELECT read_at, attempts, error_code, last_http_status, next_due_at - now() >= interval '1 hour'
+                          FROM ops.transfermarkt_reads WHERE kind = 'suspensions' AND provider_key = '342229'""").fetchone()
+        self.assertEqual(after, (before[0], before[1] + 1, "WRITE_REFUSED", 200, True))
+        self.assertEqual([l for l in lines if "write_refused" in l],
+                         ["transfermarkt write_refused kind=suspensions key=342229 sqlstate=22003"])
+        # The reader goes on: the next unit is written, and the refused one is accepted once its answer fits.
+        self.assertEqual(self.read({"injuries": [injury("2026-02-01", "2026-02-10")]}, "injuries", self.INJURIES_PATH), "ok")
+        self.assertEqual(len(self.rows("core.player_injuries")), 1)
+        self.assertEqual(self.read(moved), "ok")
+        self.assertEqual(self.unit()[1:3], (None, 200))
+
+    def test_59aq_an_integrity_refusal_fails_the_unit_too(self):
+        lines = []
+        self.reader.log = lambda *a, **k: lines.append(" ".join(map(str, a)))
+        # A CHECK the parse does not mirror (matches_missed >= 0): an IntegrityError, the same outcome.
+        negative = lambda data: [dict(s, games=-1) for s in PARSE(data)]
+        with mock.patch.object(tm, "parse_suspensions", negative):
+            self.assertEqual(self.read(ABSENCES), "failed")
+        self.assertEqual((self.rows(), self.unit()[:3]), ([], (False, "WRITE_REFUSED", 200)))
+        self.assertEqual([l for l in lines if "write_refused" in l],
+                         ["transfermarkt write_refused kind=suspensions key=342229 sqlstate=23514"])
 
     def test_59m_a_challenge_pauses_and_writes_nothing(self):
         self.assertEqual(self.read((202, {"x-amzn-waf-action": "challenge"}, b"")), "blocked")

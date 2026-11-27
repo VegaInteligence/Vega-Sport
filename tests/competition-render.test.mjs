@@ -104,9 +104,9 @@ test("competition page renders a result-derived league table and its limits", as
   stubs["./NationalFlag.jsx"] = { __esModule: true, default: () => null };
   stubs["./PhoneFold.jsx"] = { usePhoneFold: () => ({ fold: {}, toggle: {} }), PhoneFoldToggle: () => null };
   stubs["../services/national-flags.js"] = { nationalFlagCode: () => null, nationalTeamLabel: String, sameNationalTeam: () => false };
-  // § 81: on the competition page the head carries the page's bar; written out here before the edition.
+  // § 82: on the competition page the head carries the page's bar; written out here before the edition.
   stubs["../components/EditionHeader.jsx"] = { ...editionHeaderStub(React), EditionPageProvider: ({ bar, children }) => elem(React.Fragment, null, bar, children) };
-  // § 81: the bar's choice of competition, its lists written out (the panel's own behaviour is in the E2E).
+  // § 82: the bar's choice of competition, its lists written out (the panel's own behaviour is in the E2E).
   stubs["../components/CompetitionPicker.jsx"] = { CompetitionSwitcher: ({ lists, current }) => elem("nav", { "data-switcher": current?.id }, lists.map((list) => elem("section", { key: list.key, "data-list": list.key }, elem("h2", null, list.label), list.competitions.map((c) => elem("h3", { key: c.id }, c.name))))) };
   stubs["../components/NationalFlag.jsx"] = { __esModule: true, default: () => null };
   stubs["../services/trophy-art.js"] = trophies;
@@ -141,7 +141,7 @@ test("competition page renders a result-derived league table and its limits", as
   run((name) => { if (!(name in stubs)) throw Error("Unexpected import " + name); return stubs[name]; }, mod, mod.exports);
   const html = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(html, /Classement calculé à partir des résultats disponibles/);
-  // § 81: no row of cards nor « Toutes les compétitions » page; the bar chooses (its lists), Archives beside it.
+  // § 82: no row of cards nor « Toutes les compétitions » page; the bar chooses (its lists), Archives beside it.
   assert.match(html, /data-switcher="l_3FJFUl"/);
   assert.doesNotMatch(html, /league-spotlight|Toutes les compétitions/);
   assert.doesNotMatch(html, /Explorer les coupes/);

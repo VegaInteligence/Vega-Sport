@@ -4,7 +4,7 @@
 //  F1  Signed in, three competitions chosen in the home's bar (Championship, Premier League, Saudi Pro League):
 //      the segment says « 3 compétitions ».
 //  F2  The account's document holds those three (`leagues`).
-//  F3  /competitions: the bar's panel opens on « Mes compétitions » with exactly those three (§ 81), and the page opens on one of them.
+//  F3  /competitions: the bar's panel opens on « Mes compétitions » with exactly those three (§ 82), and the page opens on one of them.
 //  F4  « Se déconnecter »: this browser is back to nothing chosen (home « Top 7 Europe + UEFA », /competitions
 //      « Compétitions à la une » with its ten).
 //  F5  Signed in again on the same browser: the three are back, on the home and on /competitions.
@@ -85,7 +85,7 @@ async function signIn(page, { create = false } = {}) {
   await until(async () => (await page.locator(".account-entry").first().getAttribute("aria-label")) !== "Se connecter", { timeout: 30000 });
 }
 async function competitionsRow(page) {
-  // § 81: the row is the bar's panel, its first list « Mes compétitions » (or « À la une »); the page opens on one.
+  // § 82: the row is the bar's panel, its first list « Mes compétitions » (or « À la une »); the page opens on one.
   await open(page, "/competitions");
   await page.locator(".edition-bar .settings-picker").nth(1).locator("button").waitFor({ timeout: 30000 });
   await page.waitForTimeout(600);

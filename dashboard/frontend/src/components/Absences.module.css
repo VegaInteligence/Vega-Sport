@@ -376,3 +376,59 @@
     gap: 18px;
   }
 }
+
+/* ------------------------------------------- the preview's one list (§ 81.7) */
+.previewCounts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.previewCounts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.previewCounts b {
+  color: var(--ink-strong);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+/* Down each column, then the next: two columns of equal length. */
+.previewRows {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows), auto);
+  gap: 0 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.previewRows li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.previewRows .who small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.previewClub {
+  display: inline-flex;
+}
+@media (max-width: 760px) {
+  .previewRows {
+    grid-auto-flow: row;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+}

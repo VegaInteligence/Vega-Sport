@@ -7,7 +7,7 @@ const seasonOption = (season) =>
   typeof season === "string" ? { value: season, label: season } : season;
 
 // Up to GROUP_FROM seasons the pills simply wrap. More (twenty seasons and beyond, hugo, 27 Nov 2026: « si j'ai 20
-// saison ca peut etre le brodel », § 81): a title per decade, three seasons a row, the list scrolls by itself and
+// saison ca peut etre le brodel », § 82): a title per decade, three seasons a row, the list scrolls by itself and
 // opens on the chosen season. An « all » choice (Toutes les saisons) stays first, out of the decades.
 export const GROUP_FROM = 9;
 const decadeOf = (option) => {

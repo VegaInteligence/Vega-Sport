@@ -139,28 +139,8 @@ function TeamForm({ club, match, side }) {
     </section>
   );
 }
-function Content({ match, value }) {
-  const f = useFootball();
-  const home = clubSummary(value.data, match.home.id, { before: match }),
-    away = clubSummary(value.data, match.away.id, { before: match });
-  const h2h = value.fixtures
-    .filter(
-      (m) =>
-        m.status === "finished" &&
-        beforeMatch(m, match) &&
-        [match.home.id, match.away.id].includes(m.home.id) &&
-        [match.home.id, match.away.id].includes(m.away.id) &&
-        isNumber(m.home.score) &&
-        isNumber(m.away.score),
-    )
-    .sort((a, b) =>
-      String(b.timeUtc || b.date).localeCompare(String(a.timeUtc || a.date)),
-    );
-  const h2hRecord = { [match.home.id]: 0, [match.away.id]: 0, draws: 0 };
-  for (const m of h2h)
-    if (m.home.score === m.away.score) h2hRecord.draws++;
-    else h2hRecord[m.home.score > m.away.score ? m.home.id : m.away.id]++;
-  const h2hNote = headToHeadNote(h2h, match.home, match.away);
+/** The seven rows of the season before the kick-off (« Repères de la saison », the preview's face-to-face, § 81.6). */
+export function seasonStatRows(home, away) {
   const stat = (key, label, get, format = "double", lowerIsBetter = false) => ({
     key,
     label,
@@ -169,7 +149,7 @@ function Content({ match, value }) {
     home: home.matches ? get(home) : null,
     away: away.matches ? get(away) : null,
   });
-  const stats = [
+  return [
     stat(
       "points",
       "Points / match",
@@ -208,6 +188,30 @@ function Content({ match, value }) {
       "integer",
     ),
   ];
+}
+function Content({ match, value }) {
+  const f = useFootball();
+  const home = clubSummary(value.data, match.home.id, { before: match }),
+    away = clubSummary(value.data, match.away.id, { before: match });
+  const h2h = value.fixtures
+    .filter(
+      (m) =>
+        m.status === "finished" &&
+        beforeMatch(m, match) &&
+        [match.home.id, match.away.id].includes(m.home.id) &&
+        [match.home.id, match.away.id].includes(m.away.id) &&
+        isNumber(m.home.score) &&
+        isNumber(m.away.score),
+    )
+    .sort((a, b) =>
+      String(b.timeUtc || b.date).localeCompare(String(a.timeUtc || a.date)),
+    );
+  const h2hRecord = { [match.home.id]: 0, [match.away.id]: 0, draws: 0 };
+  for (const m of h2h)
+    if (m.home.score === m.away.score) h2hRecord.draws++;
+    else h2hRecord[m.home.score > m.away.score ? m.home.id : m.away.id]++;
+  const h2hNote = headToHeadNote(h2h, match.home, match.away);
+  const stats = seasonStatRows(home, away);
   const players = [home, away].map((club) =>
     clubSquad(value.data, club)
       .profiles.filter((p) => p.matches > 0)
@@ -298,9 +302,10 @@ function Content({ match, value }) {
     </div>
   );
 }
-export default function MatchContext({ match }) {
+/** The two clubs' season before the kick-off and their meetings: one read, shared by the preview's blocks (§ 81). */
+export function useMatchContext(match) {
   const f = useFootball();
-  const resource = useResource(
+  return useResource(
     matchResourceKey(
       f.manifest || f.client,
       "context",
@@ -311,6 +316,9 @@ export default function MatchContext({ match }) {
     ({ signal }) => contextData(f, match, { signal }),
     Boolean(match.leagueId && match.season),
   );
+}
+export default function MatchContext({ match }) {
+  const resource = useMatchContext(match);
   if (!match.leagueId || !match.season)
     return (
       <Card title="Contexte">

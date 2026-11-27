@@ -57,7 +57,7 @@ export default function NationsCompetition({ competition }) {
   const projection = useNationsProjection(league, "2026/2027"), projected = nationsProjectionRows(projection, league).rows.length > 0;
   const shown = view === "projection" && !projected ? "standings" : view;
   const chooseLeague = (next) => { setLeague(next); if (view === "bracket" && next !== "A") setView("standings"); setPage(1); };
-  // On the competition page (§ 81) the head is the page's title, above the card.
+  // On the competition page (§ 82) the head is the page's title, above the card.
   const head = (
     <EditionHeader imageUrl={competition.imageUrl} name={competition.name} season="2026/2027" onSeason={() => {}} label="Édition" editions={[{ season: "2026/2027", id: competition.id }]}>
       <Segments label="Vue de la compétition" value={shown} onChange={setView} items={[["standings", "Classements"], ["matches", "Matchs"], ...(league === "A" ? [["bracket", "Tableau"]] : []), ...(projected ? [["projection", "Projection"]] : [])]} />

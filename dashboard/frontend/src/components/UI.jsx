@@ -228,10 +228,11 @@ export function Card({
   footer,
   className = "",
   fold = false,
+  ...rest
 }) {
   const f = useCardFold(fold && Boolean(title), title);
   return (
-    <section className={`card ${className}`} {...f.section}>
+    <section className={`card ${className}`} {...rest} {...f.section}>
       {title && (
         <div className="card-header" {...f.head}>
           <h2 className="card-title">{title}</h2>

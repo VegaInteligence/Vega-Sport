@@ -336,7 +336,7 @@ async function archiveFixture({
       __esModule: true,
       default: ({ label, disabled, value }) => e("button", { "aria-label": label, disabled }, value),
     },
-    // § 81: the search pill's magnifier.
+    // § 82: the search pill's magnifier.
     "./Icon.jsx": { __esModule: true, default: ({ name }) => e("svg", { "data-icon": name }) },
   };
   const filename = path.join(

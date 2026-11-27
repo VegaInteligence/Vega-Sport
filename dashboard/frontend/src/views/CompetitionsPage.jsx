@@ -154,7 +154,7 @@ export default function CompetitionsPage() {
   // A cup edition's view and the team followed through it (a nation's tile leads here) are in the address.
   const viewParam = params.get("view") || "";
   const followed = params.get("team") || "";
-  // § 81: the row of ten cards and the « Toutes les compétitions » page gave way to the bar's panel of tiles.
+  // § 82: the row of ten cards and the « Toutes les compétitions » page gave way to the bar's panel of tiles.
   const openSeason = "";
   const [choice, setChoice] = useState({
     ready: false,
@@ -296,7 +296,7 @@ export default function CompetitionsPage() {
       : null);
   // By its own id or the canonical id it answers to (l_v…, VI-30): the URL keeps the id it was asked with.
   const selected = findCompetition(id ? expandedCatalog : catalog, chosenId);
-  // The bar's lists (§ 81): the page's row (« À la une », or « Mes compétitions » by § 78), then every competition
+  // The bar's lists (§ 82): the page's row (« À la une », or « Mes compétitions » by § 78), then every competition
   // grouped by country, as the former « Toutes les compétitions » page.
   const lists = [
     {

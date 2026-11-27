@@ -4649,6 +4649,30 @@ lendemain), 1 sur 26 à Lorient. Deux causes.
   la plus ancienne de ces lectures de blessures. Les suspensions affichées et leur fraîcheur ne changent pas (59y, 59aa).
   Attendus : le PSG du 24 Nov au soir, ses blessures lues et ses suspensions pas encore, n'affiche plus « 0 / 25 ».
 
+### 59.I. Le lecteur mort en boucle sur une suspension (GitHub #264 ; journaux du worker du 26 au 27 Nov 2026, écrit avant le correctif)
+
+Constat (journaux `/ecs/vega-v2-worker`) : depuis le 26 Nov 2026 à 1 h 36 UTC (2 h 36 à Paris), le processus `--transfermarkt process`
+meurt sur `smallint out of range` (`NumericValueOutOfRange`) dans `write_suspensions`, à l'INSERT dans
+`core.player_suspensions` ; il redémarre toutes les 5 minutes et relit la même unité en premier, intacte (313 morts au 27 Nov à 16 h 15 UTC, toutes cette trace ; la plupart moins d'une
+minute après le démarrage). Blessés,
+suspendus, valeurs marchandes et transferts ne sont presque plus mis à jour. Même schéma que 59am : une erreur de la base
+qui n'est pas un `Failed` tue le processus.
+
+- **59ap Une durée hors de la colonne.** `days` (smallint, −32 768 à 32 767) est calculé à partir des dates (fin − début
+  + 1), sans borne : des colonnes smallint de la table, c'est la seule que rien ne borne (matchs : 0 à 1 000, saison :
+  1900 à 2100). Une fin à plus de 89 ans du début (suspension à vie, date de fin factice) la dépasse. Le joueur en cause
+  n'est pas dans les journaux (le lecteur n'y écrit aucune clé d'unité). Attendus : une durée calculée hors de 0 à 32 767 jours est inconnue (`NULL`, comme une durée non donnée) ;
+  la suspension est écrite avec ses autres faits (dates, matchs, compétition, saison) tels quels ; les autres suspensions
+  de la réponse aussi ; le rejeu ne change rien (59d).
+- **59aq Une écriture refusée par la base n'arrête pas le lecteur.** Quelle que soit l'unité (profils, valeurs,
+  transferts, blessures, suspensions, effectifs, clubs, recherche), une erreur de données ou d'intégrité levée par la base
+  pendant son écriture (`psycopg.errors.DataError`, `IntegrityError` : valeur hors plage, contrainte CHECK, clé étrangère,
+  doublon) annule toute la transaction de l'unité (rien d'écrit, ni ligne ni file), puis l'unité échoue comme un refus :
+  `error_code` = `WRITE_REFUSED`, `last_http_status` = le statut de la réponse lue (200), `attempts` + 1, attente
+  exponentielle (`failed`), une ligne de journal `transfermarkt write_refused kind=… key=… sqlstate=…`. `Reader.read`
+  rend `failed` et le lecteur passe à l'unité suivante, qui s'écrit normalement. Les autres erreurs (connexion perdue,
+  `lock_timeout`, erreur du code) se propagent comme avant : le processus redémarre, la lecture n'est pas perdue.
+
 ### 59.Hypothèses non vérifiées
 
 - **H1** Aucune suspension EN COURS n'a été observée (sonde du 2026-11-24, fichier `07-…`) : on suppose qu'elle a la forme
@@ -6216,7 +6240,123 @@ K6d a finished match's « Avant-match » has no « Absents » card. Red before (
 - Rule: each section is one 22 px card on the veil with no border, holding a list in two columns (one under 1 100 px); rows without lines, a 16 px veil on hover. « Ils ont aussi brillé » is numbered from 1. The grade is a pill, green from GRADE_HIGH (70) as in the lineups, judged on the number shown (a 69.6 reads 70 and is green; found by H16 on the replay), neutral under, « – » when a followed player did not play. Goals and assists show only when there are some. « Vos joueurs » keeps each match of the week and the next match, its day with a capital. A phone shows five players, the rest behind « Voir les N joueurs ». On a phone a week's line is too long for one row: the match (day, opponent, score) then its figures (minutes, goals, assists) under it; only the opponent's name may be cut, never the day, the score or the figures (an ellipsis on « mar. 24… » then on « 5–… » were seen on the 390 px capture).
 - Tests: `tests/home-players-render.test.mjs` (red on 11f3ce1, 2/2 after); `tests/e2e/home-buttons.e2e.mjs` H16 and H17, H12 now opens a player from the list.
 
-## 81. The competition page and the archives in the spirit of the match page and the home (hugo, 26 Nov 2026, 16 h 34 « refaire le design de la page compétition et archives comme on a refait la page match et accueil »; mock-up https://claude.ai/artifact/8DpjahVVH1hHCaZ7oviEHW; 27 Nov 2026, 16 h 24 « c'est super » on piste B, « faut que la card classement etc soit même taille que l'ensemble des card de droite », « si j'ai 20 saisons ça peut être le bordel sur tous les sélecteurs de saison »; 16 h 38 « je suis d'accord avec la version A pour les saisons »; 16 h 47 « applique-le à tous les season selector du site»)
+## 81. The page of a match to come, as the page of a match played (hugo, 26 Nov 2026, 17 h 34 « la page d'un match qui n'a pas commencé elle est bof », then piste A of the mock-up chosen on 27 Nov, 16 h 17, with three changes, v2 approved at 16 h 22; GitHub #259, VI-171; written before the tests)
+
+Mock-up: https://claude.ai/artifact/EqAeUKgG3TLJSKbcF7bQeV (v2, Nottingham Forest – Chelsea, production data of 27 Nov).
+Everything below holds before the kick-off only (`upcoming` in `MatchDetail.jsx`); a match under way or played keeps
+its page, its « Avant-match » tab included, as it is.
+
+hugo's three changes, rules for every new screen: no small chart that serves nothing (a card's picture, name and figure
+on one line); no large empty space under a block; never two cards of different heights on one row (cards go by pairs of
+the same height, or alone on the full width). A card with no data goes, and the card beside it takes the row.
+
+**81.1 The model's grid of scores** (`/api/forecasts/match`). `forecast.grid`, and `lineups.forecast.grid` when the
+line-ups were read: six rows (home goals 0 to 5) of six shares (away goals 0 to 5), the last row and column holding
+5 goals or more, four decimals, from the stored expected goals and the fitted model's `rho` (Dixon-Coles, the law of
+`vega/forecast.py` and `shared/inplay.js`: `poisson`, `tau`, cells below zero at zero, the grid normalised). The model
+is the one the forecast names (version and fitting time); without it, no `grid` and nothing else changes. The shares
+add up to 1 (± 0.002). The stored shares and likely score stay those the page shows (the grid's own sums can differ by
+the rounding of the stored rates).
+
+**81.2 The scoreboard.** Under each name: « Domicile » or « Extérieur », then its place and points in the match's
+competition and season (`/api/standings`, its row by club id: « 17ᵉ · 9 pts »); without a row, the side alone. In the
+middle: the status line as today (« À venir · date »), the kick-off's time, and how long until it: « dans 35 min »,
+« dans 4 h 55 », « dans 2 j » (whole days from 24 h); nothing once it is passed. Under them, the strip of figures of the
+match played (`.match-kpis`, same look) with five tiles: Victoire (home % – away %), Buts attendus (two decimals),
+Score le plus probable, xG / match sur la saison (each club's mean xG for, its matches before the kick-off), 5 derniers
+matchs (each club's last five results as V/N/D pills, its newest on the right). A tile without its data goes; no strip
+without a tile.
+
+**81.3 The four cards of the top** (one row, the same height): « Favori du modèle » (the side with the larger share of
+the two, its crest, the draw's and the other side's shares, its share large); « En forme · <club> » for each club (the
+player with the best mean Vega grade over his last five matches of the season played 30 minutes or more before the
+kick-off, three such matches at least, ties to the most minutes; his picture, name, « 5 derniers matchs », the mean);
+« Grand absent » (of the players the « Absents » card shows, the one with the best season grade over 300 minutes or
+more; his picture, name, assists and return, his goals large when he scored, else his grade). Picture, name and figure
+on one line, no small chart. A card without its player goes; the others share the row. A player opens his page.
+
+**81.4 « Le match selon le modèle »** (replaces « Probabilités »). Views Résultat · Score exact · Buts (pills, the
+first chosen): Résultat is today's bar and shares in the teams' colours; Score exact is the 6 × 6 grid of 81.1, each
+cell's share, the likeliest framed; Buts is each club's goals 0 to 4 and 5+ (the grid's sums). Under the views, one row
+of figures: Score le plus probable, Buts attendus, Plus de 2,5 buts, Les deux marquent, <home> ne perd pas (home +
+draw), <away> ne perd pas. Without a grid: no Score exact, no Buts, no « Plus de 2,5 buts » nor « Les deux marquent ».
+At the card's foot « Lu par le modèle »: what it read (« Force des deux équipes », « 10 derniers matchs (xG) » when the
+answer has a form, « Compositions confirmées » when it read them) and what it did not (« Onze probable » without the
+line-ups, « Absents »). With the line-ups: each eleven against its usual one and the table with and without them, as
+§ 70. The sentence « Le modèle ne connaît ni les compositions ni les absents. » goes (the foot says it). No column on
+the right, nothing empty under the card. The bookmakers' card stays under it.
+
+**81.5 Form and grades** (one row, the same height). « Forme · 10 derniers matchs »: each club's last ten finished
+matches of the season before the kick-off, oldest on the left, its xG for as a bar up in its colour, its xG against as a
+grey bar down, its score in a pill of its result and the opponent's crest; per club its mean xG for and against and
+goals for and against over those matches. A match without xG keeps its pill without bars; a club with none: « Aucun
+match collecté ». « Meilleures notes de la saison »: the three best season grades of each club (300 minutes or more),
+the six by grade: rank, picture, name, « Absent » when on the « Absents » card, club, goals and assists when any,
+minutes, grade (the site's grade chip, `Grade`). Replaces « Joueurs les plus utilisés » and « Forme avant
+le match ».
+
+**81.6 Face-to-face and stakes** (one row, the same height). « Face-à-face sur la saison »: the seven rows of today's
+« Repères de la saison » (points, goals for and against, xG for and against, shots per match, possession), same values.
+« L'enjeu au classement » (a league with a table only): the table's rows around each club (two above, two below, the
+two slices joined when they meet), the two clubs marked; with the season's projection (`format` « league »), per club
+its places as twenty bars (the first four and the last three toned), its projected points, its share of the first
+four and of the last three. No table: no card, the face-to-face takes the row.
+
+**81.7 Absents** (full width). Before the kick-off, the same rows as today (`/api/teams/{id}/absences`, `absenceView`
+with the match's scope, same reasons, same returns), in one list over two columns of equal length, each row with its
+club's crest; the header gives each club's count, or « non renseignés » for a side not read. No card when neither side
+was read (as today). From the kick-off the card of § 79 is unchanged.
+
+**81.8 Confrontations** (full width). The same meetings as today (finished, before the kick-off, the two clubs): the
+record (home wins, draws, away wins, in the teams' colours, with a bar), and the six last as tiles (date, the two crests,
+the score, the winner or « Nul »), each opening its match. No meeting: no card.
+
+**81.9 Gone.** The line « Avant le … · Saison … · compétitions collectées · seuls les matchs antérieurs au coup
+d'envoi ». Nothing else of today's data is lost: each figure of today's page is in the new one (81.2 to 81.8).
+
+Cases (`tests/e2e/match-preview.e2e.mjs`, on the replay of Forest – Chelsea, red on main; `rankings.test.mjs`):
+- **81a** (API, `rankings.test.mjs`) the grid: 6 × 6, four decimals, each cell within 0.0001 of the law computed from
+  the stored expected goals and the model's rho, the shares adding up to 1; the same for the line-ups' forecast.
+- **P1** the scoreboard: « 17ᵉ · 9 pts » and « 8ᵉ · 16 pts », « dans 3 h 55 », the five tiles and their values.
+- **P2** the four cards: one row, the same height, each picture, name and figure on one line, no chart.
+- **P3** the model's card with a grid: three views, the 36 cells, 1 – 1 framed, the goals view, six figures, the foot;
+  **P4** without a grid: one view, four figures; neither has « ne connaît ni ».
+- **P5** each pair of cards the same height (± 1 px), and nothing empty under the model's card.
+- **P6** the absents: full width, five rows on two columns (three and two), a crest on each, the counts.
+- **P7** the confrontations: 2 · 3 · 3, six tiles.
+- **P8** the data kept: the seven face-to-face values, the shares, the absents' names; the technical line gone.
+- **P9** no standings: the face-to-face alone on its row.
+- **P10** a phone: everything stacked, no sideways scroll; no page error anywhere.
+- **P11** a match played: its « Avant-match » as before (« Forme avant le match », « Repères de la saison »), with no
+  « Absents » card (in « Compositions » from the kick-off, 79.7).
+- **P12** both line-ups confirmed: the forecast that read them, each eleven, the table with and without them, the foot's
+  « Compositions confirmées » (written with the code, as the card of § 70 it replaces had its unit test, R34, which goes
+  with `MatchForecast.jsx`). The scoreboard's strip reads that same forecast (Codex on #263).
+
+Codex's review of #263 (five findings, all real, each red before its fix and green after):
+- **81b** (API) the model of a forecast is found in SQL (`api.match_forecasts` joined to `api.forecast_models`), never
+  by sending its `fitted_at` back: `now()` gives microseconds, which the JavaScript Date of the pg driver drops, and the
+  equality then finds no model, so production forecasts would come without their grid. The seed's fit now has
+  microseconds (`.123456`): 81a red before, green after.
+- **P12** (strip) with both line-ups confirmed, the strip's « Victoire » is the line-ups' forecast (50 % – 24 %), as on
+  the model's card; it read the forecast without them.
+- **P13** a crest with no name beside it is named (`label`, `dashboard/frontend/AGENTS.md`): the opponents of the form
+  chart, the club of each absent, the grid's corner.
+- **P14** no player graded (300 minutes or more) on either side: no notes card, and the form card takes the whole row
+  (the pair knows the notes before it is laid out; a component returning null still counted as a second card).
+- **T1–T3** (`tests/match-preview-table.test.mjs`) the table under the names and in « Enjeu au classement » follows the
+  Classement tab's rule: a table computed from the results (source « Vega ») is shown for a plain league phase only
+  (`plainLeagueTable`, moved to `services/competition-standings.js`); a split or play-off league's is withheld, so no
+  rank or points there. Red before (`previewTable` absent), green after.
+
+Codex's second review (on f856ef3, two findings, both real, red before and green after):
+- **P15** a player's link (the four cards, the notes) opens his profile for the season the preview reads, with no
+  `league` filter carried over from the page (as « Joueurs les plus utilisés » did); opened with `league=l_3FJFUl`, the
+  links kept it.
+- **P16** a past match whose team statistics are flagged unreliable (`coverage.teamStatsReliable === false`) keeps its
+  result in the form chart but gives no xG bar and no xG to the means, as `clubSummary` leaves it out of the season.
+
+## 82. The competition page and the archives in the spirit of the match page and the home (hugo, 26 Nov 2026, 16 h 34 « refaire le design de la page compétition et archives comme on a refait la page match et accueil »; mock-up https://claude.ai/artifact/8DpjahVVH1hHCaZ7oviEHW; 27 Nov 2026, 16 h 24 « c'est super » on piste B, « faut que la card classement etc soit même taille que l'ensemble des card de droite », « si j'ai 20 saisons ça peut être le bordel sur tous les sélecteurs de saison »; 16 h 38 « je suis d'accord avec la version A pour les saisons »; 16 h 47 « applique-le à tous les season selector du site»)
 
 - **The head** (`EditionHeader.jsx`, page mode through `EditionPageProvider`, only on /competitions): the page's title is the competition, its logo and its name (h1); on its right the home's bar, one 40 px track: Saison · Compétition · Archives. The views (Classement, Matchs, Projection, Joueurs…) under the title, out of the card, in the home's track. Elsewhere (the match page's « Classement » tab) the head stays inside the card, with its arrows.
 - **Compétition** opens the home's panel of tiles (`CompetitionSwitcher`): « À la une » (or « Mes compétitions », § 78) and « Toutes » (every competition by country, the former « Toutes les compétitions » page), a search over every competition, the current one pressed; a tile opens its page at once (no « Appliquer »). The row of ten cards and the directory page are gone. A cup outside « À la une » keeps a way back (« ← Compétitions »).
@@ -6226,7 +6366,7 @@ K6d a finished match's « Avant-match » has no « Absents » card. Red before (
 - **Phone**: the bar spans the width without cutting its words; a menu is a sheet from the bottom; no sideways scroll.
 - Unchanged: the blocks and their data, the page of a match to come (§ 70), the absent players (§ 79), the logos.
 - Test: `tests/e2e/competitions-archives.e2e.mjs` C1 to C9 and X1 (written with the change, red on main 1e22161).
-- **81a** a season chosen deep in a long list (the archives' 1932/1933) out of sight on the next opening: the list measured itself before the dialog opened (Codex on #262); it now measures on the next frame. C4c, red before (scrollTop 0), green after.
-- **81b** a big empty space in the standings' card under the table (hugo, 27 Nov 2026, 16 h 59 « le super gap que tu as laissé sous le classement »): the card stretched to the column, so the column measured the stretched card and never trimmed its lists (4 next + 5 results, 403 px empty). `CompetitionHighlights` now measures the table and its legend without the stretch; the column trims to them (2 + 2 on Ligue 1) and its last card takes the rest of a row. C3 now also asks no empty space under the table (≤ 2 px): 0 after.
-- **81c** the panel's search found a competition by its shown name and country only: « Carabao Cup », « Copa del Rey », « DFB-Pokal », « AFCON », « Mondial » found nothing, which the former directory found (Codex on #262). It searches through `competitionSearchText` (the other names) and `normalizeCompetitionQuery` (apostrophes) again. C5 asks « mondial » → Coupe du monde: red before (nothing), green after.
-- **81d** an empty strip under the last result (hugo, 27 Nov 2026, 17 h 04 « remplis, la y'en a 2 mais y'a un gap »): less than a row was left. The results' rows now share the card's rest evenly (each one centred), their height is measured on their content, and the number of next matches is worked out from the sizes in one go (`upcomingLimitFor`): the former step by step rule stopped at 1 + 3 or 2 + 2 on the same page, by timing. Ligue 1: 2 + 2, four loads alike; Premier League 3 + 2. C3 asks no strip under the last result (≤ 2 px): 0.
+- **82a** a season chosen deep in a long list (the archives' 1932/1933) out of sight on the next opening: the list measured itself before the dialog opened (Codex on #262); it now measures on the next frame. C4c, red before (scrollTop 0), green after.
+- **82b** a big empty space in the standings' card under the table (hugo, 27 Nov 2026, 16 h 59 « le super gap que tu as laissé sous le classement »): the card stretched to the column, so the column measured the stretched card and never trimmed its lists (4 next + 5 results, 403 px empty). `CompetitionHighlights` now measures the table and its legend without the stretch; the column trims to them (2 + 2 on Ligue 1) and its last card takes the rest of a row. C3 now also asks no empty space under the table (≤ 2 px): 0 after.
+- **82c** the panel's search found a competition by its shown name and country only: « Carabao Cup », « Copa del Rey », « DFB-Pokal », « AFCON », « Mondial » found nothing, which the former directory found (Codex on #262). It searches through `competitionSearchText` (the other names) and `normalizeCompetitionQuery` (apostrophes) again. C5 asks « mondial » → Coupe du monde: red before (nothing), green after.
+- **82d** an empty strip under the last result (hugo, 27 Nov 2026, 17 h 04 « remplis, la y'en a 2 mais y'a un gap »): less than a row was left. The results' rows now share the card's rest evenly (each one centred), their height is measured on their content, and the number of next matches is worked out from the sizes in one go (`upcomingLimitFor`): the former step by step rule stopped at 1 + 3 or 2 + 2 on the same page, by timing. Ligue 1: 2 + 2, four loads alike; Premier League 3 + 2. C3 asks no strip under the last result (≤ 2 px): 0.
