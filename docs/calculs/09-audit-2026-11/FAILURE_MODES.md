@@ -6421,6 +6421,13 @@ Codex's second review (on f856ef3, two findings, both real, red before and green
 - Unchanged: the data and the reads, every tab's content and charts, the tabs' names and their address (`clubView`, `nationView`), the report, the absent players (§ 59, § 79).
 - Tests: `tests/e2e/team-pages.e2e.mjs` (written before the code, red on main), `club-page.e2e.mjs` and `nation-page.e2e.mjs` adapted where they read the column.
 
+### 86.1 The club's name cut at a laptop's width (found on the site after the merge, 27 Nov 2026)
+
+- **What was there**: the head's top row was a grid, the name in a shrinking column and the bar beside it down to 900 px. At 1024 px the bar left the name 257 px of its 304: « Paris Saint-Ger… ».
+- **Now**: the top row wraps. The name keeps its whole width; when the bar does not fit beside it, the bar goes under it, at the right. Under 900 px and on a phone, as before.
+- Failure mode: a long name cut, the bar over the name, the page scrolling sideways at a laptop's width.
+- Test: `team-pages.e2e.mjs` H11 at 1024, 1180 and 1280 (red on main f04c07b at 1024, green after).
+
 ## 87. The players' pages and the rankings in the spirit of the home and the competition page (hugo, 27 Nov 2026, 19 h 27 « attaquons les autres pages […] joueurs/power ranking/ballon d'or […] cautious mais à la fois innovant, tout en gardant une certaine essence de ce que l'on a actuellement »; mock-up https://claude.ai/artifact/QoP4LsHw9q64zrwcvyzhYK; 20 h 56 « je suis d'accord avec tous les choix recommandés » (piste B), « pour joueur cette partie me gêne, avoir tous ses filtres sur 2 lignes je trouve ça mauvais » on the player's tabs above its filters; GitHub #273, VI-176; written before the tests)
 
 - **What was there**: the Ballon d'Or's title centred above a podium of three steps of different heights cut by grey lines, its ranks 4 to 30 in two bare tables, the season alone under the title; the Power Ranking's Joueurs / Clubs and positions in square blocks, a table with grey lines, the score as a bare number and no crests; the players' directory with its search and filters in rectangles on their own line under the title, square tabs, the Score Vega and the Note Vega as blue squares; a player's page with a left column (identity, facts, value, Vega index, positions, availability, honours, actions) longer than the page, leaving a gap at the bottom, the tabs underlined and the filters on a second line under them.
