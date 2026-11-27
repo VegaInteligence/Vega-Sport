@@ -77,24 +77,25 @@ async function visit(pathname, { preferences = {}, favourites = [], session = nu
 }
 const shot = (page, name, selector) =>
   (selector ? page.locator(selector).first().screenshot({ path: path.join(out, `${name}.png`) }) : page.screenshot({ path: path.join(out, `${name}.png`) })).catch(() => {});
-const spotlight = (page) => page.locator('.league-spotlight-item[aria-pressed="true"] strong').first().textContent({ timeout: 30000 }).catch(() => null);
+// § 80: the competition the page opens on is its title (the row of cards gave way to the bar).
+const spotlight = (page) => page.locator(".edition-head--page h1.edition-name").first().textContent({ timeout: 30000 }).then((t) => t.trim()).catch(() => null);
 
 // ---------- P4 / P11: the competition the page opens on ----------
 {
   let v = await visit("/competitions", { favourites: [{ kind: "clubs", id: frenchClub, name: "Club" }], visitorCountry: "GB", tag: "P4" });
   let name = await spotlight(v.page);
   check("P4 a French favourite club, detected GB, nothing saved → Ligue 1", "Ligue 1", name, name === "Ligue 1");
-  await shot(v.page, "04-competitions-favori", ".league-spotlight");
+  await shot(v.page, "04-competitions-favori", ".edition-head--page");
   await v.context.close();
   v = await visit("/competitions", { visitorCountry: "GB", tag: "P4-none" });
   name = await spotlight(v.page);
   check("P4 without favourite nor country, detected GB → Premier League (as before)", "Premier League", name, name === "Premier League");
-  await shot(v.page, "04-competitions-sans-favori", ".league-spotlight");
+  await shot(v.page, "04-competitions-sans-favori", ".edition-head--page");
   await v.context.close();
   v = await visit("/competitions", { preferences: { homeCountry: "FRA" }, visitorCountry: "GB", tag: "P11" });
   name = await spotlight(v.page);
   check("P11 homeCountry FRA, detected GB → Ligue 1", "Ligue 1", name, name === "Ligue 1");
-  await shot(v.page, "11-competitions-pays", ".league-spotlight");
+  await shot(v.page, "11-competitions-pays", ".edition-head--page");
   await v.context.close();
   v = await visit("/competitions", { preferences: { homeCountry: "none" }, visitorCountry: "GB", tag: "P11-none" });
   name = await spotlight(v.page);

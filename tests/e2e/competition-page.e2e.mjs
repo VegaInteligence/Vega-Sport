@@ -3,7 +3,7 @@
 // Written before the code, from the product review of 23 Nov 2026.
 //
 // Failure modes and expected outcomes:
-//  H1 League (Ligue 1) and featured cup (Champions League): the page title is « Compétitions à la une ».
+//  H1 League (Ligue 1) and featured cup (Champions League): the page title is the competition, one h1 (§ 80).
 //  H2 Neither has a « ← … » line between the row of competitions and the edition's header: the
 //     competition's card follows the row directly, the same for both (desktop and phone).
 //  S1 While the page loads (every API response delayed), the competition skeleton is shown and the
@@ -95,7 +95,8 @@ async function open(ctx, url, tag) {
 const ready = (page, timeout = 60000) => page.waitForFunction(() => document.querySelector("#main")?.getAttribute("data-page-ready") === "true" && !document.querySelector("#main [data-page-loading]"), null, { timeout, polling: 50 });
 const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 const shot = (page, name, fullPage = false) => page.screenshot({ path: path.join(out, `${name}.png`), fullPage });
-const selectedSpotlight = (page) => page.locator('.league-spotlight-item[aria-pressed="true"] strong').first().textContent().catch(() => null);
+// § 80: the competition shown is the page's title.
+const selectedSpotlight = (page) => page.locator(".edition-head--page h1.edition-name").first().textContent().then((t) => t.trim()).catch(() => null);
 
 // Warm the dev server's routes so timings measure the page, not compilation.
 {
@@ -112,17 +113,19 @@ for (const kind of ["desktop", "phone"]) {
     const page = await open(ctx, address({ id }), kind);
     await ready(page);
     const state = await page.evaluate(() => {
-      const spotlight = document.querySelector(".league-spotlight");
+      // § 80: one header, the competition's: its h1 is the page's only title, the content right under it.
+      const head = document.querySelector(".edition-head--page");
       return {
         title: document.querySelector("#main h1")?.textContent.trim(),
+        titles: document.querySelectorAll("#main h1").length,
         returnLine: document.querySelectorAll("#main .cup-return").length,
-        afterRow: spotlight?.nextElementSibling?.className || null,
+        afterRow: head?.nextElementSibling?.className || head?.parentElement?.nextElementSibling?.className || null,
         edition: document.querySelector(".edition-head .edition-name")?.textContent.trim(),
       };
     });
-    if (kind === "desktop") check(`H1 title (${name})`, "Compétitions à la une", state.title, state.title === "Compétitions à la une");
-    check(`H2 no return line, card after the row (${name}, ${kind})`, { returnLine: 0, afterRow: "competition-detail-layout…" }, state,
-      state.returnLine === 0 && /^competition-detail-layout/.test(state.afterRow || "") && Boolean(state.edition));
+    if (kind === "desktop") check(`H1 title (${name})`, "the competition, one h1", state, state.titles === 1 && state.title === state.edition);
+    check(`H2 no return line, content after the head (${name}, ${kind})`, { returnLine: 0, afterRow: "competition-detail-layout… or the cup's card" }, state,
+      state.returnLine === 0 && /competition-detail-layout|cup-detail/.test(state.afterRow || "") && Boolean(state.edition));
     await shot(page, `header-${name}-${kind}`);
     await page.close();
   }
@@ -184,7 +187,7 @@ for (const kind of ["desktop", "phone"]) {
   await ctx.unroute("**/api/visitor-country");
   await ctx.route("**/api/visitor-country", (route) => route.fulfill({ status: 200, contentType: "application/json", body: '{"country":null}' }));
   const next = await open(ctx, address(), "next visit");
-  await next.locator('.league-spotlight-item[aria-pressed="true"]').first().waitFor({ timeout: 60000 }).catch(() => {});
+  await next.locator(".edition-head--page h1.edition-name").first().waitFor({ timeout: 60000 }).catch(() => {});
   const chosen = await selectedSpotlight(next);
   check("F3 next visit: the kept country chooses LaLiga", "LaLiga", chosen, chosen === "LaLiga");
   await next.close();
