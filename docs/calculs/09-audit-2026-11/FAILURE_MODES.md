@@ -6220,3 +6220,4 @@ K6d a finished match's « Avant-match » has no « Absents » card. Red before (
 - **Phone**: the bar spans the width without cutting its words; a menu is a sheet from the bottom; no sideways scroll.
 - Unchanged: the blocks and their data, the page of a match to come (§ 70), the absent players (§ 79), the logos.
 - Test: `tests/e2e/competitions-archives.e2e.mjs` C1 to C9 and X1 (written with the change, red on main 1e22161).
+- **80a** a season chosen deep in a long list (the archives' 1932/1933) out of sight on the next opening: the list measured itself before the dialog opened (Codex on #262); it now measures on the next frame. C4c, red before (scrollTop 0), green after.

@@ -34,18 +34,23 @@ export function seasonDecades(options) {
 export function SeasonChoices({ options, value, onChange, label = "Saison" }) {
   const list = useRef(null);
   const groups = seasonDecades(options);
+  // Measured on the next frame: this effect runs before SettingsPicker's, which opens the dialog (showModal), so
+  // the list has no height yet here (Codex on #262). The frame still comes before the first paint.
   useLayoutEffect(() => {
-    const box = list.current;
-    const chosen = box?.querySelector('[aria-pressed="true"]');
-    if (!groups || !chosen || box.scrollHeight <= box.clientHeight) return;
-    const top =
-      chosen.getBoundingClientRect().top -
-      box.getBoundingClientRect().top +
-      box.scrollTop;
-    box.scrollTop = Math.max(
-      0,
-      top - (box.clientHeight - chosen.offsetHeight) / 2,
-    );
+    const frame = requestAnimationFrame(() => {
+      const box = list.current;
+      const chosen = box?.querySelector('[aria-pressed="true"]');
+      if (!chosen || box.scrollHeight <= box.clientHeight) return;
+      const top =
+        chosen.getBoundingClientRect().top -
+        box.getBoundingClientRect().top +
+        box.scrollTop;
+      box.scrollTop = Math.max(
+        0,
+        top - (box.clientHeight - chosen.offsetHeight) / 2,
+      );
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
   const pill = (option) => (
     <button

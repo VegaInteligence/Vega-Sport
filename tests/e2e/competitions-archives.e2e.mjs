@@ -225,6 +225,28 @@ await run("archives", async () => {
   });
   await page.screenshot({ path: join(out, "archives-saisons.png") });
   check("C4b archives' seasons", "many seasons: by decade, the list scrolls inside ≤ 360 px", many, many.count >= 9 && many.grouped && many.height <= 361 && many.scrolls);
+  // Codex on #262: the list measured itself before the dialog opened, so an old season chosen far down was out of
+  // sight on the next opening. Choose one deep in the list, reopen: it is in view.
+  const deep = page.locator('dialog[data-pane="season"] .home-settings-season').nth(Math.floor(many.count * 0.6));
+  const chosenSeason = await deep.textContent();
+  await deep.click();
+  await page.waitForTimeout(1500);
+  if (await page.locator('dialog[data-pane="season"]').count()) await page.keyboard.press("Escape");
+  await page.locator(".archive-bar .settings-picker").nth(0).locator("button").click();
+  await page.waitForTimeout(400);
+  const reopened = await page.evaluate(() => {
+    const list = document.querySelector('dialog[data-pane="season"] .home-settings-seasons');
+    const chosen = list?.querySelector('[aria-pressed="true"]');
+    const box = list?.getBoundingClientRect(), c = chosen?.getBoundingClientRect();
+    return {
+      chosen: chosen?.textContent.trim(),
+      scrollTop: list && Math.round(list.scrollTop),
+      inView: Boolean(c && box && c.top >= box.top - 1 && c.bottom <= box.bottom + 1),
+    };
+  });
+  await page.keyboard.press("Escape");
+  check("C4c reopened on the chosen season", `${chosenSeason?.trim()} chosen deep in the list, in view on the next opening`, reopened,
+    reopened.chosen === chosenSeason?.trim() && reopened.scrollTop > 0 && reopened.inView);
   await context.close();
 });
 if (archivedMatch) await run("archived match", async () => {
