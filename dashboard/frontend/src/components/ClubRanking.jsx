@@ -13,10 +13,11 @@ function editionLabel(edition) {
   return `${edition.period}${editionYear(edition.edition) === String(ending) ? " · en cours" : ""}`;
 }
 
-export default function ClubRanking({ clubId }) {
+export default function ClubRanking({ clubId, title = "Classement UEFA", before = null }) {
   const result = useResource(`club-ranking:${clubId}`, () => clubRanking(clubId));
   return (
-    <Card fold title="Classement UEFA" className="club-ranking">
+    <Card fold title={title} className="club-ranking">
+      {before}
       <AsyncState resource={result}>
         {(rows) =>
           // A club never ranked (or not matched to the UEFA list) has no table of empty rows.

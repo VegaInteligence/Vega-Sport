@@ -144,11 +144,13 @@ export const matchDayAnswer = (id) => ({
   ] },
 });
 
-/** WCAG contrast of two CSS colours (rgb()/rgba() strings as getComputedStyle gives them). */
+/** WCAG contrast of two CSS colours (rgb()/rgba() strings as getComputedStyle gives them, or `color(srgb r g b)` in
+ * 0–1, which a color-mix() background computes to). */
 export function contrast(a, b) {
   const lum = (c) => {
-    const [r, g, bl] = (c.match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map((v) => {
-      const s = Number(v) / 255;
+    const unit = /^color\(srgb/.test(c) ? 1 : 255;
+    const [r, g, bl] = (c.replace(/^color\(srgb/, "").match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map((v) => {
+      const s = Number(v) / unit;
       return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
     });
     return 0.2126 * r + 0.7152 * g + 0.0722 * bl;

@@ -2,7 +2,7 @@
 
 import { CompetitionPicker } from "./CompetitionPicker.jsx";
 /* The nation pages (VI-18, approved mock-up of 16 Nov 2026): the national teams ranked by their
- * Vega Elo, and one nation's page built like a club's: its identity rail, then its season, its
+ * Vega Elo, and one nation's page built like a club's: its head (§ 86), then its season, its
  * Elo, its matches, the players of its latest tournament and its runs in the major tournaments.
  * Everything comes from /api/nations: a fact the base lacks (a coach, a score of an old final)
  * is left out, never filled in. */
@@ -20,8 +20,9 @@ import { Empty, Media, Segments, Skeleton } from "./UI.jsx";
 import { BookmarkButton, ResearchTabs } from "./ResearchUI.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { nationsOpeningScope } from "../services/preference-effects.js";
-import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
-import { Card, dateShort, fmtNum, Kpis } from "./ClubScoutUI.jsx";
+import { Card, dateShort, fmtNum } from "./ClubScoutUI.jsx";
+import TeamHero from "./TeamHero.jsx";
+import SeasonSelect from "./SeasonSelect.jsx";
 import { LineChart, TipBody } from "./PlayerScoutCharts.jsx";
 import FillChart from "./FillChart.jsx";
 import NationalFlag from "./NationalFlag.jsx";
@@ -51,7 +52,6 @@ import {
 import { matchCarousel } from "../services/nation-carousel.js";
 import { scorerLine } from "../services/international-scorers.js";
 import { trophyArt } from "../services/trophy-art.js";
-import rail from "./ClubScoutTabs.module.css";
 import s from "./Nations.module.css";
 
 /** An axis date: « 9 juil. », or « juil. 24 » when the points span several years. */
@@ -759,8 +759,20 @@ function MatchCarousel({ nation }) {
   );
 }
 
-function NationRail({ nation, last, backHref }) {
-  const more = usePhoneFold();
+/** A nation's season, chosen in the head's bar: the page reads the nation in it (as a club's, § 86). */
+function NationSeasonSelect({ season }) {
+  const f = useFootball();
+  const seasons = (f?.manifest?.seasons || []).map((item) => item.id);
+  if (!seasons.length || !f.changeSeason) return null;
+  return <SeasonSelect value={season || f.season} seasons={seasons} onChange={f.changeSeason} bare />;
+}
+
+/**
+ * The nation's head (FAILURE_MODES § 86, piste B; the identity column before): the flag, the name, « Sélection
+ * nationale » and its latest competition; the season and « Favoris » at the right; under them the Vega ranking, the
+ * Elo, the record, the goals, the form and the last major tournament. The overview's strip that repeated them goes.
+ */
+function NationHero({ nation, last }) {
   const played = nation.matches.filter(
     (m) => m.status === "finished" && m.homeScore != null,
   );
@@ -771,137 +783,92 @@ function NationRail({ nation, last, backHref }) {
     .reverse();
   const r = nation.ranking,
     rec = nation.record;
+  const lastGoals = last
+    ? last.games.reduce(
+        (sum, g) => {
+          const side = sideOf(g, nation.id);
+          return side.own == null
+            ? sum
+            : [sum[0] + side.own, sum[1] + side.other];
+        },
+        [0, 0],
+      )
+    : null;
   return (
-    <aside
-      className={rail.rail}
-      aria-label="Identité de la sélection"
-      {...more.fold}
-    >
-      <BackLink
-        className={`inline-link ${rail.railBack}`}
-        href={backHref}
-        label="Toutes les nations"
-      />
-      <div className={rail.identity}>
-        <NationMark
-          nation={nation}
-          className={`${rail.bigCrest} ${s.bigMark}`}
+    <TeamHero
+      label="Identité de la sélection"
+      mark={<NationMark nation={nation} className={`team-hero-crest ${s.bigMark}`} />}
+      name={nationName(nation.name)}
+      sub={[
+        "Sélection nationale",
+        current &&
+          [competitionLabel(current), roundLabel(current.round)]
+            .filter(Boolean)
+            .join(" · "),
+      ]}
+      segments={<NationSeasonSelect season={nation.season} />}
+      actions={
+        <BookmarkButton
+          kind="nations"
+          id={nation.id}
+          name={nationName(nation.name)}
+          imageUrl={nation.imageUrl}
+          season={nation.season}
         />
-        <h1 className={rail.name}>{nationName(nation.name)}</h1>
-        <p className={rail.sub}>Sélection nationale</p>
-        {current && (
-          <div className={rail.chips}>
-            <span className={rail.chip}>
-              {[competitionLabel(current), roundLabel(current.round)]
-                .filter(Boolean)
-                .join(" · ")}
-            </span>
-          </div>
-        )}
-      </div>
-      <div className={`${rail.railSection} phone-fold-row`}>
-        <PhoneFoldToggle
-          {...more.toggle}
-          label="Classement, bilan et tournois"
-        />
-      </div>
-      <div className={`${rail.railSection} phone-fold-part`}>
-        <div className={rail.railTitle}>
-          <div className={rail.railName}>
-            <Term hint="Rang parmi les sélections classées par l’Elo Vega sur la saison.">
-              Classement Vega
-            </Term>
-          </div>{" "}
-          <span>{nation.season}</span>
-        </div>
-        <div className={rail.position}>
-          <strong>{r ? ordinal(r.rank) : "—"}</strong>
-          <span>
-            {r
-              ? `sur ${nation.ranked} sélections classées`
-              : "non classée cette saison"}
-            <small>
-              {`Elo ${fmtNum(r ? r.elo : nation.elo)}${r?.eloChange != null ? ` · ${signed(r.eloChange)} cette saison` : ""}`}
-            </small>
-          </span>
-        </div>
-      </div>
-      <div className={`${rail.railSection} phone-fold-part`}>
-        <div className={rail.railTitle}>
-          <div className={rail.railName}>Bilan</div>{" "}
-          <span>{nation.season}</span>
-        </div>
-        {rec.played ? (
-          <dl className={s.facts}>
-            <div>
-              <dt>
-                <Term>Bilan</Term>
-              </dt>
-              <dd>
-                {rec.wins}-{rec.draws}-{rec.losses}
-              </dd>
-              <small>
-                {rec.played} match{rec.played > 1 ? "s" : ""}
-              </small>
-            </div>
-            <div>
-              <dt>
-                <Term hint="Buts marqués et encaissés.">Buts</Term>
-              </dt>
-              <dd>
-                {rec.goalsFor}–{rec.goalsAgainst}
-              </dd>
-              <small>{signed(rec.goalsFor - rec.goalsAgainst, 0)}</small>
-            </div>
-          </dl>
-        ) : (
-          <p className={s.muted}>Aucun match joué cette saison.</p>
-        )}
-        {form.length > 0 && (
-          <>
-            <div className={rail.railTitle} style={{ marginTop: 14 }}>
-              <div className={rail.railName}>
-                <Term>Forme</Term>
-              </div>
-            </div>
-            <span
-              className={s.form}
-              aria-label="Derniers résultats, du plus ancien au plus récent"
-            >
+      }
+      figures={[
+        {
+          key: "rank",
+          label: "Classement Vega",
+          value: r ? ordinal(r.rank) : "—",
+          note: r ? `sur ${nation.ranked} sélections` : "non classée cette saison",
+          lead: true,
+        },
+        {
+          key: "elo",
+          label: "Elo Vega",
+          value: fmtNum(r ? r.elo : nation.elo),
+          note: r?.eloChange != null ? `${signed(r.eloChange)} cette saison` : null,
+          tone: r?.eloChange > 0 ? "up" : r?.eloChange < 0 ? "down" : undefined,
+          lead: true,
+        },
+        {
+          key: "record",
+          label: "Bilan",
+          value: rec.played ? `${rec.wins}-${rec.draws}-${rec.losses}` : "—",
+          note: rec.played ? `${rec.played} match${rec.played > 1 ? "s" : ""} · V · N · D` : "aucun match cette saison",
+        },
+        {
+          key: "goals",
+          label: "Buts",
+          value: rec.played ? `${rec.goalsFor}–${rec.goalsAgainst}` : "—",
+          note: rec.played ? "pour – contre" : null,
+        },
+        {
+          key: "form",
+          label: "Forme",
+          value: form.length ? (
+            <span className={s.form} aria-label="Derniers résultats, du plus ancien au plus récent">
               {form.map((side, i) => (
                 <b key={i} data-r={side.result || undefined}>
                   {side.result || "?"}
                 </b>
               ))}
             </span>
-          </>
-        )}
-      </div>
-      {last && (
-        <div className={`${rail.railSection} phone-fold-part`}>
-          <div className={rail.railTitle}>
-            <div className={rail.railName}>{last.label}</div>
-          </div>
-          <div className={rail.position}>
-            <strong>{last.stage}</strong>
-            <span>
-              {last.matches} match{last.matches > 1 ? "s" : ""}
-            </span>
-          </div>
-        </div>
-      )}
-      <div className={rail.railSection}>
-        <div className={`research-toolbar ${s.railActions}`}>
-          <BookmarkButton
-            kind="nations"
-            id={nation.id}
-            name={nationName(nation.name)}
-            imageUrl={nation.imageUrl}
-            season={nation.season}
-          />
-        </div>
-      </div>
-    </aside>
+          ) : (
+            "—"
+          ),
+          note: form.length ? `${form.length} dernier${form.length > 1 ? "s" : ""} match${form.length > 1 ? "s" : ""}` : null,
+          form: true,
+        },
+        {
+          key: "tournament",
+          label: last ? last.label : "Grand tournoi",
+          value: last ? last.stage : "—",
+          note: last ? `${last.matches} match${last.matches > 1 ? "s" : ""} · ${lastGoals[0]}–${lastGoals[1]}` : null,
+        },
+      ]}
+    />
   );
 }
 
@@ -947,53 +914,8 @@ function Overview({ nation, last, onTab }) {
   const results = nation.matches
     .filter((m) => m.status === "finished" && m.homeScore != null)
     .slice(0, MATCH_ROWS - upcoming.length);
-  const lastGoals = last
-    ? last.games.reduce(
-        (sum, g) => {
-          const side = sideOf(g, nation.id);
-          return side.own == null
-            ? sum
-            : [sum[0] + side.own, sum[1] + side.other];
-        },
-        [0, 0],
-      )
-    : null;
   return (
     <div className={s.stack}>
-      <Kpis
-        items={[
-          ["Matchs", rec.played, nation.season],
-          [
-            "Bilan",
-            rec.played ? `${rec.wins}-${rec.draws}-${rec.losses}` : "—",
-            "V · N · D",
-          ],
-          [
-            "Buts",
-            rec.played ? `${rec.goalsFor}–${rec.goalsAgainst}` : "—",
-            rec.played
-              ? `${fmtNum(rec.goalsFor / rec.played, 2)} – ${fmtNum(rec.goalsAgainst / rec.played, 2)} / match`
-              : null,
-          ],
-          [
-            "Elo Vega",
-            fmtNum(r ? r.elo : nation.elo),
-            r?.eloChange != null ? `${signed(r.eloChange)} cette saison` : null,
-          ],
-          [
-            "Rang Vega",
-            r ? ordinal(r.rank) : "—",
-            r ? `sur ${nation.ranked} sélections` : "non classée",
-          ],
-          [
-            last ? last.label : "Grand tournoi",
-            last ? last.stage : "—",
-            last
-              ? `${last.matches} matchs · ${lastGoals[0]}–${lastGoals[1]}`
-              : null,
-          ],
-        ]}
-      />
       {upcoming.length || results.length ? (
         <div className={s.grid2}>
           <EloCard nation={nation} />
@@ -1047,7 +969,7 @@ function Overview({ nation, last, onTab }) {
               className={s.link}
               onClick={() => onTab("players")}
             >
-              Les {nation.players.rows.length} joueurs →
+              Les {nation.players.rows.length} joueurs
             </button>
           }
         >
@@ -1107,17 +1029,7 @@ export function NationProfile({ id }) {
     />
   );
   if (nation.loading && !value)
-    return (
-      <NationSkeleton
-        back={
-          <BackLink
-            className="inline-link"
-            href={backHref}
-            label="Toutes les nations"
-          />
-        }
-      />
-    );
+    return <NationSkeleton />;
   if (nation.error)
     return (
       <>
@@ -1137,9 +1049,9 @@ export function NationProfile({ id }) {
   const last = lastTournament(value);
   return (
     <>
-      <div className={rail.layout}>
-        <NationRail nation={value} last={last} backHref={backHref} />
-        <div className={rail.main}>
+      <div className="team-layout">
+        <NationHero nation={value} last={last} />
+        <div>
           <ResearchTabs
             animated
             label="Sélection"

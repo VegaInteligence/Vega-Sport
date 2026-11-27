@@ -14,6 +14,7 @@ export default function NationsPage() {
       path="/nations/"
       title="Nations"
       hideHeading={Boolean(id)}
+      className={id ? "team-page nation-page" : ""}
       performanceComparison={false}
       loader={id ? <NationSkeleton /> : undefined}
     >

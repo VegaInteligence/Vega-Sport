@@ -6,12 +6,12 @@
 //  H1 The nation's name is the page's main heading (`#main h1`), so the « ← » link of a page reached
 //     from it is named after the nation: a click on the page stores « France » under its history entry
 //     (sessionStorage `vega:back-labels`).
-//  B1 The back link « ← Toutes les nations » is at the top of the identity column.
+//  B1 The page opens on its head (§ 86): no « ← » above it, as on the competition page (the column held one before).
 //  B2 Unknown nation (404): the empty state keeps the back link.
 //  B3 The nation's read fails (500): the error state keeps the back link.
 //  L1 Loading (every API response held back): the page never shows the logo; it shows the nation's
 //     skeleton ([data-nation-skeleton]) until the name appears.
-//  L2 Phone: the skeleton's identity column sits above its main column (stacked, no overlap).
+//  L2 Phone: the skeleton's head sits above its main column (stacked, no overlap).
 //  T1 Three tabs: Vue d'ensemble, Matchs, Joueurs (no « Historique »).
 //  T2 The open tab is in the address: « Matchs » adds nationView=matches, a reload opens Matchs,
 //     « Vue d'ensemble » removes the parameter.
@@ -28,10 +28,10 @@
 //  O4 « Les joueurs » in the overview: 5 rows and the link to the whole table, which opens « Joueurs »
 //     with more rows.
 //  O5 « Grands tournois » stays in the overview.
-//  S1 « Enregistrer » in the identity column; a click turns it to « Enregistré » and stores the nation
+//  S1 « Favoris » in the head (« Enregistrer » in the column before § 86); a click turns it to « Dans vos favoris » and stores the nation
 //     under kind « nations » (never « clubs »), keeping an already saved club.
 //  S2 /nations: « Mes sélections » beside the list's filters lists the saved nation only.
-//  S3 Phone: the save button is visible without opening the identity column's fold.
+//  S3 Phone: the save button is visible in the head.
 //  P1 Phone: the heading, three tabs and « Prochains matchs »; no sideways page scroll.
 //  X1 No page error in the console during the whole run.
 // Absents (lot 2 of « Blessés et suspendus », mock-up validated on 24 Nov 2026), the « Joueurs » tab; the answers of
@@ -210,9 +210,8 @@ run: try {
   let page = await open(ctx, nationUrl());
   const h1 = ((await page.locator("#main h1").first().textContent().catch(() => "")) || "").trim();
   check("H1-heading", `#main h1 « ${NAME} »`, h1 || "(no h1)", h1 === NAME);
-  const back = ((await backLink(page).textContent().catch(() => "")) || "").trim();
-  check("B1", "« ← Toutes les nations » at the top of the identity column", back || "(none)",
-    /Toutes les nations/.test(back) && (await page.locator("aside [data-back]").count()) === 1);
+  const back = (await backLink(page).count()) ? ((await backLink(page).textContent().catch(() => "")) || "").trim() : "";
+  check("B1", "the head first, no « ← » above it", back || "(none)", !back && (await page.locator("header.team-hero").count()) === 1);
   const names = await tabNames(page);
   check("T1", "Vue d’ensemble · Matchs · Joueurs", names.join(" · "),
     names.length === 3 && names[0] === "Vue d’ensemble" && names[1] === "Matchs" && names[2] === "Joueurs");
@@ -304,16 +303,16 @@ run: try {
     }));
   });
   page = await open(ctx, nationUrl());
-  const save = page.locator("aside").getByRole("button", { name: new RegExp(`Enregistrer ${NAME}`) });
+  const save = page.locator("header.team-hero").getByRole("button", { name: new RegExp(`Ajouter ${NAME} aux favoris`) });
   const saveText = ((await save.innerText().catch(() => "")) || "").trim();
   if (saveText) await save.click();
   await page.waitForTimeout(300);
-  const savedText = ((await page.locator("aside .research-bookmark").first().innerText().catch(() => "")) || "").trim();
+  const savedText = ((await page.locator("header.team-hero .research-bookmark").first().innerText().catch(() => "")) || "").trim();
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("statarena.research.v1") || "null"));
   const entries = stored?.lists?.flatMap((l) => l.entries) || [];
-  check("S1", "Enregistrer → Enregistré; stored as kind nations, the saved club kept",
+  check("S1", "Favoris → Dans vos favoris; stored as kind nations, the saved club kept",
     `${saveText || "(no button)"} → ${savedText} · ${JSON.stringify(entries.map((e) => `${e.kind}:${e.id}`))}`,
-    saveText === "Enregistrer" && savedText === "Enregistré" &&
+    saveText === "Favoris" && savedText === "Dans vos favoris" &&
       entries.some((e) => e.kind === "nations" && e.id === NATION) &&
       !entries.some((e) => e.kind === "clubs" && e.id === NATION) &&
       entries.some((e) => e.kind === "clubs" && e.id === "t_41iFW3"));
@@ -395,7 +394,7 @@ run: try {
       const s = await page.evaluate(() => {
         const seen = (el) => Boolean(el && el.checkVisibility({ visibilityProperty: true, opacityProperty: true }));
         const skeleton = [...document.querySelectorAll("[data-nation-skeleton]")].find(seen);
-        const aside = skeleton?.querySelector("[data-skeleton-part=rail]")?.getBoundingClientRect();
+        const aside = skeleton?.querySelector("[data-skeleton-part=head]")?.getBoundingClientRect();
         const main = skeleton?.querySelector("[data-skeleton-part=main]")?.getBoundingClientRect();
         return {
           body: Boolean(document.body?.children.length),
@@ -420,7 +419,7 @@ run: try {
     check(`L1-${label}`, "never the logo; the nation's skeleton until the name",
       `${samples.length} samples · logo ${logo} · skeleton ${skeleton} · name ${samples.at(-1)?.h1 ? "shown" : "never"}`,
       samples.length > 0 && logo === 0 && skeleton > 0);
-    if (label === "phone") check("L2", "phone skeleton: identity column above the main column", String(stacked), stacked === true);
+    if (label === "phone") check("L2", "phone skeleton: the head above the main column", String(stacked), stacked === true);
     await page.close();
     await ctx.close();
   }
@@ -435,7 +434,7 @@ run: try {
   check("P1", "phone: heading, 3 tabs, « Prochains matchs », no sideways scroll",
     `h1 « ${phoneH1} » · ${phoneTabs.join(" · ")} · upcoming ${phoneUpcoming} · overflow ${overflow}px`,
     phoneH1 === NAME && phoneTabs.length === 3 && phoneUpcoming === 1 && overflow <= 0);
-  const phoneSave = page.locator("aside .research-bookmark").first();
+  const phoneSave = page.locator("header.team-hero .research-bookmark").first();
   check("S3", "phone: the save button visible with the fold closed", `visible ${await visible(phoneSave)}`, await visible(phoneSave));
   await shot(page, "overview-phone");
   await page.close();

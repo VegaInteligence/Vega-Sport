@@ -21,6 +21,7 @@ import "../src/navigation.css";
 import "../src/home-pills.css";
 import "../src/competitions-pills.css";
 import "../src/players-pills.css";
+import "../src/team-pages.css";
 import "../src/skeletons.css";
 import "../src/account.css";
 import "../src/legal.css";

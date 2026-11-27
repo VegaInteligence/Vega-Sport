@@ -372,6 +372,7 @@ export default function ClubsPage() {
       path="/clubs/"
       title="Clubs"
       hideHeading={Boolean(selected)}
+      className={selected ? "team-page club-page" : ""}
       loader={id ? <ClubSkeleton /> : undefined}
     >
       {selected ? (

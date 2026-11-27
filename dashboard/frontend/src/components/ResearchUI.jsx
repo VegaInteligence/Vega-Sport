@@ -263,13 +263,14 @@ export function BookmarkButton({
       className={`research-bookmark${selected ? " is-saved" : ""}${compact ? " icon-button" : " button button-secondary"}`}
       disabled={!research.ready}
       aria-pressed={selected}
-      aria-label={`${selected ? "Retirer" : "Enregistrer"} ${name} ${selected ? "de" : "dans"} ${research.currentList.name}`}
+      aria-label={`${selected ? "Retirer" : "Ajouter"} ${name} ${selected ? "des" : "aux"} favoris`}
       onClick={() =>
         research.toggleFavorite({ kind, id, name, imageUrl, season })
       }
     >
       <Icon name="bookmark" />
-      {!compact && (selected ? "Enregistré" : "Enregistrer")}
+      {/* « Favoris », not « Enregistrer » (hugo, 27 Nov 2026, § 86). */}
+      {!compact && (selected ? "Dans vos favoris" : "Favoris")}
     </button>
   );
 }

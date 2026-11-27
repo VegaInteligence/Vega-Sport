@@ -4,14 +4,14 @@
 // cards (France), on a desktop (1440×900), a wide screen (1920×1080) and a phone (iPhone 14).
 //
 // Failure modes and expected outcomes:
-//  I1 (inset) On each of the eight tabs, every card's content starts 16 px inside the card's own edge,
+//  I1 (inset) On each of the eight tabs, every card's content starts 22 px (16 px before § 86) inside the card's own edge,
 //     like the key-figure cells and the identity column. Today the cards are flush with their border.
-//  I2 (inset) The overview's last block (« Le club en bref ») follows the same 16 px.
-//  I3 (nation) The nation page's cards, the same component, follow the same 16 px.
+//  I2 (inset) The overview's last block (« Le club en bref ») follows the same inset.
+//  I3 (nation) The nation page's cards, the same component, follow the same inset.
 //  W1 (width) At 1920 px the club page is at most 1600 px wide, centred (equal margins ± 2 px).
 //  W2 (width) The same for the nation page, which shares the club page's columns.
 //  P1 (phone) No sideways scroll on the overview and the matches tab; a card's text starts no
-//     further than 18 px from the screen's edge (the page gutter, no inset added on top of it).
+//     further than 30 px from the screen's edge (the page gutter plus the card's 14 px, § 86; 18 px before).
 //  L1 (progressive) While the league's reads (the club's ranking) are held, the page is revealed:
 //     the club's name in the h1, its crest, the back link, and « Derniers matchs » with its rows.
 //  L2 (no provisional rank) While they are held, the identity column prints no rank (« 1er », « 5e »),
@@ -27,7 +27,7 @@
 //     no status line is inserted above them while the reference is read.
 //  F1 (clicks) The overview's « Derniers matchs » card has a « Tous les matchs » action that opens
 //     « Matchs et tendances » (tab selected, clubView=matches in the address).
-//  S1 (season) The identity column has a « Saison » selector, set to the page's season, listing the
+//  S1 (season) The head's bar (§ 86; the identity column before) has the season, set to the page's season, listing the
 //     published seasons.
 //  S2 (season) Choosing another season keeps the visitor on the club: the address keeps the club's
 //     id and names the season, the page names the club, and the clubs directory does not appear.
@@ -121,15 +121,18 @@ const insets = (page, root) =>
     const scope = document.querySelector(root);
     if (!scope) return [];
     const cards = [...scope.querySelectorAll("section, article")].filter((el) => el.tagName === "ARTICLE" || el.firstElementChild?.querySelector(":scope h2, :scope h3") || /^H[23]$/.test(el.firstElementChild?.tagName || ""));
-    // A card draws a line (its top border); a tab's own heading block (« Stats avancées ») does not.
+    // A card is drawn (its veil since § 86, its top border before); a tab's own heading block (« Stats avancées ») is not.
+    const drawn = (el) => parseFloat(getComputedStyle(el).borderTopWidth) > 0 || !/rgba\(0, 0, 0, 0\)|transparent/.test(getComputedStyle(el).backgroundColor);
     return cards
-      .filter((el) => el.getBoundingClientRect().width > 0 && parseFloat(getComputedStyle(el).borderTopWidth) > 0)
+      .filter((el) => el.getBoundingClientRect().width > 0 && drawn(el))
       .map((el) => {
         const title = el.querySelector("h2, h3, strong"), start = el.querySelector("h2, h3") || el.firstElementChild;
         return { title: (title?.textContent || "").trim().slice(0, 40), inset: Math.round(start.getBoundingClientRect().left - el.getBoundingClientRect().left) };
       });
   }, root);
-const allSixteen = (list) => list.length > 0 && list.every((c) => Math.abs(c.inset - 16) <= 1);
+// One inset for every card: 22 px since the cards sit on the veil (§ 86; 16 px before).
+const INSET = 22;
+const allSixteen = (list) => list.length > 0 && list.every((c) => Math.abs(c.inset - INSET) <= 1);
 async function scrollThrough(page) {
   await page.evaluate(async () => {
     for (let y = 0; y < document.body.scrollHeight; y += 500) {
@@ -350,10 +353,7 @@ await tab(page, "Statistiques").waitFor({ timeout: 60000 });
 const reference = await page.evaluate(() => {
   const cell = document.querySelector("#club-profile-panel [class*=kpis] > div");
   const kpi = cell ? Math.round(cell.querySelector("span").getBoundingClientRect().left - cell.getBoundingClientRect().left) : null;
-  const rail = document.querySelector('aside[aria-label="Identité du club"]');
-  const section = rail?.querySelectorAll(":scope > div")[1];
-  const railInset = section ? Math.round(section.firstElementChild.getBoundingClientRect().left - section.getBoundingClientRect().left) : null;
-  return { kpi, rail: railInset };
+  return { kpi };
 });
 const perTab = {};
 for (const name of TABS) {
@@ -366,12 +366,12 @@ for (const name of TABS) {
       const head = el.querySelector(".card-header") || el.firstElementChild;
       return { title: el.querySelector("h2")?.textContent.trim(), inset: Math.round(head.querySelector("h2").getBoundingClientRect().left - el.getBoundingClientRect().left) };
     }));
-    check("I2 « Le club en bref » at 16 px", "every card 16 px", info, allSixteen(info));
+    check("I2 « Le club en bref » at the cards' inset", `every card ${INSET} px`, info, allSixteen(info));
   }
 }
-const offenders = Object.fromEntries(Object.entries(perTab).map(([name, list]) => [name, list.filter((c) => Math.abs(c.inset - 16) > 1)]).filter(([, list]) => list.length));
-check("I1 every card of the eight tabs at 16 px, like the figures and the column", { kpi: 16, rail: 16, cards: 16 }, { reference, cards: Object.values(perTab).flat().length, offenders },
-  reference.kpi === 16 && reference.rail === 16 && Object.values(perTab).every((list) => list.length) && !Object.keys(offenders).length);
+const offenders = Object.fromEntries(Object.entries(perTab).map(([name, list]) => [name, list.filter((c) => Math.abs(c.inset - INSET) > 1)]).filter(([, list]) => list.length));
+check("I1 every card of the eight tabs at one inset (22 px), the key figures at 18", { kpi: 18, cards: INSET }, { reference, cards: Object.values(perTab).flat().length, offenders },
+  reference.kpi === 18 && Object.values(perTab).every((list) => list.length) && !Object.keys(offenders).length);
 
 // F1: back to the overview, then its « Tous les matchs ».
 await openTab(page, "Vue d’ensemble");
@@ -392,14 +392,22 @@ check("F1 « Tous les matchs » from the overview opens the matches tab", { acti
 await page.goto(clubUrl(), { waitUntil: "domcontentloaded" });
 await page.getByRole("heading", { level: 1, name: club.name }).waitFor({ timeout: 60000 });
 await settled(page);
-const rail = page.locator('aside[aria-label="Identité du club"]');
-const select = rail.getByRole("combobox", { name: "Saison" });
+// The season is the first segment of the head's bar (§ 86; the column's selector before), its seasons in a panel.
+const select = page.locator("header.team-hero .team-hero-track button[aria-haspopup='dialog']").first();
 const selects = await select.count();
-const seasonState = selects ? await select.first().evaluate((el) => ({ value: el.value, options: [...el.options].map((o) => o.value) })) : null;
-check("S1 a « Saison » selector in the club sheet", { value: season, includes: other }, seasonState, selects === 1 && seasonState.value === season && seasonState.options.includes(other));
+let seasonState = null;
+if (selects) {
+  await select.click();
+  await page.waitForTimeout(400);
+  seasonState = await page.evaluate(() => ({
+    value: document.querySelector("dialog[open] .home-settings-season[aria-pressed='true']")?.dataset.value,
+    options: [...document.querySelectorAll("dialog[open] .home-settings-season")].map((b) => b.dataset.value),
+  }));
+}
+check("S1 a « Saison » choice in the club's head", { value: season, includes: other }, seasonState, selects === 1 && seasonState?.value === season && seasonState.options.includes(other));
 await shot(page, "desktop-overview", false);
 if (selects) {
-  await select.first().selectOption(other);
+  await page.locator(`dialog[open] .home-settings-season[data-value="${other}"]`).click();
   await page.waitForTimeout(500);
   await page.waitForFunction(() => document.querySelector("#main")?.getAttribute("data-page-ready") === "true", null, { timeout: 60000 }).catch(() => {});
   await page.waitForFunction((name) => document.querySelector("#main")?.textContent.includes(name), club.name, { timeout: 60000 }).catch(() => {});
@@ -418,7 +426,7 @@ await settled(page);
 await scrollThrough(page);
 const nationCards = await insets(page, "#main [role=tabpanel], #main");
 const nationMain = nationCards.filter((c) => c.title);
-check("I3 the nation page's cards at 16 px", "every card 16 px", nationMain, allSixteen(nationMain));
+check("I3 the nation page's cards at the cards' inset", `every card ${INSET} px`, nationMain, allSixteen(nationMain));
 await shot(page, "desktop-nation");
 await page.close();
 await desktop.close();
@@ -426,8 +434,7 @@ await desktop.close();
 // ---------------------------------------------------------------- 1920: width cap
 const wide = await context({ viewport: { width: 1920, height: 1080 } });
 const capOf = (page) => page.evaluate(() => {
-  const rail = document.querySelector("main aside");
-  const layout = rail?.parentElement;
+  const layout = document.querySelector("main .team-layout");
   if (!layout) return null;
   const r = layout.getBoundingClientRect(), width = document.documentElement.clientWidth;
   return { width: Math.round(r.width), left: Math.round(r.left), right: Math.round(width - r.right) };
@@ -440,7 +447,7 @@ check("W1 club page ≤ 1600 px, centred, at 1920", { width: "≤ 1600", margins
 await shot(page, "wide-club", false);
 await page.close();
 page = await open(wide, `${base}/nations/?${new URLSearchParams({ season, id: nation })}`, "wide");
-await page.locator("main aside").first().waitFor({ timeout: 60000 });
+await page.locator("main .team-layout").first().waitFor({ timeout: 60000 });
 await settled(page);
 const nationCap = await capOf(page);
 check("W2 nation page ≤ 1600 px, centred, at 1920", { width: "≤ 1600", margins: "equal" }, nationCap, nationCap && nationCap.width <= 1600 && Math.abs(nationCap.left - nationCap.right) <= 2);
@@ -461,8 +468,9 @@ await openTab(page, "Matchs et tendances");
 const matchesOverflow = await overflow(page), matchesEdges = await phoneEdges();
 await shot(page, "phone-matches");
 const edges = [...overviewEdges, ...matchesEdges];
-check("P1 phone: no sideways scroll, cards at the page gutter", { overflow: 0, maxEdge: "≤ 18" }, { overviewOverflow, matchesOverflow, maxEdge: Math.max(...edges), cards: edges.length },
-  overviewOverflow <= 0 && matchesOverflow <= 0 && edges.length > 0 && Math.max(...edges) <= 18);
+// Since § 86 a card is drawn on the veil: the card sits at the page gutter and its text 14 px inside it.
+check("P1 phone: no sideways scroll, cards at the page gutter", { overflow: 0, maxEdge: "≤ 30" }, { overviewOverflow, matchesOverflow, maxEdge: Math.max(...edges), cards: edges.length },
+  overviewOverflow <= 0 && matchesOverflow <= 0 && edges.length > 0 && Math.max(...edges) <= 30);
 await page.close();
 await phone.close();
 
@@ -485,7 +493,7 @@ await page.waitForTimeout(800);
 const early = await page.evaluate(() => {
   const main = document.querySelector("#main");
   const h1 = main?.querySelector("h1");
-  const rail = main?.querySelector("aside") || main?.querySelector("[class*=club-skeleton-aside]");
+  const rail = main?.querySelector("header.team-hero, .team-hero-skeleton");
   const heading = [...(main?.querySelectorAll("h3") || [])].find((h) => h.textContent.trim().startsWith("Derniers matchs"));
   const card = heading?.closest("section");
   return {
@@ -493,7 +501,7 @@ const early = await page.evaluate(() => {
     h1: h1?.textContent.trim() || "",
     h1Box: h1 ? (({ left, top }) => ({ left: Math.round(left), top: Math.round(top + window.scrollY) }))(h1.getBoundingClientRect()) : null,
     crest: Boolean(rail?.querySelector("[data-media-state], img")),
-    back: [...(main?.querySelectorAll("a") || [])].some((a) => a.textContent.includes("Tous les clubs")),
+
     lastMatches: card ? (card.textContent.match(/\d+–\d+/g) || []).length : 0,
     railText: rail?.textContent || "",
     figures: main?.textContent.includes("Points / match") || false,
@@ -501,9 +509,10 @@ const early = await page.evaluate(() => {
 });
 const europeWhileHeld = hold.requests.filter((r) => r.path.startsWith("/api/clubs/europe")).length;
 await shot(page, "held-identity", false);
-check("L1 identity and last matches revealed while the ranking loads", { ready: true, readyAt: "< 8000 ms", h1: club.name, crest: true, back: true, lastMatches: "≥ 1" },
-  { ready: early.ready, readyAt, h1: early.h1, crest: early.crest, back: early.back, lastMatches: early.lastMatches },
-  early.ready && readyAt < 8000 && early.h1 === club.name && early.crest && early.back && early.lastMatches >= 1);
+// The head's « ← » left with the column (§ 86): the identity is the head's crest and name.
+check("L1 identity and last matches revealed while the ranking loads", { ready: true, readyAt: "< 8000 ms", h1: club.name, crest: true, lastMatches: "≥ 1" },
+  { ready: early.ready, readyAt, h1: early.h1, crest: early.crest, lastMatches: early.lastMatches },
+  early.ready && readyAt < 8000 && early.h1 === club.name && early.crest && early.lastMatches >= 1);
 const ranks = early.railText.match(/\b\d+(er|e)\b/g) || [];
 check("L2 no provisional rank, index or figure", { ranks: [], figures: false }, { ranks, figures: early.figures }, early.ready && !ranks.length && !early.figures);
 check("L4 the European comparison is read beside the league's reads", "≥ 1 request while they are held", europeWhileHeld, early.ready && europeWhileHeld >= 1);
