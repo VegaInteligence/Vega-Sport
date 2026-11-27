@@ -49,7 +49,7 @@ function HighlightMatch({ match, competition, season, upcoming }) {
 }
 
 // The standings card's own height, table and legend: on /competitions the card stretches to the column's foot
-// (§ 80), so its box would only give back the column's height and nothing would ever be trimmed (hugo, 27 Nov
+// (§ 81), so its box would only give back the column's height and nothing would ever be trimmed (hugo, 27 Nov
 // 2026: « le super gap que tu as laissé sous le classement »). The veil's stretch is taken off.
 function tableHeight(card) {
   const height = card.getBoundingClientRect().height;
@@ -62,7 +62,7 @@ function tableHeight(card) {
   return height - Math.max(0, veil.getBoundingClientRect().height - content);
 }
 
-// A result row's own height: on /competitions the rows share the card's rest (§ 80d), so their box is taller than
+// A result row's own height: on /competitions the rows share the card's rest (§ 81d), so their box is taller than
 // their content and would shrink the count at each measure.
 function rowHeight(row) {
   const first = row.firstElementChild, last = row.lastElementChild;

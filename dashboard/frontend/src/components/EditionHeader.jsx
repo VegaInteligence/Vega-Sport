@@ -7,7 +7,7 @@ import React, { createContext, useContext } from "react";
 import { Media } from "./UI.jsx";
 import SeasonSelect from "./SeasonSelect.jsx";
 
-/* The competition page (§ 80, piste B of https://claude.ai/artifact/8DpjahVVH1hHCaZ7oviEHW, hugo, 27 Nov 2026): the
+/* The competition page (§ 81, piste B of https://claude.ai/artifact/8DpjahVVH1hHCaZ7oviEHW, hugo, 27 Nov 2026): the
  * head is the page's title, the competition's logo and name, with the home's bar on its right (Saison · Compétition ·
  * Archives) and the views under it, out of the card. The page provides what the bar adds to the season (`bar`, a
  * node); the same components elsewhere (the match page's standings) keep their head inside the card. */

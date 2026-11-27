@@ -1,4 +1,4 @@
-/* The competition page and the archives (FAILURE_MODES § 80; piste B of the mock-up
+/* The competition page and the archives (FAILURE_MODES § 81; piste B of the mock-up
    https://claude.ai/artifact/8DpjahVVH1hHCaZ7oviEHW, chosen by hugo on 27 Nov 2026, 16 h 24 « c'est super », with
    two changes: the standings' card as tall as the column beside it, and a season menu that holds twenty seasons).
    The rules of the match page (match-pills.css, § 72) and of the home (home-pills.css, § 77): a pill for whatever is
@@ -390,7 +390,7 @@ html[data-theme="dark"]
   }
 }
 
-/* ================================================================= the archives (§ 80) */
+/* ================================================================= the archives (§ 81) */
 :root .archives-page .competition-back {
   display: inline-flex;
   align-items: center;

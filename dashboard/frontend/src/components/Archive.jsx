@@ -49,7 +49,7 @@ export function ArchiveResults({
       ? rows
       : rows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
   if (!rows.length) return <Empty>Aucun match pour cette sélection.</Empty>;
-  // § 80: one block a day, one line a match, the score in a pill; no table sliding sideways on a phone.
+  // § 81: one block a day, one line a match, the score in a pill; no table sliding sideways on a phone.
   const days = [];
   for (const match of visible) {
     const last = days[days.length - 1];
@@ -130,7 +130,7 @@ export function ArchiveResults({
   );
 }
 
-/** The page's title, with the archives' bar on its right (§ 80, piste B). */
+/** The page's title, with the archives' bar on its right (§ 81, piste B). */
 export function ArchiveHeading({ children }) {
   return (
     <div className="page-heading archive-heading">

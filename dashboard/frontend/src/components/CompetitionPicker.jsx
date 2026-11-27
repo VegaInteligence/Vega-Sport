@@ -217,7 +217,7 @@ export function FollowedCompetitionsPicker({ f, trigger }) {
   );
 }
 
-/* The competition page's choice of competition (§ 80, piste B): the home's panel of tiles, with the page's lists in
+/* The competition page's choice of competition (§ 81, piste B): the home's panel of tiles, with the page's lists in
    its track (« À la une » or « Mes compétitions », then « Toutes », grouped by country as the former « Toutes les
    compétitions » page was), the search over every competition, and a tile that opens its page at once. It replaces
    the row of ten cards and the directory page. */

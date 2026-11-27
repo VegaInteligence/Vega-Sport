@@ -1,4 +1,4 @@
-// E2E — the competition page and the archives, FAILURE_MODES § 80: piste B of the mock-up
+// E2E — the competition page and the archives, FAILURE_MODES § 81: piste B of the mock-up
 // https://claude.ai/artifact/8DpjahVVH1hHCaZ7oviEHW (hugo, 27 Nov 2026, 16 h 24 « c'est super »), with the standings'
 // card as tall as the column beside it and the seasons by decade from nine on (version A, hugo 16 h 38).
 //

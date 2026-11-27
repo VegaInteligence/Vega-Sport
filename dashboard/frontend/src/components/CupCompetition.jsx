@@ -199,7 +199,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
     setPage(1);
     onSeason?.(next);
   }
-  // On the competition page (§ 80) the head is the page's title, above the card.
+  // On the competition page (§ 81) the head is the page's title, above the card.
   const head = (
       <EditionHeader imageUrl={imageUrl} name={name} heading={heading} season={season} onSeason={pickSeason} label="Édition de la coupe"
         editions={(editions || competition.seasons.map((value) => ({ season: value, id: competition.id }))).map((edition) => ({ ...edition, label: editionLabel(competition, edition.season) }))}>

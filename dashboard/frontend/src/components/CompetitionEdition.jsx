@@ -263,7 +263,7 @@ export default function CompetitionEdition({
     competition?.imageUrl,
     artwork,
   );
-  // On the competition page (§ 80) the head is the page's title, above the card and the column beside it.
+  // On the competition page (§ 81) the head is the page's title, above the card and the column beside it.
   const head = editionHead && (
     <EditionHeader
       imageUrl={imageUrl}
