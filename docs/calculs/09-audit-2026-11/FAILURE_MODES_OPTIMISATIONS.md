@@ -541,13 +541,22 @@ Local measurements and query plans are in the external evidence directory `gh137
 
 Seen in production with 183 in service (Lambda request logs, Performance Insights and the worker's log, 26 Nov 17:55 UTC
 to 27 Nov 15:37 UTC; 38 conditional or HEAD probes of 27 Nov on `/api/standings` and `/api/players/{id}/transfers`, and
-the 9 conditional `/api/standings` requests the Lambda received by itself):
+the 9 conditional `/api/standings` requests the Lambda received by itself after its last Deploy). Corrected the
+evening of 27 Nov, once 184 was in service, from the Lambda's request log read over the receipts' whole life (26 Nov
+17:47 UTC, the first request of 183's Deploy, to 27 Nov 17:00 UTC, the Deploy of 184):
 
-- **No request answered by a receipt.** 47 of 47 made the receipt probe, found none current and built the answer: one
-  statement more than the base path each (`/api/standings` 2 for 1, the transfers 3 for 2), the same time (441 ms for
-  the standings). The worker logged no error and did prepare receipts (its standings statement: about 295 s of
-  database time over the period, the Lambda's own standings reads about 4 s).
-- **Why they are never current.** A standings or a cup selection names no scope (`scopeOf` gives none), so its version
+- **Few requests answered by a receipt: 6 of 80.** The first count held for its sample: the 38 probes and those 9
+  requests, 47 of 47, made the receipt probe, found none current and built the answer, one statement more than the
+  base path each (`/api/standings` 2 for 1, the transfers 3 for 2), the same time (441 ms for the standings). It was
+  written here as « no request answered by a receipt », which the whole period's log does not say. Of the 80
+  conditional `/api/standings` requests answered 304, 74 built the answer after the probe (two statements) and 6 were
+  answered by a receipt (one statement: 4.6, 7.5, 9.4, 15.6, 17.5 and 117 ms): two on 26 Nov (18:28 and 18:54 UTC),
+  four on 27 Nov (15:51 to 16:00 UTC, after the first reading). Two more conditional requests were answered 200 in
+  one statement (33 ms each): the log holds no method, so it cannot say what they were. No conditional request
+  reached the transfers or a cup edition in the period. The worker logged no error and did prepare receipts (its
+  standings statement: about 295 s of database time over the first reading's period, the Lambda's own standings
+  reads about 4 s): six reads of about 0.3 s spared, at that price and one statement more for 74 answers.
+- **Why they are seldom current.** A standings or a cup selection names no scope (`scopeOf` gives none), so its version
   counts each source table whole, and 182's map on a base migrated as production gives `api.standing_rows` the sources
   `core.matches`, `agg.standings`, `core.standings_official`, `core.teams`, `core.rounds`, `core.provider_ids`,
   `core.assets`, `core.competitions`, `core.competition_seasons`, `core.competition_zones` and `core.seasons`
@@ -556,7 +565,11 @@ the 9 conditional `/api/standings` requests the Lambda received by itself):
   all of them after each write: more work than the revalidations it would save »). The transfers' statements read
   shared tables whole as well (`core.provider_ids`, which every new match, player or club adds a row to, `core.teams`,
   `core.assets`, `core.provider_clubs`, `ops.provider_links`). `test_read_receipts.py` GH137R-c wrote it: « the
-  standings and the cups count their matches whole ».
+  standings and the cups count their matches whole ». The six answers fit it without proving it (the log names no
+  cause, the base was not read): five fell while the worker's Transfermarkt process was stopped (it died in a loop
+  until the Deploy of 27 Nov 16:39 UTC, FAILURE_MODES § 59.I: stopped 61 % of the period), 5 of the 29 answers 304 of
+  those times against 1 of the 51 while it ran. That process runs without a stop since: 1 in 51 is the nearer
+  measure of what the receipts gave with the collection whole.
 - **Why they are not prepared in time either.** A round prepares at most 20 selections in 4.5 s, shared by the stale
   receipts and five routes, while `ops.discover_read_receipts` moves each route's cursor past 20 editions or keys a
   round (up to 60 standings selections): most discovered selections are passed over until the next traversal, and
@@ -569,7 +582,31 @@ the 9 conditional `/api/standings` requests the Lambda received by itself):
 Decision (27 Nov 2026): the receipts are removed. The five routes carry few conditional requests (`/api/standings`:
 103 in the 8.5 h of 26 Nov before 183, 9 in the 16.7 h after the last Deploy), a receipt per selection cannot stay current without
 scopes per edition on every source (a trigger change on the standings', the teams' and the identities' tables), and
-preparing them anywhere but in the worker's image needs a second runtime holding the read API's code.
+preparing them anywhere but in the worker's image needs a second runtime holding the read API's code. The corrected
+count (6 of 80, not none) leaves it as it is. 184's header keeps the first wording (« no conditional request ever met
+a current receipt »): an applied migration's text is not changed (its checksum is held).
+
+Seen in production with 184 in service (Deploy 154 of `aebddf6`, 27 Nov 2026, 17:00:27 to 17:13:11 UTC; Lambda and
+worker logs, the services and the alarms read from 17:13 to 18:49 UTC):
+
+- **The Deploy.** The online run refused (exit 3), the services were stopped, the migrate task of 17:07 wrote
+  `migrations applied=1 total=189`, the worker and the backfill came back 1 of 1. Of the 219 requests the read API
+  answered meanwhile, none was a 5xx and none passed 5 s (the longest: `read.home`, 2 859 ms); the 15 of the
+  migration's minute answered under 78 ms (the rule « 184 never waits while it holds a table », seen from outside).
+- **After it.** 1 415 answers until 18:40 UTC (1 342 × 200, 64 × 304, 6 × 404, 3 × 409 from the home reads, as
+  before), no 5xx; no line naming a receipt, `mark_scoped_change` or an undefined function or table (42883, 42P01) in
+  the Lambda's log, none naming a receipt, an error or `data versions error` in the worker's; the 16 `vega-v2` alarms
+  OK, none changed state.
+- **The statements.** `/api/standings`: one statement for each of its 16 requests (46 of the 57 of the four hours
+  before made two). Its 304 costs the read again, the base commit's price: 322 ms at the median, 818 ms at the 95th
+  centile (6 answers), where five of the six receipts had answered in 5 to 17 ms. `/api/matchdays`: a 304 in one
+  statement and 6.2 ms at the median (10 answers), 9.1 ms (5) with 183: unchanged, its receipt was read in the same
+  statement.
+- **Not seen.** A conditional request on the transfers or a cup edition (none arrived; the five routes answered
+  200, 304 with their tag and a bodiless HEAD through CloudFront at 17:17 UTC). GH158-a on a real Deploy: Deploy 155
+  (`fb95f19`, 17:43 UTC) changed `backend/vega/rounds.py`, a file of the image, and built a new one as written; the
+  first Deploy that changes no file of the image is the one to read. `ops.fold_data_changes` writes no line when it
+  succeeds: its rounds are known by the absence of its error line alone.
 
 Rules in force:
 
