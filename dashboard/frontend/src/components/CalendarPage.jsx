@@ -285,12 +285,7 @@ function DayCard({ entries, now, day }) {
         return (
           <div className="calendar-group" key={id} data-league={id} aria-label={competition.name}>
             <header className="calendar-group-head">
-              <Media
-                name={competition.name}
-                url={competition.imageUrl}
-                className="crest calendar-group-logo"
-                initials={false}
-              />
+              <Media name={competition.name} url={competition.imageUrl} className="crest calendar-group-logo" />
               <span className="calendar-group-name">{competition.name}</span>
               <span className="calendar-group-meta">
                 {competition.country}
