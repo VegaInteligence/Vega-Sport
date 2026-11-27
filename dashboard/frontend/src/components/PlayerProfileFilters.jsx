@@ -65,12 +65,20 @@ export default function PlayerProfileFilters({
     setOpen((value) => !value);
   };
   if (!period && !after) return null;
+  // § 87: the bar on the title's line is one track of the home (Saison · Période · Compétitions · Comparer à). A
+  // caller that brings its own choices (`children`, the history's statistics) keeps them as they are.
+  const track = children === undefined;
   return (
-    <div className={styles.bar} ref={barRef}>
-      <div className={styles.filters} role="group" aria-label="Filtres du joueur">
+    <div className={`${styles.bar}${track ? ` ${styles.onTitle}` : ""}`} ref={barRef}>
+      <div
+        className={track ? `home-settings player-bar ${styles.track}` : styles.filters}
+        role="group"
+        aria-label="Filtres du joueur"
+      >
         {period &&
           (children ?? (
             <SeasonSelect
+              bare
               value={f.season}
               seasons={(f.manifest?.seasons || []).map((season) => season.id)}
               onChange={f.changeSeason}
@@ -80,7 +88,7 @@ export default function PlayerProfileFilters({
           <button
             ref={buttonRef}
             type="button"
-            className={styles.pill}
+            className={track ? `home-settings-segment ${styles.period}` : styles.pill}
             aria-expanded={open}
             aria-controls={panelId}
             data-active={Boolean(from || to) || undefined}
@@ -88,7 +96,7 @@ export default function PlayerProfileFilters({
           >
             <span>Période</span>
             <b>{from || to ? `${dateFr(from)} – ${dateFr(to)}` : "Toute la saison"}</b>
-            <Icon name="chevron" />
+            <Icon name="chevron" className="home-settings-chevron" />
           </button>
         )}
         {after}
@@ -141,6 +149,8 @@ export default function PlayerProfileFilters({
 /** One labelled group of the bar (« Comparer à » and its switch). `end`: pushed
  *  to the bar's right end. */
 export function FilterGroup({ label, end = false, children }) {
+  // In the track (§ 87) the group is its control alone: the label goes into the control's own words.
+  if (!label) return children;
   return (
     <div className={styles.group} data-end={end || undefined}>
       {label && <span className={styles.label}>{label}</span>}

@@ -1,5 +1,5 @@
 /**
- * The calendar's week (FAILURE_MODES § 87, piste A of https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o): which week
+ * The calendar's week (FAILURE_MODES § 88, piste A of https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o): which week
  * and day an address opens, the reads of one week (/api/fixtures by pages of 50) and how a day is laid out.
  */
 import { europeFocusIds, EUROPE_FOCUS } from "../../../shared/competition-scope.js";

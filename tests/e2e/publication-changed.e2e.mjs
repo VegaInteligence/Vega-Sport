@@ -11,7 +11,7 @@
 // served it (« Club 61 G2 », « Joueur 21 G2 »), so the page shows which one answered.
 //
 // Failure modes and expected outcomes:
-//  The calendar (§ 87) reads one week at a time, its pages of 50 chained by their cursors (120 matches: 3 pages).
+//  The calendar (§ 88) reads one week at a time, its pages of 50 chained by their cursors (120 matches: 3 pages).
 //  M0 /matchs: the week read at G1 (« Club 1 G1 » on its first day's first row), the strip counting 120 matches.
 //  M1 The served publication moves to G2 after the first page of a week (state.moveAfter = 1); the next week's arrow:
 //     its second page's cursor (G1) is refused (409) → the whole week shows at G2 (every row « … G2 », the strip

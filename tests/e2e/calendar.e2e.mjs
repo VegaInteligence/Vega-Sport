@@ -1,4 +1,4 @@
-// E2E — the calendar as a thread of days, FAILURE_MODES § 87: hugo, 27 Nov 2026, 20 h 27 « pour calendrier il est
+// E2E — the calendar as a thread of days, FAILURE_MODES § 88: hugo, 27 Nov 2026, 20 h 27 « pour calendrier il est
 // libre », then piste A of https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o (20 h 41 « POUR Calendrier va pour le
 // A »). Written before the code: on main (the tabs À venir / Résultats, the rectangular search) every K check fails.
 //

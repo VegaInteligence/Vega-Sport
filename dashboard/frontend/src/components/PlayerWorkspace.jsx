@@ -3,6 +3,7 @@ import { Skeleton } from "./UI.jsx";
 import React, { lazy, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import PlayerDirectory from "./PlayerDirectory.jsx";
+import { QueryField } from "./Layout.jsx";
 import { ResearchLists, ResearchTabs, useHasSaved } from "./ResearchUI.jsx";
 import { playerDirectoryView } from "../services/player-leaderboard.js";
 const PlayerReplacements = lazy(() => import("./PlayerReplacements.jsx"));
@@ -27,13 +28,19 @@ export default function PlayerWorkspace({
   };
   return (
     <>
-      <ResearchTabs
-        label="Vues des joueurs"
-        value={view}
-        items={items}
-        onChange={change}
-        panelId="player-workspace-panel"
-      />
+      {/* § 87: the views in a track, the search in a pill on their line. */}
+      <div className="players-tabs-row">
+        <ResearchTabs
+          label="Vues des joueurs"
+          value={view}
+          items={items}
+          onChange={change}
+          panelId="player-workspace-panel"
+        />
+        <label className="home-settings-search players-search">
+          <QueryField bare label="Filtrer les joueurs par nom ou club" placeholder="Filtrer les joueurs…" />
+        </label>
+      </div>
       <div
         id="player-workspace-panel"
         role="tabpanel"

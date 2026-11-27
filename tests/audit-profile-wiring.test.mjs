@@ -133,7 +133,11 @@ const profileModule = load("components/PlayerSeasonProfile.jsx", {
   "./ResearchUI.jsx": { BookmarkButton: record("BookmarkButton", Noop), ComparePlayerButton: record("ComparePlayerButton", Noop),
     MetricInfo: Noop, ResearchTabs: record("ResearchTabs", Noop) },
   "./PlayerScoutRail.jsx": { __esModule: true, default: record("PlayerScoutRail", (p) => e("div", null, p.actions)),
-    PlayerScoutStrip: record("PlayerScoutStrip", (p) => e("div", null, p.actions)) },
+    PlayerScoutStrip: record("PlayerScoutStrip", (p) => e("div", null, p.actions)),
+    // § 87: the head reads its facts once for the head and the tiles; the tiles go to the overview.
+    usePlayerScoutData: () => ({}), PlayerScoutTiles: Noop, PlayerScoutExtrasTiles: Noop, PlayerScoutExtrasHonours: Noop,
+    PlayerScoutExtras: ({ children }) => children },
+  "./BackLink.jsx": { __esModule: true, default: Noop },
   "./PlayerScoutOverview.jsx": { __esModule: true, default: record("PlayerScoutOverview", Noop), PlayerGames: record("PlayerGames", Noop),
     PlayerScoutCompare: Noop, PlayerScoutStats: Noop },
   "./PlayerPresenceCard.jsx": { __esModule: true, default: record("PlayerPresenceCard", Noop) },

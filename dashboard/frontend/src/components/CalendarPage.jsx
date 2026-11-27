@@ -1,5 +1,5 @@
 "use client";
-/* The calendar as a thread of days (FAILURE_MODES § 87; piste A of https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o,
+/* The calendar as a thread of days (FAILURE_MODES § 88; piste A of https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o,
  * chosen by hugo on 27 Nov 2026, 20 h 41 « POUR Calendrier va pour le A »): the title and the bar Saison ·
  * Compétition · search; the week's seven days in one strip, each with its number of matches; the chosen day's matches
  * on one 22 px card, by competition, results and matches to come together. The week is read by pages of 50

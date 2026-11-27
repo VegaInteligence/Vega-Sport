@@ -8,7 +8,7 @@
 //    its reads; publicationVersion = state.manifestGeneration ?? state.generation);
 //  - GET /api/fixtures: FIXTURES matches per status, pages of `limit`, cursor = base64url {generation, offset, scope};
 //    each match's teams are named after the generation that served it (« G1 Club 31 »), so a page shows which
-//    publication answered it; with status=all, `from` and `to` (the calendar's week, § 87) WEEK matches spread over
+//    publication answered it; with status=all, `from` and `to` (the calendar's week, § 88) WEEK matches spread over
 //    the days after `from` up to `to`, over before `now`, to come after it;
 //    `state.moveAfter` = n: after n fixtures pages answered, the served publication becomes `state.moveTo` (the worker
 //    publishing between two pages of one week);

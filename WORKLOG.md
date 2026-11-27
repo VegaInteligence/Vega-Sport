@@ -1074,8 +1074,17 @@
 - Tests: `tests/e2e/team-pages.e2e.mjs` (1/5 on main 08223d9 — the club and nation parts stop, no head; 14/14 after, in dev and on `next build`), `club-page` (30/30) and `nation-page` (32/32) E2E adapted (22 px inset, head instead of column, Favoris), `accounts` and `match-tabs` E2E follow the new label, `club-missing-render` stubs `TeamHero`, the absences' contrast helper reads `color(srgb …)`. Evidence in `/mnt/project-files/club-nation-refonte/` (outside git).
 - Follow-up (27 Nov, § 86.1): on the site at 1024 px the bar cut the club's name (« Paris Saint-Ger… »); the head's top row now wraps, the bar going under the name when both do not fit. `team-pages.e2e.mjs` H11 (red on main f04c07b, 15/15 after).
 
+## Players' pages, Power Ranking and Ballon d'Or redesigned (27 Nov 2026, GitHub #273, VI-176, FAILURE_MODES § 87)
 
-## Calendar as a thread of days (27 Nov 2026, GitHub #270, VI-174, FAILURE_MODES § 87)
+- Request (hugo, 27 Nov, 19 h 27): redo Joueurs, the Power Ranking and the Ballon d'Or in the spirit of the pages redone before, « cautious mais innovant », keeping what the pages are today.
+- Mock-up on the real pages (pistes A and B, computer and phone): https://claude.ai/artifact/QoP4LsHw9q64zrwcvyzhYK. Decision (20 h 56): piste B and every recommendation; on a player's page the filters never on a second line under the tabs, so the bar Saison · Période · Compétitions · Comparer à sits beside « ← Joueurs » (mock-up v2, approved 21 h 11).
+- Code: `players-pills.css` (new); the Ballon d'Or's « une » and gauges (`PlayerRankingPage`); the Power Ranking's bar, top three and score pills (`PowerRankingPage`); the directory's one bar (`Filters part="bar"/"body"` in `Layout`) and its search on the tabs' line (`PlayerWorkspace`); a player's head card in place of the identity column (`PlayerScoutRail`: `usePlayerScoutData`, head, `PlayerScoutTiles`), the tiles and the honours in the overview; skeletons `RankingSkeleton` and `PlayersSkeleton`, route kinds `ballon`, `power`, `players`, `player`.
+- Unchanged: every figure and its computation (Score Vega, Ballon d'Or v1.1, #125 frozen), the reads, the links. « Enregistrer » becomes « Favoris » in the Club/Nations work (`BookmarkButton`, for the whole site), not here.
+- Tests: `tests/e2e/players-rankings.e2e.mjs` 2/19 on main 08223d9 (`next dev`), 19/19 on the branch (`next build` + `next start`), replay of production reads for 2026/2027; site unit tests 1,127/1,127 (`route-skeleton`, `preference-render-ballon`, `audit-profile-wiring`, `season_player_render` updated for the new shape). Evidence in `/mnt/project-files/design-boutons/joueurs-classements/e2e-*` (outside git).
+- Review (Codex on #276, § 87a): a provisional rank in the Power Ranking's top three now keeps its warning pill on its card. P5 added: 19/20 without the fix, 20/20 with it.
+
+
+## Calendar as a thread of days (27 Nov 2026, GitHub #270, VI-174, FAILURE_MODES § 88)
 
 - Request (hugo, 27 Nov, 20 h 27): redo the Calendrier page (`/matchs`), design free. Mock-up on the real matches of 16 Nov – 6 Dec: https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o; piste A chosen at 20 h 41 (« POUR Calendrier va pour le A »).
 - Branch `claude/calendrier-fil-des-jours`. The week read by pages of 50 (`status=all`, `from`/`to`), no API change, no Deploy.

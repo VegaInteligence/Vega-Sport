@@ -17,6 +17,7 @@ import NavigationPrefetch from "./NavigationPrefetch.jsx";
 import PlayerSearchResults from "./PlayerSearchResults.jsx";
 import { CompetitionPicker, EUROPE_SCOPE, FollowedCompetitionsPicker } from "./CompetitionPicker.jsx";
 import SeasonFilter from "./SeasonFilter.jsx";
+import SettingsPicker from "./SettingsPicker.jsx";
 import { PLAYER_RANKINGS } from "../services/player-leaderboard.js";
 import {
   competitionLabel,
@@ -30,7 +31,7 @@ export const navigation = pages
  * a URL update still in flight. The URL follows after a short pause; outside
  * changes (chip removal, reset, navigation) still replace the text.
  */
-function QueryField({ label, placeholder }) {
+export function QueryField({ label, placeholder, bare = false }) {
   const f = useFootball(),
     external = f.filters.query;
   const [value, setValue] = useState(external),
@@ -49,8 +50,9 @@ function QueryField({ label, placeholder }) {
     committed.current = text;
     f.setFilters((v) => ({ ...v, query: text }));
   };
+  const Wrap = bare ? React.Fragment : "div";
   return (
-    <div className="filter-input-wrap">
+    <Wrap {...(bare ? {} : { className: "filter-input-wrap" })}>
       <Icon name="search" />
       <input
         id="player-search"
@@ -73,18 +75,25 @@ function QueryField({ label, placeholder }) {
         }}
         onBlur={() => commit(value)}
       />
-    </div>
+    </Wrap>
   );
 }
-export function Filters({ kind = "performances" }) {
+/**
+ * `part` (§ 87, the players' directory only): "bar" is the one bar on the title's line (season, competitions, playing
+ * time, advanced filters), "body" what opens under the title (the advanced filters' panel, the chips of what is
+ * applied); the two share `advanced` ([open, setOpen]) and `panelId`. Other pages keep the whole panel ("all").
+ */
+export function Filters({ kind = "performances", part = "all", advanced, panelId: sharedPanelId }) {
   const f = useFootball(),
     fixtures = kind === "fixtures",
     home = kind === "home",
     // Playing time and advanced filters only make sense on the players page.
     players = kind === "players",
     advancedCount = players ? countAdvanced(f.filters.advanced) : 0,
-    [advancedOpen, setAdvancedOpen] = useState(advancedCount > 0),
-    panelId = useId();
+    ownAdvanced = useState(advancedCount > 0),
+    [advancedOpen, setAdvancedOpen] = advanced || ownAdvanced,
+    ownPanelId = useId(),
+    panelId = sharedPanelId || ownPanelId;
   const reset = () => {
     f.setFilters({ query: "", league: "all", minutes: 1, match: "all" });
     if (home) {
@@ -116,8 +125,73 @@ export function Filters({ kind = "performances" }) {
     [f.allCompetitions, f.competitions],
   );
   const selected = competitions.find((c) => c.id === f.filters.league);
+  const competitionPicker = (bare = false) => (
+    <CompetitionPicker
+      bare={bare}
+      controlId="league-filter"
+      competitions={competitions}
+      selectedIds={f.filters.leagues}
+      value={f.filters.league === "all" && f.focus === "europe" ? EUROPE_SCOPE : f.filters.league}
+      summary={f.filters.leagues?.length > 1 ? `${f.filters.leagues.length} compétitions` : undefined}
+      topEurope
+      onChange={(value) => {
+        const preset = value === "all" || value === EUROPE_SCOPE;
+        const focus = value === EUROPE_SCOPE ? "europe" : "all";
+        const league = preset ? "all" : value;
+        // A scope change can remount the view before its preselection effect observes the clear.
+        recordPreselectionChange(players ? "players" : "matches", league);
+        if (preset ? f.focus !== focus : !f.competitions.some((competition) => competition.id === value))
+          f.changeFocus(focus);
+        f.setFilters((v) => ({ ...v, league, leagues: [], match: "all" }));
+      }}
+    />
+  );
+  if (players && part === "bar")
+    return (
+      <div className="home-settings players-bar" role="group" aria-label="Filtres des joueurs">
+        <SeasonFilter f={f} bare />
+        {competitionPicker(true)}
+        <SettingsPicker
+          pane="minutes"
+          icon="timer"
+          label="Temps de jeu moyen"
+          text={minutes.find(([value]) => value === f.filters.minutes)?.[1] || minutes[0][1]}
+          controlId="minutes-filter"
+          value={f.filters.minutes}
+          bare
+        >
+          {(close) => (
+            <div className="home-settings-seasons" role="group" aria-label="Temps de jeu moyen">
+              {minutes.map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className="home-settings-season"
+                  aria-pressed={value === f.filters.minutes}
+                  onClick={() => {
+                    f.setFilters((v) => ({ ...v, minutes: value }));
+                    close();
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </SettingsPicker>
+        <AdvancedToggle
+          className="home-settings-segment advanced-toggle"
+          open={advancedOpen}
+          controls={panelId}
+          onToggle={() => setAdvancedOpen((open) => !open)}
+        />
+      </div>
+    );
+  const body = players && part === "body";
+  if (body && !advancedOpen && !active) return null;
   return (
-    <section className="filter-panel" aria-label="Filtres des données">
+    <section className={`filter-panel${body ? " players-filter-body" : ""}`} aria-label="Filtres des données">
+      {!body && (
       <div
         className={`filter-fields${fixtures ? " fixture-filter-fields" : ""}`}
       >
@@ -147,24 +221,7 @@ export function Filters({ kind = "performances" }) {
           {home ? (
             <FollowedCompetitionsPicker f={f} />
           ) : (
-            <CompetitionPicker
-              controlId="league-filter"
-              competitions={competitions}
-              selectedIds={f.filters.leagues}
-              value={f.filters.league === "all" && f.focus === "europe" ? EUROPE_SCOPE : f.filters.league}
-              summary={f.filters.leagues?.length > 1 ? `${f.filters.leagues.length} compétitions` : undefined}
-              topEurope
-              onChange={(value) => {
-                const preset = value === "all" || value === EUROPE_SCOPE;
-                const focus = value === EUROPE_SCOPE ? "europe" : "all";
-                const league = preset ? "all" : value;
-                // A scope change can remount the view before its preselection effect observes the clear.
-                recordPreselectionChange(players ? "players" : "matches", league);
-                if (preset ? f.focus !== focus : !f.competitions.some((competition) => competition.id === value))
-                  f.changeFocus(focus);
-                f.setFilters((v) => ({ ...v, league, leagues: [], match: "all" }));
-              }}
-            />
+            competitionPicker()
           )}
           {!home && <SeasonFilter f={f} />}
           {players && (
@@ -206,6 +263,7 @@ export function Filters({ kind = "performances" }) {
           )}
         </div>
       </div>
+      )}
       {players && advancedOpen && <AdvancedPanel id={panelId} />}
       {active && !home && (
         <div className="filter-panel-footer">
@@ -317,6 +375,18 @@ export default function Layout({
   const research = useResearch();
   const params = useSearchParams();
   const pageIdentity = `${path}:${params.get("id") || ""}:${params.get("m") || ""}`;
+  // The players' directory (§ 87): its filters' bar on the title's line, the advanced panel under it, one state.
+  const playersBar = filters && filterKind === "players",
+    advanced = useState(() => countAdvanced(f.filters.advanced) > 0),
+    advancedPanelId = useId();
+  const headingActions = playersBar ? (
+    <>
+      {actions}
+      <Filters kind="players" part="bar" advanced={advanced} panelId={advancedPanelId} />
+    </>
+  ) : (
+    actions
+  );
   return (
     <>
       <NavigationPrefetch />
@@ -350,11 +420,16 @@ export default function Layout({
                   </p>
                 )}
               </div>
-              {actions && <div className="heading-actions">{actions}</div>}
+              {headingActions && <div className="heading-actions">{headingActions}</div>}
             </div>
           )}
           {subnav}
-          {filters && <Filters kind={filterKind} />}
+          {filters &&
+            (playersBar ? (
+              <Filters kind="players" part="body" advanced={advanced} panelId={advancedPanelId} />
+            ) : (
+              <Filters kind={filterKind} />
+            ))}
           {filters && filterKind === "performances" && <PlayerSearchResults />}
           {f.notice && (
             <div role="status" className="notice">

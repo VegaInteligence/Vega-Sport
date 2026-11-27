@@ -462,7 +462,7 @@ export default function MatchDetail({ match }) {
       : null;
   const fromUpcoming =
     ["upcoming", "calendar"].includes(search.get("from")) || upcoming;
-  // The calendar (§ 87, the matches read by pages): the way back opens the day the match was chosen on, else its own.
+  // The calendar (§ 88, the matches read by pages): the way back opens the day the match was chosen on, else its own.
   const calendarDay = validDay(search.get("day"))
     ? search.get("day")
     : match.timeUtc && Number.isFinite(Date.parse(match.timeUtc))

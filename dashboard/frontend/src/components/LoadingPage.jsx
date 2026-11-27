@@ -13,6 +13,8 @@ import HomeSkeleton from "./HomeSkeleton.jsx";
 import MatchSkeleton from "./MatchSkeleton.jsx";
 import NationSkeleton from "./NationSkeleton.jsx";
 import CalendarSkeleton from "./CalendarSkeleton.jsx";
+import PlayersSkeleton from "./PlayersSkeleton.jsx";
+import RankingSkeleton from "./RankingSkeleton.jsx";
 import { routeSkeleton } from "../services/route-skeleton.js";
 /** One skeleton per kind of services/route-skeleton.js. */
 const SKELETONS = {
@@ -22,6 +24,10 @@ const SKELETONS = {
   home: <HomeSkeleton />,
   match: <MatchSkeleton />,
   nation: <NationSkeleton />,
+  ballon: <RankingSkeleton kind="ballon" />,
+  power: <RankingSkeleton kind="power" />,
+  players: <PlayersSkeleton />,
+  player: <PlayersSkeleton player />,
 };
 export default function LoadingPage({ href }) {
   const path = usePathname();
@@ -32,9 +38,21 @@ export default function LoadingPage({ href }) {
       as: "fetch",
       crossOrigin: "anonymous",
     });
-  // The route's skeletons are rendered beside the logo; the flag shows one of them. A route has up to two: its item
-  // page's (`?id=`) and its directory's (/matchs: a match and the calendar, § 87), told apart by the flag's value.
+  // The route's skeleton is rendered beside the logo; the flag shows one of them. A route with two shapes draws both
+  // (the players and a player's page, § 87; a match and the calendar under /matchs, § 88): the flag keeps one.
   const kinds = [...new Set([routeSkeleton(path, "id"), routeSkeleton(path, "")])].filter((kind) => SKELETONS[kind]);
+  const skeleton =
+    kinds.length > 1 ? (
+      <>
+        {kinds.map((kind) => (
+          <div className="route-skeleton-variant" data-route-variant={kind} key={kind}>
+            {SKELETONS[kind]}
+          </div>
+        ))}
+      </>
+    ) : (
+      SKELETONS[kinds[0]]
+    );
   // Keep the head script's flag right after a client-side navigation too.
   useLayoutEffect(() => {
     const kind = routeSkeleton(path, window.location.search);
@@ -53,13 +71,9 @@ export default function LoadingPage({ href }) {
         className={`workspace${page?.path === "/classement-joueurs/" ? " ranking-page" : ""}`}
         aria-busy="true"
       >
-        {kinds.length ? (
+        {skeleton ? (
           <>
-            {kinds.map((kind) => (
-              <div className="route-skeleton" data-skeleton-kind={kind} key={kind}>
-                {SKELETONS[kind]}
-              </div>
-            ))}
+            <div className="route-skeleton">{skeleton}</div>
             <div className="route-logo">
               <PageLoader />
             </div>

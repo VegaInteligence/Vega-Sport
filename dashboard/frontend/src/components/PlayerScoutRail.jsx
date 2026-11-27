@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import useActorRead from "../hooks/useActorRead.js";
@@ -17,9 +17,7 @@ import {
 } from "../services/scouting-history.js";
 import { playerTeamSeasons } from "../services/player-team-seasons.js";
 import Link from "next/link";
-import BackLink from "./BackLink.jsx";
 import { Media, Skeleton } from "./UI.jsx";
-import PlayerHonours from "./PlayerHonours.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { number } from "../services/format.js";
 import { playerFacts } from "../services/player-bio.js";
@@ -107,28 +105,11 @@ function Facts({ items, label }) {
   );
 }
 
-/** Identity column: who (the club opens its page), facts, value, Vega index,
- *  positions, availability, palmarès and actions. */
-export default function PlayerScoutRail({
-  id,
-  backHref,
-  identity,
-  fallbackUrl,
-  showIdentity = true,
-  profile,
-  record,
-  season,
-  team,
-  playingTime,
-  vega,
-  honours,
-  actions,
-  onTab,
-}) {
+/** What the player's head and tiles show (§ 87): the facts, the nation, the main competition, the market value,
+ *  the positions held and the availability, read once for both. */
+export function usePlayerScoutData({ id, profile, record, season, team, playingTime }) {
   const { facts: published, value: publishedValue } = playerFacts(record);
   const f = useFootball();
-  // On a phone the header opens on the identity and the actions.
-  const more = usePhoneFold();
   const marketServed = servesMarketValues(f.manifest);
   const marketRead = useResource(
     playerMarketValuesKey(id),
@@ -244,15 +225,35 @@ export default function PlayerScoutRail({
   const role = profile?.role;
   const league = mainCompetition(profile, season);
   const positions = heldPositions(profile);
+  return { facts, nation, role, league, positions, valuation, market, injuries, absent };
+}
+
+/** The tiles and the honours the overview shows (§ 87): provided by the profile's layout, which reads them. */
+const ScoutExtras = createContext(null);
+export const PlayerScoutExtras = ScoutExtras.Provider;
+export function PlayerScoutExtrasTiles() {
+  return useContext(ScoutExtras)?.tiles || null;
+}
+export function PlayerScoutExtrasHonours() {
+  return useContext(ScoutExtras)?.honours || null;
+}
+
+/** The player's head (§ 87, piste B, in place of the identity column): his portrait with his club's crest, his
+ *  name, position, nation, club and league in pills, the facts in tiles, the actions. */
+export default function PlayerScoutRail({
+  data,
+  identity,
+  fallbackUrl,
+  showIdentity = true,
+  team,
+  actions,
+}) {
+  const f = useFootball();
+  // On a phone the head opens on the identity and the actions; the facts fold.
+  const more = usePhoneFold();
+  const { facts = [], nation, role, league } = data || {};
   return (
-    <aside className={s.rail} aria-label="Identité du joueur" {...more.fold}>
-      {backHref && (
-        <BackLink
-          className={`inline-link ${s.railBack}`}
-          href={backHref}
-          label="Tous les joueurs"
-        />
-      )}
+    <header className={`card player-head ${s.head}`} aria-label="Identité du joueur" {...more.fold}>
       {showIdentity && (
         <div className={s.identity}>
           <div className={s.portrait}>
@@ -268,75 +269,75 @@ export default function PlayerScoutRail({
               </span>
             )}
           </div>
-          <div>
+          <div className={s.who}>
             <h1 className="player-profile-name">{identity.name}</h1>
-            {role?.label && <p className={s.role}>{role.label}</p>}
-            {role?.peers && <p className={s.peers}>Comparé aux {role.peers}</p>}
-          </div>
-          {nation && (
-            <div className={s.nations}>
-              {nation.teamId ? (
-                <Link className={s.nationLink} href={f.href("/nations/", { id: nation.teamId })}>
-                  <NationalFlag name={nation.team} season={nation.season} />
-                  {nationalTeamName(nation.team, nation.season)}
-                </Link>
-              ) : (
-                <span>
-                  <NationalFlag name={nation.team} season={nation.season} />
-                  {nationalTeamName(nation.team, nation.season)}
-                </span>
-              )}
-            </div>
-          )}
-          {(team || league) && (
+            {(role?.label || role?.peers) && (
+              <p className={s.role}>
+                {role?.label}
+                {role?.peers && <span className={s.peers}> · comparé aux {role.peers}</span>}
+              </p>
+            )}
             <div className={s.chips}>
+              {nation &&
+                (nation.teamId ? (
+                  <Link className={`${s.chip} ${s.chipLink}`} href={f.href("/nations/", { id: nation.teamId })}>
+                    <NationalFlag name={nation.team} season={nation.season} />
+                    {nationalTeamName(nation.team, nation.season)}
+                  </Link>
+                ) : (
+                  <span className={s.chip}>
+                    <NationalFlag name={nation.team} season={nation.season} />
+                    {nationalTeamName(nation.team, nation.season)}
+                  </span>
+                ))}
               {team && (
-                <Link
-                  className={`${s.chip} ${s.chipLink}`}
-                  href={f.href("/clubs/", { id: team.id })}
-                >
-                  {team.imageUrl && (
-                    <Media name={team.name} url={team.imageUrl} />
-                  )}
+                <Link className={`${s.chip} ${s.chipLink}`} href={f.href("/clubs/", { id: team.id })}>
+                  {team.imageUrl && <Media name={team.name} url={team.imageUrl} />}
                   {team.name}
                 </Link>
               )}
               {league && <span className={s.chip}>{league}</span>}
             </div>
-          )}
+          </div>
+          {actions && <div className={s.headActions}>{actions}</div>}
         </div>
       )}
-      <div className={`${s.railSection} phone-fold-row`}>
-        <PhoneFoldToggle
-          {...more.toggle}
-          label={
-            honours?.value?.groups?.length
-              ? "Fiche, valeur, indice, postes et palmarès"
-              : "Fiche, valeur, indice et postes"
-          }
-        />
+      <div className={`${s.headFold} phone-fold-row`}>
+        <PhoneFoldToggle {...more.toggle} label="Fiche du joueur" />
       </div>
-      <div className={`${s.railSection} phone-fold-part`}>
+      <div className="phone-fold-part">
         <Facts items={facts} label="Fiche du joueur" />
       </div>
-      <div className={`${s.railSection} phone-fold-part`}>
-        <p className={s.railTitle}><Term>Valeur marchande</Term></p>
+    </header>
+  );
+}
+
+/** Four tiles of one height under the season's key figures (§ 87): the market value, the Vega index, the positions
+ *  held and the availability. */
+export function PlayerScoutTiles({ data, vega, season, profile, onTab }) {
+  const { valuation, market, positions = [], injuries, absent } = data || {};
+  return (
+    <div className={`player-tiles ${s.tiles}`}>
+      <section className={s.tile}>
+        <p className={s.railTitle}>
+          <i className={s.railName}><Term>Valeur marchande</Term></i>
+        </p>
         <div className={s.value}>{valuation?.amount ?? "—"}</div>
         {valuation ? (
-          valuation.updated && (
-            <p className={s.valueMeta}>Estimation au {valuation.updated}</p>
-          )
+          valuation.updated && <p className={s.valueMeta}>Estimation au {valuation.updated}</p>
         ) : (
           <p className={s.valueMeta}>
-            {market.loading
-              ? <Skeleton kind="inline" label="Chargement de la valeur marchande…" />
-              : market.error
-                ? "Données indisponibles"
-                : "Aucune estimation disponible"}
+            {market?.loading ? (
+              <Skeleton kind="inline" label="Chargement de la valeur marchande…" />
+            ) : market?.error ? (
+              "Données indisponibles"
+            ) : (
+              "Aucune estimation disponible"
+            )}
           </p>
         )}
-      </div>
-      <div className={`${s.railSection} phone-fold-part`}>
+      </section>
+      <section className={s.tile}>
         <p className={s.railTitle}>
           <i className={s.railName}><Term>Indice Vega</Term></i> <span>sur 100</span>
         </p>
@@ -346,9 +347,7 @@ export default function PlayerScoutRail({
             <span><Term>Niveau actuel</Term></span>
           </div>
           <div>
-            <strong>
-              {vega?.rank ? (vega.rank === 1 ? "1er" : `${vega.rank}e`) : "—"}
-            </strong>
+            <strong>{vega?.rank ? (vega.rank === 1 ? "1er" : `${vega.rank}e`) : "—"}</strong>
             <span>
               {vega?.of ? `sur ${number(vega.of)} au poste` : "au poste"}
               {vega?.women ? ", parmi les joueuses" : ""}
@@ -358,20 +357,22 @@ export default function PlayerScoutRail({
         {vega?.parts && <p className={s.valueMeta}>{vega.parts}</p>}
         {vega?.provisional && <p className={s.valueMeta}>{vega.provisional}</p>}
         {vega?.signal && <p className={s.valueMeta}>{vega.signal}</p>}
-      </div>
-      {positions.length > 0 && (
-        <div className={`${s.railSection} phone-fold-part`}>
-          <p className={s.railTitle}>
-            <i className={s.railName}><Term>Postes occupés</Term></i> <span>{season}</span>
-          </p>
-          <PositionsPitch positions={positions} total={profile.minutes} />
-        </div>
-      )}
-      <div className={`${s.railSection} phone-fold-part`}>
+      </section>
+      <section className={s.tile}>
+        <p className={s.railTitle}>
+          <i className={s.railName}><Term>Postes occupés</Term></i> <span>{season}</span>
+        </p>
+        {positions.length > 0 ? (
+          <PositionsPitch positions={positions} total={profile?.minutes} />
+        ) : (
+          <p className={s.valueMeta}>Aucun poste relevé</p>
+        )}
+      </section>
+      <section className={s.tile}>
         <p className={s.railTitle}>
           <i className={s.railName}><Term>Disponibilité</Term></i> <span>12 derniers mois</span>
         </p>
-        {injuries.loading ? (
+        {injuries?.loading ? (
           <Skeleton label="Chargement de la disponibilité…" lines={1} />
         ) : (
           <div className={s.indexRow}>
@@ -390,26 +391,16 @@ export default function PlayerScoutRail({
           </div>
         )}
         {onTab && (
-          <button
-            type="button"
-            className={s.railLink}
-            onClick={() => onTab("evolution")}
-          >
+          <button type="button" className={s.railLink} onClick={() => onTab("evolution")}>
             Historique des blessures →
           </button>
         )}
-      </div>
-      {honours && (
-        <div className={`${s.railSection} phone-fold-part`}>
-          <PlayerHonours name={identity.name || undefined} result={honours} />
-        </div>
-      )}
-      {actions && <div className={s.railSection}>{actions}</div>}
-    </aside>
+      </section>
+    </div>
   );
 }
 
-/** Compact identity bar shown once the rail's portrait leaves the screen. */
+/** Compact identity bar shown once the head's portrait leaves the screen. */
 export function PlayerScoutStrip({
   railRef,
   identity,
@@ -423,7 +414,7 @@ export function PlayerScoutStrip({
   useEffect(() => {
     const update = () => {
       const rail = railRef.current?.getBoundingClientRect();
-      const next = Boolean(rail && rail.top < -240);
+      const next = Boolean(rail && rail.bottom < 0);
       setVisible(next);
       if (next) setMounted(true);
     };

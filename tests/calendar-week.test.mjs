@@ -1,4 +1,4 @@
-// The calendar's week (FAILURE_MODES § 87): which day an address opens, how a week is read by pages, how a day is laid out.
+// The calendar's week (FAILURE_MODES § 88): which day an address opens, how a week is read by pages, how a day is laid out.
 import test from "node:test";
 import assert from "node:assert/strict";
 import {

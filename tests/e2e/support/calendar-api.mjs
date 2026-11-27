@@ -1,4 +1,4 @@
-// Test double of the read API for tests/e2e/calendar.e2e.mjs (FAILURE_MODES § 87): a small HTTP server whose answers
+// Test double of the read API for tests/e2e/calendar.e2e.mjs (FAILURE_MODES § 88): a small HTTP server whose answers
 // are all made up here, in the shapes of backend/api (no upstream, no production data). Three weeks of the 2026/2027
 // season around Friday 27 Nov 2026, 20 h 40 in Paris (NOW), ten competitions of the Top 7 Europe + UEFA and Ligue 2:
 //

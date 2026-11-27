@@ -1655,3 +1655,162 @@ p.similarIntro {
   vertical-align: middle;
   background: linear-gradient(90deg, var(--tone) var(--w), var(--border) var(--w));
 }
+
+/* ------------------------------------------------ the head and the tiles (§ 87, piste B: no identity column) */
+.head {
+  display: grid;
+  gap: 18px;
+  margin: 0 0 16px;
+  padding: 22px 24px 20px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--veil);
+  overflow: visible;
+  --mq-gap: var(--veil);
+}
+.head .identity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  justify-items: start;
+  align-items: center;
+  gap: 22px;
+  padding: 0;
+  text-align: left;
+}
+.head .portraitCrest {
+  background: var(--veil);
+  box-shadow: 0 0 0 2px var(--veil);
+}
+.who {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.head .identity :global(.player-profile-name) {
+  margin: 0;
+  color: var(--ink-strong);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.024em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.head .role {
+  margin: 0;
+}
+.head .peers {
+  font-size: var(--text-sm);
+}
+.head .chips {
+  justify-content: flex-start;
+  margin-top: 4px;
+}
+.head .chip {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: 12.5px;
+}
+.head .chip :global(.crest) {
+  width: var(--media-16);
+  height: var(--media-16);
+}
+.head .chipLink:hover {
+  background: var(--pill-quiet-hover);
+}
+.headActions {
+  align-self: start;
+}
+.headActions :global(.research-toolbar) {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+}
+.headActions :global(.research-toolbar .button) {
+  height: var(--pill-h);
+  min-height: 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  box-shadow: none;
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text);
+}
+.headActions :global(.research-toolbar .button:hover) {
+  background: var(--pill-quiet-hover);
+}
+.headFold:empty {
+  display: none;
+}
+.head .facts {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.head .facts > div {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--pill-track);
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 12px;
+}
+.tile {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: var(--veil);
+  --mq-gap: var(--veil);
+}
+.tile .indexRow {
+  margin: 0;
+}
+@media (max-width: 1100px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .head {
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .head .identity {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+  }
+  .head .identity :global(.season-player-portrait) {
+    width: var(--media-64);
+    height: var(--media-64);
+    flex-basis: var(--media-64);
+  }
+  .head .identity :global(.player-profile-name) {
+    font-size: 24px;
+  }
+  .headActions {
+    grid-column: 1 / -1;
+  }
+  .headActions :global(.research-toolbar) {
+    justify-content: flex-start;
+  }
+  .head .facts {
+    grid-template-columns: 1fr 1fr;
+  }
+  .tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
