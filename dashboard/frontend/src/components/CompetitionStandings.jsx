@@ -34,6 +34,8 @@ import {
 } from "../services/standings-zones.js";
 import {
   SIMPLE_LEAGUES,
+  plainLeagueTable,
+  resultDerived,
   standingsFromFixtures,
   hasCompleteHomeAwaySchedule,
 } from "../services/competition-standings.js";
@@ -47,30 +49,6 @@ const isMatchTeam = (row, club, teams) =>
       (team.id && (team.id === row.id || team.id === club?.id)) ||
       (team.name && teamKey(team.name) === teamKey(row.name)),
   );
-/** A table the base computed from the results, as the standings read marks it. */
-const resultDerived = (body) => body?.source === "Vega";
-/**
- * A result-derived table is only shown for a plain league phase, the rule of
- * ResultStandings below: a league known to be one, or a finished double round-robin
- * (every club has played every other twice), or a European league phase (§ 65). Split and
- * play-off formats need the fixtures, which decide whether a table can be drawn at all.
- */
-// A European league phase since 2024/2025 (FAILURE_MODES § 65): one table, eight matches a club at most.
-const LEAGUE_PHASE_MATCHES = 8;
-const leaguePhaseTable = (competition, season, tables) =>
-  FEATURED_EUROPE_IDS.includes(competition.id) &&
-  (seasonStartYear(season) ?? 0) >= 2024 &&
-  tables.length === 1 &&
-  tables[0].rows.length >= 3 &&
-  tables[0].rows.every((row) => (row.played || 0) <= LEAGUE_PHASE_MATCHES);
-const plainLeagueTable = (competition, tables, season) =>
-  SIMPLE_LEAGUES.has(competition.id) ||
-  leaguePhaseTable(competition, season, tables) ||
-  (tables.length === 1 &&
-    tables[0].rows.length >= 3 &&
-    tables[0].rows.every(
-      (row) => row.played === 2 * (tables[0].rows.length - 1),
-    ));
 /** Clubs the visitor saved, from every list. */
 function useFollowedClubs() {
   const r = useResearch();

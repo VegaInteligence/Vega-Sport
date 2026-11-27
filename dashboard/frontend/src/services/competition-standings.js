@@ -1,3 +1,5 @@
+import { FEATURED_EUROPE_IDS } from "./competition-selector.js";
+import { seasonStartYear } from "./standings-zones.js";
 // Preferred first divisions in the available PitchAPI catalogue.
 export const COUNTRY_LEAGUES = {
   FR: "l_3FJFUl", GB: "l_4WFCIZ", DE: "l_1Isor4", ES: "l_0ErfuF",
@@ -129,3 +131,29 @@ export function hasCompleteHomeAwaySchedule(fixtures) {
     (homes) => homes.length === 2 && homes[0] !== homes[1],
   );
 }
+
+// Moved from CompetitionStandings.jsx so the preview of a match (§ 80.2, 80.6) applies the same rule.
+/** A table the base computed from the results, as the standings read marks it. */
+export const resultDerived = (body) => body?.source === "Vega";
+/**
+ * A result-derived table is only shown for a plain league phase, the rule of
+ * ResultStandings below: a league known to be one, or a finished double round-robin
+ * (every club has played every other twice), or a European league phase (§ 65). Split and
+ * play-off formats need the fixtures, which decide whether a table can be drawn at all.
+ */
+// A European league phase since 2024/2025 (FAILURE_MODES § 65): one table, eight matches a club at most.
+const LEAGUE_PHASE_MATCHES = 8;
+export const leaguePhaseTable = (competition, season, tables) =>
+  FEATURED_EUROPE_IDS.includes(competition.id) &&
+  (seasonStartYear(season) ?? 0) >= 2024 &&
+  tables.length === 1 &&
+  tables[0].rows.length >= 3 &&
+  tables[0].rows.every((row) => (row.played || 0) <= LEAGUE_PHASE_MATCHES);
+export const plainLeagueTable = (competition, tables, season) =>
+  SIMPLE_LEAGUES.has(competition.id) ||
+  leaguePhaseTable(competition, season, tables) ||
+  (tables.length === 1 &&
+    tables[0].rows.length >= 3 &&
+    tables[0].rows.every(
+      (row) => row.played === 2 * (tables[0].rows.length - 1),
+    ));

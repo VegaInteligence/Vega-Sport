@@ -6,8 +6,19 @@
 import { json, useResource } from "./resources.js";
 import { gradeOf } from "./grades.js";
 import { isNumber } from "./format.js";
+import { plainLeagueTable, resultDerived } from "./competition-standings.js";
 
-/** The competition's table as the API serves it for the season in play; null when it is another season's or none. */
+/**
+ * The competition's table as the API serves it, if the page may show it: the season in play, and a table computed from
+ * the results only for a plain league phase, the Classement tab's own rule (split and play-off formats are withheld).
+ */
+export function previewTable(value, match) {
+  if (!value?.tables?.length || (value.season && match?.season && String(value.season) !== String(match.season))) return null;
+  if (resultDerived(value) && !plainLeagueTable({ id: match?.leagueId }, value.tables, match?.season)) return null;
+  return value;
+}
+
+/** The competition's table for the match's page (`previewTable`); null while it loads, or without one. */
 export function useCompetitionTable(match, enabled = true) {
   const id = match?.leagueId;
   const on = Boolean(enabled && id && match?.season);
@@ -16,9 +27,7 @@ export function useCompetitionTable(match, enabled = true) {
     () => json("/api/standings?" + new URLSearchParams({ competition: id })).catch(() => null),
     on,
   );
-  const value = on ? resource.value : null;
-  if (!value?.tables?.length || (value.season && match.season && String(value.season) !== String(match.season))) return null;
-  return value;
+  return on ? previewTable(resource.value, match) : null;
 }
 
 /** A club's row of the table (its place, points…), or null. */
