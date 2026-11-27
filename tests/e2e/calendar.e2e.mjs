@@ -1,4 +1,4 @@
-// E2E — the calendar as a thread of days, FAILURE_MODES § 86: hugo, 27 Nov 2026, 20 h 27 « pour calendrier il est
+// E2E — the calendar as a thread of days, FAILURE_MODES § 87: hugo, 27 Nov 2026, 20 h 27 « pour calendrier il est
 // libre », then piste A of https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o (20 h 41 « POUR Calendrier va pour le
 // A »). Written before the code: on main (the tabs À venir / Résultats, the rectangular search) every K check fails.
 //
@@ -48,6 +48,9 @@
 //  K18 The day read on its own longer than its 20 pages (Codex on PR #274): with 1 000 more matches the day before
 //      (UTC), « Liste incomplète » and the notice, no card and no skeleton; with 960, the 4 matches read of today
 //      under « Au moins 4 matchs » and the notice, never as the whole day.
+//  K19 A week cut before its first day (400 more matches on Sunday 29, the UTC day before Monday 30) and an empty day
+//      chosen (Tuesday 1 Dec, Codex on PR #274): « Aucun match le mardi 1 décembre. », never « Aucun match cette
+//      semaine. » nor a pill to another week, and Friday 4 still in the strip.
 //  X1  No page error.
 //
 // Setup: the site built against the double's origin, then started:
@@ -612,6 +615,23 @@ await run("day read", async () => {
     { none, some },
     /^Liste incomplète/.test(none.summary || "") && /trop de matchs/.test(none.notice || "") && none.cards === 0 && none.skeleton === 0 &&
       /^Au moins 4 matchs/.test(some.summary || "") && /trop de matchs/.test(some.notice || "") && some.rows === 4,
+  );
+  api.state.pad = { date: "2026-11-29", count: 400 };
+  const cut = await open("/matchs/?day=2026-12-01");
+  await ready(cut.page);
+  await hideConsent(cut.page);
+  await cut.page.locator(".calendar-page .calendar-empty").waitFor({ timeout: 60000 });
+  const empty = await cut.page.evaluate(() => ({
+    text: document.querySelector(".calendar-page .calendar-empty")?.textContent.replace(/\s+/g, " ").trim(),
+    pills: [...document.querySelectorAll(".calendar-page .calendar-empty .calendar-pill")].map((a) => a.textContent.trim()),
+    friday: Boolean(document.querySelector('.calendar-strip a.calendar-day[href*="day=2026-12-04"]')),
+  }));
+  await cut.context.close();
+  check(
+    "K19 cut week not empty",
+    "« Aucun match le mardi 1 décembre. », no pill to another week, Friday 4 in the strip",
+    empty,
+    /^Aucun match le mardi 1 décembre\./.test(empty.text || "") && !/cette semaine/.test(empty.text || "") && !empty.pills.some((t) => /Semaine/.test(t)) && empty.friday,
   );
   api.state.pad = null;
 });

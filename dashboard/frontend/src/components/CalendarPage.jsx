@@ -1,5 +1,5 @@
 "use client";
-/* The calendar as a thread of days (FAILURE_MODES § 86; piste A of https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o,
+/* The calendar as a thread of days (FAILURE_MODES § 87; piste A of https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o,
  * chosen by hugo on 27 Nov 2026, 20 h 41 « POUR Calendrier va pour le A »): the title and the bar Saison ·
  * Compétition · search; the week's seven days in one strip, each with its number of matches; the chosen day's matches
  * on one 22 px card, by competition, results and matches to come together. The week is read by pages of 50
@@ -435,15 +435,17 @@ export default function CalendarPage({ saved = false }) {
   else if (!entries.length && !dayCut) {
     const later = weekDays.find((d) => d > day && days.get(d)?.length),
       earlier = [...weekDays].reverse().find((d) => d < day && days.get(d)?.length),
-      target = later || earlier;
+      target = later || earlier,
+      // A week cut before its end is never declared empty: its days not read stay in the strip.
+      weekEmpty = !target && read.complete;
     body = (
-      <Empty text={target ? `Aucun match le ${dayInSentence(day)}.` : "Aucun match cette semaine."}>
+      <Empty text={weekEmpty ? "Aucun match cette semaine." : `Aucun match le ${dayInSentence(day)}.`}>
         {target ? (
           <Link className="calendar-pill is-filled" href={dayHref(target)} scroll={false}>
             {dayTitle(target, today)}
             <Icon name="right" />
           </Link>
-        ) : (
+        ) : weekEmpty ? (
           <Link
             className="calendar-pill is-filled"
             href={href({
@@ -454,7 +456,7 @@ export default function CalendarPage({ saved = false }) {
             {bounds && week.start >= bounds.end ? "Semaine précédente" : "Semaine suivante"}
             <Icon name="right" />
           </Link>
-        )}
+        ) : null}
       </Empty>
     );
   } else {
