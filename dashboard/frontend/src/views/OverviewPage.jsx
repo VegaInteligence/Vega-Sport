@@ -7,7 +7,8 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { useResourceBootstrap } from "../services/resource-bootstrap.js";
 import { mirrorHomeState } from "../services/home-bootstrap-preferences.js";
-import { AsyncState, Empty, Skeleton } from "../components/UI.jsx";
+import { AsyncState, Empty } from "../components/UI.jsx";
+import HomeSkeleton from "../components/HomeSkeleton.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
 import {
   compactGeneration,
@@ -412,20 +413,34 @@ function CompactOverview() {
     if (summary.value && !summary.loading)
       delete document.documentElement.dataset.homeBootstrapMismatch;
   }, [f.preferencesReady, research?.ready, f.preferences, f.season, scopeKey, summary.value, summary.loading]);
+  // While the week is read (another season, other competitions): the home's own skeleton under its toolbar, which
+  // stays usable (§ 84).
   if (summary.loading || summary.error)
     return (
       <Layout
         path="/"
         title="Vue d’ensemble"
-        actions={
-          <>
-            <HomeSettings f={f} />
-          </>
-        }
+        hideHeading
+        className="home-page"
+        loader={<HomeSkeleton />}
       >
+        <h1 className="sr-only">Vue d’ensemble</h1>
+        <div className="home-toolbar">
+          <div className="home-section-head" aria-hidden="true">
+            {summary.loading && (
+              <span
+                className="skeleton-line"
+                style={{ width: "min(250px, 60vw)", height: "1.2em" }}
+              />
+            )}
+          </div>
+          <div className="home-toolbar-filters">
+            <HomeSettings f={f} />
+          </div>
+        </div>
         <AsyncState
           resource={summary}
-          loading={<Skeleton label="Chargement de la synthèse…" lines={2} />}
+          loading={<HomeSkeleton toolbar={false} />}
         >
           {() => null}
         </AsyncState>
@@ -435,8 +450,8 @@ function CompactOverview() {
     <AsyncState
       resource={summary}
       loading={
-        <Layout path="/" title="Vue d’ensemble">
-          <Skeleton label="Chargement de la synthèse…" lines={2} />
+        <Layout path="/" title="Vue d’ensemble" hideHeading className="home-page">
+          <HomeSkeleton />
         </Layout>
       }
     >
@@ -651,7 +666,13 @@ function OverviewContent({
         : usual;
 
   return (
-    <Layout path="/" title="Vue d’ensemble" hideHeading className="home-page">
+    <Layout
+      path="/"
+      title="Vue d’ensemble"
+      hideHeading
+      className="home-page"
+      loader={<HomeSkeleton />}
+    >
       <h1 className="sr-only">Vue d’ensemble</h1>
       {/* The week's title and the season/competition filters share one row. */}
       <div className="home-toolbar">

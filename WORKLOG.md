@@ -1046,3 +1046,10 @@
 - Look: no mock-up; same rules as § 82 (22 px veil cards, pills), screenshots sent to hugo before the merge.
 - Tests: `tests/e2e/competition-views.e2e.mjs` 7/7 (2/7 on main), `competitions-archives.e2e.mjs` 12/12, site unit tests, `test_models` + `test_rounds` 84/84 against a local PostgreSQL 18. Evidence in `/mnt/project-files/design-boutons/competitions-archives/e2e-vues-*` (outside git).
 
+
+## Loading skeletons of the home, a match and a competition; the tab kept across competitions (27 Nov 2026, FAILURE_MODES § 84)
+
+- Request (hugo, 27 Nov, 18 h 46): the loading skeletons still drew the former pages; redo them for the pages redesigned lately (home, match, competition). And on Projection (or any tab), choosing another competition should open it on the same tab.
+- Skeletons: `CompetitionSkeleton` (piste B), new `MatchSkeleton` and `HomeSkeleton`, styles in `skeletons.css`. The home and a match (`?id=`) now have a route skeleton like the club, the nation and the competition; the home keeps its real toolbar while its week is read again.
+- Tab: `chooseCompetition` carries `view=`; Projection has its word in the address; `CompetitionEdition` opens on Projection and gives way to Classement where there is none (`useSeasonProjectionState`).
+- Tests: `tests/e2e/skeletons-and-tabs.e2e.mjs` (8/32 on main fb95f19), `tests/route-skeleton.test.mjs`, the site's render tests touched (`competition-render`, `overview-featured-render`: stubs for the new imports). Evidence in `/mnt/project-files/design-boutons/competitions-archives/e2e-squelettes-*` (outside git).

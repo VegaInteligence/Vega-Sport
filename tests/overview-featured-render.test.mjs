@@ -96,6 +96,10 @@ async function overview({
     },
     "../services/resource-bootstrap.js": { useResourceBootstrap: () => null },
     "../services/home-bootstrap-preferences.js": { mirrorHomeState: () => {} },
+    "../components/HomeSkeleton.jsx": {
+      __esModule: true,
+      default: () => h("div", { "data-page-loading": "" }, "Chargement de la synthèse…"),
+    },
     "../components/UI.jsx": {
       Empty: ({ children }) => h("div", { "data-empty": "" }, children),
       AsyncState: ({ resource, children, loading }) =>

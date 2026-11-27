@@ -4,8 +4,11 @@
  * The head script (app/layout.jsx) and LoadingPage both read this table.
  */
 export const ROUTE_SKELETONS = {
+  // The home: "/" without its slash (§ 84).
+  "": { kind: "home", needsId: false },
   "/clubs": { kind: "club", needsId: true },
   "/competitions": { kind: "competition", needsId: false },
+  "/matchs": { kind: "match", needsId: true },
   "/nations": { kind: "nation", needsId: true },
 };
 

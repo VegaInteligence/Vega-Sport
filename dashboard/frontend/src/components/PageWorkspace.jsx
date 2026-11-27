@@ -23,7 +23,12 @@ export default function PageWorkspace({ className = "", loader, children }) {
           <div className="workspace page-skeleton-overlay">{loader}</div>
         ) : (
           <div className={serverHome ? "server-home-loader" : undefined}>
-            <PageLoader overlay />
+            {/* The home redrawn for another visitor's choices: its skeleton, not the logo (§ 84). */}
+            {loader ? (
+              <div className="workspace page-skeleton-overlay">{loader}</div>
+            ) : (
+              <PageLoader overlay />
+            )}
           </div>
         ))}
       <main
