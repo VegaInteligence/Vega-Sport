@@ -59,7 +59,7 @@ async function check(name, expected, run) {
 
 /** A page on the match. `plan`: { grid, standings, played, view }. */
 async function open(label, device, plan = {}) {
-  const { grid: withGrid = true, standings = true, played = false, lineups = false, grades = true, view } = plan;
+  const { grid: withGrid = true, standings = true, played = false, lineups = false, grades = true, unreliable = false, query = {}, view } = plan;
   const context = await browser.newContext({ ...device, locale: "fr-FR", colorScheme: "dark", timezoneId: "Europe/Paris" });
   const page = await context.newPage();
   const run = { label, plan, errors: [], misses: [] };
@@ -97,13 +97,14 @@ async function open(label, device, plan = {}) {
         home: { deviation: 0.31, elo: 13.9 }, away: { deviation: -0.72, elo: -32.3 }, computedAt: "2026-11-27T19:05:00.000Z" };
     return route.fulfill({ status: 200, json: body, headers: { "access-control-allow-origin": "*" } });
   });
-  // No grade read for any player (early in a season): the clubs' reads without them (P14).
-  if (!grades)
+  // No grade read for any player (early in a season, P14), or every match's team statistics flagged unreliable (P16).
+  if (!grades || unreliable)
     await context.route(/\/api\/read\/club\?/, async (route) => {
       const url = route.request().url().replace(/^https:\/\/dngp6kh9jx2bl\.cloudfront\.net/, replay);
       const response = await route.fetch({ url });
       const body = await response.json();
-      for (const row of body.data?.appearances || []) Object.assign(row, { grade: null, gradeZ: null });
+      if (!grades) for (const row of body.data?.appearances || []) Object.assign(row, { grade: null, gradeZ: null });
+      if (unreliable) for (const m of body.data?.matches || []) m.coverage = { ...m.coverage, teamStatsReliable: false };
       return route.fulfill({ status: response.status(), json: body, headers: { "access-control-allow-origin": "*" } });
     });
   if (!standings) await context.route(/\/api\/standings\?/, (route) => route.fulfill({ status: 404, json: { error: "Donnée indisponible." } }));
@@ -118,7 +119,7 @@ async function open(label, device, plan = {}) {
       return route.fulfill({ status: 200, json: body, headers: { "access-control-allow-origin": "*" } });
     });
   await page.clock.install({ time: played ? NOW + 6 * 3600_000 : NOW });
-  await page.goto(base + "/matchs?" + new URLSearchParams({ id, ...(view ? { view } : {}) }), { waitUntil: "domcontentloaded", timeout: 120000 });
+  await page.goto(base + "/matchs?" + new URLSearchParams({ id, ...query, ...(view ? { view } : {}) }), { waitUntil: "domcontentloaded", timeout: 120000 });
   return { page, run, close: () => context.close() };
 }
 
@@ -383,6 +384,47 @@ try {
         assert.ok(form.w >= p.w - 40, `${form.w} / ${p.w}`);
         assert.deepEqual(run.errors, []);
         return { notes, form, panel: p };
+      });
+    } finally {
+      await close();
+    }
+  }
+
+  // ------------------------------------------------------------------ opened with another competition's filter
+  {
+    const { page, run, close } = await open("filtre d'une autre compétition", desktop, { query: { league: "l_3FJFUl" } });
+    try {
+      await check("P15 liens des joueurs : la saison du match, sans le filtre de compétition de la page", { season: "2026/2027", league: "" }, async () => {
+        await card(page, "notes").waitFor({ timeout: 60000 });
+        const links = [
+          ...(await panel(page).locator("[data-preview-heroes] a").evaluateAll((as) => as.map((a) => a.getAttribute("href")))),
+          ...(await card(page, "notes").locator("a").evaluateAll((as) => as.map((a) => a.getAttribute("href")))),
+        ].filter((h) => h.includes("/joueurs"));
+        const params = links.map((h) => new URL(h, "http://x").searchParams);
+        assert.ok(links.length >= 4, links.join(" | "));
+        assert.ok(params.every((q) => q.get("season") === "2026/2027"), links.join(" | "));
+        assert.ok(params.every((q) => !q.get("league")), links.join(" | "));
+        assert.deepEqual(run.errors, []);
+        return { links: links.slice(0, 3), n: links.length };
+      });
+    } finally {
+      await close();
+    }
+  }
+
+  // ------------------------------------------------------------------ team statistics flagged unreliable
+  {
+    const { page, run, close } = await open("stats non fiables", desktop, { unreliable: true });
+    try {
+      await check("P16 statistiques non fiables : les résultats restent, pas de barres xG", { results: 20, xg: 0 }, async () => {
+        await card(page, "form").waitFor({ timeout: 60000 });
+        await page.waitForTimeout(1500);
+        const results = await card(page, "form").locator("i[data-result]").count();
+        const xg = await card(page, "form").locator('[title*="xG"]').count();
+        assert.equal(results, 20);
+        assert.equal(xg, 0);
+        assert.deepEqual(run.errors, []);
+        return { results, xg };
       });
     } finally {
       await close();

@@ -6318,3 +6318,10 @@ Codex's review of #263 (five findings, all real, each red before its fix and gre
   Classement tab's rule: a table computed from the results (source « Vega ») is shown for a plain league phase only
   (`plainLeagueTable`, moved to `services/competition-standings.js`); a split or play-off league's is withheld, so no
   rank or points there. Red before (`previewTable` absent), green after.
+
+Codex's second review (on f856ef3, two findings, both real, red before and green after):
+- **P15** a player's link (the four cards, the notes) opens his profile for the season the preview reads, with no
+  `league` filter carried over from the page (as « Joueurs les plus utilisés » did); opened with `league=l_3FJFUl`, the
+  links kept it.
+- **P16** a past match whose team statistics are flagged unreliable (`coverage.teamStatsReliable === false`) keeps its
+  result in the form chart but gives no xG bar and no xG to the means, as `clubSummary` leaves it out of the season.

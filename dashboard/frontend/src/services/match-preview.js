@@ -59,15 +59,19 @@ export function matchXg(match, side) {
   return isNumber(value) ? value : null;
 }
 
-/** A club's last `n` finished matches before the kick-off (newest first), with its xG for and against. */
+/**
+ * A club's last `n` finished matches before the kick-off (newest first), with its xG for and against; none from a match
+ * whose team statistics are flagged unreliable, which keeps its result (as `clubSummary` leaves it out of the season's).
+ */
 export function formMatches(club, n = 10) {
   return (club?.forms || []).slice(0, n).map((form) => {
     const other = form.side === "home" ? "away" : "home";
+    const reliable = form.match.coverage?.teamStatsReliable !== false;
     return {
       ...form,
       opponent: form.match[other],
-      xgFor: matchXg(form.match, form.side),
-      xgAgainst: matchXg(form.match, other),
+      xgFor: reliable ? matchXg(form.match, form.side) : null,
+      xgAgainst: reliable ? matchXg(form.match, other) : null,
     };
   });
 }

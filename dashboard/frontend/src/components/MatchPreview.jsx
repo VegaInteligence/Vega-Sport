@@ -96,7 +96,7 @@ export function PreviewStrip({ match }) {
   );
 }
 
-function Hero({ eyebrow, colour, picture, name, sub, figure, href, first = false }) {
+function Hero({ eyebrow, colour, picture, name, sub, figure, href, season, first = false }) {
   const f = useFootball();
   const body = (
     <>
@@ -113,13 +113,16 @@ function Hero({ eyebrow, colour, picture, name, sub, figure, href, first = false
   );
   const props = { className: `${s.hero}${first ? ` ${s.first}` : ""}`, style: { "--c": colour } };
   return href ? (
-    <Link {...props} href={f.href("/joueurs/", { id: href, q: "" })} prefetch={false}>
+    <Link {...props} href={playerHref(f, href, season)} prefetch={false}>
       {body}
     </Link>
   ) : (
     <div {...props}>{body}</div>
   );
 }
+
+/** A player's profile for the season the preview reads, whatever filter the page was opened with (as MatchContext did). */
+const playerHref = (f, id, season) => f.href("/joueurs/", { id, season: season || "", league: "", q: "" });
 
 /** The four cards of the top (§ 80.3). */
 function Heroes({ match, reading, clubs, absents }) {
@@ -156,6 +159,7 @@ function Heroes({ match, reading, clubs, absents }) {
             sub="5 derniers matchs"
             figure={number(player.grade, 0)}
             href={player.id}
+            season={clubs.value?.season}
           />,
         );
     }
@@ -171,6 +175,7 @@ function Heroes({ match, reading, clubs, absents }) {
         sub={missing.sub}
         figure={missing.figure}
         href={missing.player.id}
+        season={clubs.value?.season}
       />,
     );
   if (!cards.length) return null;
@@ -462,7 +467,7 @@ function bestNotes(clubs) {
     .sort((a, b) => b.p.grade - a.p.grade);
 }
 
-function NotesCard({ match, rows, absents }) {
+function NotesCard({ match, rows, absents, season }) {
   const f = useFootball();
   const out = new Set(["home", "away"].flatMap((side) => (absents[side].view?.rows || []).map((a) => a.player.id)));
   return (
@@ -473,7 +478,7 @@ function NotesCard({ match, rows, absents }) {
           return (
             <li key={p.id} style={{ "--c": `var(--${side})` }}>
               <span className={s.rank}>{String(i + 1).padStart(2, "0")}</span>
-              <Link className={s.player} href={f.href("/joueurs/", { id: p.id, q: "" })} prefetch={false}>
+              <Link className={s.player} href={playerHref(f, p.id, season)} prefetch={false}>
                 <PlayerAvatar player={p} size={32} />
                 <span>
                   <b>
@@ -684,7 +689,7 @@ export default function MatchPreview({ match }) {
         <>
           <Pair wide>
             <FormCard match={match} clubs={clubs} />
-            {notes.length > 0 && <NotesCard match={match} rows={notes} absents={absents} />}
+            {notes.length > 0 && <NotesCard match={match} rows={notes} absents={absents} season={clubs.value.season} />}
           </Pair>
           <Pair>
             {(clubs.home.matches > 0 || clubs.away.matches > 0) && (
