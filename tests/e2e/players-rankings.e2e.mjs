@@ -54,7 +54,8 @@ const round = (v) => parseFloat(v) >= 100;
 const card = (v) => Math.abs(parseFloat(v) - 22) <= 1;
 
 const browser = await chromium.launch();
-async function open(path, options = {}, { held = false, wait = "load" } = {}) {
+// `rewrite(url, body)` edits a JSON answer of the API before the page reads it (null leaves it as it is).
+async function open(path, options = {}, { held = false, wait = "load", rewrite = null } = {}) {
   const context = await browser.newContext({ colorScheme: "dark", viewport: { width: 1440, height: 900 }, ...options });
   await context.addInitScript(() => {
     try {
@@ -66,13 +67,17 @@ async function open(path, options = {}, { held = false, wait = "load" } = {}) {
   for (const origin of [API, ...(replay ? [replay] : [])])
     await page.route(`${origin}/**`, async (route) => {
       if (held) return new Promise(() => {});
-      if (!replay || origin !== API) return route.continue();
+      if ((!replay || origin !== API) && !rewrite) return route.continue();
       try {
-        const response = await fetch(route.request().url().replace(API, replay));
+        const url = route.request().url();
+        const response = await fetch(replay ? url.replace(API, replay) : url);
+        let body = Buffer.from(await response.arrayBuffer());
+        const edited = rewrite && response.ok ? rewrite(url, JSON.parse(body.toString("utf8"))) : null;
+        if (edited) body = Buffer.from(JSON.stringify(edited));
         await route.fulfill({
           status: response.status,
           headers: { "content-type": response.headers.get("content-type") || "application/json", "access-control-allow-origin": "*" },
-          body: Buffer.from(await response.arrayBuffer()),
+          body,
         });
       } catch {
         await route.abort();
@@ -173,6 +178,29 @@ await run("power", async () => {
   check("P3 score pill and crests", "the score in a 999 px pill, a crest in every row", rows, rows.rows > 5 && rows.crests === rows.rows && round(rows.radius));
   await page.screenshot({ path: join(out, "power-ordinateur.png"), fullPage: true });
   await context.close();
+  // A provisional rank among the first three keeps its warning on its card (Codex review of PR #276).
+  const provisional = await open(POWER, {}, {
+    rewrite: (url, body) => {
+      if (!/\/api\/rankings\/power\?/.test(url) || /kind=clubs/.test(url) || !body?.rows?.[1]) return null;
+      body.rows[1] = { ...body.rows[1], provisionalReason: "minutes" };
+      return body;
+    },
+  });
+  await provisional.page.locator(".power-top3 > li").nth(2).waitFor({ timeout: 90000 });
+  await provisional.page.waitForTimeout(800);
+  const warned = await provisional.page.evaluate((BOX) => {
+    const box = eval(BOX);
+    const cards = [...document.querySelectorAll(".power-top3 > li")];
+    return {
+      text: cards.map((c) => c.querySelector(".power-top3-provisional")?.textContent.trim() || ""),
+      title: cards[1]?.querySelector(".power-top3-provisional")?.title,
+      heights: cards.map((c) => box(c).h),
+    };
+  }, BOX);
+  check("P5 provisional on a card", "the 2nd card says « Peu de minutes » (Rang provisoire), the others nothing, three cards of one height", warned,
+    warned.text[1] === "Peu de minutes" && warned.title === "Rang provisoire" && !warned.text[0] && !warned.text[2] && warned.heights.every((h) => near(h, warned.heights[0], 1)));
+  await provisional.page.screenshot({ path: join(out, "power-provisoire-ordinateur.png") });
+  await provisional.context.close();
   const clubs = await open(POWER + "&tab=clubs");
   await clubs.page.locator("tr[data-team-id]").first().waitFor({ timeout: 90000 });
   await clubs.page.waitForTimeout(800);

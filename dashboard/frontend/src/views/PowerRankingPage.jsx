@@ -112,6 +112,11 @@ function PlayersTab({ season, role }) {
                     {r.teamImageUrl && <Media name={r.team} url={r.teamImageUrl} />}
                     {r.team || "—"} · {r.position}
                   </small>
+                  {r.provisionalReason && (
+                    <em className="power-top3-provisional" title="Rang provisoire">
+                      {PROVISIONAL_SHORT[r.provisionalReason]}
+                    </em>
+                  )}
                 </span>
               </Link>
               <Score value={r.score} />
