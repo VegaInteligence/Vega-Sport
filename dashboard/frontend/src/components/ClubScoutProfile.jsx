@@ -8,7 +8,7 @@ import { CompetitionPicker } from "./CompetitionPicker.jsx";
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { Segments, Skeleton } from "./UI.jsx";
+import { Media, Segments, Skeleton } from "./UI.jsx";
 import { ResearchTabs } from "./ResearchUI.jsx";
 import { chartTokens, RadarChart } from "./PlayerScoutCharts.jsx";
 import { countryLabel } from "../services/competition-selector.js";
@@ -47,10 +47,13 @@ import {
   ordinal,
 } from "./ClubScoutUI.jsx";
 import { RankingDialog, RankingProvider } from "./RankingDialog.jsx";
-import ClubSkeleton, { ClubSkeletonRail } from "./ClubSkeleton.jsx";
+import ClubSkeleton from "./ClubSkeleton.jsx";
+import SettingsPicker from "./SettingsPicker.jsx";
+import { competitionCountryLabel } from "../services/competition-selector.js";
+import { competitionSearchText, normalizeCompetitionQuery } from "../services/cup-catalog.js";
 import {
-  IdentityRail,
-  RailHead,
+  ClubHero,
+  ClubHeroWho,
   Matches,
   Overview,
   Squad,
@@ -164,18 +167,7 @@ function ClubEarly({ clubId, state, backHref }) {
     <ClubSkeleton
       live
       label={label}
-      rail={
-        <aside className={sA.rail} aria-label="Identité du club">
-          <RailHead
-            club={club}
-            backHref={backHref}
-            season={<ClubSeasonSelect season={club.season} />}
-          />
-          <div className="club-skeleton-shapes" aria-hidden="true">
-            <ClubSkeletonRail />
-          </div>
-        </aside>
-      }
+      head={<ClubHeroWho club={club} />}
       after={
         <Card
           title="Derniers matchs"
@@ -189,7 +181,7 @@ function ClubEarly({ clubId, state, backHref }) {
 }
 
 /** The club's season, chosen where the club is shown: the page reads the club in it. */
-function ClubSeasonSelect({ season }) {
+function ClubSeasonSelect({ season, bare = false }) {
   const f = useFootball();
   const seasons = (f?.manifest?.seasons || []).map((item) => item.id);
   if (!seasons.length || !f.changeSeason) return null;
@@ -198,7 +190,8 @@ function ClubSeasonSelect({ season }) {
       value={season || f.season}
       seasons={seasons}
       onChange={f.changeSeason}
-      className={sA.season}
+      className={bare ? "" : sA.season}
+      bare={bare}
     />
   );
 }
@@ -238,44 +231,44 @@ function Profile({ dossier, backHref }) {
   };
   return (
     <RankingProvider value={setRanking}>
-      <div className={sA.layout}>
-        <IdentityRail
+      <div className="team-layout">
+        <ClubHero
           dossier={dossier}
-          onTab={setTab}
-          backHref={backHref}
-          season={<ClubSeasonSelect season={dossier.season} />}
+          segments={
+            <>
+              <ClubSeasonSelect season={dossier.season} bare />
+              {referentialTab && <ComparisonPicker dossier={dossier} cmp={cmp} />}
+            </>
+          }
         />
-        <div className={sA.main}>
-          <ComparisonBar dossier={dossier} cmp={cmp} active={referentialTab} />
-          <ResearchTabs
-            animated
-            label="Analyse du club"
-            items={TABS}
-            value={tab}
-            onChange={setTab}
-            panelId="club-profile-panel"
-          />
-          <div
-            id="club-profile-panel"
-            role="tabpanel"
-            aria-label={TABS.find(([key]) => key === tab)[1]}
-            className={s.panel}
-          >
-            {tab === "overview" && (
-              <Overview dossier={view} base={dossier} onTab={setTab} />
-            )}
-            {tab === "stats" && <Statistics dossier={view} />}
-            {tab === "advanced" && <AdvancedStats dossier={view} />}
-            {tab === "style" && <Style dossier={view} />}
-            {tab === "matches" && <Matches dossier={dossier} />}
-            {tab === "squad" && <Squad dossier={dossier} />}
-            {tab === "compare" && (
-              <Comparison dossier={dossier} rival={rival} onRival={setRival} />
-            )}
-            {tab === "similar" && (
-              <Similar dossier={dossier} onCompare={compare} />
-            )}
-          </div>
+        <ResearchTabs
+          animated
+          label="Analyse du club"
+          items={TABS}
+          value={tab}
+          onChange={setTab}
+          panelId="club-profile-panel"
+        />
+        <div
+          id="club-profile-panel"
+          role="tabpanel"
+          aria-label={TABS.find(([key]) => key === tab)[1]}
+          className={s.panel}
+        >
+          {tab === "overview" && (
+            <Overview dossier={view} base={dossier} onTab={setTab} />
+          )}
+          {tab === "stats" && <Statistics dossier={view} />}
+          {tab === "advanced" && <AdvancedStats dossier={view} />}
+          {tab === "style" && <Style dossier={view} />}
+          {tab === "matches" && <Matches dossier={dossier} />}
+          {tab === "squad" && <Squad dossier={dossier} />}
+          {tab === "compare" && (
+            <Comparison dossier={dossier} rival={rival} onRival={setRival} />
+          )}
+          {tab === "similar" && (
+            <Similar dossier={dossier} onCompare={compare} />
+          )}
         </div>
       </div>
       {ranking && (
@@ -337,7 +330,13 @@ function useComparison(dossier) {
   };
 }
 
-function ComparisonBar({ dossier, cmp, active }) {
+/**
+ * « Comparer à » in the head's bar (FAILURE_MODES § 86; the row of boxes above the tabs before): the home's panel,
+ * with Europe at a comparable level, Europe whole and the club's league in its track, then every competition as a
+ * tile (a search across them). A choice applies at once. While the referential is read the segment says so, in its
+ * place: nothing is inserted above the tabs.
+ */
+function ComparisonPicker({ dossier, cmp }) {
   const competitions = useSeasonCompetitions();
   const { scope, level, state } = cmp;
   const single = (c) => ({ ...c, leagues: [c] });
@@ -345,75 +344,125 @@ function ComparisonBar({ dossier, cmp, active }) {
   const played = dossier.competitions
     .filter((c) => c.id !== dossier.league?.id)
     .map((c) => single(competitions.find((x) => x.id === c.id) || c));
-  const options = [...new Map([...competitions, ...played, own]
-    .filter((item) => item.id)
+  // The competitions the club plays first, then every other one.
+  const options = [...new Map([...played, ...competitions]
+    .filter((item) => item.id && item.id !== dossier.league?.id)
     .map((item) => [item.id, item])).values()];
-  const loading = state.status !== "ready";
   const leagueName = dossier.league?.name || "Championnat";
+  const text =
+    state.status === "error"
+      ? "Référentiel indisponible"
+      : state.status !== "ready"
+        ? scope === "europe"
+          ? "Lecture de l’Europe…"
+          : `Lecture · ${state.progress?.done ?? 0} / ${state.progress?.total || "…"} clubs`
+        : scope === "europe"
+          ? level
+            ? "Europe · niveau comparable"
+            : "Europe · tous les clubs"
+          : scope === "league"
+            ? leagueName
+            : cmp.competition?.name || "Autre compétition";
   return (
-    <section
-      className={s.compareBar}
-      data-inactive={!active || undefined}
-      aria-label="Référentiel de comparaison"
+    <SettingsPicker
+      pane="competitions"
+      icon="filters"
+      label="Comparer à"
+      text={text}
+      display={
+        scope === "europe" && state.status === "ready" ? (
+          <>
+            Europe<span className="team-wide"> · {level ? "niveau comparable" : "tous les clubs"}</span>
+          </>
+        ) : (
+          text
+        )
+      }
+      value={scope === "competition" ? cmp.competition?.id : scope}
+      bare
     >
-      <div className={s.compareRow}>
-        <span className={s.compareLabel}>Comparer à</span>
-        <div
-          className={`segmented-control ${s.compareScope}`}
-          role="group"
-          aria-label="Clubs comparés"
-        >
-          <button
-            aria-pressed={scope === "europe"}
-            onClick={() => cmp.setScope("europe")}
-          >
-            Europe <small>Top 7 + UEFA</small>
+      {(close) => (
+        <ComparisonPane
+          leagueName={leagueName}
+          options={options}
+          scope={scope}
+          level={level}
+          current={scope === "competition" ? cmp.competition?.id : null}
+          onEurope={(comparable) => {
+            cmp.setScope("europe");
+            cmp.setLevel(comparable);
+            close();
+          }}
+          onLeague={() => {
+            cmp.pick(own);
+            close();
+          }}
+          onPick={(item) => {
+            cmp.pick(single(item));
+            close();
+          }}
+          error={state.status === "error" ? state.error : null}
+        />
+      )}
+    </SettingsPicker>
+  );
+}
+
+function ComparisonPane({ leagueName, options, scope, level, current, onEurope, onLeague, onPick, error }) {
+  const [query, setQuery] = useState("");
+  const search = normalizeCompetitionQuery(query).trim();
+  const shown = search
+    ? options.filter((competition) =>
+        competitionSearchText(competition, competitionCountryLabel(competition)).includes(search),
+      )
+    : options;
+  return (
+    <div className="competition-switcher">
+      <div className="home-settings-tools">
+        <div className="home-settings-presets" role="group" aria-label="Clubs comparés">
+          <button type="button" aria-pressed={scope === "europe" && level} onClick={() => onEurope(true)}>
+            Europe · niveau comparable
           </button>
-          <button
-            aria-pressed={scope === "league"}
-            onClick={() => cmp.setScope("league")}
-          >
+          <button type="button" aria-pressed={scope === "europe" && !level} onClick={() => onEurope(false)}>
+            Europe · tous les clubs
+          </button>
+          <button type="button" aria-pressed={scope === "league"} onClick={onLeague}>
             {leagueName}
           </button>
         </div>
-        <div className={s.comparePick} data-active={scope === "competition"}>
-          <CompetitionPicker
-            label="Compétition de comparaison"
-            value={scope === "competition" ? cmp.competition?.id : scope === "league" ? own.id : "all"}
-            summary={scope === "competition" ? cmp.competition?.name : "Autre compétition"}
-            competitions={options}
-            allLabel={null}
-            onChange={(id) => {
-              const item = options.find((option) => option.id === id);
-              if (item) cmp.pick(item.own ? own : single(item));
-            }}
+        <label className="home-settings-search">
+          <Icon name="search" />
+          <input
+            type="search"
+            aria-label="Rechercher une compétition"
+            placeholder="Autre compétition ou pays…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
           />
-        </div>
-        {scope === "europe" && (
-          <div
-            className={`segmented-control ${s.compareLevel}`}
-            role="group"
-            aria-label="Niveau des clubs comparés"
+        </label>
+      </div>
+      {error && <p className="home-settings-empty" role="status">{error}</p>}
+      <div className="home-settings-tiles" role="group" aria-label="Compétitions">
+        {shown.map((competition) => (
+          <button
+            key={competition.id}
+            type="button"
+            className="home-settings-tile"
+            data-league={competition.id}
+            aria-pressed={competition.id === current}
+            onClick={() => onPick(competition)}
           >
-            <button aria-pressed={level} onClick={() => cmp.setLevel(true)}>
-              Niveau comparable
-            </button>
-            <button aria-pressed={!level} onClick={() => cmp.setLevel(false)}>
-              Tous les clubs
-            </button>
-          </div>
+            {competition.id === current && <Icon name="check" className="home-settings-check" />}
+            <Media name={competition.name} url={competition.imageUrl} />
+            <strong>{competition.name}</strong>
+            <small>{competition.detail || competitionCountryLabel(competition)}</small>
+          </button>
+        ))}
+        {!shown.length && (
+          <p className="home-settings-empty">Aucune compétition pour cette recherche.</p>
         )}
       </div>
-      {active && loading && (
-        <p className={s.compareSummary} role="status">
-          {state.status === "error"
-            ? state.error
-            : scope === "europe"
-              ? "Lecture des clubs du Top 7 européen…"
-              : `Lecture de ${state.progress?.league || cmp.competition?.name} · ${state.progress?.done ?? 0} / ${state.progress?.total || "…"} clubs`}
-        </p>
-      )}
-    </section>
+    </div>
   );
 }
 
@@ -884,7 +933,7 @@ function Similar({ dossier, onCompare }) {
                   className="inline-link"
                   href={f.href("/clubs/", { id: club.id, clubView: "" })}
                 >
-                  Ouvrir la fiche →
+                  Ouvrir la fiche
                 </Link>
               </div>
             </article>

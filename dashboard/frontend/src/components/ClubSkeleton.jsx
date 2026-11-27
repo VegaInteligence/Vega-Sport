@@ -8,42 +8,67 @@ const line = (width, height) => (
   />
 );
 
-/** The identity column's sections after the club's identity, in grey. */
-export const ClubSkeletonRail = () => (
-  <>
-    <div className="club-skeleton-card club-skeleton-split">
-      {line("40%")}
-      {line("30%", "2.2em")}
-      {line("88%")}
-      {line("72%")}
+/** The head's shape while the page is read: the crest, two lines, the bar and six figures in grey. */
+export function TeamHeroSkeleton({ live = false, head = null }) {
+  return (
+    <div className="team-hero team-hero-skeleton" aria-hidden={live ? undefined : "true"}>
+      <div className="team-hero-top">
+        {head || (
+          <div className="team-hero-who">
+            <span className="skeleton-line team-hero-mark-skeleton" />
+            <div className="team-hero-words">
+              <span className="skeleton-line" style={{ width: 280, height: 30 }} />
+              <span className="skeleton-line" style={{ width: 220, marginTop: 10 }} />
+            </div>
+          </div>
+        )}
+        <div className="team-hero-bar">
+          <span className="skeleton-line skeleton-pill" style={{ width: 300, height: 40 }} />
+          <span className="skeleton-line skeleton-pill" style={{ width: 84, height: 32 }} />
+        </div>
+      </div>
+      <div className="team-hero-figs">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="team-fig">
+            <span className="skeleton-line" style={{ width: 70 }} />
+            <span className="skeleton-line" style={{ width: i < 2 ? 64 : 52, height: i < 2 ? 30 : 22, marginTop: 6 }} />
+            <span className="skeleton-line" style={{ width: 90, marginTop: 6 }} />
+          </div>
+        ))}
+      </div>
     </div>
-    <div className="club-skeleton-card">
-      {line("44%")}
-      {line("82%")}
-      {line("76%")}
-      {line("68%")}
+  );
+}
+
+/** The tabs' track, centred, in grey: `count` pills. */
+export const TeamSkeletonTabs = ({ widths }) => (
+  <div className="team-skeleton-tabs" aria-hidden="true">
+    <div className="team-skeleton-track">
+      {widths.map((w, i) => (
+        <span key={i} className="skeleton-line skeleton-pill" style={{ width: w, height: 34 }} />
+      ))}
     </div>
-  </>
+  </div>
 );
 
 /**
- * A club page while it loads: the shape of its identity column, toolbar, tabs,
- * headline figures and first chart, in grey. Light on purpose: the site shell
- * shows it before the page's code and data arrive.
+ * A club page while it loads, in the page's shape (FAILURE_MODES § 86, piste B): the head across the page with its
+ * bar and six figures, the tabs' track, the key figures' card and the profile's card, in grey. Light on purpose: the
+ * site shell shows it before the page's code and data arrive.
  *
- * Once the club's own read is in memory the page shows what it knows: `rail` takes the
- * identity column's place and `after` follows the grey figures (the last matches). The
- * page is then revealed (`live`: no data-page-loading), the rest still grey.
+ * Once the club's own read is in memory the page shows what it knows: `head` takes the head's crest and name, and
+ * `after` follows the grey cards (the last matches). The page is then revealed (`live`: no data-page-loading), the
+ * rest still grey.
  */
 export default function ClubSkeleton({
   label = "Chargement du club…",
-  rail,
+  head,
   after,
   live = false,
 }) {
   return (
     <div
-      className="club-skeleton"
+      className="club-skeleton team-skeleton"
       role={live ? undefined : "status"}
       aria-busy={live ? undefined : "true"}
       data-page-loading={live ? undefined : ""}
@@ -51,54 +76,33 @@ export default function ClubSkeleton({
       <span className="sr-only" role={live ? "status" : undefined}>
         {label}
       </span>
-      <div className="club-skeleton-body">
-        {rail || (
-          <aside className="club-skeleton-aside" aria-hidden="true">
-            <div className="club-skeleton-back">{line("96px")}</div>
-            <div className="club-skeleton-card club-skeleton-identity">
-              <span className="skeleton-line club-skeleton-crest" />
-              {line("62%", "1.4em")}
-              {line("48%")}
-              {line("56%", "1.6em")}
+      <TeamHeroSkeleton live={live} head={head} />
+      <TeamSkeletonTabs widths={[128, 104, 118, 104, 156, 78, 112, 128]} />
+      <div className="club-skeleton-shapes team-skeleton-cards" aria-hidden="true">
+        <div className="team-skeleton-card team-skeleton-kpis">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i}>
+              {line("56%")}
+              {line("44%", "1.8em")}
+              {line("36%")}
             </div>
-            <ClubSkeletonRail />
-          </aside>
-        )}
-        <div className="club-skeleton-main">
-          <div className="club-skeleton-shapes" aria-hidden="true">
-            <div className="club-skeleton-toolbar">
-              {line("38%", "2.4em")}
-              {line("20%", "2.4em")}
-            </div>
-            <div className="club-skeleton-tabs">
-              {["9%", "8%", "10%", "8%", "12%", "6%", "10%"].map((w, i) => (
-                <React.Fragment key={i}>{line(w)}</React.Fragment>
-              ))}
-            </div>
-            <div className="club-skeleton-kpis">
+          ))}
+        </div>
+        <div className="team-skeleton-card team-skeleton-chart">
+          {line("22%", "1.2em")}
+          <div>
+            <span className="skeleton-line club-skeleton-disc" />
+            <div>
               {Array.from({ length: 6 }, (_, i) => (
-                <div key={i}>
-                  {line("56%")}
-                  {line("44%", "1.8em")}
-                  {line("36%")}
-                </div>
+                <React.Fragment key={i}>
+                  {line(`${88 - (i % 3) * 9}%`)}
+                </React.Fragment>
               ))}
-            </div>
-            {line("22%", "1.2em")}
-            <div className="club-skeleton-chart">
-              <span className="skeleton-line club-skeleton-disc" />
-              <div>
-                {Array.from({ length: 6 }, (_, i) => (
-                  <React.Fragment key={i}>
-                    {line(`${88 - (i % 3) * 9}%`)}
-                  </React.Fragment>
-                ))}
-              </div>
             </div>
           </div>
-          {after}
         </div>
       </div>
+      {after}
     </div>
   );
 }

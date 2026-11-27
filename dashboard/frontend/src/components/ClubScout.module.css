@@ -1506,3 +1506,102 @@
   height: auto;
   min-height: 185px;
 }
+
+/* ------------------------------------------------------------------ the club and nation pages (FAILURE_MODES § 86)
+   Piste B of https://claude.ai/artifact/FV91Edw3nwSudoP9sTx5yS: cards on the veil at 22 px with no grey line, the key
+   figures one card, the form and the results round, the style tags and the cards' links in pills. Scoped to the two
+   pages (`.team-page`, on their workspace): the player pages that share these cards keep theirs. */
+:global(.team-page) .card {
+  padding: 20px 22px 22px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--veil);
+  --mq-gap: var(--veil);
+}
+:global(.team-page) .cardHead {
+  margin-bottom: 12px;
+}
+/* « Le club en bref » and « Compétitions et rang européen » (UI.jsx cards) at the same inset as the others. */
+:global(.team-page) .shell :global(.club-overview-info) > :global(.card) > :is(:global(.card-header), :global(.card-body)) {
+  padding-inline: 22px;
+}
+@media (max-width: 640px) {
+  :global(.team-page) .shell :global(.club-overview-info) > :global(.card) > :is(:global(.card-header), :global(.card-body)) {
+    padding-inline: 14px;
+  }
+}
+:global(.team-page) .stack,
+:global(.team-page) .grid2,
+:global(.team-page) .grid3 {
+  gap: 14px;
+}
+:global(.team-page) .matchPair {
+  row-gap: 0;
+}
+:global(.team-page) .stack > .kpis:has(+ .card) {
+  margin-bottom: 0;
+}
+:global(.team-page) .kpis {
+  gap: 0;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:global(.team-page) .kpis > div {
+  padding: 14px 18px;
+  background: transparent;
+}
+:global(.team-page) .kpis > div + div {
+  box-shadow: -1px 0 0 var(--veil-line);
+}
+:global(.team-page) .table th,
+:global(.team-page) .table td,
+:global(.team-page) .matchRow {
+  border-color: var(--veil-line);
+}
+:global(.team-page) .form {
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+:global(.team-page) .form span {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  font-size: 11px;
+}
+:global(.team-page) .form [data-result="V"] {
+  background: color-mix(in srgb, #2fb172 24%, transparent);
+  color: light-dark(#13804c, #47c98a);
+}
+:global(.team-page) .form [data-result="D"] {
+  background: color-mix(in srgb, #e5484d 24%, transparent);
+  color: light-dark(#c0272d, #f06a6e);
+}
+:global(.team-page) .tag {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--ink);
+  font-size: 12.5px;
+}
+:global(.team-page) .facts {
+  gap: 8px;
+  border: 0;
+  background: transparent;
+}
+:global(.team-page) .facts > div {
+  border-radius: 16px;
+  background: var(--veil-2);
+}
+@media (max-width: 640px) {
+  :global(.team-page) .card {
+    padding: 16px 14px 18px;
+  }
+  :global(.team-page) .kpis > div + div {
+    box-shadow: none;
+  }
+}

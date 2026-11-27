@@ -147,7 +147,7 @@ const listIds = (page) =>
   });
 const storedTheme = (page) => page.evaluate(() => localStorage.getItem("statarena.theme"));
 const markerOf = (page) => page.evaluate(() => localStorage.getItem("vega.account.merged.v1"));
-const bookmark = (page, saved) => page.locator(`button[aria-pressed="${saved}"][aria-label^="${saved ? "Retirer" : "Enregistrer"} "]`).first();
+const bookmark = (page, saved) => page.locator(`button[aria-pressed="${saved}"][aria-label^="${saved ? "Retirer" : "Ajouter"} "]`).first();
 async function toggleBookmark(page, url, wanted) {
   await open(page, url);
   const button = bookmark(page, !wanted);
