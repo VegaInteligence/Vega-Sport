@@ -454,7 +454,11 @@ l, n: the same file (writes through the owner role, the reader as `vega_read`); 
 as written for GH137 and GH137M; x: the evidence. Not verifiable here: production's write rate per table, hence the
 share of revalidations a check answers there (the access logs after a Deploy, GH149).
 
-## GH137R. Receipts: a revalidation of the five content-tagged selections without their reads (GH #137, VI-77; 26 Nov 2026)
+## GH137R. Receipts: a revalidation of the five content-tagged selections without their reads (GH #137, VI-77; 26 Nov 2026; retired 27 Nov 2026)
+
+**Retired: GH137R.3 holds the rules in force.** GH137R.1 and GH137R.2 describe migration 183 and the worker's step as
+they ran in production from the Deploy of 26 Nov 2026 (17:45 UTC) to the Deploy of migration 184. They stay here as the
+record of what was removed and why.
 
 `/api/league-history`, `/api/matchdays`, `/api/standings`, `/api/cups/edition` and `/api/players/{id}/transfers` keep the
 base commit's tags (GH137A-o, GH137, GH137M): the content's SHA-256 (`league-history-v2-<release-bound resource>-<digest>`,
@@ -532,6 +536,99 @@ prepares it.
 `backend/tests/packaged_read_receipts.py` and `test_image_identity.py` cover GH137R-n with the ARM64 worker image and
 the deployed Lambda entry point. The CI image job saves rerun instructions, the worker output and the responses.
 Local measurements and query plans are in the external evidence directory `gh137/receipts/`.
+
+### GH137R.3 Retired (review of production of 27 Nov 2026; written before the tests)
+
+Seen in production with 183 in service (Lambda request logs, Performance Insights and the worker's log, 26 Nov 17:55 UTC
+to 27 Nov 15:37 UTC; 38 conditional or HEAD probes of 27 Nov on `/api/standings` and `/api/players/{id}/transfers`, and
+the 9 conditional `/api/standings` requests the Lambda received by itself):
+
+- **No request answered by a receipt.** 47 of 47 made the receipt probe, found none current and built the answer: one
+  statement more than the base path each (`/api/standings` 2 for 1, the transfers 3 for 2), the same time (441 ms for
+  the standings). The worker logged no error and did prepare receipts (its standings statement: about 295 s of
+  database time over the period, the Lambda's own standings reads about 4 s).
+- **Why they are never current.** A standings or a cup selection names no scope (`scopeOf` gives none), so its version
+  counts each source table whole, and 182's map on a base migrated as production gives `api.standing_rows` the sources
+  `core.matches`, `agg.standings`, `core.standings_official`, `core.teams`, `core.rounds`, `core.provider_ids`,
+  `core.assets`, `core.competitions`, `core.competition_seasons`, `core.competition_zones` and `core.seasons`
+  (`api.cup_matches`: `core.matches` too). One committed write to any match, which the collection makes every minute,
+  makes every standings and cup receipt stale: what GH137A foresaw for versions per table (« the worker would rebuild
+  all of them after each write: more work than the revalidations it would save »). The transfers' statements read
+  shared tables whole as well (`core.provider_ids`, which every new match, player or club adds a row to, `core.teams`,
+  `core.assets`, `core.provider_clubs`, `ops.provider_links`). `test_read_receipts.py` GH137R-c wrote it: « the
+  standings and the cups count their matches whole ».
+- **Why they are not prepared in time either.** A round prepares at most 20 selections in 4.5 s, shared by the stale
+  receipts and five routes, while `ops.discover_read_receipts` moves each route's cursor past 20 editions or keys a
+  round (up to 60 standings selections): most discovered selections are passed over until the next traversal, and
+  the stale ones (all of a route after a write) wait behind them.
+- **What it cost.** GH137R-n made `backend/api/src`, its package manifests and all of `dashboard/shared` inputs of
+  the worker's image: a commit that changes only the read API gives a new identity, against GH158-a as written.
+  Deploy 152 (`1e22161`, the read API alone) built and pushed an image and replaced the worker and the backfill
+  (6 min 46 in its services step, the collection stopped 51 to 62 s); the image went from 105.4 to 115.8 MB.
+
+Decision (27 Nov 2026): the receipts are removed. The five routes carry few conditional requests (`/api/standings`:
+103 in the 8.5 h of 26 Nov before 183, 9 in the 16.7 h after the last Deploy), a receipt per selection cannot stay current without
+scopes per edition on every source (a trigger change on the standings', the teams' and the identities' tables), and
+preparing them anywhere but in the worker's image needs a second runtime holding the read API's code.
+
+Rules in force:
+
+- **The five routes answer by the base commit's path alone**, as GH137A (« kept as GH137 and GH137M left them »,
+  « kept on their content tags »), GH137 and GH137M write them: the content's tag, a 304 for it after the route's own
+  reads, no receipt probe, whether 183's objects exist in the base or not. A conditional request, a HEAD and a plain
+  GET of one selection run the same statements (`/api/league-history` and `/api/matchdays` one, `/api/standings` one,
+  the cup edition and the transfers theirs).
+  `backend/api/src/read-receipts.mjs` and `receipt-worker.mjs` no longer exist.
+- **The worker's round** folds the data versions (182) and starts no other process. `backend/vega/receipts.py` no
+  longer exists; `Worker` takes no receipts connection.
+- **The worker's image holds nothing of the read API.** The Dockerfile and its `.dockerignore` are those of
+  `9ebce16^` (Debian's `nodejs`, the seven `dashboard/shared` files and `legacy-8018e08` the archive import and the
+  sources read): no file of `backend/api`, no Node stage, no `node_modules`. GH158-a holds again as written: a commit
+  that changes only the read API keeps the image's identity (no build, no push, no replacement). GH137R-n is void.
+  `package_api.py` still binds the code's digest into the Lambda bundle: GH137A's tags read it (`REPRESENTATION`) when
+  no release is named.
+- **Migration 184** removes what 183 added and nothing else of it is kept but the two functions the matchdays read
+  uses: the four `vega_scope_*` triggers of `core.matches`, `core.match_events`, `core.league_player_seasons`,
+  `core.player_transfers` and `ops.transfermarkt_reads`, `ops.mark_scoped_change`, `ops.read_receipts`,
+  `ops.read_receipt_discovery`, `ops.receipt_version`, `api.read_receipt`, `ops.put_read_receipt`,
+  `ops.check_read_receipts`, `ops.missing_history_receipts`, `ops.discover_read_receipts`,
+  `api.player_transfer_scope`, the membership of `vega_calc` in `vega_read`, and the scoped rows (`scope <> ''`) of
+  `ops.data_changes` and `ops.data_versions`. Kept: `api.matchday_editions` and `api.matchday_rounds` as 183 wrote
+  them (GH137M's read), `ops.scoped_data_version` (182: `api.data_version`'s body, asked without scopes), every
+  whole-table trigger, mark and version of 182. **Not marked `-- vega:online`**: it drops triggers of the
+  collection's tables and functions the previous Deploy's code calls, so the Deploy stops the services for it (GH157).
+- **184 never waits while it holds a table.** The read API keeps answering while a Deploy's migration applies (GH157
+  stops the writers, not the reads). Dropping a trigger or a table takes an ACCESS EXCLUSIVE lock, and 184 needs seven
+  (the five tables above with their partitions, the two receipt tables). Taken in turn, a read that holds one of them
+  and then asks for another (the previous release's `/api/matchdays`: `ops.read_receipts` in its probe, then
+  `core.matches`) meets 184 holding the second and asking for the first: a deadlock, one of the two cancelled after
+  `deadlock_timeout` (a 5xx, or the migration failed and the services left stopped), and every read arriving behind a
+  waiting exclusive request queues meanwhile. So 184 first takes its seven locks together or not at all
+  (`LOCK TABLE … NOWAIT` in a block of its own, asked again every 50 ms): while a read holds one of them it holds
+  none, and no read waits behind it. After 10 s of that it asks once the ordinary way (a wait, rather than a Deploy
+  failed with its services stopped).
+- **The previous release during that Deploy.** The read API of the previous release still asks `api.read_receipt`
+  until its own step of the Deploy: a function that no longer exists is its « no receipt » answer (`versionsMissing`:
+  42883), the base path. The previous worker is stopped before the migration.
+
+| # | Situation | Expected |
+|---|---|---|
+| GH137R-p | Each of the five routes asked with the tag its 200 gave, with `*`, with another content's tag, by HEAD, by a plain GET, on a base with 184 | 304 with the held tag; 304; 200 with the body and the current tag; 200 without body; 200: the base commit's answers. No statement names `read_receipt`; the conditional requests run the statements of the plain GET |
+| GH137R-r | The previous release's read API (`1e22161`) on a base with 184: the same conditional requests | the base path's answers (its own fallback), no 5xx |
+| GH137R-s | 184 on a base holding receipts, a discovery cursor, scoped marks pending and folded, and whole-table marks pending and folded | applied; every object named above absent; no row with a scope left; the whole-table rows of `ops.data_changes` and `ops.data_versions` as they were |
+| GH137R-t | After 184: an insert, an update, a delete and a truncate on each of the five tables 183 scoped, each in its own transaction, then the fold | one whole-table mark per table and transaction (182), none with a scope; `api.data_version` of a relation reading the table changes with each |
+| GH137R-u | After 184: `/api/matchdays` (`api.matchday_rounds`, `api.matchday_editions`); `vega_calc` asking `SET ROLE vega_read`; `vega_read` calling a removed function | GH137M's answers; refused (not a member); undefined function |
+| GH137R-v | The worker's round (`Worker.publish`) with marks pending, `node` absent from its PATH; a `Worker` given a receipts connection | the marks folded, no `read receipts error` line, no process started; refused (no such argument, no module `vega.receipts`) |
+| GH137R-w | The image's context; a commit changing only `backend/api/src/handler.mjs`, only `backend/api/package-lock.json`, only a `dashboard/shared` file the image does not copy | no path under `backend/api`; the same identity for each (GH158-a) |
+| GH137R-x | A Deploy's migrate task from production's schema (183 applied): `--online`, then the full run, then again | exit 3, nothing applied (184 is not marked); 184 applied once; nothing more |
+| GH137R-y | 184 started while a read's transaction holds `core.match_events` (read, not ended); meanwhile another session reads `core.matches`, then the first reads `core.matches` too and ends | the migration holds no ACCESS EXCLUSIVE lock while it waits: both reads of `core.matches` answer (no wait behind it, no deadlock, nobody cancelled); 184 then applies |
+
+GH137R-p, s–v, y: `backend/tests/test_read_receipts_retired.py` (the worker's real round, fresh read API processes
+through `read_conditional.mjs`, the migrations applied for real up to 183, then 184). GH137R-w:
+`backend/tests/test_image_identity.py`. GH137R-x: `backend/tests/test_deploy_migrations.py` and
+`test_deploy_flow.py`'s online cases. GH137R-r is a single recorded run (the previous release's tree exported by
+`git archive 1e22161`, not kept as a suite: that tree leaves the history's reach of a shallow CI checkout): its
+commands, inputs and answers are in the evidence of the pull request.
 
 ## GH137. `/api/league-history`: one statement for a validator and its answer, the reads made cheaper, an hour at the edge (GH #137 for this route, VI-77; with GH #145 for this route, VI-85)
 

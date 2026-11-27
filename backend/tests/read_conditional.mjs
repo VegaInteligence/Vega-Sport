@@ -1,6 +1,6 @@
-// Read API requests as a fresh process sends them, for the receipts' end-to-end tests (test_read_receipts.py,
-// FAILURE_MODES_OPTIMISATIONS.md GH137R): the production read role (vega_read) and the real handler, a handler of its
-// own for each request, nothing kept between them.
+// Read API requests as a fresh process sends them, for the end-to-end tests of the five content-tagged reads
+// (test_read_receipts_retired.py, FAILURE_MODES_OPTIMISATIONS.md GH137R.3): the production read role (vega_read) and the
+// real handler, a handler of its own for each request, nothing kept between them.
 //   node backend/tests/read_conditional.mjs <dsn> '<json [{"path": "/api/...", "etag": "W/\"…\"", "method": "HEAD"}]>'
 // prints [{path, status, etag, cache, body, statements: [{sql, params, rows}]}]: `body` the parsed JSON of a GET's 200,
 // `statements` every statement the request ran, its parameters and how many rows it returned. Needs

@@ -566,8 +566,8 @@ test("GH137A-y, probe: refused parameters run nothing; a failed version is never
 
 // GH137A-o (third review, finding 13): the routes whose written contracts keep a client's tag through a writer's pass
 // that leaves their bytes (test_sportscore_standings.py 35t, test_snapshot_roles.py 35m–35o, test_dfb_periods.py,
-// test_transfermarkt_history.py 35w–35z) keep the base commit's content tag, and a 304 for it. How the 304 is reached
-// is not asserted here: a receipt read before the answer (findings 15, 16) may make it cheap without changing the tag.
+// test_transfermarkt_history.py 35w–35z) keep the base commit's content tag, and a 304 for it, reached by their own
+// reads (GH137R.3: the receipts read before the answer are retired).
 test("GH137A-o: standings, cup editions and transfers keep their content tags", { skip }, async () => {
   const handle = fresh();
   for (const [path, form] of [["/api/standings?competition=l_3FJFUl", /^W\/"support-v1-[a-f0-9]{64}"$/],

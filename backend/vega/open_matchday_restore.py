@@ -100,8 +100,10 @@ REFS = {
 # (no match dependency), functions and four triggers on every table the api reads, including core.matches. An applied
 # restore marks the tables it writes in ops.data_changes; a read-only dry run creates no marks.
 # 183 (GH137R) records additional season marks for the restored matches and events. It adds no match FK or column;
-# its receipt tables and the functions reading/writing them are independent of the restore. A later migration needs
-# its own review here.
+# its receipt tables and the functions reading/writing them are independent of the restore. 184 (GH137R.3) removes what
+# 183 added (the season marks' triggers, the receipt tables and their functions) and keeps 182: an applied restore marks
+# the tables it writes whole, as after 182; no table, no column, nothing naming a match. A later migration needs its own
+# review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
                     "168_nation_world_ranking.sql", "169_player_level_measured.sql",
@@ -109,7 +111,8 @@ REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_season
                     "173_nation_last_played.sql", "174_absences_suspensions.sql",
                     "175_player_award.sql", "176_match_probable_lineups.sql", "177_league_history_lean_reads.sql",
                     "178_match_grades_on_arrival.sql", "179_statement_statistics.sql", "180_matchday_rounds.sql",
-                    "181_match_absences.sql", "182_data_versions.sql", "183_read_receipts.sql")
+                    "181_match_absences.sql", "182_data_versions.sql", "183_read_receipts.sql",
+                    "184_retire_read_receipts.sql")
 
 
 class Refusal(RuntimeError):
