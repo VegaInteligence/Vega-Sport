@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { Card, Pager, AsyncState, Segments, Empty } from "./UI.jsx";
+import { Card, Pager, AsyncState, Segments, Empty, Skeleton } from "./UI.jsx";
 import { MatchLink } from "./MatchLink.jsx";
 import MatchdaySchedule from "./MatchdaySchedule.jsx";
 import { LeagueHistoryRail, LeagueHistoryView } from "./LeagueHistory.jsx";
@@ -31,7 +31,7 @@ import {
 } from "../../../shared/competition-scope.js";
 import CompetitionStandings from "./CompetitionStandings.jsx";
 import SeasonProjection from "./SeasonProjection.jsx";
-import { useSeasonProjection } from "../services/forecasts.js";
+import { useSeasonProjectionState } from "../services/forecasts.js";
 import { WORLD_CUP_ID } from "../services/cup-catalog.js";
 import EditionHeader, {
   FollowedTeam,
@@ -99,7 +99,8 @@ export default function CompetitionEdition({
       : asked === "standings" ||
           asked === "matches" ||
           (asked === "bracket" && hasKnockout) ||
-          (asked === "players" && !hasKnockout)
+          (asked === "players" && !hasKnockout) ||
+          asked === "projection"
         ? asked
         : worldCup
           ? "bracket"
@@ -216,10 +217,18 @@ export default function CompetitionEdition({
   const showHighlights =
     !embedded && supported && view === "standings" && !archived;
   // The league replayed to its end, where the base projects it (a domestic league in progress).
-  const projection = useSeasonProjection(
+  const projectionState = useSeasonProjectionState(
     supported && !archived ? competition?.id : null,
     seasonLabel(season),
   );
+  const projection = projectionState.value;
+  // Kept from another competition or the address (§ 84), the Projection tab gives way to the table where the
+  // league has none (a cup, a season over, an archive).
+  const noProjection =
+    view === "projection" && projectionState.settled && !projection;
+  useEffect(() => {
+    if (noProjection) setViewState(worldCup ? "bracket" : "standings");
+  }, [noProjection]);
   // A league with a closed round has the whole Player of the Season race (VI-44); a cup has no rounds.
   const leagueRounds = useLeagueRounds(
     supported && !hasKnockout && !archived ? competition?.id : null,
@@ -339,6 +348,8 @@ export default function CompetitionEdition({
               competition={competition?.id}
               season={seasonLabel(season)}
             />
+          ) : supported && view === "projection" && !projectionState.settled ? (
+            <Skeleton label="Chargement de la projection…" lines={8} />
           ) : supported && view === "projection" && projection ? (
             <SeasonProjection
               projection={projection}

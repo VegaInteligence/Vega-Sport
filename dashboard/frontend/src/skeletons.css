@@ -1,0 +1,466 @@
+/* Loading skeletons in the pages' new shapes (FAILURE_MODES § 84): the competition (piste B, § 82), a match (§ 81)
+   and the home (§ 77), drawn with the same pills (999 px) and 22 px cards of the veil as the pages they stand for.
+   The shell shows them before the page's code and data arrive (LoadingPage, PageWorkspace), so they stay plain. */
+
+.skeleton-pill {
+  border-radius: 999px;
+}
+
+/* ------------------------------------------------------------------------------------------------- competition */
+.competition-skeleton {
+  display: grid;
+  gap: 16px;
+}
+.competition-skeleton-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.competition-skeleton-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.competition-skeleton-logo {
+  flex: 0 0 var(--media-40, 40px);
+  width: var(--media-40, 40px);
+  height: var(--media-40, 40px);
+  border-radius: 10px;
+}
+.competition-skeleton-bar {
+  width: 366px;
+  max-width: 100%;
+  height: 40px;
+}
+.competition-skeleton-views {
+  width: 373px;
+  max-width: 100%;
+  height: 40px;
+}
+.competition-skeleton-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px);
+  gap: 18px;
+  align-items: start;
+}
+.competition-skeleton-table,
+.competition-skeleton-card {
+  min-width: 0;
+  border-radius: 22px;
+  background: var(--veil);
+}
+.competition-skeleton-table {
+  padding: 8px 14px;
+}
+.competition-skeleton-row {
+  display: grid;
+  grid-template-columns: 24px var(--media-20, 20px) minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 12px;
+  height: 39px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--veil-line);
+}
+.competition-skeleton-row:last-child {
+  border-bottom: 0;
+}
+.competition-skeleton-crest {
+  width: var(--media-20, 20px);
+  height: var(--media-20, 20px);
+  border-radius: 50%;
+}
+.competition-skeleton-side {
+  display: grid;
+  gap: 12px;
+}
+.competition-skeleton-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+@media (max-width: 1050px) {
+  .competition-skeleton-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .competition-skeleton-bar,
+  .competition-skeleton-views {
+    width: 100%;
+  }
+  .competition-skeleton-table {
+    padding-inline: 6px;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------------------- match */
+.match-skeleton {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.match-skeleton-top {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.match-skeleton-group {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.match-skeleton-pill {
+  flex: 0 1 auto;
+  height: 32px;
+}
+.match-skeleton-thread {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.match-skeleton-step {
+  flex: 0 0 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+.match-skeleton-strip {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+.match-skeleton-tick {
+  display: grid;
+  align-content: center;
+  flex: 0 0 172px;
+  gap: 8px;
+  height: 82px;
+  padding: 0 14px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+.match-skeleton-tick-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.match-skeleton-dot {
+  flex: 0 0 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.match-skeleton-score {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 40px;
+  padding: 12px 0 4px;
+}
+.match-skeleton-team {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.match-skeleton-team.is-away {
+  justify-content: flex-start;
+}
+.match-skeleton-team-text {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+/* The home side's name before its crest, both turned to the score. */
+.match-skeleton-team:not(.is-away) .match-skeleton-team-text {
+  justify-items: end;
+  order: -1;
+}
+.match-skeleton-crest {
+  flex: 0 0 64px;
+  height: 64px;
+  border-radius: 50%;
+}
+.match-skeleton-center {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.match-skeleton-result {
+  width: 128px;
+  height: 56px;
+  border-radius: 14px;
+}
+.match-skeleton-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-radius: 22px;
+  background: var(--veil);
+}
+.match-skeleton-kpi {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 14px 12px;
+  border-left: 1px solid var(--veil-line);
+}
+.match-skeleton-kpi:first-child {
+  border-left: 0;
+}
+.match-skeleton-tabs {
+  display: flex;
+  gap: 22px;
+  height: 44px;
+  align-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+.match-skeleton-tab {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+.match-skeleton-icon {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+}
+.match-skeleton-cards {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.match-skeleton-card {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+  min-height: 144px;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+.match-skeleton-card-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.match-skeleton-card-body > span:last-child {
+  display: grid;
+  flex: 1;
+  gap: 10px;
+}
+.match-skeleton-face {
+  flex: 0 0 52px;
+  height: 52px;
+  border-radius: 50%;
+}
+.match-skeleton-wide-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.match-skeleton-chart {
+  height: 260px;
+  border-radius: 14px;
+}
+@media (max-width: 900px) {
+  .match-skeleton-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .match-skeleton-score {
+    gap: 16px;
+  }
+}
+@media (max-width: 640px) {
+  .match-skeleton-step {
+    display: none;
+  }
+  .match-skeleton-tick {
+    flex-basis: 140px;
+    height: 90px;
+  }
+  .match-skeleton-team,
+  .match-skeleton-team.is-away {
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+  }
+  .match-skeleton-team .match-skeleton-team-text,
+  .match-skeleton-team.is-away .match-skeleton-team-text {
+    order: 0;
+    justify-items: center;
+  }
+  .match-skeleton-crest {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+  }
+  .match-skeleton-result {
+    width: 84px;
+    height: 44px;
+  }
+  /* Two figures a row, the fifth across, as the page on a phone. */
+  .match-skeleton-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .match-skeleton-kpi {
+    border-top: 1px solid var(--veil-line);
+  }
+  .match-skeleton-kpi:nth-child(odd) {
+    border-left: 0;
+  }
+  .match-skeleton-kpi:nth-child(-n + 2) {
+    border-top: 0;
+  }
+  .match-skeleton-kpi:last-child {
+    grid-column: 1 / -1;
+  }
+  .match-skeleton-tabs {
+    gap: 16px;
+  }
+  .match-skeleton-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .match-skeleton-chart {
+    height: 180px;
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------------- home */
+.home-skeleton {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.home-skeleton-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.home-skeleton-settings {
+  width: 347px;
+  max-width: 100%;
+  height: 40px;
+}
+.home-skeleton-ticker {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+.home-skeleton-day {
+  flex: 0 0 27px;
+  height: 113px;
+}
+.home-skeleton-tick {
+  display: grid;
+  align-content: center;
+  flex: 0 0 182px;
+  gap: 9px;
+  height: 113px;
+  padding: 0 16px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+.home-skeleton-tick-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-skeleton-dot {
+  flex: 0 0 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+.home-skeleton-bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 4px;
+}
+.home-skeleton-card {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.home-skeleton-motw {
+  grid-column: span 8;
+}
+.home-skeleton-stack {
+  display: grid;
+  grid-column: span 4;
+  align-content: start;
+  gap: 14px;
+}
+.home-skeleton-race {
+  grid-column: span 7;
+}
+.home-skeleton-next {
+  grid-column: span 5;
+}
+.home-skeleton-duel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 28px;
+  padding: 8px 0;
+}
+.home-skeleton-crest {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+.home-skeleton-score {
+  width: 120px;
+  height: 56px;
+  border-radius: 14px;
+}
+.home-skeleton-chart {
+  height: 300px;
+  border-radius: 14px;
+}
+.home-skeleton-player {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.home-skeleton-player > span:last-child {
+  display: grid;
+  flex: 1;
+  gap: 10px;
+}
+.home-skeleton-face {
+  flex: 0 0 96px;
+  height: 96px;
+  border-radius: 50%;
+}
+@media (max-width: 900px) {
+  .home-skeleton-bento > * {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 640px) {
+  .home-skeleton-settings {
+    width: 100%;
+  }
+  .home-skeleton-tick {
+    flex-basis: 160px;
+  }
+  .home-skeleton-chart {
+    height: 180px;
+  }
+}

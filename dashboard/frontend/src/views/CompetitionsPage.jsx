@@ -124,6 +124,7 @@ const VIEW_OF_PARAM = {
   classement: "standings",
   matchs: "matches",
   joueurs: "players",
+  projection: "projection",
 };
 const PARAM_OF_VIEW = {
   bracket: "tableau",
@@ -131,6 +132,7 @@ const PARAM_OF_VIEW = {
   standings: "classement",
   matches: "matchs",
   players: "joueurs",
+  projection: "projection",
 };
 
 function availableView(id, edition, view) {
@@ -332,6 +334,9 @@ export default function CompetitionsPage() {
       f.href("/competitions/", {
         id: next,
         edition: "",
+        // The tab one was on follows to the next competition (§ 84); it gives way there to its first view
+        // when that competition has no such tab (CompetitionEdition, CupCompetition).
+        view: availableView(next, "", currentView),
         ...(f.focus === "europe" &&
         !inEuropeFocus(
           expandedCatalog.find((c) => c.id === next) || { id: next },

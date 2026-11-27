@@ -9,12 +9,16 @@ import TabBar from "./TabBar.jsx";
 import PageLoader from "./PageLoader.jsx";
 import ClubSkeleton from "./ClubSkeleton.jsx";
 import CompetitionSkeleton from "./CompetitionSkeleton.jsx";
+import HomeSkeleton from "./HomeSkeleton.jsx";
+import MatchSkeleton from "./MatchSkeleton.jsx";
 import NationSkeleton from "./NationSkeleton.jsx";
 import { routeSkeleton } from "../services/route-skeleton.js";
 /** One skeleton per kind of services/route-skeleton.js. */
 const SKELETONS = {
   club: <ClubSkeleton />,
   competition: <CompetitionSkeleton />,
+  home: <HomeSkeleton />,
+  match: <MatchSkeleton />,
   nation: <NationSkeleton />,
 };
 export default function LoadingPage({ href }) {
@@ -31,7 +35,8 @@ export default function LoadingPage({ href }) {
   // Keep the head script's flag right after a client-side navigation too.
   useLayoutEffect(() => {
     const kind = routeSkeleton(path, window.location.search);
-    if (kind) document.documentElement.setAttribute("data-route-skeleton", kind);
+    if (kind)
+      document.documentElement.setAttribute("data-route-skeleton", kind);
     else document.documentElement.removeAttribute("data-route-skeleton");
   }, [path]);
   const page = pages.find(

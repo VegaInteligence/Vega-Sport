@@ -4,7 +4,7 @@
  */
 import { useResource, json } from "./resources.js";
 import { cupId } from "./api-routes.js";
-import { useSeasonProjection } from "./forecasts.js";
+import { useSeasonProjectionState } from "./forecasts.js";
 import { GERMAN_CUP_FOLDER } from "./cup-archives.js";
 
 /** The source edition a cup's projection is read from: the German cup's is OpenLigaDB's, which gives its rounds. */
@@ -15,11 +15,18 @@ export function cupProjectionSource(competition) {
 
 /** The cup's projection for `season`, or null (no projection: its round is not drawn, or a club is not rated). */
 export function useCupProjection(competition, season) {
+  return useCupProjectionState(competition, season).value;
+}
+
+/** The same, with `settled`: true once it is known whether the cup has one (§ 84, a tab kept from another page). */
+export function useCupProjectionState(competition, season) {
   const source = cupProjectionSource(competition);
-  const id = useResource(
+  const read = useResource(
     `cup-projection-id:${source ? source.kind + ":" + source.key : "none"}`,
     () => cupId(source.kind, source.key, json).catch(() => null),
     Boolean(source),
-  ).value;
-  return useSeasonProjection(id || null, season);
+  );
+  const id = source ? read.value : null;
+  const projection = useSeasonProjectionState(id || null, season);
+  return { value: projection.value, settled: (!source || !read.loading) && projection.settled };
 }

@@ -10,6 +10,11 @@ const none = (error) =>
 
 /** A league's projection, or null without one (a season over, a cup, a league too small). */
 export function useSeasonProjection(competitionId, season) {
+  return useSeasonProjectionState(competitionId, season).value;
+}
+
+/** The same, with `settled`: true once it is known whether the league has one (asked, answered or refused). */
+export function useSeasonProjectionState(competitionId, season) {
   const enabled = Boolean(competitionId && /^\d{4}\/\d{4}$/.test(season || ""));
   const resource = useResource(
     `season-projection:${competitionId || "none"}:${season || "none"}`,
@@ -17,7 +22,10 @@ export function useSeasonProjection(competitionId, season) {
       json("/api/forecasts/season?" + new URLSearchParams({ competition: competitionId, season })).catch(none),
     enabled,
   );
-  return enabled && !resource.error ? (resource.value ?? null) : null;
+  return {
+    value: enabled && !resource.error ? (resource.value ?? null) : null,
+    settled: !enabled || Boolean(resource.error) || !resource.loading,
+  };
 }
 
 /** A match's forecast, or null without one (a match played, a team without a strength). */

@@ -7,6 +7,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { Card, Empty, Pager, AsyncState } from "../components/UI.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
 import MatchDetail from "../components/MatchDetail.jsx";
+import MatchSkeleton from "../components/MatchSkeleton.jsx";
 import UpcomingMatches from "../components/UpcomingMatches.jsx";
 import { useResource, json } from "../services/resources.js";
 import { loadRemoteMatch } from "../services/remote-match.js";
@@ -30,7 +31,7 @@ function RemoteDetail({ id }) {
       },
     );
   return (
-    <AsyncState resource={resource}>
+    <AsyncState resource={resource} loading={<MatchSkeleton />}>
       {(match) => <MatchDetail key={match.id} match={match} />}
     </AsyncState>
   );
@@ -70,6 +71,7 @@ export default function MatchesPage() {
       filterKind={upcoming || f.pagedMatches ? "fixtures" : "performances"}
       hideHeading={!!id}
       className={id ? "match-workspace" : ""}
+      loader={id && !archived ? <MatchSkeleton /> : undefined}
       subnav={
         !id && (
           <nav className="matches-view-switch" aria-label="Vue des matchs">
