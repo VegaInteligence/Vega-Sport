@@ -1072,6 +1072,8 @@
 - `BookmarkButton` reads « Favoris » / « Dans vos favoris » everywhere (aria « Ajouter … aux favoris »).
 - Styles in `team-pages.css` (pages with `.team-page` on their workspace) and `:global(.team-page)` appends in the club and nation modules: cards at 22 px on the veil, round form and result marks, tabs in a centred pill track. Skeletons of the club and the nation redrawn to the head's shape.
 - Tests: `tests/e2e/team-pages.e2e.mjs` (1/5 on main 08223d9 — the club and nation parts stop, no head; 14/14 after, in dev and on `next build`), `club-page` (30/30) and `nation-page` (32/32) E2E adapted (22 px inset, head instead of column, Favoris), `accounts` and `match-tabs` E2E follow the new label, `club-missing-render` stubs `TeamHero`, the absences' contrast helper reads `color(srgb …)`. Evidence in `/mnt/project-files/club-nation-refonte/` (outside git).
+- Follow-up (27 Nov, § 86.1): on the site at 1024 px the bar cut the club's name (« Paris Saint-Ger… »); the head's top row now wraps, the bar going under the name when both do not fit. `team-pages.e2e.mjs` H11 (red on main f04c07b, 15/15 after).
+
 
 ## Calendar as a thread of days (27 Nov 2026, GitHub #270, VI-174, FAILURE_MODES § 87)
 

@@ -6421,6 +6421,13 @@ Codex's second review (on f856ef3, two findings, both real, red before and green
 - Unchanged: the data and the reads, every tab's content and charts, the tabs' names and their address (`clubView`, `nationView`), the report, the absent players (§ 59, § 79).
 - Tests: `tests/e2e/team-pages.e2e.mjs` (written before the code, red on main), `club-page.e2e.mjs` and `nation-page.e2e.mjs` adapted where they read the column.
 
+### 86.1 The club's name cut at a laptop's width (found on the site after the merge, 27 Nov 2026)
+
+- **What was there**: the head's top row was a grid, the name in a shrinking column and the bar beside it down to 900 px. At 1024 px the bar left the name 257 px of its 304: « Paris Saint-Ger… ».
+- **Now**: the top row wraps. The name keeps its whole width; when the bar does not fit beside it, the bar goes under it, at the right. Under 900 px and on a phone, as before.
+- Failure mode: a long name cut, the bar over the name, the page scrolling sideways at a laptop's width.
+- Test: `team-pages.e2e.mjs` H11 at 1024, 1180 and 1280 (red on main f04c07b at 1024, green after).
+
 ## 87. The calendar as a thread of days (hugo, 27 Nov 2026, 20 h 27 « pour calendrier il est libre »; mock-up https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o, 20 h 41 « POUR Calendrier va pour le A »; GitHub #270, VI-174; written before the tests)
 
 - **What was there** (`/matchs` without `id`): the former page's title, a rectangular search field and filter boxes under it; three tabs (À venir, Résultats, Mes matchs) as text links, « Mes matchs » first as soon as one match was saved; À venir a week of square boxes with the competition's name on each, Résultats a list of 30 rows with « Précédents » / « Suivants », the two never together: today's results and today's matches to come on two tabs; the logo while the page loaded.
