@@ -232,26 +232,34 @@ html[data-theme="dark"]
 :root .competitions-page .competition-detail-layout--overview .competition-standings {
   flex: 1;
 }
-:root .competitions-page .competition-standings {
+:root :is(.competitions-page, .match-table-view) .competition-standings {
   padding: 6px 14px 10px;
   border-radius: 22px;
   background: var(--veil);
 }
-:root .competitions-page .standings-table thead th {
+:root :is(.competitions-page, .match-table-view) .standings-table thead th {
   border-bottom-color: var(--veil-line);
 }
-:root .competitions-page .standings-table tbody tr > * {
+:root :is(.competitions-page, .match-table-view) .standings-table tbody tr > * {
   border-bottom-color: var(--veil-line);
 }
-:root .competitions-page .standings-table tbody tr:last-child > * {
+:root :is(.competitions-page, .match-table-view) .standings-table tbody tr:last-child > * {
   border-bottom: 0;
 }
-:root .competitions-page .standings-table :is(th, td) {
+:root :is(.competitions-page, .match-table-view) .standings-table :is(th, td) {
   background-color: transparent;
 }
 /* The columns that stay put when the table slides keep the veil under them. */
-:root .competitions-page .standings-table :is(tbody th, thead th:nth-child(2), :is(td, th):first-child) {
+:root :is(.competitions-page, .match-table-view) .standings-table :is(tbody th, thead th:nth-child(2), :is(td, th):first-child) {
   background-color: var(--veil);
+}
+/* On a match's page, its two teams keep their tint, the columns that stay put included (§ 85). */
+:root .match-table-view .standings-table tr[data-match-team="true"] {
+  background: none;
+}
+:root .match-table-view .standings-table tr[data-match-team="true"] > * {
+  background-color: var(--veil);
+  background-image: linear-gradient(var(--accent-soft), var(--accent-soft));
 }
 :root .competitions-page .competition-highlights {
   gap: 12px;
@@ -307,13 +315,13 @@ html[data-theme="dark"]
 }
 
 /* The rounds: round arrows, the round in a pill, the score in a pill. */
-:root .competitions-page .matchday-toolbar {
+:root :is(.competitions-page, .match-table-view) .matchday-toolbar {
   margin: 4px 0;
   padding: 8px 0 6px 6px;
   border: 0;
   background: transparent;
 }
-:root .competitions-page .matchday-arrow.button {
+:root :is(.competitions-page, .match-table-view) .matchday-arrow.button {
   width: 32px;
   height: 32px;
   min-height: 0;
@@ -322,7 +330,7 @@ html[data-theme="dark"]
   border-radius: 999px;
   background: var(--pill-quiet);
 }
-:root .competitions-page .matchday-navigation select {
+:root :is(.competitions-page, .match-table-view) .matchday-navigation select {
   height: 32px;
   min-height: 0;
   padding: 0 30px 0 14px;
@@ -332,14 +340,14 @@ html[data-theme="dark"]
   color: var(--pill-quiet-ink);
   font-size: 13px;
 }
-:root .competitions-page .match-row {
+:root :is(.competitions-page, .match-table-view) .match-row {
   border-bottom: 0;
   border-radius: 14px;
 }
-:root .competitions-page .match-row:hover {
+:root :is(.competitions-page, .match-table-view) .match-row:hover {
   background: var(--pill-quiet);
 }
-:root .competitions-page .match-row .score {
+:root :is(.competitions-page, .match-table-view) .match-row .score {
   padding: 3px 12px;
   border: 0;
   border-radius: 999px;
@@ -348,10 +356,12 @@ html[data-theme="dark"]
 
 /* ----------------------------------------------------------------- Matchs, Projection, Joueurs (§ 83)
    hugo, 27 Nov 2026, 18 h 08 « section projection et match, joueurs, y'a encore les coins […] et que 10 joueurs »:
-   the three other views on the same veil as the standings, every control a pill, every grade a pill, no grey box. */
+   the three other views on the same veil as the standings, every control a pill, every grade a pill, no grey box.
+   A match's « Classement » tab (.match-table-view) shows the same views and wears the same (§ 85, hugo, 20 h 43
+   « quand je clique sur projection, match etc j'ai pas le meme design »). */
 
 /* Matchs: the chosen matchday on one card, the next one on another; no square heading box, no league repeated. */
-:root .competitions-page .matchday-schedule {
+:root :is(.competitions-page, .match-table-view) .matchday-schedule {
   display: grid;
   gap: 14px;
   margin: 0;
@@ -359,18 +369,18 @@ html[data-theme="dark"]
   border-radius: 0;
   background: transparent;
 }
-:root .competitions-page :is(.matchday-current, .matchday-next) {
+:root :is(.competitions-page, .match-table-view) :is(.matchday-current, .matchday-next) {
   margin: 0;
   padding: 6px 14px 10px;
   border-radius: 22px;
   background: var(--veil);
 }
-:root .competitions-page :is(.matchday-title, .matchday-next-title) {
+:root :is(.competitions-page, .match-table-view) :is(.matchday-title, .matchday-next-title) {
   display: grid;
   gap: 2px;
   min-width: 0;
 }
-:root .competitions-page :is(.matchday-heading, .matchday-next-heading) {
+:root :is(.competitions-page, .match-table-view) :is(.matchday-heading, .matchday-next-heading) {
   margin: 0;
   padding: 0;
   border: 0;
@@ -379,34 +389,34 @@ html[data-theme="dark"]
   font-size: var(--text-md);
   font-weight: 650;
 }
-:root .competitions-page .matchday-summary {
+:root :is(.competitions-page, .match-table-view) .matchday-summary {
   color: var(--muted);
   font-size: var(--text-xs);
   font-weight: 500;
 }
-:root .competitions-page .matchday-next-title {
+:root :is(.competitions-page, .match-table-view) .matchday-next-title {
   padding: 12px 0 8px 6px;
 }
-:root .competitions-page .matchday-arrow.button:disabled {
+:root :is(.competitions-page, .match-table-view) .matchday-arrow.button:disabled {
   opacity: 0.35;
 }
-:root .competitions-page .matchday-note {
+:root :is(.competitions-page, .match-table-view) .matchday-note {
   margin: 4px 6px 10px;
 }
-:root .competitions-page :is(.matchday-current, .matchday-next) .match-league {
+:root :is(.competitions-page, .match-table-view) :is(.matchday-current, .matchday-next) .match-league {
   display: none;
 }
-:root .competitions-page :is(.matchday-current, .matchday-next) .match-row {
+:root :is(.competitions-page, .match-table-view) :is(.matchday-current, .matchday-next) .match-row {
   padding: 8px 12px;
 }
-:root .competitions-page .list-forecast-bar {
+:root :is(.competitions-page, .match-table-view) .list-forecast-bar {
   gap: 3px;
   border-radius: 999px;
 }
-:root .competitions-page .list-forecast-bar i {
+:root :is(.competitions-page, .match-table-view) .list-forecast-bar i {
   border-radius: 999px;
 }
-:root .competitions-page .matchday-more {
+:root :is(.competitions-page, .match-table-view) .matchday-more {
   justify-self: center;
   height: var(--pill-h);
   min-height: 0;
@@ -418,36 +428,36 @@ html[data-theme="dark"]
 }
 
 /* Projection and Joueurs: the table on the veil, as the standings; the columns that stay put keep the veil. */
-:root .competitions-page :is(.season-projection-view, .league-race-view) {
+:root :is(.competitions-page, .match-table-view) :is(.season-projection-view, .league-race-view) {
   padding: 6px 14px 12px;
   border-radius: 22px;
   background: var(--veil);
 }
-:root .competitions-page :is(.season-projection, .league-race-table) thead th {
+:root :is(.competitions-page, .match-table-view) :is(.season-projection, .league-race-table) thead th {
   border-bottom-color: var(--veil-line);
   background-color: var(--veil);
 }
-:root .competitions-page :is(.season-projection, .league-race-table) tbody tr > * {
+:root :is(.competitions-page, .match-table-view) :is(.season-projection, .league-race-table) tbody tr > * {
   border-bottom-color: var(--veil-line);
   background-color: transparent;
 }
-:root .competitions-page :is(.season-projection, .league-race-table) tbody tr:last-child > * {
+:root :is(.competitions-page, .match-table-view) :is(.season-projection, .league-race-table) tbody tr:last-child > * {
   border-bottom: 0;
 }
-:root .competitions-page .season-projection :is(tbody th, :is(td, th):first-child) {
+:root :is(.competitions-page, .match-table-view) .season-projection :is(tbody th, :is(td, th):first-child) {
   background-color: var(--veil);
 }
-:root .competitions-page .season-projection :is(th, td)[data-first] {
+:root :is(.competitions-page, .match-table-view) .season-projection :is(th, td)[data-first] {
   border-left-color: var(--veil-line);
 }
-:root .competitions-page :is(.season-projection-view, .league-race-view) .standings-note {
+:root :is(.competitions-page, .match-table-view) :is(.season-projection-view, .league-race-view) .standings-note {
   margin: 10px 4px 2px;
 }
 /* A share as a pill, shaded by its size: the accent for the title and the top four, red for the bottom three. */
-:root .competitions-page .season-projection td.projection-share {
+:root :is(.competitions-page, .match-table-view) .season-projection td.projection-share {
   text-align: center;
 }
-:root .competitions-page .projection-share > span {
+:root :is(.competitions-page, .match-table-view) .projection-share > span {
   --heat: var(--accent);
   display: inline-grid;
   place-items: center;
@@ -460,14 +470,14 @@ html[data-theme="dark"]
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
-:root .competitions-page .projection-share > span[data-tone="out"] {
+:root :is(.competitions-page, .match-table-view) .projection-share > span[data-tone="out"] {
   --heat: var(--danger);
 }
 /* A UEFA cup's shares: the cell clear, its share the same pill, shaded by its tone. */
-:root .competitions-page .season-projection td.projection-heat {
+:root :is(.competitions-page, .match-table-view) .season-projection td.projection-heat {
   background: transparent;
 }
-:root .competitions-page .season-projection td.projection-heat > span {
+:root :is(.competitions-page, .match-table-view) .season-projection td.projection-heat > span {
   display: inline-grid;
   place-items: center;
   min-width: 58px;
@@ -481,51 +491,51 @@ html[data-theme="dark"]
 }
 
 /* Joueurs: a title and its line, the matchday in a pill, the pages in pills. */
-:root .competitions-page .league-race-view {
+:root :is(.competitions-page, .match-table-view) .league-race-view {
   gap: 6px;
 }
-:root .competitions-page .league-race-view-head {
+:root :is(.competitions-page, .match-table-view) .league-race-view-head {
   padding: 8px 0 4px 6px;
 }
-:root .competitions-page .league-race-title {
+:root :is(.competitions-page, .match-table-view) .league-race-title {
   display: grid;
   gap: 2px;
   min-width: 0;
 }
-:root .competitions-page .league-race-heading {
+:root :is(.competitions-page, .match-table-view) .league-race-heading {
   margin: 0;
   color: var(--ink-strong);
   font-size: var(--text-md);
   font-weight: 650;
 }
-:root .competitions-page .league-race-title .card-note {
+:root :is(.competitions-page, .match-table-view) .league-race-title .card-note {
   color: var(--muted);
   font-size: var(--text-xs);
 }
-:root .competitions-page .league-race-table tbody tr:hover > * {
+:root :is(.competitions-page, .match-table-view) .league-race-table tbody tr:hover > * {
   background-color: var(--pill-quiet);
 }
-:root .competitions-page .league-race-table tbody tr > :first-child {
+:root :is(.competitions-page, .match-table-view) .league-race-table tbody tr > :first-child {
   border-radius: 14px 0 0 14px;
 }
-:root .competitions-page .league-race-table tbody tr > :last-child {
+:root :is(.competitions-page, .match-table-view) .league-race-table tbody tr > :last-child {
   border-radius: 0 14px 14px 0;
 }
 
 /* The matchday's choice (Joueurs, Équipe de la journée): a quiet pill, as the season's, as wide as its words. */
-:root .competitions-page .league-round-select {
+:root :is(.competitions-page, .match-table-view) .league-round-select {
   flex: 0 0 auto;
 }
-:root .competitions-page .league-round-select .filter-input-wrap {
+:root :is(.competitions-page, .match-table-view) .league-round-select .filter-input-wrap {
   height: var(--pill-h);
   border: 0;
   border-radius: 999px;
   background: var(--pill-quiet);
 }
-:root .competitions-page .league-round-select .filter-input-wrap:hover {
+:root :is(.competitions-page, .match-table-view) .league-round-select .filter-input-wrap:hover {
   background: var(--pill-quiet-hover);
 }
-:root .competitions-page .league-round-select select {
+:root :is(.competitions-page, .match-table-view) .league-round-select select {
   min-width: 132px;
   padding: 0 32px 0 14px;
   color: var(--pill-quiet-ink);
@@ -534,11 +544,11 @@ html[data-theme="dark"]
 }
 
 /* Pages: « Précédents » and « Suivants » as pills, the count between them. */
-:root .competitions-page .pagination {
+:root :is(.competitions-page, .match-table-view) .pagination {
   justify-content: center;
   margin: 12px 0 2px;
 }
-:root .competitions-page .pagination .button {
+:root :is(.competitions-page, .match-table-view) .pagination .button {
   height: var(--pill-h);
   min-height: 0;
   padding: 0 16px;
@@ -549,15 +559,15 @@ html[data-theme="dark"]
   color: var(--pill-quiet-ink);
   font-size: var(--pill-text);
 }
-:root .competitions-page .pagination .button:hover:not(:disabled) {
+:root :is(.competitions-page, .match-table-view) .pagination .button:hover:not(:disabled) {
   background: var(--pill-quiet-hover);
 }
-:root .competitions-page .pagination .button:disabled {
+:root :is(.competitions-page, .match-table-view) .pagination .button:disabled {
   opacity: 0.4;
 }
 
 /* Every grade of the page a pill, green from 70 as on the home and in the lineups. */
-:root .competitions-page .rating-pill {
+:root :is(.competitions-page, .match-table-view) .rating-pill {
   min-width: 42px;
   height: 26px;
   padding: 0 9px;
@@ -569,41 +579,41 @@ html[data-theme="dark"]
   font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
-:root .competitions-page .rating-pill.rating-high {
+:root :is(.competitions-page, .match-table-view) .rating-pill.rating-high {
   background: light-dark(#0f8a5f, #34d399);
   color: light-dark(#fff, #052e1f);
 }
-:root .competitions-page .team-pitch-avatar .rating-pill {
+:root :is(.competitions-page, .match-table-view) .team-pitch-avatar .rating-pill {
   min-width: 34px;
   height: 22px;
   padding: 0 7px;
   box-shadow: 0 0 0 2px var(--veil);
   font-size: 12px;
 }
-:root .competitions-page .team-pitch-avatar .rating-pill:not(.rating-high) {
+:root :is(.competitions-page, .match-table-view) .team-pitch-avatar .rating-pill:not(.rating-high) {
   background: var(--bg);
 }
 
 /* Under the standings: « Joueur de la saison » and « Équipe de la journée » on the veil, the pitch rounded. */
-:root .competitions-page .league-round-cards > .card {
+:root :is(.competitions-page, .match-table-view) .league-round-cards > .card {
   padding: 4px 18px 14px;
   border: 0;
   border-radius: 22px;
   background: var(--veil);
 }
-:root .competitions-page .league-round-cards .card-header {
+:root :is(.competitions-page, .match-table-view) .league-round-cards .card-header {
   min-height: 44px;
   padding: 10px 0 2px;
   border-bottom: 0;
 }
-:root .competitions-page .league-round-cards .card-body {
+:root :is(.competitions-page, .match-table-view) .league-round-cards .card-body {
   padding: 0;
 }
-:root .competitions-page .league-round-cards .card-note {
+:root :is(.competitions-page, .match-table-view) .league-round-cards .card-note {
   color: var(--muted);
   font-size: var(--text-xs);
 }
-:root .competitions-page .team-pitch {
+:root :is(.competitions-page, .match-table-view) .team-pitch {
   border: 0;
   border-radius: 18px;
 }
@@ -651,23 +661,32 @@ html[data-theme="dark"]
     flex: 1 1 auto;
     padding: 0 8px;
   }
-  :root .competitions-page :is(.competition-standings, .matchday-current, .matchday-next, .season-projection-view, .league-race-view) {
+  /* A match's « Classement »: its four views on the card's width, as on the competition page (§ 85). */
+  :root .match-table-view .edition-head .edition-tools .segmented-control {
+    display: flex;
+    width: 100%;
+  }
+  :root .match-table-view .edition-head .edition-tools .segmented-control button {
+    flex: 1 1 auto;
+    padding: 0 8px;
+  }
+  :root :is(.competitions-page, .match-table-view) :is(.competition-standings, .matchday-current, .matchday-next, .season-projection-view, .league-race-view) {
     padding: 4px 6px 8px;
     border-radius: 18px;
   }
-  :root .competitions-page .league-round-cards > .card {
+  :root :is(.competitions-page, .match-table-view) .league-round-cards > .card {
     padding: 4px 12px 12px;
     border-radius: 18px;
   }
   /* A phone: the matchday's arrows and choice on the first row, its days under them. */
-  :root .competitions-page .matchday-current .matchday-toolbar {
+  :root :is(.competitions-page, .match-table-view) .matchday-current .matchday-toolbar {
     flex-wrap: wrap;
     padding: 8px 2px 4px;
   }
-  :root .competitions-page .matchday-current .matchday-navigation {
+  :root :is(.competitions-page, .match-table-view) .matchday-current .matchday-navigation {
     order: -1;
   }
-  :root .competitions-page .matchday-current .matchday-title {
+  :root :is(.competitions-page, .match-table-view) .matchday-current .matchday-title {
     flex: 1 1 100%;
     padding: 0 6px;
   }

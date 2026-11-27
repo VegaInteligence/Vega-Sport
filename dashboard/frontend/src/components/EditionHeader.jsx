@@ -56,7 +56,9 @@ export default function EditionHeader({ imageUrl, name, editions, season, onSeas
         <button type="button" aria-label="Édition précédente" disabled={index < 0 || index >= editions.length - 1} onClick={() => onSeason(editions[index + 1].season)}>
           ‹
         </button>
+        {/* `bare`: the season joins the stepper's own track, between the arrows (§ 85). */}
         <SeasonSelect
+          bare
           label={label}
           value={season}
           seasons={editions.map((edition) => ({ value: edition.season, label: edition.label || edition.season }))}
