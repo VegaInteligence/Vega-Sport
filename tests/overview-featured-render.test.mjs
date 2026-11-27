@@ -217,6 +217,9 @@ test("the home features the big match of the week within the followed competitio
   const rendered = await overview({ context: context() });
   assert.match(rendered, /data-motw="arsenal-match"/);
   assert.match(rendered, /Liverpool – Arsenal/);
+  // The week in progress says its dates only (hugo, 27 Nov 2026: « enleve · résultats provisoires »).
+  assert.match(rendered, /Semaine en cours/);
+  assert.doesNotMatch(rendered, /provisoires/);
   assert.match(
     rendered,
     /data-ticker="(braga,arsenal-match|arsenal-match,braga)"/,

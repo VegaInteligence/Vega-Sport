@@ -665,7 +665,6 @@ function OverviewContent({
                   : "Semaine en cours"}
               <span>
                 {weekPeriodLabel(matchWeek)}
-                {!archived && !matchWeek.latest && " · résultats provisoires"}
               </span>
             </h2>
           </div>

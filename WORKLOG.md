@@ -1,5 +1,9 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Accueil : plus de « · résultats provisoires » sous « Semaine en cours » (27 novembre 2026)
+
+- Demande de hugo (16 h 50) : « tout en haut enleve · résultats provisoires ». L'en-tête de la semaine en cours ne donne plus que ses dates. Test de rendu (overview-featured-render) rouge avant, 11/11 après.
+
 ## Absents d'un match commencé : dans l'onglet Compositions — FAILURE_MODES § 79.7 (27 novembre 2026, branche `claude/absents-compositions`)
 
 - Demande de hugo (16 h 11) : les absents dans l'Avant-match avant le coup d'envoi, mais pendant et après le match dans Compositions.
