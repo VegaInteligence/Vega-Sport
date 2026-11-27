@@ -73,17 +73,13 @@ html[data-theme="light"] {
   min-width: 0;
 }
 :root .competitions-page .edition-head--page .edition-logo {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
+  /* The media scale (frontend AGENTS.md): 40, the size chosen with piste B; the image follows its shell. */
+  width: var(--media-40);
+  height: var(--media-40);
+  flex: 0 0 var(--media-40);
   border: 0;
   background: transparent;
   box-shadow: none;
-}
-:root .competitions-page .edition-head--page .edition-logo img {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
 }
 :root .competitions-page .edition-head--page .edition-name {
   min-width: 0;
