@@ -325,7 +325,7 @@ test("the forecast of a match still to play and a league replayed to its end", {
   assert.equal(found.length, 1);
   const { forecast: { grid, ...forecast }, model, lineups: { forecast: { grid: lineupGrid, ...lineupForecast }, ...lineups } } = found[0].body;
   assert.deepEqual(forecast, { home: 0.5123, draw: 0.2501, away: 0.2376, homeGoals: 1.62, awayGoals: 1.04, score: [1, 0] });
-  // 80a (FAILURE_MODES § 80.1): the model's grid of scores, 0 to 5+ goals a side, from the stored expected goals and the
+  // 81a (FAILURE_MODES § 81.1): the model's grid of scores, 0 to 5+ goals a side, from the stored expected goals and the
   // model's rho (the seed's -0.03), Dixon-Coles as vega/forecast.py; written here from the law.
   const law = (lh, la, rho) => {
     const pois = (lam) => { const p = []; let v = Math.exp(-lam); for (let k = 0; k < 5; k++) { p.push(v); v *= lam / (k + 1); } p.push(1 - p.reduce((x, y) => x + y, 0)); return p; };

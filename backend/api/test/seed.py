@@ -292,7 +292,7 @@ def main(dsn):
     x("""INSERT INTO agg.player_power_roles(season_id,player_id,role,matches,minutes,total,rate,run_id)
          VALUES (2025,101,'centre_forward',2,200,3.9,0.539,%(run)s),(2025,101,'winger',1,60,0.3,0.053,%(run)s)""", {"run": run})
     # A match forecast and a league projection, as forecast.refresh writes them (076). The fit's time has microseconds,
-    # as now() gives them: the grid's model is found in SQL, never by a JavaScript Date (FAILURE_MODES § 80.1, 80b).
+    # as now() gives them: the grid's model is found in SQL, never by a JavaScript Date (FAILURE_MODES § 81.1, 81b).
     model = x("""INSERT INTO agg.forecast_models(version,fitted_at,matches,home_base,home_slope,away_base,away_slope,rho,strength_spread,simulations)
                  VALUES ('forecast-v1','2025-09-06T03:10:00.123456Z',60000,0.26,0.93,0.32,0.91,-0.03,90,1000) RETURNING id""").fetchone()[0]
     pending = x("SELECT id, home_team_id, away_team_id FROM core.matches WHERE status='not_started' ORDER BY id LIMIT 1").fetchone()

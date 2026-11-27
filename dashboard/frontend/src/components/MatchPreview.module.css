@@ -1,4 +1,4 @@
-/* The page of a match to come (MatchPreview.jsx, FAILURE_MODES § 80). Each team in its colour (--home, --away, set on
+/* The page of a match to come (MatchPreview.jsx, FAILURE_MODES § 81). Each team in its colour (--home, --away, set on
    .match-detail from the crests, § 64). Cards go by pairs of the same height or alone on the row. */
 .preview {
   display: grid;

@@ -37,7 +37,7 @@ export function tau(i, j, lh, la, rho) {
 }
 
 /**
- * A match's grid of scores (FAILURE_MODES § 80.1): rows the home side's goals 0 to `top`, columns the away side's, the
+ * A match's grid of scores (FAILURE_MODES § 81.1): rows the home side's goals 0 to `top`, columns the away side's, the
  * last row and column `top` goals or more; Dixon and Coles' law with the model's rho, cells below zero at zero, the grid
  * normalised. As vega/forecast.py score_grid, cut at `top`.
  */

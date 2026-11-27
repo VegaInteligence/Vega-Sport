@@ -6210,7 +6210,13 @@ under the lineups, above the players' board. E2E (`tests/e2e/match-page.e2e.mjs`
 K6d a finished match's « Avant-match » has no « Absents » card. Red before (the card in « Avant-match », none in
 « Compositions »), green after.
 
-## 80. The page of a match to come, as the page of a match played (hugo, 26 Nov 2026, 17 h 34 « la page d'un match qui n'a pas commencé elle est bof », then piste A of the mock-up chosen on 27 Nov, 16 h 17, with three changes, v2 approved at 16 h 22; GitHub #259, VI-171; written before the tests)
+## 80. « Vos joueurs » and « Ils ont aussi brillé » as ranked lists (hugo, 27 Nov 2026, 16 h 50 « sur la page vue d'ensemble il faut voir pour la derniere partie car la c'est pas beau et forcé », with a capture; mock-up https://claude.ai/artifact/7m8xpqAU3o9U9ndvf2xYKb, 16 h 58 « B »; written before the tests)
+
+- What was there: both sections were a sideways rail of 220 px cards with a grey line above each card and between its lines, cut at the right edge on a desktop (« Ils ont aussi brillé ») or filling half the row (four players), the grade a 24 px number far from the player, and « 0 but · 0 passe » on most cards.
+- Rule: each section is one 22 px card on the veil with no border, holding a list in two columns (one under 1 100 px); rows without lines, a 16 px veil on hover. « Ils ont aussi brillé » is numbered from 1. The grade is a pill, green from GRADE_HIGH (70) as in the lineups, judged on the number shown (a 69.6 reads 70 and is green; found by H16 on the replay), neutral under, « – » when a followed player did not play. Goals and assists show only when there are some. « Vos joueurs » keeps each match of the week and the next match, its day with a capital. A phone shows five players, the rest behind « Voir les N joueurs ». On a phone a week's line is too long for one row: the match (day, opponent, score) then its figures (minutes, goals, assists) under it; only the opponent's name may be cut, never the day, the score or the figures (an ellipsis on « mar. 24… » then on « 5–… » were seen on the 390 px capture).
+- Tests: `tests/home-players-render.test.mjs` (red on 11f3ce1, 2/2 after); `tests/e2e/home-buttons.e2e.mjs` H16 and H17, H12 now opens a player from the list.
+
+## 81. The page of a match to come, as the page of a match played (hugo, 26 Nov 2026, 17 h 34 « la page d'un match qui n'a pas commencé elle est bof », then piste A of the mock-up chosen on 27 Nov, 16 h 17, with three changes, v2 approved at 16 h 22; GitHub #259, VI-171; written before the tests)
 
 Mock-up: https://claude.ai/artifact/EqAeUKgG3TLJSKbcF7bQeV (v2, Nottingham Forest – Chelsea, production data of 27 Nov).
 Everything below holds before the kick-off only (`upcoming` in `MatchDetail.jsx`); a match under way or played keeps
@@ -6220,7 +6226,7 @@ hugo's three changes, rules for every new screen: no small chart that serves not
 on one line); no large empty space under a block; never two cards of different heights on one row (cards go by pairs of
 the same height, or alone on the full width). A card with no data goes, and the card beside it takes the row.
 
-**80.1 The model's grid of scores** (`/api/forecasts/match`). `forecast.grid`, and `lineups.forecast.grid` when the
+**81.1 The model's grid of scores** (`/api/forecasts/match`). `forecast.grid`, and `lineups.forecast.grid` when the
 line-ups were read: six rows (home goals 0 to 5) of six shares (away goals 0 to 5), the last row and column holding
 5 goals or more, four decimals, from the stored expected goals and the fitted model's `rho` (Dixon-Coles, the law of
 `vega/forecast.py` and `shared/inplay.js`: `poisson`, `tau`, cells below zero at zero, the grid normalised). The model
@@ -6228,7 +6234,7 @@ is the one the forecast names (version and fitting time); without it, no `grid` 
 add up to 1 (± 0.002). The stored shares and likely score stay those the page shows (the grid's own sums can differ by
 the rounding of the stored rates).
 
-**80.2 The scoreboard.** Under each name: « Domicile » or « Extérieur », then its place and points in the match's
+**81.2 The scoreboard.** Under each name: « Domicile » or « Extérieur », then its place and points in the match's
 competition and season (`/api/standings`, its row by club id: « 17ᵉ · 9 pts »); without a row, the side alone. In the
 middle: the status line as today (« À venir · date »), the kick-off's time, and how long until it: « dans 35 min »,
 « dans 4 h 55 », « dans 2 j » (whole days from 24 h); nothing once it is passed. Under them, the strip of figures of the
@@ -6237,7 +6243,7 @@ Score le plus probable, xG / match sur la saison (each club's mean xG for, its m
 matchs (each club's last five results as V/N/D pills, its newest on the right). A tile without its data goes; no strip
 without a tile.
 
-**80.3 The four cards of the top** (one row, the same height): « Favori du modèle » (the side with the larger share of
+**81.3 The four cards of the top** (one row, the same height): « Favori du modèle » (the side with the larger share of
 the two, its crest, the draw's and the other side's shares, its share large); « En forme · <club> » for each club (the
 player with the best mean Vega grade over his last five matches of the season played 30 minutes or more before the
 kick-off, three such matches at least, ties to the most minutes; his picture, name, « 5 derniers matchs », the mean);
@@ -6245,8 +6251,8 @@ kick-off, three such matches at least, ties to the most minutes; his picture, na
 more; his picture, name, assists and return, his goals large when he scored, else his grade). Picture, name and figure
 on one line, no small chart. A card without its player goes; the others share the row. A player opens his page.
 
-**80.4 « Le match selon le modèle »** (replaces « Probabilités »). Views Résultat · Score exact · Buts (pills, the
-first chosen): Résultat is today's bar and shares in the teams' colours; Score exact is the 6 × 6 grid of 80.1, each
+**81.4 « Le match selon le modèle »** (replaces « Probabilités »). Views Résultat · Score exact · Buts (pills, the
+first chosen): Résultat is today's bar and shares in the teams' colours; Score exact is the 6 × 6 grid of 81.1, each
 cell's share, the likeliest framed; Buts is each club's goals 0 to 4 and 5+ (the grid's sums). Under the views, one row
 of figures: Score le plus probable, Buts attendus, Plus de 2,5 buts, Les deux marquent, <home> ne perd pas (home +
 draw), <away> ne perd pas. Without a grid: no Score exact, no Buts, no « Plus de 2,5 buts » nor « Les deux marquent ».
@@ -6256,7 +6262,7 @@ line-ups, « Absents »). With the line-ups: each eleven against its usual one a
 § 70. The sentence « Le modèle ne connaît ni les compositions ni les absents. » goes (the foot says it). No column on
 the right, nothing empty under the card. The bookmakers' card stays under it.
 
-**80.5 Form and grades** (one row, the same height). « Forme · 10 derniers matchs »: each club's last ten finished
+**81.5 Form and grades** (one row, the same height). « Forme · 10 derniers matchs »: each club's last ten finished
 matches of the season before the kick-off, oldest on the left, its xG for as a bar up in its colour, its xG against as a
 grey bar down, its score in a pill of its result and the opponent's crest; per club its mean xG for and against and
 goals for and against over those matches. A match without xG keeps its pill without bars; a club with none: « Aucun
@@ -6265,27 +6271,27 @@ the six by grade: rank, picture, name, « Absent » when on the « Absents » ca
 minutes, grade (the site's grade chip, `Grade`). Replaces « Joueurs les plus utilisés » and « Forme avant
 le match ».
 
-**80.6 Face-to-face and stakes** (one row, the same height). « Face-à-face sur la saison »: the seven rows of today's
+**81.6 Face-to-face and stakes** (one row, the same height). « Face-à-face sur la saison »: the seven rows of today's
 « Repères de la saison » (points, goals for and against, xG for and against, shots per match, possession), same values.
 « L'enjeu au classement » (a league with a table only): the table's rows around each club (two above, two below, the
 two slices joined when they meet), the two clubs marked; with the season's projection (`format` « league »), per club
 its places as twenty bars (the first four and the last three toned), its projected points, its share of the first
 four and of the last three. No table: no card, the face-to-face takes the row.
 
-**80.7 Absents** (full width). Before the kick-off, the same rows as today (`/api/teams/{id}/absences`, `absenceView`
+**81.7 Absents** (full width). Before the kick-off, the same rows as today (`/api/teams/{id}/absences`, `absenceView`
 with the match's scope, same reasons, same returns), in one list over two columns of equal length, each row with its
 club's crest; the header gives each club's count, or « non renseignés » for a side not read. No card when neither side
 was read (as today). From the kick-off the card of § 79 is unchanged.
 
-**80.8 Confrontations** (full width). The same meetings as today (finished, before the kick-off, the two clubs): the
+**81.8 Confrontations** (full width). The same meetings as today (finished, before the kick-off, the two clubs): the
 record (home wins, draws, away wins, in the teams' colours, with a bar), and the six last as tiles (date, the two crests,
 the score, the winner or « Nul »), each opening its match. No meeting: no card.
 
-**80.9 Gone.** The line « Avant le … · Saison … · compétitions collectées · seuls les matchs antérieurs au coup
-d'envoi ». Nothing else of today's data is lost: each figure of today's page is in the new one (80.2 to 80.8).
+**81.9 Gone.** The line « Avant le … · Saison … · compétitions collectées · seuls les matchs antérieurs au coup
+d'envoi ». Nothing else of today's data is lost: each figure of today's page is in the new one (81.2 to 81.8).
 
 Cases (`tests/e2e/match-preview.e2e.mjs`, on the replay of Forest – Chelsea, red on main; `rankings.test.mjs`):
-- **80a** (API, `rankings.test.mjs`) the grid: 6 × 6, four decimals, each cell within 0.0001 of the law computed from
+- **81a** (API, `rankings.test.mjs`) the grid: 6 × 6, four decimals, each cell within 0.0001 of the law computed from
   the stored expected goals and the model's rho, the shares adding up to 1; the same for the line-ups' forecast.
 - **P1** the scoreboard: « 17ᵉ · 9 pts » and « 8ᵉ · 16 pts », « dans 3 h 55 », the five tiles and their values.
 - **P2** the four cards: one row, the same height, each picture, name and figure on one line, no chart.
@@ -6304,10 +6310,10 @@ Cases (`tests/e2e/match-preview.e2e.mjs`, on the replay of Forest – Chelsea, r
   with `MatchForecast.jsx`). The scoreboard's strip reads that same forecast (Codex on #263).
 
 Codex's review of #263 (five findings, all real, each red before its fix and green after):
-- **80b** (API) the model of a forecast is found in SQL (`api.match_forecasts` joined to `api.forecast_models`), never
+- **81b** (API) the model of a forecast is found in SQL (`api.match_forecasts` joined to `api.forecast_models`), never
   by sending its `fitted_at` back: `now()` gives microseconds, which the JavaScript Date of the pg driver drops, and the
   equality then finds no model, so production forecasts would come without their grid. The seed's fit now has
-  microseconds (`.123456`): 80a red before, green after.
+  microseconds (`.123456`): 81a red before, green after.
 - **P12** (strip) with both line-ups confirmed, the strip's « Victoire » is the line-ups' forecast (50 % – 24 %), as on
   the model's card; it read the forecast without them.
 - **P13** a crest with no name beside it is named (`label`, `dashboard/frontend/AGENTS.md`): the opponents of the form

@@ -31,7 +31,7 @@ import MatchTable from "./MatchTable.jsx";
 import MatchShotMap from "./MatchShotMap.jsx";
 import { StatRow } from "./StatRows.jsx";
 const MatchContext = lazy(() => import("./MatchContext.jsx"));
-// Before the kick-off (FAILURE_MODES § 80): the scoreboard's strip and the « Avant-match » tab.
+// Before the kick-off (FAILURE_MODES § 81): the scoreboard's strip and the « Avant-match » tab.
 const MatchPreview = lazy(() => import("./MatchPreview.jsx"));
 const PreviewStrip = lazy(() => import("./MatchPreview.jsx").then((m) => ({ default: m.PreviewStrip })));
 import MatchFlow from "./MatchFlow.jsx";
@@ -462,7 +462,7 @@ export default function MatchDetail({ match }) {
     ["upcoming", "calendar"].includes(search.get("from")) || upcoming;
   // Each team in its crest's colour, blue and violet without one (hugo, 25 Nov; § 64).
   const teamColours = useCrestColours(match.home, match.away);
-  // Before the kick-off, each side's place in the competition and the time left (§ 80.2).
+  // Before the kick-off, each side's place in the competition and the time left (§ 81.2).
   const table = useCompetitionTable(match, upcoming);
   const standing = (team) => {
     const row = upcoming ? tableRow(table, team.id) : null;
@@ -684,7 +684,7 @@ export default function MatchDetail({ match }) {
               <Skeleton data-page-loading="" label="Chargement du contexte…" />
             }
           >
-            {/* Before the kick-off the preview (§ 80); from it, the absents are in « Compositions » (§ 79.7). */}
+            {/* Before the kick-off the preview (§ 81); from it, the absents are in « Compositions » (§ 79.7). */}
             {upcoming ? <MatchPreview match={match} /> : <MatchContext match={match} />}
           </Suspense>
         )}

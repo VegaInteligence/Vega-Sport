@@ -319,7 +319,7 @@ export function useUpcomingAbsences(match) {
 }
 
 /**
- * The preview's « Absents » (FAILURE_MODES § 80.7): the same rows as the two sides of `UpcomingMatchAbsences`, in one
+ * The preview's « Absents » (FAILURE_MODES § 81.7): the same rows as the two sides of `UpcomingMatchAbsences`, in one
  * list over two columns of equal length, each row with its club's crest; each club's count in the header.
  */
 export function PreviewAbsences({ absents }) {

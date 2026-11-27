@@ -139,7 +139,7 @@ function TeamForm({ club, match, side }) {
     </section>
   );
 }
-/** The seven rows of the season before the kick-off (« Repères de la saison », the preview's face-to-face, § 80.6). */
+/** The seven rows of the season before the kick-off (« Repères de la saison », the preview's face-to-face, § 81.6). */
 export function seasonStatRows(home, away) {
   const stat = (key, label, get, format = "double", lowerIsBetter = false) => ({
     key,
@@ -302,7 +302,7 @@ function Content({ match, value }) {
     </div>
   );
 }
-/** The two clubs' season before the kick-off and their meetings: one read, shared by the preview's blocks (§ 80). */
+/** The two clubs' season before the kick-off and their meetings: one read, shared by the preview's blocks (§ 81). */
 export function useMatchContext(match) {
   const f = useFootball();
   return useResource(

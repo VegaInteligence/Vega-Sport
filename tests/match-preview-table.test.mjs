@@ -1,4 +1,4 @@
-// The table on the page of a match to come (FAILURE_MODES § 80.2, 80.6; Codex on #263): the rule of the Classement tab.
+// The table on the page of a match to come (FAILURE_MODES § 81.2, 80.6; Codex on #263): the rule of the Classement tab.
 //  T1 the season in play is shown; another season's is not.
 //  T2 a table computed from the results (source « Vega ») of a split or play-off league is withheld, as on Classement.
 //  T3 the same computed table of a plain league (Premier League) is shown.

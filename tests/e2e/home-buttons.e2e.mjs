@@ -33,6 +33,9 @@
 //      the screen's, 22 px top corners) over a veil; the folds are 40 px pills; no sideways scroll.
 //  H15 The search clicked (§ 77.1, hugo's capture of 26 Nov): the field inside the pill stays transparent and without
 //      a border, and the pill has no ring, so the pill lights up whole rather than in two halves.
+//  H16 « Ils ont aussi brillé » (§ 80, piste B): one card, 22 px corners, no border, a ranked list in two columns,
+//      rows without lines, grades as pills (green from 70), no « 0 but » or « 0 passe ».
+//  H17 Phone: one column, five rows shown, the rest behind a 40 px « Voir les N joueurs » pill that opens them.
 //  X1  No page error.
 //
 //   node tests/e2e/home-buttons.e2e.mjs <base url> <evidence dir>
@@ -220,8 +223,33 @@ async function run(id, fn) {
     await page.mouse.move(10, 10);
   });
 
+  await run("H16", async () => {
+    const section = page.locator("section[aria-labelledby=home-also]");
+    await section.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    const d = await section.evaluate((n) => {
+      const card = n.querySelector(".home-list-card"), cs = card && getComputedStyle(card);
+      const rows = [...n.querySelectorAll(".home-list-row")];
+      const lefts = new Set(rows.map((r) => Math.round(r.getBoundingClientRect().left)));
+      const grades = [...n.querySelectorAll(".home-grade")].map((g) => ({ v: Number(g.textContent), radius: getComputedStyle(g).borderTopLeftRadius, bg: getComputedStyle(g).backgroundColor, high: g.hasAttribute("data-high") }));
+      return {
+        cards: n.querySelectorAll(".home-list-card").length, rail: n.querySelectorAll(".home-rail, .home-rail-card").length,
+        radius: cs?.borderTopLeftRadius, border: cs?.borderTopWidth,
+        rows: rows.length, columns: lefts.size, rowBorder: rows.map((r) => getComputedStyle(r).borderTopWidth).find((w) => w !== "0px") || "0px",
+        ranks: [...n.querySelectorAll(".home-list-rank")].map((r) => r.textContent).join(","),
+        grades, zero: /(^|\D)0 but|(^|\D)0 passe/.test(n.textContent),
+      };
+    });
+    await section.screenshot({ path: join(out, "h16-ils-ont-aussi-brille.png") });
+    const greenOk = d.grades.every((g) => g.high === Number(g.v) >= 70) && d.grades.filter((g) => g.high).every((g) => g.bg === "rgb(52, 211, 153)");
+    check("H16 « Ils ont aussi brillé »: one 22 px card, ranked list in two columns, grade pills, no zero", "1 card, 22 px, 0 border, 2 columns, pills",
+      { ...d, grades: d.grades.map((g) => `${g.v}${g.high ? "+" : ""}`).join(" ") },
+      d.cards === 1 && d.rail === 0 && d.radius === "22px" && d.border === "0px" && d.rows >= 2 && d.columns === 2 && d.rowBorder === "0px" &&
+        d.ranks.startsWith("1,2") && d.grades.length === d.rows && d.grades.every((g) => round(g.radius)) && greenOk && !d.zero);
+  });
+
   await run("H12", async () => {
-    await page.locator(".home-rail-card").first().click();
+    await page.locator("section[aria-labelledby=home-also] .home-list-row").first().click();
     const dialog = page.locator("dialog[open]");
     await dialog.waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
@@ -299,6 +327,24 @@ async function run(id, fn) {
       { track: t?.width, toolbar: bar?.width, fold, sheet, vh, veil, overflow },
       near(t.width, bar.width) && fold.h === 40 && round(fold.radius) && sheet.position === "fixed" && near(sheet.bottom, vh, 1) && sheet.radius === "22px" &&
         parseFloat(sheet.low) === 0 && veil === 1 && overflow <= 0);
+  });
+
+  await run("H17", async () => {
+    await page.keyboard.press("Escape");
+    const section = page.locator("section[aria-labelledby=home-also]");
+    await section.scrollIntoViewIfNeeded();
+    const count = await section.locator(".home-list-row").count();
+    const visible = () => section.locator(".home-list-row:visible").count();
+    const before = await visible();
+    const toggle = section.locator(".phone-fold-toggle");
+    const t = await toggle.evaluate((n) => ({ text: n.textContent.trim(), h: Math.round(n.getBoundingClientRect().height), radius: getComputedStyle(n).borderTopLeftRadius }));
+    const columns = await section.evaluate((n) => new Set([...n.querySelectorAll(".home-list-row")].slice(0, 2).map((r) => Math.round(r.getBoundingClientRect().left))).size);
+    await shot(page, "h17-telephone-ils-ont-aussi-brille");
+    await toggle.click();
+    await page.waitForTimeout(250);
+    const after = await visible();
+    check("H17 phone: one column, five rows, a 40 px pill opens the rest", { before: 5, after: count, text: `Voir les ${count} joueurs` }, { count, before, after, columns, toggle: t },
+      count > 5 && before === 5 && after === count && columns === 1 && t.text === `Voir les ${count} joueurs` && t.h === 40 && round(t.radius));
   });
   await context.close();
 }

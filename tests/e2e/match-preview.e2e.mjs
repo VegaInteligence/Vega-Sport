@@ -1,10 +1,10 @@
-// E2E — the page of a match to come, as the page of a match played (FAILURE_MODES.md § 80, GitHub #259), written before
+// E2E — the page of a match to come, as the page of a match played (FAILURE_MODES.md § 81, GitHub #259), written before
 // the code from the mock-up hugo chose on 27 Nov 2026 (piste A, v2: https://claude.ai/artifact/EqAeUKgG3TLJSKbcF7bQeV).
 //
 // It runs on a replay of production for Nottingham Forest – Chelsea (m_3xkED2, Premier League, 27 Nov 2026 20:00 UTC),
 // captured at 15:29 UTC that day: the frontend reads the replay as its API (NEXT_PUBLIC_API_ORIGIN) and the browser's
 // reads of the API's public origin are sent to it too. The clock is set at 16:05 UTC, before the kick-off. Overlays
-// (Playwright routes) add the model's grid of scores (80.1, not in production before its Deploy), take the standings
+// (Playwright routes) add the model's grid of scores (81.1, not in production before its Deploy), take the standings
 // away (P9) or make the match played (P11). The replay and its capture are kept beside the evidence, never in git.
 //
 //   REPLAY=http://127.0.0.1:8765 node tests/e2e/match-preview.e2e.mjs <base url> <evidence dir>
@@ -24,7 +24,7 @@ const results = [], runs = [];
 await mkdir(out, { recursive: true });
 const browser = await chromium.launch();
 
-/** The model's grid as 80.1 defines it (Dixon-Coles, 5+ in the last row and column), written here from the law. */
+/** The model's grid as 81.1 defines it (Dixon-Coles, 5+ in the last row and column), written here from the law. */
 function grid(lh, la, rho, top = 5) {
   const pois = (lam) => {
     const p = [];
@@ -91,7 +91,7 @@ async function open(label, device, plan = {}) {
     const response = await route.fetch({ url: replay + "/api/forecasts/match?match=" + id });
     const body = await response.json();
     if (withGrid) body.forecast.grid = GRID;
-    // Both elevens confirmed (§ 70 kept in 80.4): the forecast that read them, each eleven against its usual one.
+    // Both elevens confirmed (§ 70 kept in 81.4): the forecast that read them, each eleven against its usual one.
     if (lineups)
       body.lineups = { forecast: { home: 0.5012, draw: 0.2541, away: 0.2447, homeGoals: 1.61, awayGoals: 1.08, score: [1, 1], ...(withGrid ? { grid: GRID } : {}) },
         home: { deviation: 0.31, elo: 13.9 }, away: { deviation: -0.72, elo: -32.3 }, computedAt: "2026-11-27T19:05:00.000Z" };

@@ -28,7 +28,7 @@
  * GET /api/forecasts/match?match= — the forecast of a match still to play (vega/forecast.py,
  * from the two Elo strengths): win, draw, loss, expected goals and the likeliest score; and,
  * once both clubs have confirmed their eleven, `lineups`: the same forecast read with them. Each forecast carries
- * `grid`, its 6 × 6 shares of scores (0 to 5+ goals a side) from the fitted model's Dixon-Coles law (FAILURE_MODES § 80.1).
+ * `grid`, its 6 × 6 shares of scores (0 to 5+ goals a side) from the fitted model's Dixon-Coles law (FAILURE_MODES § 81.1).
  * GET /api/forecasts/live?match= — a finished or running match minute by minute: win, draw
  * and loss from the forecast (the one that read the line-ups when there is one), the score,
  * the clock and the dismissals (vega/inplay.py).
@@ -331,8 +331,8 @@ async function matchForecast(read, params) {
   validateParams(params, ["match"]);
   const id = params.get("match");
   if (!MATCH.test(id || "")) reject(400, "Paramètre invalide.");
-  // The model the forecast names, for its rho: the grid of scores (FAILURE_MODES § 80.1); none without it. Found in SQL:
-  // a fit's time has microseconds, which a JavaScript Date sent back would lose (80b).
+  // The model the forecast names, for its rho: the grid of scores (FAILURE_MODES § 81.1); none without it. Found in SQL:
+  // a fit's time has microseconds, which a JavaScript Date sent back would lose (81b).
   const [[r], [l], [fitted]] = await Promise.all([
     read("SELECT * FROM api.match_forecasts WHERE match_key=api.internal_id('match',$1)", [id]),
     read("SELECT * FROM api.match_lineup_forecasts WHERE match_key=api.internal_id('match',$1)", [id]),

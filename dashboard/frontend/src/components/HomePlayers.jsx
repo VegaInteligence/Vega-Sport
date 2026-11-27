@@ -13,8 +13,27 @@ import { number } from "../services/format.js";
 import { Kicker, lastName, matchHref, relativeDay, shortDay } from "./HomeCommon.jsx";
 import { playerLeaderboardHref } from "../services/player-leaderboard.js";
 import { matchDay, weekPeriodLabel } from "../services/home-insights.js";
+import { GRADE_HIGH } from "../services/grades.js";
 
 const plural = (n, word) => `${number(n)} ${word}${n > 1 ? "s" : ""}`;
+/** Goals and assists as words, only those there are: « 1 but · 2 passes », « » for none. */
+const tally = (goals, assists) =>
+  [goals > 0 && plural(goals, "but"), assists > 0 && plural(assists, "passe")].filter(Boolean);
+const capitalized = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+/** A grade as a pill (FAILURE_MODES § 80): green from GRADE_HIGH, as in the lineups, judged on the number shown (a 69.6
+ * reads 70 and is green); « – » without one. */
+function GradePill({ grade }) {
+  const known = Number.isFinite(grade);
+  return (
+    <span
+      className="home-grade"
+      data-high={known && Math.round(grade) >= GRADE_HIGH ? "" : undefined}
+      aria-label={known ? `Note Vega ${number(grade, 0)}` : "Pas de note cette semaine"}
+    >
+      {known ? number(grade, 0) : "–"}
+    </span>
+  );
+}
 const share = (a, b) =>
   Number.isFinite(a) && b > 0 ? `${number((a / b) * 100)} %` : "—";
 
@@ -251,9 +270,13 @@ export function PlayerOfTheWeek({
   );
 }
 
+/** « Ils ont aussi brillé » (piste B of https://claude.ai/artifact/7m8xpqAU3o9U9ndvf2xYKb, hugo 27 Nov 2026): the week's
+ * other best grades as one card, a ranked list in two columns; a phone shows five, the rest on demand. */
 export function AlsoShone({ performances, matches, period }) {
   const f = useFootball();
+  const more = usePhoneFold();
   if (!performances.length) return null;
+  const folds = performances.length > 5;
   return (
     <section className="home-section" aria-labelledby="home-also">
       <div className="home-section-head">
@@ -270,41 +293,47 @@ export function AlsoShone({ performances, matches, period }) {
           Tous les joueurs <Icon name="arrow" />
         </Link>
       </div>
-      <div className="home-rail">
-        {performances.map((p) => {
-          const m = matches.get(p.matchId);
-          return (
-            <button
-              type="button"
-              key={p.id}
-              className="card home-rail-card"
-              onClick={() => f.setPlayer(p.id)}
-            >
-              <span className="home-rail-top">
-                <Media
-                  name={p.name}
-                  url={p.imageUrl}
-                  className="player-avatar"
-                />
-                <b>{number(p.grade, 0)}</b>
-              </span>
-              <span>
-                <strong>{p.name}</strong>
-                <small>{p.team}</small>
-              </span>
-              <span className="home-rail-line">
-                <b>{number(p.goals || 0)}</b> but{p.goals > 1 ? "s" : ""} ·{" "}
-                <b>{number(p.assists || 0)}</b> passe{p.assists > 1 ? "s" : ""}
-                {m && (
-                  <>
-                    {" "}
-                    · {m.home.name} {m.home.score}–{m.away.score} {m.away.name}
-                  </>
-                )}
-              </span>
-            </button>
-          );
-        })}
+      <div className="home-list-card" {...more.fold}>
+        <ol className="home-list is-ranked">
+          {performances.map((p, i) => {
+            const m = matches.get(p.matchId);
+            const facts = tally(p.goals || 0, p.assists || 0);
+            return (
+              <li key={p.id} className={i >= 5 ? "phone-fold-part" : undefined}>
+                <button
+                  type="button"
+                  className="home-list-row"
+                  onClick={() => f.setPlayer(p.id)}
+                >
+                  <span className="home-list-rank">{i + 1}</span>
+                  <Media name={p.name} url={p.imageUrl} className="player-avatar home-list-avatar" />
+                  <span className="home-list-copy">
+                    <span className="home-list-name">
+                      <strong>{p.name}</strong> <small>{p.team}</small>
+                    </span>
+                    <span className="home-list-line">
+                      {m && (
+                        <span>
+                          {m.home.name} <b>{m.home.score}–{m.away.score}</b> {m.away.name}
+                        </span>
+                      )}
+                      {facts.map((fact) => (
+                        <span key={fact}>{fact}</span>
+                      ))}
+                    </span>
+                  </span>
+                  <GradePill grade={p.grade} />
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        {folds && (
+          <PhoneFoldToggle
+            {...more.toggle}
+            label={more.toggle.open ? "Voir moins" : `Voir les ${performances.length} joueurs`}
+          />
+        )}
       </div>
     </section>
   );
@@ -464,8 +493,8 @@ export function SeasonScorers({ leaders, scopeIds, favourites = null }) {
   );
 }
 
-/** « Vos joueurs cette semaine »: each followed player's matches of the week and his
- * club's next match (design doc, Accueil et personnalisation, retenu). */
+/** « Vos joueurs cette semaine »: each followed player's matches of the week and his club's next match, as rows of
+ * one card (piste B, hugo 27 Nov 2026; design doc, Accueil et personnalisation, retenu). */
 export function YourPlayers({ players, period, now }) {
   const f = useFootball();
   if (!players?.length) return null;
@@ -477,38 +506,54 @@ export function YourPlayers({ players, period, now }) {
           {period && <span>{weekPeriodLabel(period)}</span>}
         </h2>
       </div>
-      <div className="home-rail">
-        {players.map((p) => (
-          <Link key={p.playerId} className="card home-rail-card" href={f.href("/joueurs/", { id: p.playerId })}>
-            <span className="home-rail-top">
-              <Media name={p.name} url={p.imageUrl} className="player-avatar" />
-              {p.matches.some((m) => Number.isFinite(m.grade)) && (
-                <b>{number(Math.max(...p.matches.filter((m) => Number.isFinite(m.grade)).map((m) => m.grade)), 0)}</b>
-              )}
-            </span>
-            <span>
-              <strong>{p.name}</strong>
-              <small>{p.team}</small>
-            </span>
-            {p.matches.length ? (
-              p.matches.map((m) => (
-                <span className="home-rail-line" key={m.matchId}>
-                  {shortDay(m.date)} · {m.opponent} {m.score?.[0] ?? "–"}–{m.score?.[1] ?? "–"} · {number(m.minutes || 0)}′
-                  {Number.isFinite(m.grade) && <> · <b>{number(m.grade, 0)}</b></>}
-                  {" · "}
-                  <b>{number(m.goals || 0)}</b> but{m.goals > 1 ? "s" : ""} · <b>{number(m.assists || 0)}</b> passe{m.assists > 1 ? "s" : ""}
-                </span>
-              ))
-            ) : (
-              <span className="home-rail-line">Pas de match cette semaine</span>
-            )}
-            {p.next && p.next.time >= now && (
-              <span className="home-rail-line">
-                Prochain match : {p.next.home.name} – {p.next.away.name} · {relativeDay(p.next.time, now)}
-              </span>
-            )}
-          </Link>
-        ))}
+      <div className="home-list-card">
+        <ol className="home-list">
+          {players.map((p) => {
+            const graded = p.matches.filter((m) => Number.isFinite(m.grade));
+            return (
+              <li key={p.playerId}>
+                <Link className="home-list-row" href={f.href("/joueurs/", { id: p.playerId })}>
+                  <Media name={p.name} url={p.imageUrl} className="player-avatar home-list-avatar" />
+                  <span className="home-list-copy">
+                    <span className="home-list-name">
+                      <strong>{p.name}</strong> <small>{p.team}</small>
+                    </span>
+                    {p.matches.length ? (
+                      p.matches.map((m) => (
+                        <span className="home-list-line is-week" key={m.matchId}>
+                          <span className="home-list-group">
+                            <span>{shortDay(m.date)}</span>
+                            <span className="home-list-opponent">contre {m.opponent}</span>
+                            <b className="home-list-score">
+                              {m.score?.[0] ?? "–"}–{m.score?.[1] ?? "–"}
+                            </b>
+                          </span>
+                          <span className="home-list-group">
+                            <span>{number(m.minutes || 0)}′</span>
+                            {tally(m.goals || 0, m.assists || 0).map((fact) => (
+                              <span key={fact}>{fact}</span>
+                            ))}
+                          </span>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="home-list-line">Pas de match cette semaine</span>
+                    )}
+                    {p.next && p.next.time >= now && (
+                      <span className="home-list-line is-next">
+                        <Icon name="calendar" />
+                        <span>
+                          <b>{capitalized(relativeDay(p.next.time, now))}</b> · {p.next.home.name} – {p.next.away.name}
+                        </span>
+                      </span>
+                    )}
+                  </span>
+                  <GradePill grade={graded.length ? Math.max(...graded.map((m) => m.grade)) : null} />
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
       </div>
     </section>
   );

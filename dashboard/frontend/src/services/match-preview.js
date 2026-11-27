@@ -1,5 +1,5 @@
 /**
- * The page of a match to come (FAILURE_MODES § 80): what its blocks read from the reads the page already makes (the
+ * The page of a match to come (FAILURE_MODES § 81): what its blocks read from the reads the page already makes (the
  * forecast and its grid, the competition's table, the two clubs' seasons before the kick-off, their absents).
  * Pure functions, and the table's read.
  */
@@ -94,7 +94,7 @@ export function formMeans(rows) {
 const rowGrade = (row) => (isNumber(row.grade) ? row.grade : isNumber(row.gradeZ) ? gradeOf(row.gradeZ) : null);
 
 /**
- * A club's player in form (§ 80.3): the best mean grade over his last five matches of the season played 30 minutes or
+ * A club's player in form (§ 81.3): the best mean grade over his last five matches of the season played 30 minutes or
  * more before the kick-off, three such matches at least; ties to the most minutes. Null without one.
  */
 export function inForm(data, club) {
@@ -125,7 +125,7 @@ export const profileCount = (profile, key) => {
   return stat && isNumber(stat.sum) ? stat.sum : null;
 };
 
-/** The model's grid read (§ 80.1): over 2.5 goals, both sides scoring, each side's goals 0 to 4 and 5+, the likeliest cell. */
+/** The model's grid read (§ 81.1): over 2.5 goals, both sides scoring, each side's goals 0 to 4 and 5+, the likeliest cell. */
 export function gridReading(grid) {
   if (!Array.isArray(grid) || grid.length < 2 || !grid.every((row) => Array.isArray(row) && row.length === grid.length)) return null;
   let over = 0, both = 0, likely = [0, 0], top = -1;

@@ -1,5 +1,5 @@
 "use client";
-/* The page of a match to come, as the page of a match played (FAILURE_MODES § 80, piste A of the mock-up hugo chose on
+/* The page of a match to come, as the page of a match played (FAILURE_MODES § 81, piste A of the mock-up hugo chose on
  * 27 Nov 2026): the scoreboard's strip of figures, then in « Avant-match » four cards, the model's card in three views,
  * the form and the season's grades, the face-to-face and the stakes, the absents and the past meetings. Cards go by
  * pairs of the same height or alone on the row; a card without its data goes. */
@@ -46,9 +46,9 @@ function Pills({ club }) {
   );
 }
 
-/** The scoreboard's strip (§ 80.2): the same look as the match played's. */
+/** The scoreboard's strip (§ 81.2): the same look as the match played's. */
 export function PreviewStrip({ match }) {
-  // The forecast the model card shows: with the confirmed line-ups once both are in (§ 80.2).
+  // The forecast the model card shows: with the confirmed line-ups once both are in (§ 81.2).
   const forecast = matchForecastReading(useMatchForecast(match.id), match.home?.name || "Domicile", match.away?.name || "Extérieur")?.forecast;
   const clubs = useClubs(match);
   const tiles = [];
@@ -124,7 +124,7 @@ function Hero({ eyebrow, colour, picture, name, sub, figure, href, season, first
 /** A player's profile for the season the preview reads, whatever filter the page was opened with (as MatchContext did). */
 const playerHref = (f, id, season) => f.href("/joueurs/", { id, season: season || "", league: "", q: "" });
 
-/** The four cards of the top (§ 80.3). */
+/** The four cards of the top (§ 81.3). */
 function Heroes({ match, reading, clubs, absents }) {
   const cards = [];
   const colour = (side) => `var(--${side})`;
@@ -212,7 +212,7 @@ function greatAbsent(match, clubs, absents) {
   };
 }
 
-/** « Le match selon le modèle » (§ 80.4). */
+/** « Le match selon le modèle » (§ 81.4). */
 function ModelCard({ match, answer, reading }) {
   const [view, setView] = useState("result");
   const f = reading.forecast;
@@ -407,7 +407,7 @@ function GoalsView({ match, f, reading }) {
   );
 }
 
-/** « Forme · 10 derniers matchs » (§ 80.5). */
+/** « Forme · 10 derniers matchs » (§ 81.5). */
 function FormCard({ match, clubs }) {
   const rows = ["home", "away"].map((side) => ({ side, club: clubs[side], matches: formMatches(clubs[side], 10) }));
   const scale = Math.max(1.5, ...rows.flatMap((r) => r.matches.flatMap((m) => [m.xgFor, m.xgAgainst]).filter(isNumber)));
@@ -453,8 +453,8 @@ function FormCard({ match, clubs }) {
   );
 }
 
-/** « Meilleures notes de la saison » (§ 80.5): the three best of each club, the six by grade. */
-/** The three best season grades of each club (300 minutes or more), best first (§ 80.5). */
+/** « Meilleures notes de la saison » (§ 81.5): the three best of each club, the six by grade. */
+/** The three best season grades of each club (300 minutes or more), best first (§ 81.5). */
 function bestNotes(clubs) {
   return ["home", "away"]
     .flatMap((side) =>
@@ -500,7 +500,7 @@ function NotesCard({ match, rows, absents, season }) {
   );
 }
 
-/** « L'enjeu au classement » (§ 80.6): the table around each club, and their projected places. */
+/** « L'enjeu au classement » (§ 81.6): the table around each club, and their projected places. */
 function StakesCard({ match, table }) {
   const ids = [match.home.id, match.away.id];
   const row = tableRow(table, match.home.id) || tableRow(table, match.away.id);
@@ -596,7 +596,7 @@ function StakesCard({ match, table }) {
   );
 }
 
-/** « Confrontations précédentes » (§ 80.8). */
+/** « Confrontations précédentes » (§ 81.8). */
 function MeetingsCard({ match, fixtures }) {
   const f = useFootball();
   const ids = [match.home.id, match.away.id];
@@ -670,7 +670,7 @@ function Pair({ children, wide = false }) {
   );
 }
 
-/** « Avant-match » before the kick-off (§ 80.3 to 80.8). */
+/** « Avant-match » before the kick-off (§ 81.3 to 81.8). */
 export default function MatchPreview({ match }) {
   const answer = useMatchForecast(match.id);
   const reading = matchForecastReading(answer, match.home?.name || "Domicile", match.away?.name || "Extérieur");
@@ -678,7 +678,7 @@ export default function MatchPreview({ match }) {
   const absents = useUpcomingAbsences(match);
   const table = useCompetitionTable(match);
   const ready = Boolean(clubs.value);
-  // Known before the pair is laid out: without notes the form card takes the whole row (§ 80.5).
+  // Known before the pair is laid out: without notes the form card takes the whole row (§ 81.5).
   const notes = ready ? bestNotes(clubs) : [];
   return (
     <div className={s.preview}>

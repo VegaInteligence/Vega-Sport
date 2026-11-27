@@ -132,7 +132,7 @@ export function hasCompleteHomeAwaySchedule(fixtures) {
   );
 }
 
-// Moved from CompetitionStandings.jsx so the preview of a match (§ 80.2, 80.6) applies the same rule.
+// Moved from CompetitionStandings.jsx so the preview of a match (§ 81.2, 81.6) applies the same rule.
 /** A table the base computed from the results, as the standings read marks it. */
 export const resultDerived = (body) => body?.source === "Vega";
 /**
