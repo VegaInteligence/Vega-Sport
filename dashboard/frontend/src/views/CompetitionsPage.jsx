@@ -406,7 +406,9 @@ export default function CompetitionsPage() {
       }),
     onHighlight: (team) => replaceEditionAddress({ team }),
   };
-  const bar = selected && (
+  // Also shown on its own when the competition is unknown or its cups fail to load (Codex on #262): one can still
+  // choose another, as the former « Toutes les compétitions » allowed.
+  const bar = (
     <>
       <CompetitionSwitcher
         lists={lists}
@@ -472,17 +474,27 @@ export default function CompetitionsPage() {
           (awaitsCupIndex(id) && cupIndex.loading) ? (
           <CompetitionSkeleton detail />
         ) : awaitsCupIndex(id) && cupIndex.error ? (
-          <div className="notice" role="alert">
-            Les coupes nationales sont indisponibles.{" "}
-            <button
-              className="button button-secondary"
-              onClick={cupIndex.retry}
-            >
-              Réessayer
-            </button>
-          </div>
+          <>
+            <div className="home-settings edition-bar competition-fallback-bar">
+              {bar}
+            </div>
+            <div className="notice" role="alert">
+              Les coupes nationales sont indisponibles.{" "}
+              <button
+                className="button button-secondary"
+                onClick={cupIndex.retry}
+              >
+                Réessayer
+              </button>
+            </div>
+          </>
         ) : (
-          <Empty>Compétition inconnue ou indisponible.</Empty>
+          <>
+            <div className="home-settings edition-bar competition-fallback-bar">
+              {bar}
+            </div>
+            <Empty>Compétition inconnue ou indisponible.</Empty>
+          </>
         )}
       </EditionPageProvider>
     </Layout>

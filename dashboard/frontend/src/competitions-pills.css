@@ -97,6 +97,11 @@ html[data-theme="light"] {
   justify-self: end;
   max-width: 100%;
 }
+:root .competitions-page .competition-fallback-bar {
+  /* An unknown competition or cups that fail: the bar alone above the notice, to choose another one. */
+  display: inline-flex;
+  margin: 0 0 16px;
+}
 :root .competitions-page .edition-bar > .settings-picker {
   width: auto;
   min-width: 0;

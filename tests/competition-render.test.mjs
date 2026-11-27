@@ -258,5 +258,13 @@ test("competition page renders a result-derived league table and its limits", as
   assert.doesNotMatch(directory, /<h1>Toutes les compétitions<\/h1>/);
   assert.doesNotMatch(directory, /Autres ligues et coupes/);
 
+  // Codex on #262: an unknown competition keeps the bar, to choose another one (« Toutes » as before).
+  requestedId = "l_unknown";
+  const unknown = renderToStaticMarkup(elem(mod.exports.default));
+  assert.match(unknown, /Compétition inconnue ou indisponible/);
+  assert.match(unknown, /class="home-settings edition-bar competition-fallback-bar"><nav/);
+  assert.match(unknown, /data-list="all"/);
+  assert.match(unknown, /<span>Archives<\/span><\/a>/);
+
 
 });
