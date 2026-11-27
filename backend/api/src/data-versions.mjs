@@ -43,7 +43,7 @@ export function codeDigest(src = fileURLToPath(new URL(".", import.meta.url))) {
   for (const root of [src, join(src, "..", "package.json"), join(src, "..", "package-lock.json"), join(src, "..", "..", "..", "dashboard", "shared")]) visit(root);
   return hash.digest("hex");
 }
-// The worker has this tree on disk; package_api.py binds its digest into the Lambda bundle.
+// A process run from this tree reads it; package_api.py binds its digest into the Lambda bundle, which has no tree.
 export const CODE_DIGEST = process.env.VEGA_CODE_DIGEST ||
   (typeof VEGA_BUNDLED_CODE_DIGEST === "string" ? VEGA_BUNDLED_CODE_DIGEST : codeDigest());
 

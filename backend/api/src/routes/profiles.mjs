@@ -80,7 +80,6 @@
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { createDataVersions } from "../data-versions.mjs";
-import { contentTag, readReceipt } from "../read-receipts.mjs";
 import { ROLE_LABEL } from "./rankings.mjs";
 
 const PLAYER = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))$/;
@@ -550,7 +549,7 @@ const SEASON_KEY = "(SELECT season_id FROM api.season_keys WHERE season=$2)";
 // GH137A-o), its written contract keeping a client's tag through a reader's pass that leaves the list as it was
 // (test_transfermarkt_history.py 35w–35z: a refused refresh records its attempt in the tables the list reads).
 function respond(req, data) {
-  const etag = contentTag("profile", createHash("sha256").update(JSON.stringify(data)).digest("hex"));
+  const etag = `W/"profile-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
   if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 300 });
   return send(req, { data }, 200, { etag, ttl: 300, maxBytes: 2 * 1024 * 1024 });
 }
@@ -560,8 +559,7 @@ export function createProfileRoute(read, { versioned = createDataVersions(read) 
     const transfers = path.match(TRANSFERS);
     if (transfers) {
       validateParams(params, []);
-      const receipt = await readReceipt(req, read, "transfers", transfers[1], "profile", 300);
-      return receipt ?? respond(req, await transferHistory(read, transfers[1]));
+      return respond(req, await transferHistory(read, transfers[1]));
     }
     if (MATCH_ABSENCES.test(path)) return respond(req, await profileAnswer(read, path, params));
     const spec = profileSpec(path, params);

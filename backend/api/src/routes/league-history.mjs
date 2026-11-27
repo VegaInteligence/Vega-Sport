@@ -13,13 +13,13 @@
  * representation's version, the league and the season (`resource`), then that digest. The digests the request holds for
  * this resource (If-None-Match, read by http.mjs's parser), and whether it sent '*', are the statement's parameters: it
  * gives the rows only for an answer to send, a GET none of whose tags is the digest. Otherwise 304, or a HEAD's 200
- * without body. When the worker has a current receipt (GH137R), a matching revalidation or HEAD skips the four reads.
+ * without body, and nothing is built. The reads always run: a revalidation spares their rows' transfer, the answer's
+ * building and its hash, not the reads.
  */
 import { createHash } from "node:crypto";
 import { entityTags, reject, send, validateParams } from "../http.mjs";
 import { clubName, editionKeys, historySeason, HISTORY_LEAGUES, matchdays, playersIncomplete, standings, summary, zones, fold } from "../league-history.mjs";
-import { CODE_DIGEST, versionsMissing } from "../data-versions.mjs";
-import { editionSelector, RECEIPT_CODE } from "../read-receipts.mjs";
+import { CODE_DIGEST } from "../data-versions.mjs";
 
 const PLAYERS_FROM = 2012;
 const CREDITS = {
@@ -42,7 +42,7 @@ function heldDigests(header, prefix) {
 }
 
 // The four reads, each once, in one statement (one snapshot).
-const reads = (start) => `edition AS MATERIALIZED (SELECT key FROM api.league_history_edition($1::text[],$2::smallint)),
+const reads = (start) => `WITH edition AS MATERIALIZED (SELECT key FROM api.league_history_edition($1::text[],$2::smallint)),
 matches AS MATERIALIZED (SELECT m.* FROM edition e CROSS JOIN LATERAL api.league_history_matches(e.key,$2::smallint) WITH ORDINALITY m),
 next AS MATERIALIZED (SELECT n.* FROM api.league_history_next($3,$4::text[],$5::smallint) n),
 people AS MATERIALIZED (SELECT p.* FROM ${start >= PLAYERS_FROM ? "api.league_history_players($3,$2::smallint) p" : "edition e CROSS JOIN LATERAL api.league_history_scorers(e.key,$2::smallint) p"})`;
@@ -56,11 +56,7 @@ const DIGEST = `encode(sha256(convert_to(json_build_array(e.key,
  (SELECT json_agg(x::text ORDER BY x::text COLLATE "C") FROM people x))::text,'UTF8')),'hex')`;
 // The statement: the digest once, then the rows, in the digest's order, only when the answer is to be sent ($8 a GET,
 // $7 not '*', $6 the request's digests, none of them this one). No edition: no row (404).
-const receiptCtes = `candidate AS MATERIALIZED (SELECT api.read_receipt('league-history', $9, $10) AS digest),
-hit AS MATERIALIZED (SELECT digest FROM candidate WHERE digest IS NOT NULL
-  AND (NOT $8::boolean OR $7::boolean OR digest = ANY($6::text[]))),`;
-const seasonSql = (start, receipt = false) => `/*vega:v2:league-history*/
-WITH ${receipt ? receiptCtes : ""}
+const seasonSql = (start) => `/*vega:v2:league-history*/
 ${reads(start)},
 checked AS MATERIALIZED (SELECT e.key,${DIGEST} digest FROM edition e),
 held AS (SELECT d.*,($8::boolean AND NOT $7::boolean AND NOT d.digest=ANY($6::text[])) answer FROM checked d)
@@ -68,8 +64,7 @@ SELECT h.key,h.digest,h.answer,
  CASE WHEN h.answer THEN (SELECT coalesce(jsonb_agg(to_jsonb(x)-'ordinality' ORDER BY x.ordinality),'[]') FROM matches x) END matches,
  CASE WHEN h.answer THEN (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x::text COLLATE "C"),'[]') FROM next x) END next,
  CASE WHEN h.answer THEN (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x::text COLLATE "C"),'[]') FROM people x) END people
-FROM held h${receipt ? ` WHERE NOT EXISTS (SELECT 1 FROM hit)
-UNION ALL SELECT NULL,digest,false,NULL,NULL,NULL FROM hit` : ""}`;
+FROM held h`;
 
 const day = (value) => (value ? String(value instanceof Date ? value.toISOString() : value).slice(0, 10) : null);
 // A side: the club as the site shows it, with its spelling in the archive (`names`) to match it across editions.
@@ -85,15 +80,7 @@ async function season(req, params, read) {
     held = heldDigests(req.headers.get("if-none-match"), prefix);
   const values = [editionKeys(league, start), start, league, start + 1 <= 2020 ? editionKeys(league, start + 1) : [], start + 1,
     held.digests, held.any, req.method !== "HEAD"];
-  let result;
-  if (held.any || held.digests.length || req.method === "HEAD") {
-    try {
-      result = await read(seasonSql(start, true), [...values, editionSelector(league, start), RECEIPT_CODE]);
-    } catch (error) {
-      if (!versionsMissing(error)) throw error;
-    }
-  }
-  const [edition] = result ?? await read(seasonSql(start), values);
+  const [edition] = await read(seasonSql(start), values);
   if (!edition) reject(404, "Ressource introuvable.");
   const etag = tagOf(prefix, edition.digest);
   // Held ('*' or this digest): 304; a HEAD: 200 without body (send compares the request's tags with this one).

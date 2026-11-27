@@ -22,7 +22,7 @@ import traceback
 
 import psycopg
 
-from . import calculator, media, models, planner, profiles, receipts, scope
+from . import calculator, media, models, planner, profiles, scope
 from .jobs import LeaseLost, ack, claim, fail
 from .normalize import NormalizedFamily, NormalizationError, normalize_family
 from .pilot import DETAILS, safe_code
@@ -258,8 +258,7 @@ def publish(conn, now, *, force=False):
 
 
 class Worker:
-    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600, calc_conn=None, backfill=None,
-                 source_get=None, media_io=None, receipts_dsn=None):
+    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600, calc_conn=None, backfill=None, source_get=None, media_io=None):
         unknown = set(lanes) - set(LANE_ORDER)
         if unknown or not lanes:
             raise ValueError("invalid lanes")
@@ -267,7 +266,6 @@ class Worker:
         self.conn = store.conn
         # Collect role for the queue and core; calc role for agg (doc "Rôles en base").
         self.calc_conn = calc_conn or store.conn
-        self.receipts_dsn = receipts_dsn
         self.client = client
         self.lanes = tuple(lane for lane in LANE_ORDER if lane in lanes)
         self.clock = clock
@@ -738,11 +736,6 @@ class Worker:
                 self.conn.execute("SELECT ops.fold_data_changes()")
         except Exception as error:
             print(f"data versions error={error_code(error)}", flush=True)
-        if self.backfill is None and self.receipts_dsn:
-            try:
-                receipts.refresh(self.receipts_dsn)
-            except Exception as error:
-                print(f"read receipts error={error_code(error)}", flush=True)
 
     # Handlers ------------------------------------------------------------
 
@@ -1260,7 +1253,6 @@ def main(argv=None):
                 lanes=tuple(x for x in args.lanes.split(",") if x),
                 cohort_delay=args.cohort_delay,
                 calc_conn=conns[1] if calc_dsn else None,
-                receipts_dsn=calc_dsn,
                 source_get=None if args.lanes == "backfill" else __import__("vega.sources.http", fromlist=["json_getter"]).json_getter(),
                 backfill=(
                     {"first_season": args.backfill_from, "last_season": args.backfill_to,

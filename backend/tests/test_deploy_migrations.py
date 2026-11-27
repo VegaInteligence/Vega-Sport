@@ -75,7 +75,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # GH137A (#137): the writers' data versions (five ops tables, functions, four triggers per table the api reads).
          "182_data_versions.sql",
          # GH137R (#137): scoped markers and content receipts prepared by the worker.
-         "183_read_receipts.sql"]
+         "183_read_receipts.sql",
+         # GH137R.3 (#137, #158): the receipts retired (183's triggers, tables and functions removed; 182 kept).
+         "184_retire_read_receipts.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -226,8 +228,12 @@ class DeploymentMigrationsTest(unittest.TestCase):
                     "SELECT count(*) FROM api.team_absence_players", "SELECT count(*) FROM api.team_absences",
                     "SELECT count(*) FROM api.match_probable_lineups", "SELECT count(*) FROM api.match_probable_lineup_players",
                     "SELECT count(*) FROM api.match_absence_players", "SELECT count(*) FROM api.match_absences",
-                    "SELECT api.read_receipt('standings', 'l_v0009601|2026', '') IS NULL"):
+                    "SELECT count(*) FROM api.matchday_editions('l_v0009601', '2026')",
+                    "SELECT count(*) FROM api.matchday_rounds('l_v0009601', '2026')"):
             self.assertIsNotNone(self.read.execute(sql).fetchone()[0], sql)
+        # GH137R-x: the receipts' read is gone with 184, the versions' read stays.
+        self.assertEqual(self.read.execute("""SELECT to_regprocedure('api.read_receipt(text,text,text)') IS NULL,
+                                              to_regprocedure('api.data_version(text[],text)') IS NOT NULL""").fetchone(), (True, True))
         friendly = self.read.execute("SELECT match_id, tournament, home_name, away_name FROM api.home_internationals('2026-10-05', '2026-10-11')").fetchall()
         self.assertEqual([r[1:] for r in friendly], [("Friendly", "Brazil", "Japan")])
 
