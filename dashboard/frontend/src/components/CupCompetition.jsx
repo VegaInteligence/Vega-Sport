@@ -1,7 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, Media, Pager, Segments, AsyncState, Empty } from "./UI.jsx";
+import { Card, Media, Pager, Segments, AsyncState, Empty, Skeleton } from "./UI.jsx";
 import { date, seasonLabel } from "../services/format.js";
 import { parisDay } from "../services/fixtures.js";
 import KnockoutBracket from "./KnockoutBracket.jsx";
@@ -15,7 +15,7 @@ import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
 import NationalFlag from "./NationalFlag.jsx";
 import SeasonProjection from "./SeasonProjection.jsx";
-import { useCupProjection } from "../services/cup-projection.js";
+import { useCupProjectionState } from "../services/cup-projection.js";
 import MatchForecastBar from "./MatchForecastBar.jsx";
 import { Term } from "./Hint.jsx";
 import EditionHeader, { FollowedTeam, useEditionPage } from "./EditionHeader.jsx";
@@ -122,14 +122,18 @@ export default function CupCompetition({ competition, initialSeason, name = comp
     ? [["groups", "Groupes"], ["bracket", "Tableau"], ["matches", "Matchs"]]
     : [["bracket", "Tableau"], ["groups", "Groupes"], ["matches", "Matchs"]];
   const views = tournament ? tournamentViews.map(([value]) => value) : league ? ["standings", "matches", "projection"] : supportsBracket ? ["matches", "bracket", "projection"] : ["matches"];
-  const [preferredView, setViewState] = useState(initialView === "projection" ? "" : initialView);
-  const view = views.includes(preferredView) ? preferredView : views[0];
+  const [preferredView, setViewState] = useState(initialView);
   const setView = (next) => { setViewState(next); onView?.(next); };
   const archive = NATIONAL_CUP_ARCHIVES[competition.folder];
   const germany = competition.folder === GERMAN_CUP_FOLDER;
   // A domestic cup whose next round is drawn: its rounds replayed (124); a complementary league replayed to its end (VI-19).
-  const projection = useCupProjection(competition, typeof season === "string" ? season : String(season));
+  const projectionState = useCupProjectionState(competition, typeof season === "string" ? season : String(season));
+  const projection = projectionState.value;
   const projected = projection?.format === "knockout" || (!projection?.format && projection?.teams?.length > 0);
+  // Projection, kept from another competition or the address (§ 84): held while it is read, then the first view
+  // where the competition has none.
+  const awaitingProjection = preferredView === "projection" && views.includes("projection") && !projectionState.settled;
+  const view = views.includes(preferredView) && (preferredView !== "projection" || projected || awaitingProjection) ? preferredView : views[0];
   const showProjection = view === "projection" && projected;
   const [status, setStatus] = useState(
     (competition.source === "open-matchday" && !Number(competition.tables?.results?.rows)) ||
@@ -216,7 +220,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
         <Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} />
         <input type="search" aria-label="Rechercher une équipe dans la coupe" placeholder="Rechercher une équipe…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
       </div>}
-      {showProjection ? <SeasonProjection projection={projection} competition={competition} season={season} /> : <>
+      {awaitingProjection ? <Skeleton label="Chargement de la projection…" lines={8} /> : showProjection ? <SeasonProjection projection={projection} competition={competition} season={season} /> : <>
       {tournament && view !== "matches" ? null : mode === "archive" ? <p className="cup-source">Archive {season}</p> : mode === "openligadb" ? <p className="cup-source">Résultats et calendrier</p> : competition.source === "open-matchday" ? (competition.sourceDate && <p className="cup-source">Données du {date(competition.sourceDate)}</p>) : <p className="cup-source">{competition.coverage || "Résultats et calendrier"}</p>}
       {competition.sourceKey === "euro" && season === "2028" && <p className="cup-source">Les équipes indiquées par des codes restent à déterminer.</p>}
       <AsyncState resource={resource}>

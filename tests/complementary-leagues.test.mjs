@@ -66,11 +66,13 @@ test("a league's page: its standings, its matches, its projection, no bracket", 
     { key: "2", date: "2099-11-21", home: "Woking", away: "York City", score: null, status: "scheduled", round: "J16", forecast: { home: 0.3, draw: 0.3, away: 0.4 } },
   ];
   let projection = { teams: [{ id: "t_1", name: "York City", points: 3, played: 1, projectedPoints: 80, places: [0.6, 0.4] }] };
+  let settled = true;
   const stubs = {
     react: React,
     "./UI.jsx": { Card: ({ children }) => elem("section", null, children), Media: () => null, Pager: () => null,
       Segments: ({ items, value }) => elem("div", { "data-value": value }, items.map(([id, text]) => elem("button", { key: id }, text))),
-      AsyncState: ({ resource, children }) => children(resource.value), Empty: ({ children }) => elem("p", null, children) },
+      AsyncState: ({ resource, children }) => children(resource.value), Empty: ({ children }) => elem("p", null, children),
+      Skeleton: ({ label }) => elem("div", { "data-skeleton": "" }, label) },
     "./KnockoutBracket.jsx": { __esModule: true, default: () => elem("div", null, "Tableau éliminatoire") },
     "./NationalFlag.jsx": { __esModule: true, default: () => null },
     "./EditionHeader.jsx": editionHeaderStub(React),
@@ -91,7 +93,7 @@ test("a league's page: its standings, its matches, its projection, no bracket", 
     "../services/cup-worker-client.js": { cupWorkerSnapshot: async () => ({ matches: [] }) },
     "../services/cup-archives.js": { NATIONAL_CUP_ARCHIVES: {}, GERMAN_CUP_FOLDER: "GER_CUP_dfb-pokal", isGermanCupSeason: () => false },
     "./SeasonProjection.jsx": { __esModule: true, default: () => elem("div", null, "projection") },
-    "../services/cup-projection.js": { useCupProjection: () => projection },
+    "../services/cup-projection.js": { useCupProjection: () => projection, useCupProjectionState: () => ({ value: projection, settled }) },
     "../services/forecasts.js": { share: (v) => `${Math.round(v * 100)} %` },
     "./MatchForecastBar.jsx": { __esModule: true, default: () => null },
   };
@@ -107,6 +109,15 @@ test("a league's page: its standings, its matches, its projection, no bracket", 
   assert.match(html, /data-value="standings"/); // the standings first
   assert.match(html, /aria-label="Classement de la National League"/);
   assert.match(html, /York City<\/span><\/th><td>1<\/td><td>1<\/td><td>0<\/td><td>0<\/td><td>2<\/td><td>0<\/td><td>\+2<\/td><td><strong>3<\/strong>/);
+  // § 84a: Projection kept from another competition (the address's `view=projection`) opens on it…
+  assert.match(renderToStaticMarkup(elem(mod.exports.default, { competition: league, initialView: "projection" })), /data-value="projection"[\s\S]*<div>projection<\/div>/);
+  // …is held while the projection is read…
+  settled = false;
   projection = null;
-  assert.doesNotMatch(renderToStaticMarkup(elem(mod.exports.default, { competition: league })), /Projection/);
+  assert.match(renderToStaticMarkup(elem(mod.exports.default, { competition: league, initialView: "projection" })), /data-skeleton=""/);
+  // …and gives way to the first view where the league has none.
+  settled = true;
+  const without = renderToStaticMarkup(elem(mod.exports.default, { competition: league, initialView: "projection" }));
+  assert.match(without, /data-value="standings"/);
+  assert.doesNotMatch(without, /Projection|data-skeleton/);
 });

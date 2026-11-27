@@ -410,9 +410,11 @@ function CompactOverview() {
       personalTeams: saved("clubs").split(",").filter(Boolean),
       personalPlayers: saved("players").split(",").filter(Boolean),
     });
-    if (summary.value && !summary.loading)
+    // The server's home stays masked until the visitor's own is read; a failed read lifts the mask too, so its
+    // message and « Réessayer » show (Codex on #268).
+    if ((summary.value && !summary.loading) || summary.error)
       delete document.documentElement.dataset.homeBootstrapMismatch;
-  }, [f.preferencesReady, research?.ready, f.preferences, f.season, scopeKey, summary.value, summary.loading]);
+  }, [f.preferencesReady, research?.ready, f.preferences, f.season, scopeKey, summary.value, summary.loading, summary.error]);
   // While the week is read (another season, other competitions): the home's own skeleton under its toolbar, which
   // stays usable (§ 84).
   if (summary.loading || summary.error)
