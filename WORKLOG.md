@@ -1082,3 +1082,10 @@
 - Unchanged: every figure and its computation (Score Vega, Ballon d'Or v1.1, #125 frozen), the reads, the links. « Enregistrer » becomes « Favoris » in the Club/Nations work (`BookmarkButton`, for the whole site), not here.
 - Tests: `tests/e2e/players-rankings.e2e.mjs` 2/19 on main 08223d9 (`next dev`), 19/19 on the branch (`next build` + `next start`), replay of production reads for 2026/2027; site unit tests 1,127/1,127 (`route-skeleton`, `preference-render-ballon`, `audit-profile-wiring`, `season_player_render` updated for the new shape). Evidence in `/mnt/project-files/design-boutons/joueurs-classements/e2e-*` (outside git).
 - Review (Codex on #276, § 87a): a provisional rank in the Power Ranking's top three now keeps its warning pill on its card. P5 added: 19/20 without the fix, 20/20 with it.
+
+
+## Calendar as a thread of days (27 Nov 2026, GitHub #270, VI-174, FAILURE_MODES § 88)
+
+- Request (hugo, 27 Nov, 20 h 27): redo the Calendrier page (`/matchs`), design free. Mock-up on the real matches of 16 Nov – 6 Dec: https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o; piste A chosen at 20 h 41 (« POUR Calendrier va pour le A »).
+- Branch `claude/calendrier-fil-des-jours`. The week read by pages of 50 (`status=all`, `from`/`to`), no API change, no Deploy.
+- Tests: `tests/e2e/calendar.e2e.mjs` with the double `tests/e2e/support/calendar-api.mjs` (written before the code), `publication-changed.e2e.mjs` M and U cases rewritten for the week's pages.

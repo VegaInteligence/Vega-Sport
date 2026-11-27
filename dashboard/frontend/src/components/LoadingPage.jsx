@@ -12,11 +12,13 @@ import CompetitionSkeleton from "./CompetitionSkeleton.jsx";
 import HomeSkeleton from "./HomeSkeleton.jsx";
 import MatchSkeleton from "./MatchSkeleton.jsx";
 import NationSkeleton from "./NationSkeleton.jsx";
+import CalendarSkeleton from "./CalendarSkeleton.jsx";
 import PlayersSkeleton from "./PlayersSkeleton.jsx";
 import RankingSkeleton from "./RankingSkeleton.jsx";
 import { routeSkeleton } from "../services/route-skeleton.js";
 /** One skeleton per kind of services/route-skeleton.js. */
 const SKELETONS = {
+  calendar: <CalendarSkeleton />,
   club: <ClubSkeleton />,
   competition: <CompetitionSkeleton />,
   home: <HomeSkeleton />,
@@ -36,16 +38,20 @@ export default function LoadingPage({ href }) {
       as: "fetch",
       crossOrigin: "anonymous",
     });
-  // The route's skeleton is rendered beside the logo; the flag shows one of them.
-  // Both shapes of a route with an item page of its own (the players) are drawn: the flag shows the right one.
+  // The route's skeleton is rendered beside the logo; the flag shows one of them. A route with two shapes draws both
+  // (the players and a player's page, § 87; a match and the calendar under /matchs, § 88): the flag keeps one.
+  const kinds = [...new Set([routeSkeleton(path, "id"), routeSkeleton(path, "")])].filter((kind) => SKELETONS[kind]);
   const skeleton =
-    path.replace(/\/$/, "") === "/joueurs" ? (
+    kinds.length > 1 ? (
       <>
-        <div className="route-skeleton-variant" data-route-variant="players">{SKELETONS.players}</div>
-        <div className="route-skeleton-variant" data-route-variant="player">{SKELETONS.player}</div>
+        {kinds.map((kind) => (
+          <div className="route-skeleton-variant" data-route-variant={kind} key={kind}>
+            {SKELETONS[kind]}
+          </div>
+        ))}
       </>
     ) : (
-      SKELETONS[routeSkeleton(path, "id")]
+      SKELETONS[kinds[0]]
     );
   // Keep the head script's flag right after a client-side navigation too.
   useLayoutEffect(() => {

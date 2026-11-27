@@ -685,8 +685,11 @@
     padding-inline: 10px;
   }
 }
-/* The players' route draws both its shapes before the page's code: the head script's flag keeps one. */
+/* The players' route and /matchs (a match and the calendar, § 88) draw both their shapes before the page's code: the
+   head script's flag keeps one. */
 html:not([data-route-skeleton="players"]) [data-route-variant="players"],
-html:not([data-route-skeleton="player"]) [data-route-variant="player"] {
+html:not([data-route-skeleton="player"]) [data-route-variant="player"],
+html:not([data-route-skeleton="match"]) [data-route-variant="match"],
+html:not([data-route-skeleton="calendar"]) [data-route-variant="calendar"] {
   display: none;
 }

@@ -8,8 +8,11 @@ test("each redesigned page has its own loading skeleton", () => {
   assert.equal(routeSkeleton("/", ""), "home");
   assert.equal(routeSkeleton("/competitions/", ""), "competition");
   assert.equal(routeSkeleton("/matchs/", "?id=m_0BcQYa"), "match");
-  // The calendar (no id) keeps the logo; so does a page without a skeleton of its own.
-  assert.equal(routeSkeleton("/matchs/", "?tab=results"), "");
+  // The calendar (no id) has its own since § 88; an archived World Cup match (cdm) keeps the logo, as does a page
+  // without a skeleton of its own.
+  assert.equal(routeSkeleton("/matchs/", "?tab=results"), "calendar");
+  assert.equal(routeSkeleton("/matchs/", ""), "calendar");
+  assert.equal(routeSkeleton("/matchs/", "?cdm=WC-1930-01"), "");
   assert.equal(routeSkeleton("/compte/", ""), "");
 });
 
@@ -34,7 +37,8 @@ test("the head script flags the same skeleton before the first paint", () => {
   };
   assert.equal(flag("/", ""), "home");
   assert.equal(flag("/matchs/", "?id=m_0BcQYa"), "match");
-  assert.equal(flag("/matchs/", ""), "");
+  assert.equal(flag("/matchs/", ""), "calendar");
+  assert.equal(flag("/matchs/", "?cdm=WC-1930-01"), "");
   assert.equal(flag("/competitions/", "?id=l_3FJFUl"), "competition");
   assert.equal(flag("/classement-joueurs/", ""), "ballon");
   assert.equal(flag("/power-ranking", ""), "power");

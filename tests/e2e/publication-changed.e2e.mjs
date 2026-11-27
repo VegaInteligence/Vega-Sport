@@ -11,18 +11,20 @@
 // served it (« Club 61 G2 », « Joueur 21 G2 »), so the page shows which one answered.
 //
 // Failure modes and expected outcomes:
-//  M1 /matchs?tab=results, page 1 read at G1, the API moves to G2, « Suivants »: the G1 cursor is refused (409) → the
-//     list shows page 2 of G2 (« Page 2 », first row « Club 61 G2 », no G1 row), never page 1 again.
-//  M2 Same page after the site's manifest re-read has landed (the recovery asks for it; its new publication is G2):
-//     still « Page 2 » with the same G2 rows — the list does not jump back to its first page (review finding on
-//     PR #216: Pages was keyed by the manifest's publication and remounted).
+//  The calendar (§ 88) reads one week at a time, its pages of 50 chained by their cursors (120 matches: 3 pages).
+//  M0 /matchs: the week read at G1 (« Club 1 G1 » on its first day's first row), the strip counting 120 matches.
+//  M1 The served publication moves to G2 after the first page of a week (state.moveAfter = 1); the next week's arrow:
+//     its second page's cursor (G1) is refused (409) → the whole week shows at G2 (every row « … G2 », the strip
+//     counting 120), never a mix of the two.
+//  M2 Same page after the site's manifest re-read has landed (its new publication is G2): still that week and day,
+//     G2 rows only — the calendar does not jump back to today.
 //  M3 Nowhere on the page « Rechargez la première page », « La publication a changé », « … ont été actualisées »,
 //     nor an error notice (role=alert, « Réessayer », « Données momentanément indisponibles »).
-//  M4 The requests: the G1 cursor answered 409, then page 1 and page 2 read at G2 (no read mixing two).
-//  U1 Variant, the publication does not settle: every fixtures read refused (409) after the move → the last valid
-//     list stays (page 1 of G1, « Club 1 G1 ») with a neutral « Actualiser » button, no forbidden text, no alert.
-//  U2 The API answers again; « Actualiser » → the list shows page 2 of G2 (« Page 2 », « Club 61 G2 »), and stays
-//     there after the manifest re-read.
+//  M4 The requests: page 1 at G1, the G1 cursor answered 409, then pages 1 to 3 read at G2 (no read mixing two).
+//  U1 Variant, the publication does not settle: every fixtures read refused (409) after the move; the next week's
+//     arrow → the strip stays, a neutral « Actualiser » button, no forbidden text, no alert.
+//  U2 The API answers again; « Actualiser » → that week shows at G2 (« Club 1 G2 »), and stays so after the
+//     manifest re-read.
 //  J1 /joueurs (Performances, offset pages of 20 through useCompactRead), page 1 at G1, the API moves to G2,
 //     « Suivants »: page 2 shows (« 2 / 3 », first row « Joueur 21 G2 »), no forbidden text, no alert; the page=2
 //     read pinned to G1 answered 409 and the same page was read again without the pin (200).
@@ -58,6 +60,7 @@ const check = (id, expected, actual, ok) => {
   console.log(ok ? "PASS" : "FAIL", id, "—", String(JSON.stringify(actual ?? null)).slice(0, 300));
 };
 const reset = () => {
+  api.state.moveAfter = 0;
   api.state.generation = "G1";
   api.state.manifestGeneration = null;
   api.state.refuse = new Set();
@@ -93,16 +96,17 @@ const complaints = (page, scope = "body") =>
     };
   });
 const clean = (c) => !c.forbidden.length && !c.alerts.length && !c.retry && !c.unavailable;
-// The paginated matches: the page number and the teams of its rows (in order).
+// The calendar: the chosen day, the strip's total and the teams of the day's rows (in order).
 const matchesState = (page) =>
   page.evaluate(() => {
-    const nav = document.querySelector('nav[aria-label="Pagination des rencontres"]');
-    const rows = [...document.querySelectorAll(".match-row")].map((row) => row.innerText.match(/Club \d+ G\d/g)?.join(" – ") || row.innerText.slice(0, 60));
+    const rows = [...document.querySelectorAll(".calendar-card .calendar-row")].map((row) => row.innerText.match(/Club \d+ G\d/g)?.join(" – ") || row.innerText.slice(0, 60));
+    const total = [...document.querySelectorAll(".calendar-strip .calendar-day-count")].reduce((sum, n) => sum + (parseInt(n.textContent, 10) || 0), 0);
     return {
-      label: nav?.querySelector("span")?.innerText || null,
+      day: document.querySelector('.calendar-strip .calendar-day[aria-current="date"]')?.getAttribute("href")?.match(/day=([\d-]+)/)?.[1] || null,
+      week: document.querySelector(".calendar-week")?.textContent.trim() || null,
+      total,
       rows: rows.length,
       first: rows[0] || null,
-      last: rows.at(-1) || null,
       g1: rows.filter((r) => /G1/.test(r)).length,
       g2: rows.filter((r) => /G2/.test(r)).length,
       actualiser: [...document.querySelectorAll("button")].some((b) => b.innerText.trim() === "Actualiser"),
@@ -125,90 +129,95 @@ const manifestReread = async (page, mark) => {
   return since(mark, "/api/dashboard/manifest").map((r) => ({ status: r.status, served: r.served }));
 };
 
-// ---------- M: the paginated matches ----------
+// ---------- M: the calendar's week, read by pages ----------
+const nextWeek = (page) => page.locator('.calendar-strip .calendar-arrow[aria-label="Semaine suivante"]').click({ timeout: 10000 }).catch(() => {});
 for (const device of ["desktop", "phone"]) {
   reset();
-  const { context, page } = await open(device, "/matchs/?tab=results");
+  const { context, page } = await open(device, "/matchs/");
   const first = await waitFor(page, async () => {
     const s = await matchesState(page);
-    return { ...s, ok: s.label === "Page 1" && s.first === "Club 1 G1 – Club 2 G1" };
+    return { ...s, ok: s.total === 120 && s.rows > 0 && s.g1 === s.rows };
   });
-  check(`M0 ${device}`, "page 1 of G1 (« Page 1 », first row « Club 1 G1 – Club 2 G1 »)", first, first?.ok);
-  api.state.generation = "G2";
+  check(`M0 ${device}`, "the week at G1: the strip counts 120, the day's rows all « … G1 »", first, first?.ok);
+  api.state.moveAfter = 1;
+  api.state.moveTo = "G2";
   const mark = api.log.length;
-  await page.getByRole("button", { name: "Suivants" }).click();
+  await nextWeek(page);
   const second = await waitFor(page, async () => {
     const s = await matchesState(page);
-    return { ...s, ok: s.label === "Page 2" && s.first === "Club 61 G2 – Club 62 G2" && s.g1 === 0 };
+    return { ...s, ok: s.week !== first?.week && s.total === 120 && s.rows > 0 && s.g2 === s.rows };
   });
-  check(`M1 ${device}`, "« Page 2 », first row « Club 61 G2 – Club 62 G2 », 30 rows, none of G1", second, second?.ok && second.rows === 30);
+  check(`M1 ${device}`, "the next week at G2: the strip counts 120, every row « … G2 », none of G1", second, second?.ok);
   const manifests = await manifestReread(page, mark);
   const after = await matchesState(page);
   check(
     `M2 ${device}`,
-    "after the manifest re-read (G2): still « Page 2 », first row « Club 61 G2 – Club 62 G2 », no G1 row",
+    "after the manifest re-read (G2): the same week and day, G2 rows only",
     { ...after, manifests },
-    after.label === "Page 2" && after.first === "Club 61 G2 – Club 62 G2" && after.g1 === 0 && manifests.some((m) => m.served === "G2"),
+    after.week === second?.week && after.day === second?.day && after.rows > 0 && after.g1 === 0 && after.g2 === after.rows && manifests.some((m) => m.served === "G2"),
   );
   const said = await complaints(page);
   check(`M3 ${device}`, "no forbidden text, no alert, no « Réessayer », no « Données momentanément indisponibles »", said, clean(said));
   const fixtures = since(mark, "/api/fixtures").map((r) => ({ status: r.status, served: r.served, cursor: Boolean(r.query.cursor) }));
   requests[`M ${device}`] = since(mark);
+  const refused = fixtures.findIndex((r) => r.status === 409);
+  const afterRefusal = fixtures.slice(refused + 1).filter((r) => r.status === 200);
   check(
     `M4 ${device}`,
-    "the G1 cursor refused (409, with a cursor), then page 1 (no cursor) and page 2 (cursor) answered 200 at G2",
+    "page 1 at G1, the G1 cursor refused (409), then pages 1 to 3 at G2",
     fixtures,
-    fixtures[0]?.status === 409 && fixtures[0].cursor &&
-      fixtures.some((r, i) => i > 0 && r.status === 200 && !r.cursor && r.served === "G2") &&
-      fixtures.some((r, i) => i > 0 && r.status === 200 && r.cursor && r.served === "G2"),
+    fixtures[0]?.status === 200 && !fixtures[0].cursor && refused === 1 && fixtures[1].cursor &&
+      afterRefusal.length >= 3 && !afterRefusal[0].cursor && afterRefusal.slice(0, 3).every((r) => r.served === "G2"),
   );
-  await page.screenshot({ path: path.join(out, `matches-page2-${device}.png`), fullPage: false });
-  await page.locator('nav[aria-label="Pagination des rencontres"]').scrollIntoViewIfNeeded();
-  await page.screenshot({ path: path.join(out, `matches-page2-${device}-pager.png`), fullPage: false });
+  await page.screenshot({ path: path.join(out, `calendar-g2-${device}.png`), fullPage: false });
   await context.close();
 }
 
 // ---------- U: the publication does not settle, then does ----------
 {
   reset();
-  const { context, page } = await open("desktop", "/matchs/?tab=results");
-  await waitFor(page, async () => ({ ok: (await matchesState(page)).first === "Club 1 G1 – Club 2 G1" }));
+  const { context, page } = await open("desktop", "/matchs/");
+  const shown = await waitFor(page, async () => {
+    const s = await matchesState(page);
+    return { ...s, ok: s.total === 120 && s.g1 === s.rows && s.rows > 0 };
+  });
   api.state.generation = "G2";
   api.state.refuse = new Set(["fixtures"]);
   const mark = api.log.length;
-  await page.getByRole("button", { name: "Suivants" }).click();
+  await nextWeek(page);
   const kept = await waitFor(page, async () => {
     const s = await matchesState(page);
-    return { ...s, ok: s.actualiser && s.first === "Club 1 G1 – Club 2 G1" };
+    return { ...s, ok: s.actualiser };
   });
-  await page.waitForTimeout(2500); // the manifest re-read lands; the kept list must survive it
+  await page.waitForTimeout(2500); // the manifest re-read lands; the notice must survive it
   const keptAfter = await matchesState(page);
   const said = await complaints(page);
+  const strip = await page.locator(".calendar-strip .calendar-day").count();
   check(
     "U1 desktop",
-    "the last valid list (page 1 of G1, « Club 1 G1 – Club 2 G1 », 30 rows) with « Actualiser »; no forbidden text, no alert",
-    { kept, keptAfter, said },
-    kept?.ok && keptAfter.actualiser && keptAfter.first === "Club 1 G1 – Club 2 G1" && keptAfter.rows === 30 && !said.forbidden.length && !said.alerts.length && !said.retry,
+    "the strip stays with a neutral « Actualiser »; no forbidden text, no alert",
+    { shown: shown?.ok, kept, keptAfter, said, strip },
+    kept?.ok && keptAfter.actualiser && strip === 7 && !said.forbidden.length && !said.alerts.length && !said.retry,
   );
-  await page.screenshot({ path: path.join(out, "matches-unsettled-desktop.png") });
+  await page.screenshot({ path: path.join(out, "calendar-unsettled-desktop.png") });
   api.state.refuse = new Set();
   const mark2 = api.log.length;
   await page.getByRole("button", { name: "Actualiser" }).click();
   const recovered = await waitFor(page, async () => {
     const s = await matchesState(page);
-    return { ...s, ok: s.label === "Page 2" && s.first === "Club 61 G2 – Club 62 G2" && !s.actualiser };
+    return { ...s, ok: s.total === 120 && s.rows > 0 && s.g2 === s.rows && s.first === "Club 1 G2 – Club 2 G2" && !s.actualiser };
   });
   await page.waitForTimeout(2500);
   const recoveredAfter = await matchesState(page);
   const said2 = await complaints(page);
   check(
     "U2 desktop",
-    "« Actualiser » → « Page 2 », « Club 61 G2 – Club 62 G2 », no « Actualiser », still so 2.5 s later; no forbidden text, no alert",
+    "« Actualiser » → the week at G2 (« Club 1 G2 – Club 2 G2 »), no « Actualiser », still so 2.5 s later; no forbidden text, no alert",
     { recovered, recoveredAfter, said: said2 },
-    recovered?.ok && recoveredAfter.label === "Page 2" && recoveredAfter.first === "Club 61 G2 – Club 62 G2" && clean(said2),
+    recovered?.ok && recoveredAfter.g2 === recoveredAfter.rows && recoveredAfter.rows > 0 && !recoveredAfter.actualiser && clean(said2),
   );
   requests["U desktop"] = { unsettled: since(mark, null).slice(0, mark2 - mark), recovery: since(mark2) };
-  await page.screenshot({ path: path.join(out, "matches-recovered-desktop.png") });
+  await page.screenshot({ path: path.join(out, "calendar-recovered-desktop.png") });
   await context.close();
 }
 
