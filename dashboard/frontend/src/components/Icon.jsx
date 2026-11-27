@@ -29,6 +29,7 @@ import {
   Save,
   House,
   Crown,
+  Archive,
 } from "lucide-react";
 const icons = {
   search: Search,
@@ -61,6 +62,7 @@ const icons = {
   save: Save,
   home: House,
   crown: Crown,
+  archive: Archive,
 };
 export default function Icon({ name, className = "" }) {
   const Component = icons[name] || CircleDot;

@@ -104,7 +104,10 @@ test("competition page renders a result-derived league table and its limits", as
   stubs["./NationalFlag.jsx"] = { __esModule: true, default: () => null };
   stubs["./PhoneFold.jsx"] = { usePhoneFold: () => ({ fold: {}, toggle: {} }), PhoneFoldToggle: () => null };
   stubs["../services/national-flags.js"] = { nationalFlagCode: () => null, nationalTeamLabel: String, sameNationalTeam: () => false };
-  stubs["../components/EditionHeader.jsx"] = editionHeaderStub(React);
+  // § 82: on the competition page the head carries the page's bar; written out here before the edition.
+  stubs["../components/EditionHeader.jsx"] = { ...editionHeaderStub(React), EditionPageProvider: ({ bar, children }) => elem(React.Fragment, null, bar, children) };
+  // § 82: the bar's choice of competition, its lists written out (the panel's own behaviour is in the E2E).
+  stubs["../components/CompetitionPicker.jsx"] = { CompetitionSwitcher: ({ lists, current }) => elem("nav", { "data-switcher": current?.id }, lists.map((list) => elem("section", { key: list.key, "data-list": list.key }, elem("h2", null, list.label), list.competitions.map((c) => elem("h3", { key: c.id }, c.name))))) };
   stubs["../components/NationalFlag.jsx"] = { __esModule: true, default: () => null };
   stubs["../services/trophy-art.js"] = trophies;
   const standingsFile = path.join(root, "dashboard/frontend/src/components/CompetitionStandings.jsx");
@@ -138,12 +141,14 @@ test("competition page renders a result-derived league table and its limits", as
   run((name) => { if (!(name in stubs)) throw Error("Unexpected import " + name); return stubs[name]; }, mod, mod.exports);
   const html = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(html, /Classement calculé à partir des résultats disponibles/);
-  assert.match(html, /Compétitions à la une/);
+  // § 82: no row of cards nor « Toutes les compétitions » page; the bar chooses (its lists), Archives beside it.
+  assert.match(html, /data-switcher="l_3FJFUl"/);
+  assert.doesNotMatch(html, /league-spotlight|Toutes les compétitions/);
   assert.doesNotMatch(html, /Explorer les coupes/);
   assert.doesNotMatch(html, /Retrouvez les sept grandes ligues/);
-  assert.match(html, /<a[^>]*href="\/archives\/"[^>]*>Archives<\/a>/);
+  assert.match(html, /<a[^>]*href="\/archives\/"[^>]*><span>Archives<\/span><\/a>/);
   assert.doesNotMatch(html, /Archives de buts/);
-  assert.ok(html.indexOf(">Archives</a>") < html.indexOf("Toutes les compétitions"));
+  assert.ok(html.indexOf("data-switcher") < html.indexOf(">Archives</span></a>"));
   assert.match(html, /France/);
   assert.match(html, /Paris/);
   assert.match(html, /Lille/);
@@ -244,19 +249,22 @@ test("competition page renders a result-derived league table and its limits", as
   ];
   context.manifest.seasons[0].chunks = [{ leagueId: "turkey2", competitions: [{ id: "turkey2", country: "TUR", seasons: [] }] }];
   forceMatchView = false;
-  forceDirectory = true;
-  hookCount = 0;
+  // The former « Toutes les compétitions » page is the bar's « Toutes » list: every competition, in the site's order
+  // (its grouping by country is competitionGroups, competition-directory.test.mjs).
+  requestedId = "england";
   const directory = renderToStaticMarkup(elem(mod.exports.default));
-  assert.ok(directory.indexOf(">Australie</h2>") < directory.indexOf(">International</h2>"));
-  assert.ok(directory.indexOf(">Allemagne</h2>") < directory.indexOf(">Angleterre</h2>"));
-  assert.ok(directory.indexOf(">Premier League</h3>") < directory.indexOf(">Championship</h3>"));
-  assert.ok(directory.indexOf(">Angleterre</h2>") < directory.indexOf(">Australie</h2>"));
-  assert.ok(directory.indexOf(">Turquie</h2>") < directory.indexOf(">1. Lig</h3>"));
-  assert.match(directory, /<h1>Toutes les compétitions<\/h1>/);
-  assert.match(directory, /aria-label="Filtrer par saison"/);
-  assert.match(directory, /Toutes les saisons/);
+  const all = directory.slice(directory.indexOf('data-list="all"'));
+  for (const name of ["Premier League", "Championship", "A-League", "Champions League", "Bundesliga", "1. Lig"]) assert.match(all, new RegExp(">" + name + "</h3>"));
+  assert.doesNotMatch(directory, /<h1>Toutes les compétitions<\/h1>/);
   assert.doesNotMatch(directory, /Autres ligues et coupes/);
-  assert.doesNotMatch(directory, /Calendrier par date/);
+
+  // Codex on #262: an unknown competition keeps the bar, to choose another one (« Toutes » as before).
+  requestedId = "l_unknown";
+  const unknown = renderToStaticMarkup(elem(mod.exports.default));
+  assert.match(unknown, /Compétition inconnue ou indisponible/);
+  assert.match(unknown, /class="home-settings edition-bar competition-fallback-bar"><nav/);
+  assert.match(unknown, /data-list="all"/);
+  assert.match(unknown, /<span>Archives<\/span><\/a>/);
 
 
 });

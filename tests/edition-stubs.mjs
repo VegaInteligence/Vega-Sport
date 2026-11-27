@@ -9,5 +9,8 @@ export function editionHeaderStub(React) {
         h("select", { "aria-label": "Édition", value: season, onChange() {} }, editions.map((edition) => h("option", { key: edition.season, value: edition.season }, edition.label || edition.season))),
         children),
     FollowedTeam: ({ label }) => h("button", null, label),
+    // § 82: the competition page's head (its bar) — elsewhere there is none.
+    useEditionPage: () => null,
+    EditionPageProvider: ({ children }) => children,
   };
 }

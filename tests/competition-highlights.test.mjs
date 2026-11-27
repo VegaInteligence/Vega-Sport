@@ -62,3 +62,22 @@ test("a short table shows fewer next matches before the column runs past it", as
   assert.equal(nextUpcomingLimit({ limit: 3, room: 3, upcomingRow: 80, resultRow: 60 }), 3);
   assert.equal(nextUpcomingLimit({ limit: 4, room: 9, upcomingRow: 80, resultRow: 60 }), 4);
 });
+
+test("the next matches beside the table are worked out from the sizes, whatever was shown before", async () => {
+  const { upcomingLimitFor, recentResultRoom } = await import("../dashboard/frontend/src/services/competition-highlights.js");
+  // Ligue 1, 27 Nov 2026: table 874, level 252 + gap 12, next card 289 with two rows of 101.5, header 44, result 89.5.
+  const sizes = { standingsHeight: 874, upcomingHeight: 289 + 264, headerHeight: 44, rowHeight: 89.5, gap: 12 };
+  assert.equal(recentResultRoom(sizes), 2);
+  // Two shown or one shown, the answer is the same: two next matches (one more would leave room for one result).
+  assert.equal(upcomingLimitFor({ sizes, shown: 2, upcomingRow: 101.5 }), 2);
+  const fromOne = { ...sizes, upcomingHeight: sizes.upcomingHeight - 101.5 };
+  assert.equal(upcomingLimitFor({ sizes: fromOne, shown: 1, upcomingRow: 101.5 }), 2);
+  const fromFour = { ...sizes, upcomingHeight: sizes.upcomingHeight + 2 * 101.5 };
+  assert.equal(upcomingLimitFor({ sizes: fromFour, shown: 4, upcomingRow: 101.5 }), 2);
+  // A tall table: four; a very short one: one; only one next match left in the season: four asked, one shown.
+  assert.equal(upcomingLimitFor({ sizes: { ...sizes, standingsHeight: 1400 }, shown: 2, upcomingRow: 101.5 }), 4);
+  assert.equal(upcomingLimitFor({ sizes: { ...sizes, standingsHeight: 500 }, shown: 2, upcomingRow: 101.5 }), 1);
+  assert.equal(upcomingLimitFor({ sizes: { ...sizes, standingsHeight: 1400 }, shown: 1, upcomingRow: 101.5, available: 1 }), 4);
+  // No next row to measure: nothing decided.
+  assert.equal(upcomingLimitFor({ sizes, shown: 0, upcomingRow: 0 }), null);
+});

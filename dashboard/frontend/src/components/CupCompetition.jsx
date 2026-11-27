@@ -18,7 +18,7 @@ import SeasonProjection from "./SeasonProjection.jsx";
 import { useCupProjection } from "../services/cup-projection.js";
 import MatchForecastBar from "./MatchForecastBar.jsx";
 import { Term } from "./Hint.jsx";
-import EditionHeader, { FollowedTeam } from "./EditionHeader.jsx";
+import EditionHeader, { FollowedTeam, useEditionPage } from "./EditionHeader.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useWorldCupIndex, withWorldCupKeys } from "../services/worldcup-matches.js";
 import { nationalTeamLabel, sameNationalTeam } from "../services/national-flags.js";
@@ -104,6 +104,7 @@ function CupMatch({ match, nationalTeams, season, highlight, hrefForMatch }) {
  * (`onSeason`, `onView`: its address follows).
  */
 export default function CupCompetition({ competition, initialSeason, name = competition.name, editions, onEdition, initialView, onSeason, onView, highlight = "", onHighlight, heading = false }) {
+  const titled = useEditionPage();
   const [season, setSeason] = useState(
     () =>
       (initialSeason &&
@@ -198,8 +199,8 @@ export default function CupCompetition({ competition, initialSeason, name = comp
     setPage(1);
     onSeason?.(next);
   }
-  return (
-    <Card className="cup-detail edition-card">
+  // On the competition page (§ 82) the head is the page's title, above the card.
+  const head = (
       <EditionHeader imageUrl={imageUrl} name={name} heading={heading} season={season} onSeason={pickSeason} label="Édition de la coupe"
         editions={(editions || competition.seasons.map((value) => ({ season: value, id: competition.id }))).map((edition) => ({ ...edition, label: editionLabel(competition, edition.season) }))}>
         {highlight && nationalTeams && <FollowedTeam label={nationalTeamLabel(highlight)} flag={<NationalFlag name={highlight} season={season} />} onClear={() => onHighlight?.("")} />}
@@ -207,6 +208,10 @@ export default function CupCompetition({ competition, initialSeason, name = comp
         {supportsBracket && !tournament && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["matches", "Matchs"], ["bracket", "Tableau"], ...(projected ? [["projection", "Projection"]] : [])]} />}
         {league && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["standings", "Classement"], ["matches", "Matchs"], ...(projected ? [["projection", "Projection"]] : [])]} />}
       </EditionHeader>
+  );
+  return (
+    <>{titled && head}<Card className="cup-detail edition-card">
+      {!titled && head}
       {view === "matches" && <div className="cup-controls">
         <Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} />
         <input type="search" aria-label="Rechercher une équipe dans la coupe" placeholder="Rechercher une équipe…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
@@ -221,7 +226,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
         </>}
       </AsyncState>
       </>}
-    </Card>
+    </Card></>
   );
 }
 export function CupMatchList({ matches, status, query, page, onPage, nationalTeams = false, season, highlight = "", hrefForMatch }) {

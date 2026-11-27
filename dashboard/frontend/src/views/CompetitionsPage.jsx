@@ -2,20 +2,18 @@
 import { useSearchParams } from "next/navigation";
 import BackLink from "../components/BackLink.jsx";
 import Link from "next/link";
-import React, { useState, useEffect, useDeferredValue, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import CompetitionOptions from "../components/CompetitionOptions.jsx";
 import CompetitionSkeleton from "../components/CompetitionSkeleton.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { Card, Media, Segments, Empty, Skeleton } from "../components/UI.jsx";
-import { seasonLabel } from "../services/format.js";
+import { Card, Segments, Empty } from "../components/UI.jsx";
 import { useResource } from "../services/resources.js";
 import {
   cupIndex as loadCupIndex,
   servesCupWorkerIndex,
 } from "../services/catalog-client.js";
-import SeasonSelect from "../components/SeasonSelect.jsx";
 import CupCompetition from "../components/CupCompetition.jsx";
 import NationsCompetition from "../components/NationsCompetition.jsx";
 import { inEuropeFocus } from "../../../shared/competition-scope.js";
@@ -27,19 +25,12 @@ import {
   mergeCupCatalog,
   competitionEditions,
   editionView,
-  competitionSearchText,
-  normalizeCompetitionQuery,
 } from "../services/cup-catalog.js";
 import {
   FEATURED_EUROPE_IDS,
   FEATURED_LEAGUE_IDS,
-  countryLabel,
   orderedFeatured,
-  orderedCountryCodes,
-  competitionGroups,
   orderedCompetitions,
-  competitionCountry,
-  competitionCountryLabel,
   mergeCompetitionSeasons,
 } from "../services/competition-selector.js";
 import {
@@ -53,6 +44,8 @@ import useFavourites from "../hooks/useFavourites.js";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { preferencesChanged } from "../services/user-preferences.js";
 import CompetitionEdition from "../components/CompetitionEdition.jsx";
+import { CompetitionSwitcher } from "../components/CompetitionPicker.jsx";
+import { EditionPageProvider } from "../components/EditionHeader.jsx";
 export function SupplementalPanel({
   data: value,
   id = "",
@@ -161,14 +154,8 @@ export default function CompetitionsPage() {
   // A cup edition's view and the team followed through it (a nation's tile leads here) are in the address.
   const viewParam = params.get("view") || "";
   const followed = params.get("team") || "";
-  const [query, setQuery] = useState("");
-  const [country, setCountry] = useState("all");
-  const [directory, setDirectory] = useState(false);
-  // The directory filters stay on this page: they never change the scope of
-  // the other pages and never reload the season.
-  const [europeOnly, setEuropeOnly] = useState(false);
-  const [directorySeason, setDirectorySeason] = useState("all");
-  const [openSeason, setOpenSeason] = useState("");
+  // § 82: the row of ten cards and the « Toutes les compétitions » page gave way to the bar's panel of tiles.
+  const openSeason = "";
   const [choice, setChoice] = useState({
     ready: false,
     saved: null,
@@ -309,29 +296,21 @@ export default function CompetitionsPage() {
       : null);
   // By its own id or the canonical id it answers to (l_v…, VI-30): the URL keeps the id it was asked with.
   const selected = findCompetition(id ? expandedCatalog : catalog, chosenId);
-  const directoryCatalog = europeOnly
-    ? expandedCatalog.filter(inEuropeFocus)
-    : expandedCatalog;
-  const seasonOptions = f.manifest.seasons.map((s) => s.id);
-  const inSeason = (c) =>
-    directorySeason === "all" ||
-    (c.seasons || []).some((s) => seasonLabel(s) === directorySeason);
-  const directoryCountry =
-    country === "all" || orderedCountryCodes(directoryCatalog).includes(country)
-      ? country
-      : "all";
-  const rows = orderedCompetitions(directoryCatalog).filter(
-    (c) =>
-      (directoryCountry === "all" ||
-        competitionCountry(c) === directoryCountry) &&
-      inSeason(c) &&
-      competitionSearchText(c, competitionCountryLabel(c)).includes(
-        normalizeCompetitionQuery(query),
-      ),
-  );
-  // Render the first screen immediately, then the rest of the catalogue.
-  const complete = useDeferredValue(true, false);
-  const groups = competitionGroups(rows, complete ? Infinity : 120);
+  // The bar's lists (§ 82): the page's row (« À la une », or « Mes compétitions » by § 78), then every competition
+  // grouped by country, as the former « Toutes les compétitions » page.
+  const lists = [
+    {
+      key: "spotlight",
+      label: followsHome ? "Mes compétitions" : "À la une",
+      competitions: spotlight,
+    },
+    {
+      key: "all",
+      label: "Toutes",
+      competitions: orderedCompetitions(expandedCatalog),
+      grouped: true,
+    },
+  ];
   useEffect(() => {
     if (
       !id ||
@@ -343,18 +322,10 @@ export default function CompetitionsPage() {
     url.searchParams.set("focus", "all");
     window.history.replaceState(null, "", url.pathname + url.search);
   }, [id, f.focus]);
-  function openDirectory() {
-    setEuropeOnly(f.focus === "europe");
-    setDirectory("all");
-  }
   function chooseCompetition(next) {
-    setOpenSeason(
-      directory && directorySeason !== "all" ? directorySeason : "",
-    );
     writePreferredCompetition(next);
     preferencesChanged();
     setChoice({ ready: true, saved: next, country: null });
-    setDirectory(false);
     window.history.pushState(
       null,
       "",
@@ -378,11 +349,9 @@ export default function CompetitionsPage() {
         FEATURED_EUROPE_IDS.includes(competition.id) ||
         competition.cupWorker),
     );
-  // A cup outside the featured row has a page of its own: no row of leagues above it, its name as the page's title.
+  // A cup outside the featured row, reached from elsewhere (a nation's tile): a way back above its title.
   const standalone =
-    !directory &&
-    isCup(selected) &&
-    !spotlight.some((c) => c.id === selected.id);
+    isCup(selected) && !spotlight.some((c) => c.id === selected.id);
   const currentView = selected
     ? availableView(selected.id, requestedEdition || openSeason, viewParam)
     : viewParam;
@@ -437,106 +406,78 @@ export default function CompetitionsPage() {
       }),
     onHighlight: (team) => replaceEditionAddress({ team }),
   };
+  // Also shown on its own when the competition is unknown or its cups fail to load (Codex on #262): one can still
+  // choose another, as the former « Toutes les compétitions » allowed.
+  const bar = (
+    <>
+      <CompetitionSwitcher
+        lists={lists}
+        current={selected}
+        onPick={chooseCompetition}
+      />
+      <Link
+        className="home-settings-segment edition-bar-link"
+        href={f.href("/archives/")}
+      >
+        <Icon name="archive" />
+        <span>Archives</span>
+      </Link>
+    </>
+  );
   return (
     <Layout
       path="/competitions/"
-      hideHeading={standalone}
+      hideHeading={Boolean(selected)}
+      className="competitions-page"
       loader={<CompetitionSkeleton />}
-      title={
-        directory
-          ? "Toutes les compétitions"
-          : followsHome
-            ? "Mes compétitions"
-            : "Compétitions à la une"
-      }
-      actions={
-        directory ? null : (
-          <>
-            <Link
-              className="button button-secondary"
-              href={f.href("/archives/")}
-            >
-              Archives
-            </Link>
-            <button className="button button-secondary" onClick={openDirectory}>
-              Toutes les compétitions <Icon name="arrow" />
-            </button>
-          </>
-        )
-      }
+      title={followsHome ? "Mes compétitions" : "Compétitions"}
     >
-      {!directory ? (
-        <>
-          {!standalone && (
-            <section
-              className="league-spotlight"
-              aria-label="Choisir une compétition"
-            >
-              <div className="league-spotlight-grid">
-                {spotlight.map((c) => (
-                  <button
-                    key={c.id}
-                    className="league-spotlight-item"
-                    type="button"
-                    aria-pressed={selected?.id === c.id}
-                    onClick={() => chooseCompetition(c.id)}
-                  >
-                    <Media
-                      name={c.name}
-                      url={c.imageUrl}
-                      className="crest league-spotlight-logo"
-                      initials={false}
-                    />
-                    <span>
-                      <strong>{c.name}</strong>
-                      <small>{competitionCountryLabel(c)}</small>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-          {/* Only a cup with a page of its own: a featured cup has the row above, like a league. */}
-          {standalone && (
-            <BackLink
-              className="inline-link cup-return"
-              onFallback={openDirectory}
-              label="Toutes les compétitions"
+      <EditionPageProvider bar={bar} league={selected?.id}>
+        {/* Only a cup with a page of its own: a featured cup is one of the bar's « À la une ». */}
+        {standalone && (
+          <BackLink
+            className="inline-link cup-return"
+            href={f.href("/competitions/")}
+            label="Compétitions"
+          />
+        )}
+        {selected ? (
+          selected.sourceKey === "nations-league" ? (
+            <NationsCompetition key={selected.id} competition={selected} />
+          ) : selected.source ? (
+            <CupCompetition
+              key={`${selected.id}:${requestedEdition}`}
+              competition={selected}
+              name={
+                selected.id === WORLD_CUP_ARCHIVE_ID
+                  ? "Coupe du monde"
+                  : selected.name
+              }
+              initialSeason={requestedEdition || openSeason}
+              {...edition}
             />
-          )}
-          {selected ? (
-            selected.sourceKey === "nations-league" ? (
-              <NationsCompetition key={selected.id} competition={selected} />
-            ) : selected.source ? (
-              <CupCompetition
-                key={`${selected.id}:${requestedEdition}`}
-                competition={selected}
-                name={
-                  selected.id === WORLD_CUP_ARCHIVE_ID
-                    ? "Coupe du monde"
-                    : selected.name
-                }
-                initialSeason={requestedEdition || openSeason}
-                {...edition}
-              />
-            ) : (
-              <CompetitionEdition
-                key={`${selected.id}:${requestedEdition}`}
-                competition={selected}
-                initialSeason={requestedEdition || openSeason}
-                {...(isCup(selected)
-                  ? edition
-                  : {
-                      initialView: edition.initialView,
-                      onView: edition.onView,
-                      onSeason: edition.onSeason,
-                    })}
-              />
-            )
-          ) : (!id && !choice.ready) ||
-            (awaitsCupIndex(id) && cupIndex.loading) ? (
-            <CompetitionSkeleton detail />
-          ) : awaitsCupIndex(id) && cupIndex.error ? (
+          ) : (
+            <CompetitionEdition
+              key={`${selected.id}:${requestedEdition}`}
+              competition={selected}
+              initialSeason={requestedEdition || openSeason}
+              {...(isCup(selected)
+                ? edition
+                : {
+                    initialView: edition.initialView,
+                    onView: edition.onView,
+                    onSeason: edition.onSeason,
+                  })}
+            />
+          )
+        ) : (!id && !choice.ready) ||
+          (awaitsCupIndex(id) && cupIndex.loading) ? (
+          <CompetitionSkeleton detail />
+        ) : awaitsCupIndex(id) && cupIndex.error ? (
+          <>
+            <div className="home-settings edition-bar competition-fallback-bar">
+              {bar}
+            </div>
             <div className="notice" role="alert">
               Les coupes nationales sont indisponibles.{" "}
               <button
@@ -546,131 +487,16 @@ export default function CompetitionsPage() {
                 Réessayer
               </button>
             </div>
-          ) : (
+          </>
+        ) : (
+          <>
+            <div className="home-settings edition-bar competition-fallback-bar">
+              {bar}
+            </div>
             <Empty>Compétition inconnue ou indisponible.</Empty>
-          )}
-        </>
-      ) : (
-        <>
-          <button
-            className="inline-link competition-back"
-            onClick={() => setDirectory(false)}
-          >
-            ← Retour à la compétition
-          </button>
-          <div className="filter-fields competition-directory-toolbar">
-            <div className="filter-field filter-search competition-directory-search">
-              <label htmlFor="competition-directory-search">
-                Rechercher une compétition
-              </label>
-              <div className="filter-input-wrap">
-                <Icon name="search" />
-                <input
-                  id="competition-directory-search"
-                  type="search"
-                  placeholder="Rechercher une compétition…"
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                  }}
-                />
-              </div>
-            </div>
-            <div className="filter-rail">
-              <button
-                type="button"
-                className="competition-scope-button"
-                aria-pressed={europeOnly}
-                onClick={() => setEuropeOnly((value) => !value)}
-              >
-                <Icon name="trophy" />
-                Top 7 Europe + UEFA{europeOnly && <Icon name="check" />}
-              </button>
-              <div className="filter-field">
-                <label htmlFor="competition-directory-country">
-                  Filtrer par pays
-                </label>
-                <div className="filter-input-wrap">
-                  <Icon name="globe" />
-                  <select
-                    id="competition-directory-country"
-                    value={directoryCountry}
-                    onChange={(e) => {
-                      setCountry(e.target.value);
-                    }}
-                  >
-                    <option value="all">Tous les pays</option>
-                    {orderedCountryCodes(directoryCatalog).map((c) => (
-                      <option key={c} value={c}>
-                        {countryLabel(c)}
-                      </option>
-                    ))}
-                  </select>
-                  <Icon name="chevron" className="select-chevron" />
-                </div>
-              </div>
-              <SeasonSelect
-                label="Filtrer par saison"
-                allLabel="Toutes les saisons"
-                value={directorySeason}
-                seasons={seasonOptions}
-                onChange={setDirectorySeason}
-              />
-            </div>
-          </div>
-          <div className="competition-directory">
-            {groups.map((group, index) => (
-              <section
-                key={group.key}
-                className="directory-country"
-                aria-labelledby={"competition-country-" + index}
-              >
-                <h2 id={"competition-country-" + index}>{group.label}</h2>
-                <div className="competition-grid directory-grid">
-                  {group.competitions.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className="competition-card competition-card-button"
-                      onClick={() => chooseCompetition(c.id)}
-                    >
-                      <div className="competition-card-header">
-                        <Media url={c.imageUrl} initials={false} />
-                        <div>
-                          <h3>{c.name}</h3>
-                          <p>
-                            {isCup(c)
-                              ? "Coupe · " + competitionCountryLabel(c)
-                              : competitionCountryLabel(c)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="directory-card-footer">
-                        <span>
-                          {c.seasons?.length || 0} saison
-                          {(c.seasons?.length || 0) === 1 ? "" : "s"}
-                        </span>
-                        <Icon name="arrow" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-          {!rows.length &&
-            (cupIndex.loading ? (
-              <Skeleton
-                data-page-loading=""
-                label="Chargement des compétitions…"
-                kind="table"
-                lines={8}
-              />
-            ) : (
-              <Empty>Aucune compétition ne correspond à ces filtres.</Empty>
-            ))}
-        </>
-      )}
+          </>
+        )}
+      </EditionPageProvider>
     </Layout>
   );
 }

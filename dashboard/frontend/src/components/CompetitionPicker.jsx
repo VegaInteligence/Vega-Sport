@@ -1,7 +1,7 @@
 "use client";
 
 import Icon from "./Icon.jsx";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Media } from "./UI.jsx";
 import SettingsPicker from "./SettingsPicker.jsx";
@@ -11,7 +11,8 @@ import {
   useCompetitionDraft,
   useHomeCompetitions,
 } from "./HomePreferences.jsx";
-import { competitionCountryLabel } from "../services/competition-selector.js";
+import { competitionCountryLabel, competitionGroups } from "../services/competition-selector.js";
+import { competitionSearchText, normalizeCompetitionQuery } from "../services/cup-catalog.js";
 
 export const EUROPE_SCOPE = "europe";
 
@@ -161,6 +162,7 @@ export function CompetitionPicker({
   disabled = false,
   controlId,
   selectedIds,
+  bare = false,
 }) {
   const text = summary || choiceLabel(competitions, value) || "Toutes les compétitions";
   const initial = selectedIds?.length ? selectedIds : value === "all" ? [] : [value];
@@ -173,6 +175,7 @@ export function CompetitionPicker({
       disabled={disabled}
       controlId={controlId}
       value={value}
+      bare={bare}
     >
       {(close) => (
         <CompetitionsPane
@@ -211,5 +214,120 @@ export function FollowedCompetitionsPicker({ f, trigger }) {
         />
       )}
     </SettingsPicker>
+  );
+}
+
+/* The competition page's choice of competition (§ 82, piste B): the home's panel of tiles, with the page's lists in
+   its track (« À la une » or « Mes compétitions », then « Toutes », grouped by country as the former « Toutes les
+   compétitions » page was), the search over every competition, and a tile that opens its page at once. It replaces
+   the row of ten cards and the directory page. */
+export function CompetitionSwitcher({ lists, current, onPick, label = "Compétition", bare = true }) {
+  const all = lists[lists.length - 1];
+  const chosen = all.competitions.find((competition) => competition.id === current?.id) || current;
+  return (
+    <SettingsPicker
+      pane="competitions"
+      icon="filters"
+      label={label}
+      text={chosen?.name || "Choisir"}
+      bare={bare}
+      value={chosen?.id}
+    >
+      {(close) => (
+        <SwitcherPane
+          lists={lists}
+          current={chosen}
+          onPick={(id) => {
+            close();
+            if (id !== chosen?.id) onPick(id);
+          }}
+        />
+      )}
+    </SettingsPicker>
+  );
+}
+
+function SwitcherPane({ lists, current, onPick }) {
+  const [list, setList] = useState(
+    () => (lists.find((entry) => entry.competitions.some((competition) => competition.id === current?.id)) || lists[0]).key,
+  );
+  const [query, setQuery] = useState("");
+  const search = normalizeCompetitionQuery(query).trim();
+  const shown = lists.find((entry) => entry.key === list) || lists[0];
+  const every = lists[lists.length - 1];
+  // A search looks through every competition, whatever list is shown.
+  const found = search
+    ? every.competitions.filter((competition) =>
+        // Same search as the former directory: the other names too (Carabao Cup, Copa del Rey, Mondial), Codex on #262.
+        competitionSearchText(competition, competitionCountryLabel(competition)).includes(search),
+      )
+    : null;
+  const groups = !found && shown.grouped ? competitionGroups(shown.competitions) : null;
+  const tile = (competition) => (
+    <button
+      key={competition.id}
+      type="button"
+      className="home-settings-tile"
+      data-league={competition.id}
+      aria-pressed={competition.id === current?.id}
+      onClick={() => onPick(competition.id)}
+    >
+      {competition.id === current?.id && <Icon name="check" className="home-settings-check" />}
+      <Media name={competition.name} url={competition.imageUrl} />
+      <strong>{competition.name}</strong>
+      <small>{competition.detail || competitionCountryLabel(competition)}</small>
+    </button>
+  );
+  return (
+    <div className="competition-switcher">
+      <div className="home-settings-tools">
+        {lists.length > 1 && (
+          <div className="home-settings-presets" role="group" aria-label="Listes de compétitions">
+            {lists.map((entry) => (
+              <button
+                key={entry.key}
+                type="button"
+                aria-pressed={!search && entry.key === shown.key}
+                onClick={() => {
+                  setList(entry.key);
+                  setQuery("");
+                }}
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
+        )}
+        <label className="home-settings-search">
+          <Icon name="search" />
+          <input
+            type="search"
+            aria-label="Rechercher une compétition"
+            placeholder="Compétition ou pays…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+      </div>
+      {groups ? (
+        <div className="home-settings-tiles competition-switcher-groups">
+          {groups.map((group) => (
+            <section key={group.key} className="competition-switcher-country" aria-label={group.label}>
+              <h3>{group.label}</h3>
+              <div className="competition-switcher-tiles" role="group" aria-label={group.label}>
+                {group.competitions.map(tile)}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div className="home-settings-tiles" role="group" aria-label="Compétitions">
+          {(found || shown.competitions).map(tile)}
+          {!(found || shown.competitions).length && (
+            <p className="home-settings-empty">Aucune compétition pour cette recherche.</p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

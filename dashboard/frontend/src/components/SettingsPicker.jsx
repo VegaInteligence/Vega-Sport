@@ -3,7 +3,8 @@
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 
-export default function SettingsPicker({ pane, icon, label, text, disabled, triggerClassName, controlId, value, className = "", children }) {
+// `bare`: the trigger joins a track its parent draws (the competition page's bar, § 82) instead of its own.
+export default function SettingsPicker({ pane, icon, label, text, disabled, triggerClassName, controlId, value, className = "", bare = false, children }) {
   const id = useId();
   const trigger = useRef(null);
   const dialog = useRef(null);
@@ -58,7 +59,7 @@ export default function SettingsPicker({ pane, icon, label, text, disabled, trig
 
   return (
     <div className={`settings-picker ${className}`.trim()}>
-      {triggerClassName ? button : <div className="home-settings">{button}</div>}
+      {triggerClassName || bare ? button : <div className="home-settings">{button}</div>}
       {open && (
         <dialog
           id={id}

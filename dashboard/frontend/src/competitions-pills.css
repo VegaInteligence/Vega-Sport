@@ -1,0 +1,696 @@
+/* The competition page and the archives (FAILURE_MODES § 82; piste B of the mock-up
+   https://claude.ai/artifact/8DpjahVVH1hHCaZ7oviEHW, chosen by hugo on 27 Nov 2026, 16 h 24 « c'est super », with
+   two changes: the standings' card as tall as the column beside it, and a season menu that holds twenty seasons).
+   The rules of the match page (match-pills.css, § 72) and of the home (home-pills.css, § 77): a pill for whatever is
+   clicked, filled for the current choice, 22 px corners and no grey line, a sheet from the bottom on a phone.
+   Every rule starts with `:root .competitions-page` or `:root .archives-page`, so it does not depend on the order in
+   which the sheets load. */
+
+html {
+  /* A veil a shade off the page: the standings, the round, the cards beside them and the archives' days sit on it. */
+  --veil: color-mix(in srgb, var(--bg), #fff 3.5%);
+  --veil-line: rgb(255 255 255 / 0.06);
+}
+html[data-theme="light"] {
+  --veil: color-mix(in srgb, var(--bg), #000 3%);
+  --veil-line: rgb(11 13 15 / 0.07);
+}
+
+/* ----------------------------------------------------------------- the seasons, from nine on (every season menu) */
+.home-settings-seasons.is-grouped {
+  display: grid;
+  gap: 14px;
+  width: 340px;
+  max-width: 100%;
+  max-height: min(360px, 56dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.home-settings-decade-title {
+  margin: 0 0 6px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.home-settings-decade-seasons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.home-settings-decade-seasons .home-settings-season {
+  padding: 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .home-settings-seasons.is-grouped {
+    width: auto;
+  }
+}
+
+/* ----------------------------------------------------------------- the head: the competition, the bar, the views */
+:root .competitions-page .page-heading {
+  margin-bottom: 18px;
+}
+:root .competitions-page .edition-head--page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title bar"
+    "tools tools";
+  align-items: center;
+  gap: 16px 20px;
+  margin: 4px 0 18px;
+  padding: 0;
+  border: 0;
+}
+:root .competitions-page .edition-head--page .edition-title {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+:root .competitions-page .edition-head--page .edition-logo {
+  /* The media scale (frontend AGENTS.md): 40, the size chosen with piste B; the image follows its shell. */
+  width: var(--media-40);
+  height: var(--media-40);
+  flex: 0 0 var(--media-40);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:root .competitions-page .edition-head--page .edition-name {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 650;
+  letter-spacing: -0.024em;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .competitions-page .edition-bar {
+  grid-area: bar;
+  justify-self: end;
+  max-width: 100%;
+}
+:root .competitions-page .competition-fallback-bar {
+  /* An unknown competition or cups that fail: the bar alone above the notice, to choose another one. */
+  display: inline-flex;
+  margin: 0 0 16px;
+}
+:root .competitions-page .edition-bar > .settings-picker {
+  width: auto;
+  min-width: 0;
+}
+:root .competitions-page .edition-bar-link {
+  color: var(--pill-quiet-ink);
+  text-decoration: none;
+}
+:root .competitions-page .edition-head--page .edition-tools {
+  grid-area: tools;
+  justify-content: flex-start;
+  margin: 0;
+}
+/* The views (Classement, Matchs, Projection, Joueurs) in the home's track, the chosen one filled. */
+:root .competitions-page .edition-head--page .segmented-control {
+  display: inline-flex;
+  gap: 2px;
+  max-width: 100%;
+  padding: 3px;
+  overflow-x: auto;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+  scrollbar-width: none;
+}
+:root .competitions-page .edition-head--page .segmented-control button {
+  flex: none;
+  height: 34px;
+  min-height: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: var(--pill-text);
+  font-weight: 500;
+}
+:root .competitions-page .edition-head--page .segmented-control button:hover {
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+}
+:root
+  .competitions-page
+  .edition-head--page
+  .segmented-control
+  button[aria-pressed="true"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+/* The followed team (a nation's cup) a quiet pill beside the views. */
+:root .competitions-page .edition-head--page .edition-followed {
+  height: var(--pill-h);
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+}
+/* Ligue 1, the Premier League and the Champions League are drawn in black: light on the dark page. */
+html[data-theme="dark"]
+  .competitions-page
+  .edition-title:is([data-league="l_3FJFUl"], [data-league="l_4WFCIZ"], [data-league="l_0bfbkO"])
+  .edition-logo
+  img {
+  filter: brightness(0) invert(0.92);
+}
+:root .competitions-page .cup-return {
+  display: inline-flex;
+  align-items: center;
+  height: var(--pill-h);
+  margin: 0 0 12px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  text-decoration: none;
+}
+
+/* ----------------------------------------------------------------- the bar's panel of competitions */
+.competition-switcher .home-settings-tiles {
+  max-height: min(420px, 60dvh);
+}
+.competition-switcher-groups {
+  display: grid;
+  gap: 14px;
+}
+.competition-switcher-country h3 {
+  margin: 4px 0 8px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.competition-switcher-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  gap: 8px;
+}
+.competition-switcher .home-settings-tiles.competition-switcher-groups {
+  display: grid;
+  grid-template-columns: none;
+}
+
+/* ----------------------------------------------------------------- the standings and the column beside them */
+:root .competitions-page .competition-detail.card {
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
+:root .competitions-page .competition-detail > .card-body {
+  padding: 0;
+}
+/* hugo, 27 Nov 2026: the standings' card goes down to the foot of the column beside it, no gap under the table. */
+:root .competitions-page .competition-detail-layout--overview {
+  align-items: stretch;
+}
+:root .competitions-page .competition-detail-layout--overview > .competition-detail {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+:root .competitions-page .competition-detail-layout--overview > .competition-detail > .card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+:root .competitions-page .competition-detail-layout--overview .competition-standings {
+  flex: 1;
+}
+:root .competitions-page :is(.competition-standings, .matchday-schedule) {
+  padding: 6px 14px 10px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:root .competitions-page .standings-table thead th {
+  border-bottom-color: var(--veil-line);
+}
+:root .competitions-page .standings-table tbody tr > * {
+  border-bottom-color: var(--veil-line);
+}
+:root .competitions-page .standings-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+:root .competitions-page .standings-table :is(th, td) {
+  background-color: transparent;
+}
+/* The columns that stay put when the table slides keep the veil under them. */
+:root .competitions-page .standings-table :is(tbody th, thead th:nth-child(2), :is(td, th):first-child) {
+  background-color: var(--veil);
+}
+:root .competitions-page .competition-highlights {
+  gap: 12px;
+}
+:root .competitions-page .competition-detail-layout--overview .competition-highlights-results.card {
+  /* The trimmed column ends within a result row of the table: its last card takes the rest, both feet meet. */
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+/* hugo, 27 Nov 2026, 17 h 04 « remplis, la y'en a 2 mais y'a un gap »: the rest goes to the results' rows, shared
+   evenly, each one centred in its share, so no empty strip stays under the last one. */
+:root .competitions-page .competition-detail-layout--overview .competition-highlights-results.card > .card-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+:root .competitions-page .competition-detail-layout--overview .competition-highlights-results .competition-highlight-match {
+  flex: 1 0 auto;
+  align-content: center;
+}
+:root .competitions-page .competition-highlights-card.card {
+  margin: 0;
+  padding: 4px 18px 10px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:root .competitions-page .competition-highlights-card .card-header {
+  min-height: 44px;
+  padding: 10px 0 2px;
+  border-bottom: 0;
+}
+:root .competitions-page .competition-highlights-card .card-body {
+  padding: 0 0 4px;
+}
+:root .competitions-page .competition-highlights-more {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+:root .competitions-page .competition-highlights-more:hover {
+  background: var(--pill-quiet-hover);
+}
+:root .competitions-page .competition-level-rows li {
+  border-color: var(--veil-line);
+}
+
+/* The rounds: round arrows, the round in a pill, the score in a pill. */
+:root .competitions-page .matchday-toolbar {
+  margin: 4px 0;
+  padding: 8px 0 6px 6px;
+  border: 0;
+  background: transparent;
+}
+:root .competitions-page .matchday-arrow.button {
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+}
+:root .competitions-page .matchday-navigation select {
+  height: 32px;
+  min-height: 0;
+  padding: 0 30px 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background-color: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: 13px;
+}
+:root .competitions-page .match-row {
+  border-bottom: 0;
+  border-radius: 14px;
+}
+:root .competitions-page .match-row:hover {
+  background: var(--pill-quiet);
+}
+:root .competitions-page .match-row .score {
+  padding: 3px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+}
+
+@media (max-width: 1050px) {
+  :root .competitions-page .edition-head--page {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "bar"
+      "tools";
+    gap: 12px;
+  }
+  :root .competitions-page .edition-bar {
+    justify-self: start;
+  }
+}
+@media (max-width: 640px) {
+  :root .competitions-page .edition-head--page .edition-name {
+    font-size: 24px;
+  }
+  :root .competitions-page .edition-bar {
+    display: flex;
+    width: 100%;
+  }
+  /* The season and the competition share the room; « Archives » keeps its word. */
+  :root .competitions-page .edition-bar > .settings-picker {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+  :root .competitions-page .edition-bar .home-settings-segment {
+    width: 100%;
+    justify-content: center;
+  }
+  :root .competitions-page .edition-bar > a.edition-bar-link {
+    flex: none;
+    width: auto;
+  }
+  :root .competitions-page .edition-head--page .segmented-control {
+    display: flex;
+    width: 100%;
+  }
+  :root .competitions-page .edition-head--page .segmented-control button {
+    flex: 1 1 auto;
+    padding: 0 8px;
+  }
+  :root .competitions-page :is(.competition-standings, .matchday-schedule) {
+    padding: 4px 6px 8px;
+    border-radius: 18px;
+  }
+}
+
+/* ================================================================= the archives (§ 82) */
+:root .archives-page .competition-back {
+  display: inline-flex;
+  align-items: center;
+  height: var(--pill-h);
+  margin: 0 0 14px;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font-size: var(--pill-text);
+  text-decoration: none;
+}
+:root .archives-page .competition-back:hover {
+  background: var(--pill-quiet-hover);
+}
+:root .archives-page .archive-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-bottom: 18px;
+}
+:root .archives-page .archive-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+:root .archives-page .archive-bar > .settings-picker {
+  width: auto;
+  min-width: 0;
+}
+:root .archives-page .archive-search {
+  width: 240px;
+  height: 40px;
+}
+/* The field inside the pill stays transparent in every state (§ 77.1). */
+:root .archives-page .archive-search input,
+:root .archives-page .archive-search input:hover,
+:root .archives-page .archive-search input:focus,
+:root .archives-page .archive-search input:focus-visible {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-strong);
+  font: inherit;
+  font-size: var(--pill-text);
+}
+
+/* One block a day on the veil, one line a match. */
+:root .archives-page .archive-days {
+  display: grid;
+  gap: 14px;
+}
+:root .archives-page .archive-day {
+  padding: 6px 8px 8px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:root .archives-page .archive-day-date {
+  margin: 0;
+  padding: 10px 12px 6px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+:root .archives-page .archive-day-rows {
+  display: grid;
+}
+:root .archives-page .archive-line {
+  display: grid;
+  grid-template-columns: minmax(110px, 190px) minmax(0, 1fr) auto minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 14px;
+  min-height: 48px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  color: var(--ink-strong);
+}
+:root .archives-page .archive-line.archive-row-open {
+  cursor: pointer;
+}
+:root .archives-page .archive-line.archive-row-open:hover {
+  background: var(--pill-quiet);
+}
+:root .archives-page .archive-line-competition {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .archives-page .archive-line-team {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .archives-page .archive-line-home {
+  text-align: right;
+}
+:root .archives-page .archive-line-score {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+:root .archives-page .archive-line-score a {
+  color: inherit;
+  text-decoration: none;
+}
+:root .archives-page .archive-line-score-pill {
+  display: inline-grid;
+  place-items: center;
+  min-width: 64px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+:root .archives-page .archive-line-score small,
+:root .archives-page .archive-line-competition small {
+  color: var(--muted);
+  font-size: 11px;
+}
+:root .archives-page .archive-line-go {
+  color: var(--muted);
+  font-size: 18px;
+  text-align: center;
+}
+:root .archives-page .pagination {
+  justify-content: center;
+  margin-top: 18px;
+}
+
+/* An archived match: the score filled in the middle, each side's goals on its side, the minute between them. */
+:root .archives-page .archive-match.card {
+  padding: 6px 22px 22px;
+  overflow: visible;
+  border: 0;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:root .archives-page .archive-match .card-header {
+  border: 0;
+}
+:root .archives-page .archive-match-title small {
+  color: var(--muted);
+  font-weight: 400;
+}
+:root .archives-page .archive-scoreboard {
+  gap: 28px;
+  padding: 18px 0 26px;
+  border: 0;
+  background: transparent;
+}
+:root .archives-page .archive-scoreboard-score {
+  padding: 6px 22px;
+  border-radius: 999px;
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+  font-weight: 650;
+}
+:root .archives-page .archive-goals {
+  display: grid;
+  gap: 6px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+:root .archives-page .archive-goal {
+  display: grid;
+  grid-template-columns: 1fr 64px 1fr;
+  align-items: center;
+  gap: 0 14px;
+  min-height: 0;
+  padding: 6px 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+:root .archives-page .archive-goal-minute {
+  display: inline-grid;
+  grid-column: 2;
+  grid-row: 1;
+  place-items: center;
+  justify-self: center;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+:root .archives-page .archive-goal-copy {
+  grid-row: 1 / span 2;
+}
+:root .archives-page .archive-goal-copy small {
+  color: var(--muted);
+}
+:root .archives-page :is(.archive-goal-home, .archive-goal-unknown) .archive-goal-copy {
+  grid-column: 1;
+  text-align: right;
+}
+:root .archives-page .archive-goal-away .archive-goal-copy {
+  grid-column: 3;
+  text-align: left;
+}
+:root .archives-page .archive-goal-score {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: center;
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  :root .archives-page .archive-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  :root .archives-page .archive-tools,
+  :root .archives-page .archive-bar {
+    width: 100%;
+  }
+  :root .archives-page .archive-bar {
+    display: flex;
+  }
+  :root .archives-page .archive-bar > * {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+  :root .archives-page .archive-bar .home-settings-segment {
+    width: 100%;
+    justify-content: center;
+  }
+  :root .archives-page .archive-search {
+    width: 100%;
+  }
+  :root .archives-page .archive-day {
+    padding: 4px 4px 6px;
+    border-radius: 18px;
+  }
+  :root .archives-page .archive-line {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas:
+      "comp comp comp"
+      "home score away";
+    gap: 4px 10px;
+    padding: 8px 10px;
+  }
+  :root .archives-page .archive-line-competition {
+    grid-area: comp;
+    font-size: 12px;
+  }
+  :root .archives-page .archive-line-home {
+    grid-area: home;
+  }
+  :root .archives-page .archive-line-score {
+    grid-area: score;
+  }
+  :root .archives-page .archive-line-away {
+    grid-area: away;
+  }
+  :root .archives-page .archive-line-go {
+    display: none;
+  }
+  :root .archives-page .archive-line-score-pill {
+    min-width: 56px;
+  }
+  :root .archives-page .archive-match.card {
+    padding: 4px 12px 16px;
+  }
+}
