@@ -1188,7 +1188,8 @@ select optgroup {
   height: 11px;
   background: light-dark(#d93025, #ff6b61);
 }
-.scoreboard-shootout {
+.scoreboard-shootout,
+.scoreboard-countdown {
   color: var(--muted);
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;

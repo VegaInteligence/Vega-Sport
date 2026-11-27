@@ -31,11 +31,13 @@ import MatchTable from "./MatchTable.jsx";
 import MatchShotMap from "./MatchShotMap.jsx";
 import { StatRow } from "./StatRows.jsx";
 const MatchContext = lazy(() => import("./MatchContext.jsx"));
-const MatchForecast = lazy(() => import("./MatchForecast.jsx"));
-const MatchOdds = lazy(() => import("./MatchOdds.jsx"));
+// Before the kick-off (FAILURE_MODES § 80): the scoreboard's strip and the « Avant-match » tab.
+const MatchPreview = lazy(() => import("./MatchPreview.jsx"));
+const PreviewStrip = lazy(() => import("./MatchPreview.jsx").then((m) => ({ default: m.PreviewStrip })));
 import MatchFlow from "./MatchFlow.jsx";
 import { MatchAbsences } from "./Absences.jsx";
 import { useMatchWinProbability } from "../services/forecasts.js";
+import { countdown, place, tableRow, useCompetitionTable } from "../services/match-preview.js";
 import MatchKpis from "./MatchKpis.jsx";
 import MatchLineups from "./MatchLineups.jsx";
 import MatchPlayersBoard, { MatchLeaders } from "./MatchPlayersBoard.jsx";
@@ -460,6 +462,13 @@ export default function MatchDetail({ match }) {
     ["upcoming", "calendar"].includes(search.get("from")) || upcoming;
   // Each team in its crest's colour, blue and violet without one (hugo, 25 Nov; § 64).
   const teamColours = useCrestColours(match.home, match.away);
+  // Before the kick-off, each side's place in the competition and the time left (§ 80.2).
+  const table = useCompetitionTable(match, upcoming);
+  const standing = (team) => {
+    const row = upcoming ? tableRow(table, team.id) : null;
+    return row ? ` · ${place(row.position)} · ${number(row.points)} pts` : "";
+  };
+  const left = upcoming ? countdown(match.timeUtc, now) : null;
   return (
     <div className="match-detail" style={teamColours}>
       <MatchNav
@@ -527,6 +536,7 @@ export default function MatchDetail({ match }) {
               <span>
                 Domicile
                 {match.home.formation ? ` · ${match.home.formation}` : ""}
+                {standing(match.home)}
               </span>
             </div>
           </Link>
@@ -560,6 +570,11 @@ export default function MatchDetail({ match }) {
                 </>
               )}
             </div>
+            {left && (
+              <span className="scoreboard-countdown" data-countdown="">
+                {left}
+              </span>
+            )}
             {afterNote && (
               <span className="scoreboard-shootout">{afterNote}</span>
             )}
@@ -574,6 +589,7 @@ export default function MatchDetail({ match }) {
               <span>
                 Extérieur
                 {match.away.formation ? ` · ${match.away.formation}` : ""}
+                {standing(match.away)}
               </span>
             </div>
           </Link>
@@ -593,7 +609,13 @@ export default function MatchDetail({ match }) {
             ))}
           </div>
         ) : (
-          !upcoming && <MatchKpis match={match} />
+          upcoming ? (
+            <Suspense fallback={null}>
+              <PreviewStrip match={match} />
+            </Suspense>
+          ) : (
+            <MatchKpis match={match} />
+          )
         )}
       </section>
       {teamStatsFlagged(match) && (
@@ -662,11 +684,8 @@ export default function MatchDetail({ match }) {
               <Skeleton data-page-loading="" label="Chargement du contexte…" />
             }
           >
-            {upcoming && <MatchForecast match={match} />}
-            {/* From the kick-off the card moves to « Compositions » (FAILURE_MODES § 79.7). */}
-            {upcoming && <MatchAbsences match={match} />}
-            {upcoming && <MatchOdds match={match} />}
-            <MatchContext match={match} />
+            {/* Before the kick-off the preview (§ 80); from it, the absents are in « Compositions » (§ 79.7). */}
+            {upcoming ? <MatchPreview match={match} /> : <MatchContext match={match} />}
           </Suspense>
         )}
         {view === "standings" && <MatchTable match={match} />}

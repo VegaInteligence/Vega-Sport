@@ -323,12 +323,25 @@ test("the forecast of a match still to play and a league replayed to its end", {
   const answers = await Promise.all(matches.map((id) => get("/api/forecasts/match?match=" + id)));
   const found = answers.filter((a) => a.response.status === 200);
   assert.equal(found.length, 1);
-  const { forecast, model, lineups } = found[0].body;
+  const { forecast: { grid, ...forecast }, model, lineups: { forecast: { grid: lineupGrid, ...lineupForecast }, ...lineups } } = found[0].body;
   assert.deepEqual(forecast, { home: 0.5123, draw: 0.2501, away: 0.2376, homeGoals: 1.62, awayGoals: 1.04, score: [1, 0] });
-  // Both elevens confirmed: the forecast that read them, and what each eleven is against its club's usual one
-  // (a deviation in rate units, and the Elo points it moves the side by).
+  // 80a (FAILURE_MODES § 80.1): the model's grid of scores, 0 to 5+ goals a side, from the stored expected goals and the
+  // model's rho (the seed's -0.03), Dixon-Coles as vega/forecast.py; written here from the law.
+  const law = (lh, la, rho) => {
+    const pois = (lam) => { const p = []; let v = Math.exp(-lam); for (let k = 0; k < 5; k++) { p.push(v); v *= lam / (k + 1); } p.push(1 - p.reduce((x, y) => x + y, 0)); return p; };
+    const tau = (i, j) => (i === 0 && j === 0 ? 1 - lh * la * rho : i === 0 && j === 1 ? 1 + lh * rho : i === 1 && j === 0 ? 1 + la * rho : i === 1 && j === 1 ? 1 - rho : 1);
+    const g = pois(lh).map((x, i) => pois(la).map((y, j) => Math.max(0, x * y * tau(i, j))));
+    const total = g.flat().reduce((x, y) => x + y, 0);
+    return g.map((row) => row.map((v) => v / total));
+  };
+  for (const [g, f] of [[grid, forecast], [lineupGrid, lineupForecast]]) {
+    const want = law(f.homeGoals, f.awayGoals, -0.03);
+    assert.equal(g.length, 6);
+    assert.ok(g.every((row, i) => row.length === 6 && row.every((v, j) => Math.abs(v - want[i][j]) <= 1e-4 && Math.abs(v * 1e4 - Math.round(v * 1e4)) < 1e-6)));
+    assert.ok(Math.abs(g.flat().reduce((x, y) => x + y, 0) - 1) <= 0.002);
+  }
+  assert.deepEqual(lineupForecast, { home: 0.5642, draw: 0.2389, away: 0.1969, homeGoals: 1.74, awayGoals: 0.97, score: [2, 0] });
   assert.deepEqual(lineups, {
-    forecast: { home: 0.5642, draw: 0.2389, away: 0.1969, homeGoals: 1.74, awayGoals: 0.97, score: [2, 0] },
     home: { deviation: 0.31, elo: 13.9 }, away: { deviation: -0.72, elo: -32.3 }, computedAt: "2025-09-06T11:10:00.000Z",
   });
   assert.deepEqual([model.version, model.matches], ["forecast-v1", 60000]);

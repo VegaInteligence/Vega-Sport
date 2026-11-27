@@ -308,3 +308,71 @@ function UpcomingMatchAbsences({ match }) {
     </MatchCard>
   );
 }
+
+/** Before the kick-off, each side's read and its absents that count for the match (the scope of `UpcomingMatchAbsences`). */
+export function useUpcomingAbsences(match) {
+  const home = useTeamAbsences(match?.home?.id);
+  const away = useTeamAbsences(match?.away?.id);
+  const scope = { competitionId: match?.leagueId || null, kickoff: match?.timeUtc || match?.date || null };
+  const side = (team, state) => ({ team, state, view: absenceView(state.value, { match: scope }) });
+  return { home: side(match?.home, home), away: side(match?.away, away), loading: home.loading || away.loading };
+}
+
+/**
+ * The preview's « Absents » (FAILURE_MODES § 80.7): the same rows as the two sides of `UpcomingMatchAbsences`, in one
+ * list over two columns of equal length, each row with its club's crest; each club's count in the header.
+ */
+export function PreviewAbsences({ absents }) {
+  const f = useFootball();
+  const sides = [absents.home, absents.away];
+  if (!absents.loading && sides.every((x) => !x.state.value)) return null;
+  const rows = sides.flatMap((x) => (x.view?.rows || []).map((a) => ({ a, team: x.team, asOf: x.view.asOf })));
+  const count = (x) =>
+    x.state.loading && !x.state.value ? "…" : !x.view ? "non renseignés" : String(x.view.rows.length);
+  return (
+    <MatchCard
+      title="Absents"
+      className={s.matchCard}
+      data-preview="absents"
+      action={
+        <span className={s.previewCounts} data-absent-counts="">
+          {sides.map((x) => (
+            <span key={x.team.id}>
+              <ClubCrest club={x.team} size={20} />
+              {x.team.name} <b>{count(x)}</b>
+            </span>
+          ))}
+        </span>
+      }
+    >
+      {rows.length ? (
+        <ul className={`${s.previewRows} ${chartTokens}`} style={{ "--rows": Math.ceil(rows.length / 2) }}>
+          {rows.map(({ a, team, asOf }) => {
+            const kind = absenceKind(a);
+            return (
+              <li key={team.id + a.key} data-kind={kind}>
+                <Link className={s.who} href={f.href("/joueurs/", { id: a.player.id, q: "" })} prefetch={false}>
+                  <PlayerAvatar player={a.player} size={28} />
+                  <span>
+                    <strong>{a.player.name}</strong>
+                    <small>
+                      <span className={s.previewClub} data-absent-club="">
+                        <ClubCrest club={team} size={16} />
+                      </span>
+                      <AbsenceGlyph kind={kind} />
+                      {absenceReason(a)}
+                    </small>
+                  </span>
+                </Link>
+                <Back absence={a} asOf={asOf} />
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className={s.empty}>{absents.loading ? "…" : sides.some((x) => x.view) ? "Aucun absent" : "Non renseignés"}</p>
+      )}
+    </MatchCard>
+  );
+}
+

@@ -27,7 +27,8 @@
  *
  * GET /api/forecasts/match?match= — the forecast of a match still to play (vega/forecast.py,
  * from the two Elo strengths): win, draw, loss, expected goals and the likeliest score; and,
- * once both clubs have confirmed their eleven, `lineups`: the same forecast read with them.
+ * once both clubs have confirmed their eleven, `lineups`: the same forecast read with them. Each forecast carries
+ * `grid`, its 6 × 6 shares of scores (0 to 5+ goals a side) from the fitted model's Dixon-Coles law (FAILURE_MODES § 80.1).
  * GET /api/forecasts/live?match= — a finished or running match minute by minute: win, draw
  * and loss from the forecast (the one that read the line-ups when there is one), the score,
  * the clock and the dismissals (vega/inplay.py).
@@ -78,7 +79,7 @@
  */
 import { reject, validateParams } from "../http.mjs";
 import { createDataVersions } from "../data-versions.mjs";
-import { rates as inplayRates, timeline as inplayTimeline } from "../../../../dashboard/shared/inplay.js";
+import { rates as inplayRates, scoreGrid, timeline as inplayTimeline } from "../../../../dashboard/shared/inplay.js";
 import { ownRate, replace as replacePlayer } from "../lineup.mjs";
 
 const TEAM = /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/;
@@ -110,7 +111,7 @@ const READS = {
   "/api/rankings/rounds": ["api.edition_keys", "api.league_rounds"],
   "/api/rankings/round": ["api.edition_keys", "api.league_rounds", "api.round_teams", "api.round_season_race"],
   "/api/rankings/fates": ["api.edition_keys", "api.league_team_fates"],
-  "/api/forecasts/match": ["api.match_forecasts", "api.match_lineup_forecasts", ID],
+  "/api/forecasts/match": ["api.match_forecasts", "api.match_lineup_forecasts", "api.forecast_models", ID],
   "/api/forecasts/odds": ["api.match_odds", "api.match_forecasts", ID],
   "/api/forecasts/season": ["api.edition_keys", "api.season_projections", "api.season_projection_places", "api.schedule_forecasts",
     "api.cup_stage_odds", "api.cup_round_opponents", "api.power_clubs", "api.cup_team_groups"],
@@ -335,8 +336,12 @@ async function matchForecast(read, params) {
     read("SELECT * FROM api.match_lineup_forecasts WHERE match_key=api.internal_id('match',$1)", [id]),
   ]);
   if (!r) reject(404, "Donnée indisponible.");
+  // The model the forecast names, for its rho: the grid of scores (FAILURE_MODES § 80.1); none without it.
+  const [fitted] = await read("SELECT rho FROM api.forecast_models WHERE version=$1 AND fitted_at=$2 ORDER BY id DESC LIMIT 1", [r.model_version, r.fitted_at]);
+  const grid = (f) => Number.isFinite(fitted?.rho) && f.home_goals > 0 && f.away_goals > 0
+    ? { grid: scoreGrid(f.home_goals, f.away_goals, fitted.rho).map((row) => row.map((v) => round(v, 4))) } : {};
   const shares = (f) => ({ home: round(f.home_win, 4), draw: round(f.draw, 4), away: round(f.away_win, 4),
-    homeGoals: round(f.home_goals, 2), awayGoals: round(f.away_goals, 2), score: [f.likely_home, f.likely_away] });
+    homeGoals: round(f.home_goals, 2), awayGoals: round(f.away_goals, 2), score: [f.likely_home, f.likely_away], ...grid(f) });
   const side = (deviation, shift) => ({ deviation: round(deviation, 2), elo: round(shift, 1) });
   return {
     match: id,
