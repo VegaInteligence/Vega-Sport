@@ -1,7 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import { AsyncState, Card, Segments } from "./UI.jsx";
-import EditionHeader from "./EditionHeader.jsx";
+import EditionHeader, { useEditionPage } from "./EditionHeader.jsx";
 import { CupMatchList } from "./CupCompetition.jsx";
 import KnockoutBracket from "./KnockoutBracket.jsx";
 import { useResource } from "../services/resources.js";
@@ -49,6 +49,7 @@ function Projection({ projection, league }) {
   </>;
 }
 export default function NationsCompetition({ competition }) {
+  const titled = useEditionPage();
   const [league, setLeague] = useState("A"), [view, setView] = useState("standings"), [status, setStatus] = useState("finished"), [query, setQuery] = useState(""), [page, setPage] = useState(1);
   const leagueA = useResource("nations-league-a:2026/2027", () => cupWorkerSnapshot("openligadb", "nations-league", "2026/2027", "/api/openligadb?competition=nations-league&season=2026%2F2027"), league === "A");
   const otherLeagues = useResource("nations-league-other:2026/2027", () => cupWorkerSnapshot("nations-results", "nations-league", "2026/2027", "/api/nations-results?season=2026%2F2027"), league !== "A");
@@ -56,15 +57,19 @@ export default function NationsCompetition({ competition }) {
   const projection = useNationsProjection(league, "2026/2027"), projected = nationsProjectionRows(projection, league).rows.length > 0;
   const shown = view === "projection" && !projected ? "standings" : view;
   const chooseLeague = (next) => { setLeague(next); if (view === "bracket" && next !== "A") setView("standings"); setPage(1); };
-  return <Card className="cup-detail nations-detail edition-card">
+  // On the competition page (§ 80) the head is the page's title, above the card.
+  const head = (
     <EditionHeader imageUrl={competition.imageUrl} name={competition.name} season="2026/2027" onSeason={() => {}} label="Édition" editions={[{ season: "2026/2027", id: competition.id }]}>
       <Segments label="Vue de la compétition" value={shown} onChange={setView} items={[["standings", "Classements"], ["matches", "Matchs"], ...(league === "A" ? [["bracket", "Tableau"]] : []), ...(projected ? [["projection", "Projection"]] : [])]} />
     </EditionHeader>
+  );
+  return <>{titled && head}<Card className="cup-detail nations-detail edition-card">
+    {!titled && head}
     <div className="nations-league-switch"><span>Ligue</span><Segments label="Ligue" value={league} onChange={chooseLeague} items={[["A", "A"], ["B", "B"], ["C", "C"], ["D", "D"]]} /></div>
     {shown === "matches" && <div className="cup-controls">
       <><Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} /><input type="search" aria-label="Rechercher une sélection" placeholder="Rechercher une sélection…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></>
     </div>}
     {league !== "A" && <p className="cup-source">Résultats disponibles ; les rencontres à venir ne sont pas fournies pour cette ligue.</p>}
     <AsyncState resource={resource}>{(value) => { const matches = league === "A" ? value.matches : value.matches.filter((match) => match.league === league); return shown === "projection" ? <Projection projection={projection} league={league} /> : shown === "standings" ? <Groups matches={matches} /> : shown === "matches" ? <CupMatchList matches={matches} status={status} query={query} page={page} onPage={setPage} nationalTeams season="2026/2027" /> : <KnockoutBracket matches={matches} nationalTeams season="2026/2027" />; }}</AsyncState>
-  </Card>;
+  </Card></>;
 }

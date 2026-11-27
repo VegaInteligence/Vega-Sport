@@ -997,3 +997,10 @@
 - Identity fix deployed 23 Nov (`b1b27c79e0`, CI green, run 45271721947, user: « Yes, deploy »). After the 24 Nov daily pass: 53 of 1,078 rows without a link (was 300), all clubs the site does not hold (Hércules, Siena, Livorno, Arles-Avignon, Évian…); colours now right for Lyon, Monaco, Marseille, Real Sociedad, Betis, Milan/Atalanta 2020/21 (`e2e/noid-after.txt`, `e2e/live-seasons-after-merge.txt`).
 - Known limits: Lyon 2010/11 lacks its Champions League colour (engsoccerdata « Olympique Lyon » vs openfootball's European « Olympique Lyonnais (FRA) », a row never merged); European archive rows with a country tag stay unmerged; deductions sourced for Serie A only.
 - Done. Worktree and branch removed.
+
+## Competition page and archives redesigned (27 Nov 2026, GitHub #261, FAILURE_MODES § 80)
+
+- Request (hugo, 26 Nov, 16 h 34): redo the competition page and the archives like the match page and the home.
+- Mock-up on the real pages: https://claude.ai/artifact/8DpjahVVH1hHCaZ7oviEHW. Approved direction (27 Nov, 16 h 24): piste B, with the standings' card as tall as the column beside it and a season menu that holds twenty seasons; seasons version A (16 h 38), on every season selector of the site (16 h 47).
+- Excluded: the page of a match to come (§ 70), the absent players (§ 79), the logos.
+- Tests: `tests/e2e/competitions-archives.e2e.mjs` (replay of production reads, `next build` + `next start`), unit tests updated where the directory page and the old row were asserted.

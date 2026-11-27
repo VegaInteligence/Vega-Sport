@@ -33,7 +33,10 @@ import CompetitionStandings from "./CompetitionStandings.jsx";
 import SeasonProjection from "./SeasonProjection.jsx";
 import { useSeasonProjection } from "../services/forecasts.js";
 import { WORLD_CUP_ID } from "../services/cup-catalog.js";
-import EditionHeader, { FollowedTeam } from "./EditionHeader.jsx";
+import EditionHeader, {
+  FollowedTeam,
+  useEditionPage,
+} from "./EditionHeader.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { nationalTeamLabel } from "../services/national-flags.js";
 import { trophyArt } from "../services/trophy-art.js";
@@ -61,6 +64,7 @@ export default function CompetitionEdition({
   embedded = false,
   highlightTeams,
 }) {
+  const titled = useEditionPage();
   const f = useFootball();
   // The five big leagues also offer their archived seasons, 2010/11–2020/21 (services/league-history.js).
   const seasons = withHistorySeasons(competition);
@@ -259,186 +263,201 @@ export default function CompetitionEdition({
     competition?.imageUrl,
     artwork,
   );
-  return (
-    <div
-      className={
-        "competition-detail-layout" +
-        (showHighlights || archived
-          ? " competition-detail-layout--overview"
-          : "")
+  // On the competition page (§ 80) the head is the page's title, above the card and the column beside it.
+  const head = editionHead && (
+    <EditionHeader
+      imageUrl={imageUrl}
+      name={competition.name}
+      heading={heading}
+      label="Saison de compétition"
+      season={String(season)}
+      onSeason={pickSeason}
+      editions={
+        editions ||
+        seasons.map((value) => ({
+          season: String(value),
+          id: competition.id,
+        }))
       }
     >
-      <Card
-        title={editionHead ? null : "Calendrier par date"}
-        className={"competition-detail" + (editionHead ? " edition-card" : "")}
+      {highlight && worldCup && (
+        <FollowedTeam
+          label={nationalTeamLabel(highlight)}
+          flag={<NationalFlag name={highlight} season={season} />}
+          onClear={() => onHighlight?.("")}
+        />
+      )}
+      {supported && (
+        <Segments
+          value={view}
+          onChange={changeView}
+          label="Vue de la compétition"
+          items={views}
+        />
+      )}
+    </EditionHeader>
+  );
+  return (
+    <>
+      {titled && head}
+      <div
+        className={
+          "competition-detail-layout" +
+          (showHighlights || archived
+            ? " competition-detail-layout--overview"
+            : "")
+        }
       >
-        {editionHead && (
-          <EditionHeader
-            imageUrl={imageUrl}
-            name={competition.name}
-            heading={heading}
-            label="Saison de compétition"
-            season={String(season)}
-            onSeason={pickSeason}
-            editions={
-              editions ||
-              seasons.map((value) => ({
-                season: String(value),
-                id: competition.id,
-              }))
-            }
-          >
-            {highlight && worldCup && (
-              <FollowedTeam
-                label={nationalTeamLabel(highlight)}
-                flag={<NationalFlag name={highlight} season={season} />}
-                onClear={() => onHighlight?.("")}
-              />
-            )}
-            {supported && (
-              <Segments
-                value={view}
-                onChange={changeView}
-                label="Vue de la compétition"
-                items={views}
-              />
-            )}
-          </EditionHeader>
+        <Card
+          title={editionHead ? null : "Calendrier par date"}
+          className={
+            "competition-detail" + (editionHead ? " edition-card" : "")
+          }
+        >
+          {!titled && head}
+          {archived ? (
+            <LeagueHistoryView resource={history} view={view} />
+          ) : supported && view === "standings" ? (
+            <CompetitionStandings
+              competition={competition}
+              season={season}
+              matches={overviewFixtures?.matches || []}
+              source={resource.value?.source}
+              fixturesLoading={!resource.value}
+              fixturesError={resource.error}
+              onRetry={resource.retry}
+              onNeedFixtures={needFixtures}
+              highlightTeams={highlightTeams}
+              served
+            />
+          ) : supported &&
+            view === "players" &&
+            !hasKnockout &&
+            (hasRace || leagueRounds.loading) ? (
+            <LeagueRace
+              key={seasonLabel(season)}
+              competition={competition?.id}
+              season={seasonLabel(season)}
+            />
+          ) : supported && view === "projection" && projection ? (
+            <SeasonProjection
+              projection={projection}
+              competition={competition}
+              season={season}
+            />
+          ) : (
+            <AsyncState resource={resource}>
+              {(value) => {
+                const rows = orderCompetitionMatches(
+                  (value.matches || []).filter(
+                    (m) =>
+                      f.focus !== "europe" ||
+                      inEuropeFocus(competition) ||
+                      EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId),
+                  ),
+                  { status, day: Boolean(day) },
+                );
+                const pages = Math.max(1, Math.ceil(rows.length / 30)),
+                  current = Math.min(page, pages);
+                return (
+                  <>
+                    {supported && view === "bracket" && hasKnockout ? (
+                      <NativeKnockoutBracket
+                        competition={competition}
+                        season={season}
+                        matches={value.matches || []}
+                        rounds={value.rounds}
+                        highlight={highlight}
+                        trophy={trophyArt({
+                          title: competition.name,
+                          trophyYear: Number(String(season).slice(0, 4)),
+                        })}
+                      />
+                    ) : supported ? (
+                      <MatchdaySchedule
+                        key={competition.id + ":" + season}
+                        competition={competition}
+                        season={season}
+                        initialStatus={status}
+                        matches={(value.matches || []).filter(
+                          (m) =>
+                            f.focus !== "europe" ||
+                            inEuropeFocus(competition) ||
+                            EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId),
+                        )}
+                      />
+                    ) : (
+                      <>
+                        <Segments
+                          value={status}
+                          onChange={(v) => {
+                            setStatus(v);
+                            setPage(1);
+                          }}
+                          label="Statut des rencontres"
+                          items={[
+                            ["finished", "Résultats"],
+                            ["not_started", "À venir"],
+                            ["all", "Tous"],
+                          ]}
+                        />
+                        {!day && (
+                          <p className="competition-matches-order">
+                            {status === "finished"
+                              ? "Les résultats les plus récents en premier"
+                              : status === "not_started"
+                                ? "Les prochaines rencontres en premier"
+                                : "Résultats récents, puis rencontres à venir"}
+                          </p>
+                        )}
+                        {rows
+                          .slice((current - 1) * 30, current * 30)
+                          .map((m) => (
+                            <MatchLink key={m.id} match={m} />
+                          ))}
+                        {!rows.length && (
+                          <Empty>
+                            {status === "finished"
+                              ? "Aucun match terminé disponible pour cette saison."
+                              : "Aucune rencontre collectée."}
+                          </Empty>
+                        )}
+                        <Pager
+                          page={current}
+                          total={pages}
+                          onChange={setPage}
+                        />
+                      </>
+                    )}
+                  </>
+                );
+              }}
+            </AsyncState>
+          )}
+        </Card>
+        {archived && history.value && (
+          <LeagueHistoryRail value={history.value} />
         )}
-        {archived ? (
-          <LeagueHistoryView resource={history} view={view} />
-        ) : supported && view === "standings" ? (
-          <CompetitionStandings
+        {showHighlights && overviewFixtures && (
+          <CompetitionHighlights
+            matches={overviewFixtures.matches || []}
             competition={competition}
             season={season}
-            matches={overviewFixtures?.matches || []}
-            source={resource.value?.source}
-            fixturesLoading={!resource.value}
-            fixturesError={resource.error}
-            onRetry={resource.retry}
-            onNeedFixtures={needFixtures}
-            highlightTeams={highlightTeams}
-            served
+            onShowMatches={(next) => {
+              setStatus(next);
+              setPage(1);
+              setView("matches");
+            }}
           />
-        ) : supported &&
-          view === "players" &&
-          !hasKnockout &&
-          (hasRace || leagueRounds.loading) ? (
-          <LeagueRace
-            key={seasonLabel(season)}
+        )}
+        {showHighlights && !hasKnockout && (
+          <LeagueRoundCards
             competition={competition?.id}
             season={seasonLabel(season)}
+            onAllPlayers={() => setView("players")}
           />
-        ) : supported && view === "projection" && projection ? (
-          <SeasonProjection
-            projection={projection}
-            competition={competition}
-            season={season}
-          />
-        ) : (
-          <AsyncState resource={resource}>
-            {(value) => {
-              const rows = orderCompetitionMatches(
-                (value.matches || []).filter(
-                  (m) =>
-                    f.focus !== "europe" ||
-                    inEuropeFocus(competition) ||
-                    EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId),
-                ),
-                { status, day: Boolean(day) },
-              );
-              const pages = Math.max(1, Math.ceil(rows.length / 30)),
-                current = Math.min(page, pages);
-              return (
-                <>
-                  {supported && view === "bracket" && hasKnockout ? (
-                    <NativeKnockoutBracket
-                      competition={competition}
-                      season={season}
-                      matches={value.matches || []}
-                      rounds={value.rounds}
-                      highlight={highlight}
-                      trophy={trophyArt({
-                        title: competition.name,
-                        trophyYear: Number(String(season).slice(0, 4)),
-                      })}
-                    />
-                  ) : supported ? (
-                    <MatchdaySchedule
-                      key={competition.id + ":" + season}
-                      competition={competition}
-                      season={season}
-                      initialStatus={status}
-                      matches={(value.matches || []).filter(
-                        (m) =>
-                          f.focus !== "europe" ||
-                          inEuropeFocus(competition) ||
-                          EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId),
-                      )}
-                    />
-                  ) : (
-                    <>
-                      <Segments
-                        value={status}
-                        onChange={(v) => {
-                          setStatus(v);
-                          setPage(1);
-                        }}
-                        label="Statut des rencontres"
-                        items={[
-                          ["finished", "Résultats"],
-                          ["not_started", "À venir"],
-                          ["all", "Tous"],
-                        ]}
-                      />
-                      {!day && (
-                        <p className="competition-matches-order">
-                          {status === "finished"
-                            ? "Les résultats les plus récents en premier"
-                            : status === "not_started"
-                              ? "Les prochaines rencontres en premier"
-                              : "Résultats récents, puis rencontres à venir"}
-                        </p>
-                      )}
-                      {rows.slice((current - 1) * 30, current * 30).map((m) => (
-                        <MatchLink key={m.id} match={m} />
-                      ))}
-                      {!rows.length && (
-                        <Empty>
-                          {status === "finished"
-                            ? "Aucun match terminé disponible pour cette saison."
-                            : "Aucune rencontre collectée."}
-                        </Empty>
-                      )}
-                      <Pager page={current} total={pages} onChange={setPage} />
-                    </>
-                  )}
-                </>
-              );
-            }}
-          </AsyncState>
         )}
-      </Card>
-      {archived && history.value && <LeagueHistoryRail value={history.value} />}
-      {showHighlights && overviewFixtures && (
-        <CompetitionHighlights
-          matches={overviewFixtures.matches || []}
-          competition={competition}
-          season={season}
-          onShowMatches={(next) => {
-            setStatus(next);
-            setPage(1);
-            setView("matches");
-          }}
-        />
-      )}
-      {showHighlights && !hasKnockout && (
-        <LeagueRoundCards
-          competition={competition?.id}
-          season={seasonLabel(season)}
-          onAllPlayers={() => setView("players")}
-        />
-      )}
-    </div>
+      </div>
+    </>
   );
 }

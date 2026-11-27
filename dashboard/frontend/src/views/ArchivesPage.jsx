@@ -9,11 +9,11 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 export default function ArchivesPage() {
   const f = useFootball();
   return (
-    <Layout path="/archives/" title="Archives">
+    <Layout path="/archives/" title="Archives" hideHeading className="archives-page">
       <BackLink
         className="inline-link competition-back"
         href={f.href("/competitions/")}
-        label="Retour aux compétitions"
+        label="Compétitions"
       />
       <Archive />
       <ArchiveAttribution />
