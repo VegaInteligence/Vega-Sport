@@ -8,7 +8,10 @@
 //    its reads; publicationVersion = state.manifestGeneration ?? state.generation);
 //  - GET /api/fixtures: FIXTURES matches per status, pages of `limit`, cursor = base64url {generation, offset, scope};
 //    each match's teams are named after the generation that served it (« G1 Club 31 »), so a page shows which
-//    publication answered it;
+//    publication answered it; with status=all, `from` and `to` (the calendar's week, § 86) WEEK matches spread over
+//    the days after `from` up to `to`, over before `now`, to come after it;
+//    `state.moveAfter` = n: after n fixtures pages answered, the served publication becomes `state.moveTo` (the worker
+//    publishing between two pages of one week);
 //  - GET /api/read/players: PLAYERS rows, offset pages (page, limit), each name carrying its generation;
 //  - GET /api/read/home: a home of one week (Joueur de la semaine) at the served generation;
 //  - GET /api/read/performance: one performance (its match, competition, profile);
@@ -21,6 +24,7 @@ export const LEAGUE = { id: "l_3FJFUl", name: "Ligue 1", country: "FRA" };
 export const SEASON = "2026/2027";
 export const FIXTURES = 75;
 export const PLAYERS = 60;
+export const WEEK = 120;
 
 const b64 = (v) => Buffer.from(JSON.stringify(v)).toString("base64url");
 const unb64 = (s) => {
@@ -101,6 +105,15 @@ function fixture(i, g, played, nowMs) {
     score_penalty_home: null,
     score_penalty_away: null,
   };
+}
+
+// The calendar's week (status=all, from, to): WEEK matches over the days after `from` up to `to`, at noon UTC.
+function weekFixture(i, g, from, to, nowMs) {
+  const span = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 864e5));
+  const day = new Date(Date.parse(from) + (1 + Math.floor((i * span) / WEEK)) * 864e5).toISOString().slice(0, 10);
+  const iso = `${day}T12:${String(i % 60).padStart(2, "0")}:00Z`;
+  const played = Date.parse(iso) + 2 * 3600_000 <= nowMs;
+  return { ...fixture(i, g, played, nowMs), date: day, time_utc: iso, ...(played ? {} : { forecast: { home: 0.45, draw: 0.27, away: 0.28 } }) };
 }
 
 function playerRow(i, g) {
@@ -186,7 +199,7 @@ function performance(g, nowMs) {
 }
 
 export async function startPublicationApi({ port = 0, now = Date.now() } = {}) {
-  const state = { generation: "G1", manifestGeneration: null, publishedAt: now - 60_000, refuse: new Set(), now };
+  const state = { generation: "G1", manifestGeneration: null, publishedAt: now - 60_000, refuse: new Set(), now, moveAfter: 0, moveTo: "G2" };
   const log = [];
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, "http://stub");
@@ -232,9 +245,15 @@ export async function startPublicationApi({ port = 0, now = Date.now() } = {}) {
         if (cursor.generation !== g) return send(409, refusal());
         offset = cursor.offset;
       }
-      const matches = Array.from({ length: Math.max(0, Math.min(limit, FIXTURES - offset)) }, (_, k) => fixture(offset + k, g, played, state.now));
-      const nextCursor = offset + limit < FIXTURES ? b64({ scope, generation: g, offset: offset + limit }) : null;
-      return send(200, { data: { matches }, pagination: { limit, nextCursor, generation: g }, meta: { generation: g } });
+      const week = q.get("status") === "all" && q.has("from") && q.has("to"),
+        total = week ? WEEK : FIXTURES;
+      const matches = Array.from({ length: Math.max(0, Math.min(limit, total - offset)) }, (_, k) =>
+        week ? weekFixture(offset + k, g, q.get("from"), q.get("to"), state.now) : fixture(offset + k, g, played, state.now),
+      );
+      const nextCursor = offset + limit < total ? b64({ scope, generation: g, offset: offset + limit }) : null;
+      send(200, { data: { matches }, pagination: { limit, nextCursor, generation: g }, meta: { generation: g } });
+      if (state.moveAfter > 0 && --state.moveAfter === 0) state.generation = state.moveTo;
+      return;
     }
     if (route === "/api/read/players") {
       if (state.refuse.has("players") || pinnedStale) return send(409, refusal());

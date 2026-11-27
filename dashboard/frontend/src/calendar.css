@@ -1,0 +1,693 @@
+/* The calendar as a thread of days (FAILURE_MODES § 86; piste A of https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o,
+   chosen by hugo on 27 Nov 2026, 20 h 41). The rules of the match page (match-pills.css, § 72), of the home
+   (home-pills.css, § 77) and of the competition page (competitions-pills.css, § 82): a pill for whatever is clicked,
+   filled for the current choice, 22 px corners on the veil and no grey line. The page's rules start with
+   `:root .calendar-page` so they do not depend on the order in which the sheets load. */
+
+:root .calendar-page {
+  --calendar-live: #ff5a5f;
+}
+html[data-theme="light"] .calendar-page {
+  --calendar-live: #d6363c;
+}
+:root .calendar-page .calendar {
+  display: grid;
+  gap: 18px;
+  padding-bottom: 32px;
+}
+
+/* ----------------------------------------------------------------- the head: the title and the bar */
+:root .calendar-page .calendar-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+:root .calendar-page .calendar-head .page-title {
+  margin: 0;
+}
+:root .calendar-page .calendar-bar > .settings-picker {
+  width: auto;
+  min-width: 0;
+}
+:root .calendar-page .calendar-search {
+  flex: none;
+  width: 34px;
+  padding: 0;
+  justify-content: center;
+}
+:root .calendar-page .calendar-search.is-open {
+  width: 250px;
+  padding: 0 4px 0 12px;
+  background: var(--pill-quiet);
+  cursor: text;
+}
+/* The field inside the pill stays transparent in every state (§ 77.1). */
+:root .calendar-page .calendar-search input,
+:root .calendar-page .calendar-search input:hover,
+:root .calendar-page .calendar-search input:focus,
+:root .calendar-page .calendar-search input:focus-visible {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-strong);
+  font: inherit;
+  font-size: var(--pill-text);
+}
+:root .calendar-page .calendar-search input::-webkit-search-cancel-button {
+  display: none;
+}
+:root .calendar-page .calendar-search-clear {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+:root .calendar-page .calendar-search-clear:hover {
+  background: var(--pill-quiet-hover);
+  color: var(--ink-strong);
+}
+:root .calendar-page .calendar-search-clear .icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* ----------------------------------------------------------------- the pills */
+:root .calendar-page .calendar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--pill-h);
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--pill-quiet-ink);
+  font: inherit;
+  font-size: var(--pill-text);
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+:root .calendar-page .calendar-pill:hover {
+  background: var(--pill-quiet-hover);
+}
+:root .calendar-page .calendar-pill.is-filled {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+:root .calendar-page .calendar-pill .icon {
+  width: 15px;
+  height: 15px;
+}
+:root .calendar-page :is(.calendar-pill, .calendar-arrow, .calendar-day, .calendar-row):focus-visible {
+  outline: 2px solid var(--pill-focus);
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------- the strip of the week's days */
+:root .calendar-page .calendar-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+}
+:root .calendar-page .calendar-strip {
+  flex: 1 1 640px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+:root .calendar-page .calendar-arrow {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  color: var(--pill-quiet-ink);
+  text-decoration: none;
+}
+:root .calendar-page .calendar-arrow:hover {
+  background: var(--pill-quiet);
+}
+:root .calendar-page .calendar-arrow .icon {
+  width: 16px;
+  height: 16px;
+}
+:root .calendar-page .calendar-days {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  min-width: 0;
+}
+:root .calendar-page .calendar-day {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-content: center;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: 6px;
+  min-width: 0;
+  height: 48px;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: var(--pill-quiet-ink);
+  text-decoration: none;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+:root .calendar-page .calendar-day:hover {
+  background: var(--pill-quiet);
+}
+:root .calendar-page .calendar-day-name {
+  color: var(--muted);
+  font-size: 12px;
+}
+:root .calendar-page .calendar-day-number {
+  font-size: 17px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+:root .calendar-page .calendar-day-count {
+  grid-column: 1 / -1;
+  min-height: 1.2em;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+:root .calendar-page .calendar-day-count-skeleton {
+  width: 44px;
+  height: 0.7em;
+  margin: 0.25em auto 0;
+  border-radius: 999px;
+}
+:root .calendar-page .calendar-day.is-today .calendar-day-name {
+  color: var(--accent);
+  font-weight: 600;
+}
+:root .calendar-page .calendar-day.is-empty {
+  color: var(--muted-light);
+}
+:root .calendar-page .calendar-day[aria-current="date"] {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
+}
+:root .calendar-page .calendar-day[aria-current="date"] :is(.calendar-day-name, .calendar-day-count) {
+  color: inherit;
+  opacity: 0.72;
+}
+:root .calendar-page .calendar-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+:root .calendar-page .calendar-week {
+  margin-right: 4px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------- the chosen day */
+:root .calendar-page .calendar-day-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 6px 2px -4px;
+}
+:root .calendar-page .calendar-day-head h2 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+:root .calendar-page .calendar-day-summary {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+:root .calendar-page .calendar-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 22px;
+  background: var(--veil);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+:root .calendar-page .calendar-card {
+  padding: 4px 14px 8px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+:root .calendar-page .calendar-group + .calendar-group {
+  margin-top: 6px;
+  border-top: 1px solid var(--veil-line);
+}
+:root .calendar-page .calendar-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 4px 2px;
+}
+:root .calendar-page .calendar-group-logo {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+:root .calendar-page .calendar-group-name {
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+  font-weight: 650;
+}
+:root .calendar-page .calendar-group-meta {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+:root .calendar-page .calendar-group-meta sup {
+  font-size: 0.75em;
+}
+/* Ligue 1, the Premier League and the Champions League are drawn in black: light on the dark page. */
+html[data-theme="dark"]
+  .calendar-page
+  .calendar-group:is([data-league="l_3FJFUl"], [data-league="l_4WFCIZ"], [data-league="l_0bfbkO"])
+  .calendar-group-logo
+  img {
+  filter: brightness(0) invert(0.92);
+}
+:root .calendar-page .calendar-rows {
+  display: grid;
+}
+:root .calendar-page .calendar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 8px;
+  border-top: 1px solid var(--veil-line);
+  border-radius: 14px;
+  color: var(--ink);
+  text-decoration: none;
+}
+:root .calendar-page .calendar-rows > .calendar-row:first-child,
+:root .calendar-page .calendar-row:hover,
+:root .calendar-page .calendar-row:hover + .calendar-row {
+  border-top-color: transparent;
+}
+:root .calendar-page .calendar-row:hover {
+  background: var(--pill-quiet);
+}
+:root .calendar-page .calendar-team {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+:root .calendar-page .calendar-team.is-home {
+  flex-direction: row;
+  justify-content: flex-end;
+  text-align: right;
+}
+:root .calendar-page .calendar-team.is-away {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+:root .calendar-page .calendar-team-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .calendar-page .calendar-crest {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+:root .calendar-page .calendar-team.is-lost {
+  color: var(--muted);
+}
+:root .calendar-page .calendar-team.is-win {
+  color: var(--ink-strong);
+  font-weight: 650;
+}
+:root .calendar-page .calendar-mid {
+  display: inline-grid;
+  place-items: center;
+  min-width: 64px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--pill-quiet);
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+:root .calendar-page .calendar-mid:is([data-state="off"], [data-state="stale"]) {
+  color: var(--muted);
+  font-weight: 500;
+}
+:root .calendar-page .calendar-mid[data-state="live"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: color-mix(in srgb, var(--calendar-live), transparent 86%);
+  color: var(--calendar-live);
+}
+:root .calendar-page .calendar-mid[data-state="live"] i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--calendar-live);
+  animation: calendar-pulse 1.6s ease-in-out infinite;
+}
+@keyframes calendar-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .calendar-page .calendar-mid[data-state="live"] i {
+    animation: none;
+  }
+}
+:root .calendar-page .calendar-note {
+  grid-column: 1 / -1;
+  justify-self: center;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+/* The forecast bar of the competition page (§ 83): round ends, under the match. */
+:root .calendar-page .calendar-row .list-forecast {
+  width: min(220px, 100%);
+  margin-top: 2px;
+}
+:root .calendar-page .list-forecast-bar {
+  gap: 3px;
+  border-radius: 999px;
+}
+:root .calendar-page .list-forecast-bar i {
+  border-radius: 999px;
+}
+
+/* ----------------------------------------------------------------- an empty day, the saved matches */
+:root .calendar-page .calendar-empty {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 56px 16px;
+  border-radius: 22px;
+  background: var(--veil);
+  color: var(--muted);
+  text-align: center;
+}
+:root .calendar-page .calendar-empty p {
+  margin: 0;
+}
+
+/* ----------------------------------------------------------------- the skeleton (before the code, while a week is read) */
+.calendar-skeleton {
+  display: grid;
+  gap: 18px;
+}
+.calendar-skeleton-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+.calendar-skeleton-bar {
+  width: min(400px, 100%);
+  height: 40px;
+}
+.calendar-skeleton-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+}
+.calendar-skeleton-strip {
+  flex: 1 1 640px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  min-width: 0;
+  height: 56px;
+  padding: 4px 46px;
+  border-radius: 999px;
+  background: var(--pill-track);
+  box-shadow: inset 0 0 0 1px var(--pill-quiet);
+}
+.calendar-skeleton-day {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.calendar-skeleton-day .skeleton-line {
+  max-width: 100%;
+  border-radius: 999px;
+}
+.calendar-skeleton-side {
+  width: 220px;
+  height: var(--pill-h, 32px);
+}
+.calendar-skeleton-body {
+  gap: 14px;
+}
+.calendar-skeleton-dayhead {
+  display: grid;
+  gap: 8px;
+  margin: 6px 2px 0;
+}
+.calendar-skeleton-card {
+  display: grid;
+  gap: 6px;
+  padding: 10px 14px 12px;
+  border-radius: 22px;
+  background: var(--veil);
+}
+.calendar-skeleton-grouphead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 4px;
+}
+.calendar-skeleton-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+}
+.calendar-skeleton-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 8px;
+}
+.calendar-skeleton-home {
+  justify-self: end;
+}
+.calendar-skeleton-mid {
+  height: 28px;
+}
+
+/* ----------------------------------------------------------------- phone */
+@media (max-width: 640px) {
+  :root .calendar-page .calendar {
+    gap: 14px;
+  }
+  :root .calendar-page .calendar-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  :root .calendar-page .calendar-bar {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+  }
+  :root .calendar-page .calendar-bar > .settings-picker {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  :root .calendar-page .calendar-bar .settings-picker .home-settings-segment {
+    width: 100%;
+    justify-content: center;
+    padding: 0 10px;
+  }
+  /* The search keeps its symbol (a phone's segments drop theirs, home-pills.css). */
+  :root .calendar-page .calendar-search {
+    flex: none;
+    width: 36px;
+  }
+  :root .calendar-page .calendar-search > .icon:first-child {
+    display: block;
+  }
+  /* Open, it takes the room the bar has left and never widens the page (its field sized by the pill, not by its text). */
+  :root .calendar-page .calendar-search.is-open {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+  :root .calendar-page .calendar-search.is-open input {
+    width: 0;
+  }
+  /* The search open: the two others show their symbol only. */
+  :root .calendar-page .calendar-bar:has(.calendar-search.is-open) > .settings-picker {
+    flex: none;
+  }
+  :root .calendar-page .calendar-bar:has(.calendar-search.is-open) > .settings-picker .home-settings-segment {
+    width: 40px;
+    padding: 0;
+  }
+  :root
+    .calendar-page
+    .calendar-bar:has(.calendar-search.is-open)
+    > .settings-picker
+    .home-settings-segment
+    > .icon:first-child {
+    display: block;
+  }
+  :root
+    .calendar-page
+    .calendar-bar:has(.calendar-search.is-open)
+    > .settings-picker
+    .home-settings-segment
+    > :not(.icon:first-child) {
+    display: none;
+  }
+  :root .calendar-page .calendar-nav {
+    gap: 10px;
+  }
+  :root .calendar-page .calendar-strip {
+    flex-basis: 100%;
+    gap: 0;
+    padding: 3px;
+  }
+  :root .calendar-page .calendar-arrow {
+    width: 26px;
+    height: 26px;
+  }
+  :root .calendar-page .calendar-day {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    row-gap: 1px;
+    height: 56px;
+    padding: 0 2px;
+  }
+  :root .calendar-page .calendar-day-name {
+    font-size: 10px;
+  }
+  :root .calendar-page .calendar-day.is-today .calendar-day-name {
+    font-size: 0;
+  }
+  :root .calendar-page .calendar-day.is-today .calendar-day-name::before {
+    content: "Auj.";
+    font-size: 10px;
+  }
+  :root .calendar-page .calendar-day-count {
+    font-size: 0;
+  }
+  :root .calendar-page .calendar-day-count::before {
+    content: attr(data-short);
+    font-size: 10px;
+  }
+  :root .calendar-page .calendar-day-count-skeleton {
+    width: 14px;
+  }
+  :root .calendar-page .calendar-side {
+    width: 100%;
+  }
+  :root .calendar-page .calendar-week {
+    margin-right: auto;
+  }
+  :root .calendar-page .calendar-card {
+    padding: 2px 8px 6px;
+  }
+  :root .calendar-page .calendar-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 10px;
+    padding: 10px 6px;
+  }
+  :root .calendar-page .calendar-team.is-home,
+  :root .calendar-page .calendar-team.is-away {
+    grid-column: 1;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    text-align: left;
+  }
+  :root .calendar-page .calendar-team.is-home {
+    grid-row: 1;
+  }
+  :root .calendar-page .calendar-team.is-away {
+    grid-row: 2;
+  }
+  :root .calendar-page .calendar-mid {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+  :root .calendar-page .calendar-row :is(.list-forecast, .calendar-note) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: stretch;
+    width: auto;
+  }
+  .calendar-skeleton-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .calendar-skeleton-bar {
+    width: 100%;
+  }
+  .calendar-skeleton-strip {
+    flex-basis: 100%;
+    padding: 4px 30px;
+  }
+  .calendar-skeleton-day .skeleton-line:last-child {
+    width: 14px !important;
+  }
+  .calendar-skeleton-side {
+    width: 100%;
+  }
+}

@@ -95,7 +95,7 @@ export async function readFixturePage(
 }
 
 /** The page's body, or null when its publication was refused (409). */
-async function readFixtureBody(filters, cursor, { signal, fetcher }) {
+export async function readFixtureBody(filters, cursor, { signal, fetcher }) {
   const params = new URLSearchParams(filters);
   if (cursor) params.set("cursor", cursor);
   const response = await publicApiFetch(

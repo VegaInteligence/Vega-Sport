@@ -1063,3 +1063,9 @@
 - Skeletons: `CompetitionSkeleton` (piste B), new `MatchSkeleton` and `HomeSkeleton`, styles in `skeletons.css`. The home and a match (`?id=`) now have a route skeleton like the club, the nation and the competition; the home keeps its real toolbar while its week is read again.
 - Tab: `chooseCompetition` carries `view=`; Projection has its word in the address; `CompetitionEdition` opens on Projection and gives way to Classement where there is none (`useSeasonProjectionState`).
 - Tests: `tests/e2e/skeletons-and-tabs.e2e.mjs` (8/32 on main fb95f19), `tests/route-skeleton.test.mjs`, the site's render tests touched (`competition-render`, `overview-featured-render`: stubs for the new imports). Evidence in `/mnt/project-files/design-boutons/competitions-archives/e2e-squelettes-*` (outside git).
+
+## Calendar as a thread of days (27 Nov 2026, GitHub #270, VI-174, FAILURE_MODES § 86)
+
+- Request (hugo, 27 Nov, 20 h 27): redo the Calendrier page (`/matchs`), design free. Mock-up on the real matches of 16 Nov – 6 Dec: https://claude.ai/artifact/Uw76VAiFvpWqZoUowgt52o; piste A chosen at 20 h 41 (« POUR Calendrier va pour le A »).
+- Branch `claude/calendrier-fil-des-jours`. The week read by pages of 50 (`status=all`, `from`/`to`), no API change, no Deploy.
+- Tests: `tests/e2e/calendar.e2e.mjs` with the double `tests/e2e/support/calendar-api.mjs` (written before the code), `publication-changed.e2e.mjs` M and U cases rewritten for the week's pages.

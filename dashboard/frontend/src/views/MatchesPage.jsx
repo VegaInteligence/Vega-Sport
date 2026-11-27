@@ -19,8 +19,9 @@ import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
 import useFavourites from "../hooks/useFavourites.js";
 import { favouritesFirstWithinDay, involvesFavourite, matchesLeague } from "../services/preference-effects.js";
 import usePreselect from "../hooks/usePreselect.js";
-import PaginatedMatches from "../components/PaginatedMatches.jsx";
 import WorldCupArchiveMatch from "../components/WorldCupArchiveMatch.jsx";
+import CalendarPage from "../components/CalendarPage.jsx";
+import CalendarSkeleton from "../components/CalendarSkeleton.jsx";
 function RemoteDetail({ id }) {
   const f = useFootball(),
     resource = useResource(
@@ -45,7 +46,9 @@ export default function MatchesPage() {
     id = search.get("id") || archived,
     hasSaved = useHasSaved("matches"),
     tab = search.get("tab"),
-    saved = tab === "saved" || (!tab && hasSaved),
+    // The calendar (§ 86, the matches read by pages) opens on its day; « Mes matchs » only when asked for.
+    calendar = !id && f.pagedMatches,
+    saved = tab === "saved" || (!tab && hasSaved && !calendar),
     upcoming = !saved && tab !== "results",
     selected = f.data.matches.find((m) => m.id === id),
     fixture = f.data.fixtures?.find((m) => m.id === id),
@@ -63,12 +66,18 @@ export default function MatchesPage() {
     current: f.filters.league,
     apply: (league) => f.setFilters((v) => ({ ...v, league, leagues: [], match: "all" })),
   });
+  if (calendar)
+    return (
+      <Layout path="/matchs/" title="Calendrier" hideHeading className="calendar-page" loader={<CalendarSkeleton />}>
+        <CalendarPage saved={saved} />
+      </Layout>
+    );
   return (
     <Layout
       path={archived ? "/competitions/" : "/matchs/"}
       title="Calendrier"
       filters={!id && !saved}
-      filterKind={upcoming || f.pagedMatches ? "fixtures" : "performances"}
+      filterKind={upcoming ? "fixtures" : "performances"}
       hideHeading={!!id}
       className={id ? "match-workspace" : ""}
       loader={id && !archived ? <MatchSkeleton /> : undefined}
@@ -117,8 +126,6 @@ export default function MatchesPage() {
         </>
       ) : saved ? (
         <ResearchLists kind="matches" />
-      ) : f.pagedMatches ? (
-        <PaginatedMatches upcoming={upcoming} />
       ) : upcoming ? (
         <UpcomingMatches />
       ) : (

@@ -63,6 +63,8 @@ import {
   matchResourceKey,
 } from "../services/match-resources.js";
 import { seasonLabel } from "../model.js";
+import { parisDay, validDay } from "../services/fixtures.js";
+import { pagedMatchList } from "../services/season-version.js";
 import { BookmarkButton } from "./ResearchUI.jsx";
 import useCrestColours from "../hooks/useCrestColours.js";
 // The match in five tabs (issue #221, FAILURE_MODES § 62): « Vue d’ensemble », « Tirs & xG » and
@@ -460,6 +462,17 @@ export default function MatchDetail({ match }) {
       : null;
   const fromUpcoming =
     ["upcoming", "calendar"].includes(search.get("from")) || upcoming;
+  // The calendar (§ 86, the matches read by pages): the way back opens the day the match was chosen on, else its own.
+  const calendarDay = validDay(search.get("day"))
+    ? search.get("day")
+    : match.timeUtc && Number.isFinite(Date.parse(match.timeUtc))
+      ? parisDay(match.timeUtc)
+      : validDay(match.date)
+        ? match.date
+        : "";
+  const calendarBack = pagedMatchList(f.manifest, "/matchs/", null)
+    ? f.href("/matchs/", calendarDay ? { day: calendarDay } : {})
+    : null;
   // Each team in its crest's colour, blue and violet without one (hugo, 25 Nov; § 64).
   const teamColours = useCrestColours(match.home, match.away);
   // Before the kick-off, each side's place in the competition and the time left (§ 81.2).
@@ -475,22 +488,26 @@ export default function MatchDetail({ match }) {
         match={match}
         competition={competition}
         back={
-          <BackLink
-            href={
-              fromUpcoming
-                ? f.href("/matchs/", {
-                    tab: "upcoming",
-                    ...(search.get("week") ? { week: search.get("week") } : {}),
-                  })
-                : f.href("/matchs/", {
-                    tab: "results",
-                    ...(search.get("week") ? { week: search.get("week") } : {}),
-                  })
-            }
-            className="match-head-back"
-            prefix={<Icon name="back" />}
-            label={fromUpcoming ? "Matchs à venir" : "Résultats"}
-          />
+          calendarBack ? (
+            <BackLink href={calendarBack} className="match-head-back" prefix={<Icon name="back" />} label="Calendrier" />
+          ) : (
+            <BackLink
+              href={
+                fromUpcoming
+                  ? f.href("/matchs/", {
+                      tab: "upcoming",
+                      ...(search.get("week") ? { week: search.get("week") } : {}),
+                    })
+                  : f.href("/matchs/", {
+                      tab: "results",
+                      ...(search.get("week") ? { week: search.get("week") } : {}),
+                    })
+              }
+              className="match-head-back"
+              prefix={<Icon name="back" />}
+              label={fromUpcoming ? "Matchs à venir" : "Résultats"}
+            />
+          )
         }
         logo={
           (competition || match.editionArtwork) && (

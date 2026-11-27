@@ -12,9 +12,11 @@ import CompetitionSkeleton from "./CompetitionSkeleton.jsx";
 import HomeSkeleton from "./HomeSkeleton.jsx";
 import MatchSkeleton from "./MatchSkeleton.jsx";
 import NationSkeleton from "./NationSkeleton.jsx";
+import CalendarSkeleton from "./CalendarSkeleton.jsx";
 import { routeSkeleton } from "../services/route-skeleton.js";
 /** One skeleton per kind of services/route-skeleton.js. */
 const SKELETONS = {
+  calendar: <CalendarSkeleton />,
   club: <ClubSkeleton />,
   competition: <CompetitionSkeleton />,
   home: <HomeSkeleton />,
@@ -30,8 +32,9 @@ export default function LoadingPage({ href }) {
       as: "fetch",
       crossOrigin: "anonymous",
     });
-  // The route's skeleton is rendered beside the logo; the flag shows one of them.
-  const skeleton = SKELETONS[routeSkeleton(path, "id")];
+  // The route's skeletons are rendered beside the logo; the flag shows one of them. A route has up to two: its item
+  // page's (`?id=`) and its directory's (/matchs: a match and the calendar, § 86), told apart by the flag's value.
+  const kinds = [...new Set([routeSkeleton(path, "id"), routeSkeleton(path, "")])].filter((kind) => SKELETONS[kind]);
   // Keep the head script's flag right after a client-side navigation too.
   useLayoutEffect(() => {
     const kind = routeSkeleton(path, window.location.search);
@@ -50,9 +53,13 @@ export default function LoadingPage({ href }) {
         className={`workspace${page?.path === "/classement-joueurs/" ? " ranking-page" : ""}`}
         aria-busy="true"
       >
-        {skeleton ? (
+        {kinds.length ? (
           <>
-            <div className="route-skeleton">{skeleton}</div>
+            {kinds.map((kind) => (
+              <div className="route-skeleton" data-skeleton-kind={kind} key={kind}>
+                {SKELETONS[kind]}
+              </div>
+            ))}
             <div className="route-logo">
               <PageLoader />
             </div>
