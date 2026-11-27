@@ -65,6 +65,12 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+try:
+    from psycopg.errors import DataError, IntegrityError
+    WRITE_REFUSED = (DataError, IntegrityError)  # 59aq: what the base refuses of a unit's write, never a dead reader
+except ImportError:  # the parsers alone, without a base
+    WRITE_REFUSED = ()
+
 from .sources import normalize
 from .sources.tm_history import LEAGUES as TM_LEAGUES
 
@@ -113,6 +119,7 @@ NOT_FOUND_AGAIN = timedelta(days=90)
 # match of 1895 gave « 350:1894 ») is never queued, and one queued before fails without a request (59am): the base's
 # refusal had killed the reader eleven times on 24 Nov 2026.
 SQUAD_YEARS = (1900, 2100)
+SUSPENSION_DAYS_MAX = 32767  # core.player_suspensions.days is a smallint (59ap)
 # A search whose chosen club has no record yet: again within a day, its record read by then (FAILURE_MODES.md §45).
 SEARCH_UNNAMED_AGAIN = timedelta(days=1)
 # The kinds whose 404 is a refusal, not an answer: their reads views (api.player_injury_reads, 160;
@@ -477,6 +484,8 @@ def parse_suspensions(data):
             continue
         duration = _obj(entry.get("durationDetails")).get("days")
         days = (end - start).days + 1 if end else (duration + 1 if _count(duration) is not None else None)
+        if days is not None and not 0 <= days <= SUSPENSION_DAYS_MAX:
+            days = None  # 59ap: an end before the start or some 90 years after it gives no duration
         code, season = entry.get("competitionId"), entry.get("seasonId")
         out.append({"label": entry["name"], "start": start, "end": end, "days": days,
                     "games": _count(entry.get("missedGamesCount")), "possible": _count(entry.get("possibleMissingGamesCount")),
@@ -1055,6 +1064,12 @@ class Reader:
             with self.conn.transaction():
                 self.failed(kind, units, error)
             return self._schema(error)
+        except WRITE_REFUSED as error:
+            # 59aq: the unit's transaction is rolled back; the unit fails and waits, the reader reads on.
+            self.log(f"transfermarkt write_refused kind={kind} key={','.join(keys)} sqlstate={error.sqlstate}", flush=True)
+            with self.conn.transaction():
+                self.failed(kind, units, Failed("WRITE_REFUSED", 200))
+            return "failed"
 
     def _schema(self, error):
         if error.code != "SCHEMA_CHANGED":
