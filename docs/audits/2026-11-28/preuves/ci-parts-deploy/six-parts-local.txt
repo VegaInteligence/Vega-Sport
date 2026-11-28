@@ -1,0 +1,49 @@
+== deploy-1
+deploy-1: 9 tests
+Ran 9 tests in 184.794s
+OK
+exit 0 in 187 s
+      2 test_account_deploy
+      6 test_deploy_flow
+      1 test_panna_deploy
+== deploy-2
+deploy-2: 9 tests
+Ran 9 tests in 183.377s
+OK
+exit 0 in 186 s
+      2 test_account_deploy
+      5 test_deploy_flow
+      2 test_panna_deploy
+== deploy-3
+deploy-3: 12 tests
+Ran 12 tests in 173.282s
+OK
+exit 0 in 175 s
+      5 test_account_deploy
+      7 test_deploy_flow
+== deploy-4
+deploy-4: 11 tests
+Ran 11 tests in 190.306s
+OK
+exit 0 in 193 s
+      5 test_account_deploy
+      5 test_deploy_flow
+      1 test_panna_deploy
+== deploy-5
+deploy-5: 23 tests
+Ran 23 tests in 190.459s
+OK
+exit 0 in 193 s
+      3 test_account_deploy
+      7 test_deploy_flow
+     13 test_deploy_grants
+== deploy-6
+deploy-6: 12 tests
+Ran 12 tests in 173.762s
+OK
+exit 0 in 176 s
+      5 test_account_deploy
+      6 test_deploy_flow
+      1 test_panna_deploy
+== whole group against the six parts
+tests: 76 and 76; twice in the parts: 0; lines that differ: 0

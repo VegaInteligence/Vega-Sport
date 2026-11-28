@@ -12,6 +12,9 @@ Failure modes guarded here:
 - a path no rule knows, or an empty list, skips anything; notes nobody reads start a suite;
 - the parts of the Python and Deploy suites miss a test of the whole discovery, run one twice, leave one empty or
   drift apart (one part far longer than another: the 18 minutes of the Deploy's suites in one entry);
+- a module of the Deploy's suites is kept whole in one part although each of its tests builds its own world: the 22
+  tests of test_account_deploy (160 to 257 s from one run to the next) made deploy-1 the slowest job of every run of
+  28 Nov 2026 (7 min 12 s and 7 min 22 s), whatever the weights;
 - a module that fails to import is counted in a part, or fails one part only, instead of failing every part;
 - ci.yml no longer feeds the zones and the parts to its jobs, or cancels main's run in progress (all eleven of main's
   runs cancelled on 26 Nov 2026, main never checked whole).
@@ -101,7 +104,7 @@ class ZonesTest(unittest.TestCase):
         self.assertEqual(needed(full=True), everything)
         self.assertEqual(changed_suites.outputs(everything),
                          'suites=["python","deploy","api"]\n'
-                         'parts=["python-1","python-2","deploy-1","deploy-2","deploy-3","deploy-4","api"]\nsite=true\ninfra=true\nimage=true\npackage=true')
+                         'parts=["python-1","python-2","deploy-1","deploy-2","deploy-3","deploy-4","deploy-5","deploy-6","api"]\nsite=true\ninfra=true\nimage=true\npackage=true')
         self.assertEqual(needed(), everything)
         self.assertEqual(needed("", " "), everything)
 
@@ -160,7 +163,7 @@ class ZonesTest(unittest.TestCase):
                 self.assertTrue(found, f"{name} runs nothing")
                 ran.update(found)
         self.assertEqual(ran, whole)
-        self.assertEqual(parts, ["python-1", "python-2", "deploy-1", "deploy-2", "deploy-3", "deploy-4", "api"])
+        self.assertEqual(parts, ["python-1", "python-2", "deploy-1", "deploy-2", "deploy-3", "deploy-4", "deploy-5", "deploy-6", "api"])
 
     def test_i3_a_part_keeps_its_units_whole_and_in_discovery_order(self):
         order = {i: n for n, i in enumerate(t.id() for t in python_suites.discover())}
@@ -169,10 +172,34 @@ class ZonesTest(unittest.TestCase):
             found = [t.id() for t in python_suites.tests(python_suites.part(name))]
             self.assertEqual(found, sorted(found, key=order.get), name)
             for unit in {durations.unit(i) for i in found}:
-                # A method of test_deploy_flow, or a whole module elsewhere, is never split between two parts.
+                # A test of a module that plays deploy.sh, or a whole module elsewhere, is never split between two parts.
                 self.assertEqual(owner.setdefault(unit, name), name, unit)
         self.assertIn("test_deploy_flow.DeployFlowTest.test_GH157_x_runtask_refused_lost_unknown_missing_and_past_its_window", owner)
-        self.assertIn("test_account_deploy", owner)
+        self.assertIn("test_account_deploy.AccountDeployTest.test_w7_w10_w11_everything_prepared_deploys_the_account_in_order", owner)
+        self.assertIn("test_worker", owner)
+
+    def test_i3b_the_modules_that_play_deploy_sh_are_split_test_by_test(self):
+        # Each of their tests plays deploy.sh in a world of its own (its state file, its stand-ins, its repository or
+        # its cloned base): none needs what another left, so a part may hold any of them.
+        for module in ("test_deploy_flow.DeployFlowTest", "test_account_deploy.AccountDeployTest", "test_panna_deploy.PannaDeployTest"):
+            self.assertEqual(durations.unit(f"{module}.test_x"), f"{module}.test_x")
+        for whole in ("test_deploy_grants.GrantsTest.test_x", "test_worker.WorkerTest.test_x", "test_panna.PannaTest.test_x"):
+            self.assertEqual(durations.unit(whole), whole.split(".")[0])
+        deploy = [t.id() for t in python_suites.discover() if python_suites.group(t) == "deploy"]
+        spread = {}
+        for name in python_suites.names():
+            if name.startswith("deploy-"):
+                for i in (t.id() for t in python_suites.tests(python_suites.part(name))):
+                    spread.setdefault(i.split(".")[0], set()).add(name)
+        self.assertEqual(set(spread), {i.split(".")[0] for i in deploy})
+        # The 22 tests of the account's Deploy are no longer one part's load.
+        self.assertGreater(len(spread["test_account_deploy"]), 1, spread)
+        # No weight of a module split test by test is left in the file: it would never be read again.
+        weights = json.loads(python_suites.DURATIONS.read_text())
+        self.assertEqual([key for key in weights if key in durations.UNIT_BY_METHOD], [])
+        # One unit never weighs a part's whole share: the parts can be balanced.
+        loads = [weights.get(u, 0) for u in {durations.unit(i) for i in deploy}]
+        self.assertLess(max(loads), sum(loads) / changed_suites.PARTS["deploy"], sorted(loads)[-3:])
 
     def test_i4_the_parts_are_balanced_by_measured_time_and_a_new_unit_weighs_the_median(self):
         self.assertEqual(python_suites.assign(["a", "b", "c", "d"], 2, {"a": 5, "b": 4, "c": 3, "d": 2}),

@@ -9,6 +9,16 @@
 - La page détaillée du PSG a été comparée champ par champ sur la même version API. Les données sont identiques, avec les identifiants d'apparitions attendus en plus sur les matchs combinés.
 - Les 1 139 tests du site et les quatre vérifications navigateur de ONLY=D passent. La suite du site utilise Node 24.18.0 et Bun 1.4.5. Les six tests d'intégration de l'API demandent un DSN jetable.
 
+## CI : le Deploy en six parts, ses tests répartis un par un (28 novembre 2026, branche `ci/parts-du-deploy`)
+
+- Demande (28 nov., après la fusion de #280) : s'attaquer au plafond restant, les parts du Deploy. Linear non consulté (règle de l'utilisateur pour ce dossier).
+- Constat (run 46101676263) : 1 391 s de tests du Deploy en quatre parts de 369 à 442 s. Le temps est du travail : un `deploy.sh` fait environ 180 appels aux outils simulés, 22 à 68 ms chacun, sans attente à retirer. `test_account_deploy` restait d'un seul bloc de 160 à 257 s selon le run, et faisait de deploy-1 le job le plus lent quel que soit l'équilibrage.
+- Fait : `durations.UNIT_BY_METHOD` compte aussi `test_account_deploy` et `test_panna_deploy` (chaque test y construit son propre état) ; `changed_suites.PARTS` passe le Deploy de 4 à 6 parts ; `durations.json` refait sur les six journaux de ce run (231 à 232 s par part du Deploy, 181 s par part Python).
+- Tests d'abord : `test_ci_zones.py` g, i2, i3 modifiés et i3b ajouté, 4 échecs avant, 24/24 après.
+- Vérifié en local (PostgreSQL 18.6, Docker réel) : les six parts passent, 173 à 190 s chacune, 76 tests joués une fois chacun ; les 27 tests nouvellement séparés passent seuls et dans l'ordre inverse. Preuves : `docs/audits/2026-11-28/preuves/ci-parts-deploy/EVIDENCE.md`.
+- **Non vérifié** : les durées dans GitHub Actions. Rien n'est poussé.
+- Reste : la part API (5 à 6 min 15 s, une seule entrée) devient le plafond d'un run complet ; la découper demande de traiter la base partagée entre ses fichiers et le relevé de couverture commun au passage.
+
 ## CI : bases de test clonées d'un modèle au lieu des migrations rejouées (28 novembre 2026, branche `ci/base-modele-par-job`)
 
 - Demande (28 nov.) : « Pourquoi les CI/CD mettent autant de temps ? », puis choix du levier « Base modèle par job ». Linear non consulté (règle de l'utilisateur pour ce dossier).
@@ -20,7 +30,8 @@
 - Vérifié en local, la branche sans adaptation sur PostgreSQL 18.6 et Node 24 : groupe Python 1 223 tests OK en 421 s (9 sautés : Docker, pgvector), API 436/436 en 316 s, comptes 110/110. Avant/après sur PostgreSQL 16 (une ligne de 056 adaptée dans une copie jetable) : aucun test ne change d'issue, Python 1 371 s → 455 s, API 618 s → 305 s. Preuves : `docs/audits/2026-11-28/preuves/ci-base-modele/EVIDENCE.md`.
 - GitHub Actions, PR #280 (run 46096786041) : tout vert, suites du Deploy comprises ; run entier 401 s contre 656 à 811 s pour les trois derniers runs de main ; python-1 191 s, python-2 280 s (477–689 s et 437–670 s), api 297 s (359–635 s) ; 88 et 103 bases clonées en 8,2 s et 17,6 s.
 - `backend/ci/durations.json` refait par `durations.py` sur les six journaux Python et Deploy de ce run : les parts Python passent de 149/238 s à 194/193 s, celles du Deploy de 218–350 s à 287–288 s. **Non vérifié** : l'effet de ces poids, à lire au run suivant.
-- Reste : les parts du Deploy sont le plafond d'un run complet (1 151 s de tests en quatre parts ; six parts donneraient 191 à 194 s) ; règle `src/services/` qui lance tout le backend pour une PR frontend (#274, #276) ; Auto-fix non activé sur la PR (l'app refuse de la rattacher à la session).
+- Fusionnée le 28 nov. (PR #280, main `2f5a2d8fe1`) sur un run vert ; runs de la PR entre 401 et 456 s. Un échec local isolé de `test_GH171_d` (le texte d'une entrée de `pg_stat_statements` non retrouvé, sur un serveur déjà saturé par le passage précédent) : non reproduit en six relances, vert en CI, cause non établie.
+- Reste : règle `src/services/` qui lance tout le backend pour une PR frontend (#274, #276) ; le plafond du Deploy est traité dans la section au-dessus.
 
 ## PannaData · backfill AWS et actualisation quotidienne
 
