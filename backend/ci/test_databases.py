@@ -71,6 +71,7 @@ SUITES = {
     "VEGA_V2_PANNA_S1_TEST_DSN": "vega_v2_panna_s1_test",
     # PannaData S3 detailed actions and source revisions (test_panna_s3.py).
     "VEGA_V2_PANNA_S3_TEST_DSN": "vega_v2_panna_s3_test",
+    "VEGA_V2_PANNA_SYNC_TEST_DSN": "vega_v2_panna_sync_test",
 }
 
 

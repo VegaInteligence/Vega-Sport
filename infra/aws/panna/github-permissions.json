@@ -61,6 +61,16 @@
           "cloudwatch:namespace": "Vega/Panna"
         }
       }
+    },
+    {
+      "Sid": "IndividuallyProvisionedQueueAndHandlerLogins",
+      "Effect": "Allow",
+      "Action": "ssm:GetParameter",
+      "Resource": [
+        "arn:aws:ssm:us-east-2:361769570630:parameter/vega/v2/panna-daily-queue-database-url",
+        "arn:aws:ssm:us-east-2:361769570630:parameter/vega/v2/panna-action-refresh-database-url",
+        "arn:aws:ssm:us-east-2:361769570630:parameter/vega/v2/panna-identity-refresh-database-url"
+      ]
     }
   ]
 }

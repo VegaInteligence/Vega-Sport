@@ -83,17 +83,21 @@ def load_env(dsn):
     return env
 
 
-def cli(scratch, operation, args, dsn=None, monitor=None):
+def cli(scratch, operation, args, dsn=None, monitor=None, *, prefix=(), hard_timeout=None):
     # Capture private output. Publish only the vetted fields below, never raw tracebacks or row values.
     receipt = scratch / (operation + ".jsonl")
+    deadline = time.monotonic() + hard_timeout if hard_timeout is not None else None
     with receipt.open("wb") as out:
-        process = subprocess.Popen([sys.executable, "-m", "panna", operation, *args],
+        process = subprocess.Popen([sys.executable, "-m", "panna", *prefix, operation, *args],
                                    env=load_env(dsn), stdout=out, stderr=subprocess.STDOUT,
                                    start_new_session=True)
         try:
             while True:
+                interval = min(45, deadline - time.monotonic()) if deadline is not None else 45
+                if interval <= 0:
+                    raise Stop("LOADER_DEADLINE")
                 try:
-                    status = process.wait(timeout=45)
+                    status = process.wait(timeout=interval)
                     break
                 except subprocess.TimeoutExpired:
                     if monitor:
@@ -325,7 +329,7 @@ def refresh(scratch, args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["preflight", "connect", "refresh"], default="preflight")
+    parser.add_argument("--mode", choices=["preflight", "connect", "refresh", "sync"], default="preflight")
     parser.add_argument("--manifest", type=Path, help="local preflight only")
     parser.add_argument("--as-of", type=lambda value: datetime.strptime(value, "%Y-%m-%d").date(),
                         help="local preflight only")
@@ -340,6 +344,11 @@ def main():
             return
         if args.mode == "connect":
             connect(scratch)
+            return
+        if args.mode == "sync":
+            from autosync import tick
+
+            tick(scratch)
             return
         manifest = pin(scratch, args.manifest)
         cutoff = (args.as_of or datetime.now(UTC).date()).isoformat()

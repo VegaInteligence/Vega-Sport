@@ -29,6 +29,22 @@ Resources:
       Threshold: 1
       TreatMissingData: breaching
       AlarmActions: [!Ref AlarmTopicArn]
+  DailyInventoryFreshness:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-panna-inventory-stale
+      AlarmDescription: No verified Opta latest source discovery in 26 hours
+      ActionsEnabled: false
+      Namespace: Vega/Panna
+      MetricName: OptaLatestInventoryVerified
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 26
+      DatapointsToAlarm: 26
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlarmTopicArn]
   BridgeRole:
     Type: AWS::IAM::Role
     Properties:

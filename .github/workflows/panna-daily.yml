@@ -1,14 +1,14 @@
 name: PannaData daily
 on:
   push:
-    branches: [codex/panna-daily-fixtures]
+    branches: [codex/panna-daily-fixtures, codex/panna-autosync-operator]
   schedule:
-    - cron: '17 4 * * *'
+    - cron: '17,47 * * * *'
   workflow_dispatch:
     inputs:
       mode:
         type: choice
-        options: [preflight, connect, refresh]
+        options: [preflight, connect, refresh, sync]
         default: preflight
       cancellation_probe:
         type: boolean
@@ -22,10 +22,39 @@ env:
   PYTHONPATH: backend
   PYTHONDONTWRITEBYTECODE: '1'
 jobs:
+  queue-smoke:
+    if: github.repository_id == '1441213700' && github.event_name == 'push' && github.ref == 'refs/heads/codex/panna-autosync-operator'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18.3
+        env:
+          POSTGRES_DB: vega_v2_panna_sync_test
+          POSTGRES_PASSWORD: queue-smoke-local-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      VEGA_V2_PANNA_SYNC_TEST_DSN: postgresql://postgres:queue-smoke-local-only@127.0.0.1:5432/vega_v2_panna_sync_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - run: python -m pip install -r backend/panna/requirements.txt
+      - run: PYTHONPATH=backend python -m unittest discover -s backend/tests -p test_panna_sync.py -v
   preflight:
     if: >-
       github.repository_id == '1441213700' &&
-      ((github.event_name == 'push' && github.ref == 'refs/heads/codex/panna-daily-fixtures') ||
+      ((github.event_name == 'push' && (github.ref == 'refs/heads/codex/panna-daily-fixtures' || github.ref == 'refs/heads/codex/panna-autosync-operator')) ||
        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.mode == 'preflight'))
     runs-on: macos-15-intel
     timeout-minutes: 15
@@ -51,7 +80,7 @@ jobs:
       github.repository_id == '1441213700' && github.ref == 'refs/heads/main' &&
       ((github.event_name == 'schedule' && vars.PANNA_DAILY_ENABLED == 'true') ||
        (github.event_name == 'workflow_dispatch' &&
-        (inputs.mode == 'connect' || (inputs.mode == 'refresh' && vars.PANNA_MANUAL_REFRESH_ENABLED == 'true'))))
+        (inputs.mode == 'connect' || ((inputs.mode == 'refresh' || inputs.mode == 'sync') && vars.PANNA_MANUAL_REFRESH_ENABLED == 'true'))))
     runs-on: macos-15-intel
     environment: v2-panna-refresh
     timeout-minutes: 35
@@ -61,7 +90,10 @@ jobs:
     env:
       PANNA_CONNECT_HOLD: ${{ inputs.cancellation_probe && inputs.mode == 'connect' && 'true' || 'false' }}
       PANNA_BRIDGE_LAUNCHER: ${{ vars.PANNA_BRIDGE_LAUNCHER }}
-      PANNA_MODE: ${{ inputs.mode || 'refresh' }}
+      PANNA_MODE: ${{ inputs.mode || 'sync' }}
+      PANNA_ACTIONS_READY: ${{ vars.PANNA_ACTIONS_READY }}
+      PANNA_IDENTITY_READY: ${{ vars.PANNA_IDENTITY_READY }}
+      PANNA_IDLE_HINT: ${{ vars.PANNA_IDLE_HINT }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -82,7 +114,7 @@ jobs:
           allowed-account-ids: '361769570630'
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
         id: aws_refresh
-        if: env.PANNA_MODE == 'refresh'
+        if: env.PANNA_MODE == 'refresh' || env.PANNA_MODE == 'sync'
         with:
           role-to-assume: ${{ vars.PANNA_REFRESH_ROLE_ARN }}
           aws-region: us-east-2
