@@ -13,7 +13,8 @@ const favouritesHook = (clubs = [], players = []) => ({
 });
 const link = { __esModule: true, default: ({ href, children, ...props }) => h("a", { href, ...props }, children) };
 
-test("R3 the matches page lists a favourite club's match first within its day", async () => {
+test("R3 the matches page lists a favourite club's match first within its day", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-11-24T08:00:00Z") });
   const fixture = (id, time, home, away) => ({
     id, status: "not_started", date: time.slice(0, 10), time_utc: time,
     league: { id: "l_4WFCIZ", name: "Premier League" }, home_team: { id: home, name: home }, away_team: { id: away, name: away },
@@ -30,7 +31,6 @@ test("R3 the matches page lists a favourite club's match first within its day", 
   };
   const render = async (clubs) => {
     const mod = await compile("components/UpcomingMatches.jsx", {
-      react: { ...React, useState: (v) => React.useState(typeof v === "function" ? () => Date.parse("2026-11-24T08:00:00Z") : v) },
       "next/link": link,
       "next/navigation": { useSearchParams: () => new URLSearchParams("week=2026-11-23") },
       "../hooks/FootballContext.jsx": { useFootball: () => context },
