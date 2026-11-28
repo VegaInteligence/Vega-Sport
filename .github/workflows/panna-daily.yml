@@ -1,0 +1,75 @@
+name: PannaData daily
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [preflight, refresh]
+        default: preflight
+permissions: {}
+concurrency:
+  group: vega-v2-panna-rds
+  cancel-in-progress: false
+env:
+  AWS_REGION: us-east-2
+  PYTHONPATH: backend
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  preflight:
+    if: github.repository_id == '1441213700' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.mode == 'preflight'
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - run: python -m pip install -r backend/panna/requirements.txt
+      - run: ./infra/aws/panna/install-ssm-plugin.sh
+      - run: |
+          df -Pk "$RUNNER_TEMP"
+          sysctl -n hw.memsize
+          python infra/aws/panna/daily.py
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+  refresh:
+    if: github.repository_id == '1441213700' && github.ref == 'refs/heads/main' && vars.PANNA_DAILY_ENABLED == 'true' && (github.event_name == 'schedule' || inputs.mode == 'refresh')
+    runs-on: macos-15-intel
+    environment: v2-panna-refresh
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PANNA_BRIDGE_LAUNCHER: ${{ vars.PANNA_BRIDGE_LAUNCHER }}
+      PANNA_RDS_HOST: ${{ vars.PANNA_RDS_HOST }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - run: python -m pip install -r backend/panna/requirements.txt
+      - run: ./infra/aws/panna/install-ssm-plugin.sh
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        id: aws
+        with:
+          role-to-assume: ${{ vars.PANNA_REFRESH_ROLE_ARN }}
+          aws-region: us-east-2
+          role-duration-seconds: 3600
+          role-session-name: panna-${{ github.run_id }}-${{ github.run_attempt }}
+          allowed-account-ids: '361769570630'
+      - name: Refresh PannaData fixture index
+        run: python infra/aws/panna/daily.py --mode refresh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Reconcile exact bridge on failure or cancellation
+        if: always() && steps.aws.outcome == 'success'
+        run: python infra/aws/panna/daily.py --cleanup-only

@@ -1,0 +1,11 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Sid":"PinnedTaskOnly","Effect":"Allow","Action":"ecs:RunTask","Resource":"REPLACE_WITH_EXACT_BRIDGE_TASK_DEFINITION_ARN","Condition":{"ArnEquals":{"ecs:cluster":"arn:aws:ecs:us-east-2:361769570630:cluster/vega-v2"},"StringEquals":{"aws:RequestTag/VegaPurpose":"PannaDailyBridge"},"ForAllValues:StringEquals":{"aws:TagKeys":["VegaPurpose"]},"BoolIfExists":{"ecs:enable-ebs-volumes":"false"}}},
+    {"Sid":"TagOnlyAtCreation","Effect":"Allow","Action":"ecs:TagResource","Resource":"arn:aws:ecs:us-east-2:361769570630:task/vega-v2/*","Condition":{"StringEquals":{"ecs:CreateAction":"RunTask","aws:RequestTag/VegaPurpose":"PannaDailyBridge"},"ForAllValues:StringEquals":{"aws:TagKeys":["VegaPurpose"]}}},
+    {"Sid":"PassOnlyExactBridgeRoles","Effect":"Allow","Action":"iam:PassRole","Resource":["REPLACE_WITH_EXACT_BRIDGE_TASK_ROLE_ARN","REPLACE_WITH_EXACT_ECR_EXECUTION_ROLE_ARN"],"Condition":{"StringEquals":{"iam:PassedToService":"ecs-tasks.amazonaws.com"}}},
+    {"Sid":"ReadTasks","Effect":"Allow","Action":"ecs:DescribeTasks","Resource":"arn:aws:ecs:us-east-2:361769570630:task/vega-v2/*"},
+    {"Sid":"ReconcileThisCluster","Effect":"Allow","Action":"ecs:ListTasks","Resource":"*","Condition":{"ArnEquals":{"ecs:cluster":"arn:aws:ecs:us-east-2:361769570630:cluster/vega-v2"}}},
+    {"Sid":"StopTaggedBridgeOnly","Effect":"Allow","Action":"ecs:StopTask","Resource":"arn:aws:ecs:us-east-2:361769570630:task/vega-v2/*","Condition":{"StringEquals":{"aws:ResourceTag/VegaPurpose":"PannaDailyBridge"}}}
+  ]
+}

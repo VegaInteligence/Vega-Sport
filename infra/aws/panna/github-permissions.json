@@ -1,0 +1,11 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Sid":"FixedBridgeLauncher","Effect":"Allow","Action":"lambda:InvokeFunction","Resource":"arn:aws:lambda:us-east-2:361769570630:function:vega-v2-panna-daily-launcher:live"},
+    {"Sid":"FixedSessionDocument","Effect":"Allow","Action":"ssm:StartSession","Resource":"arn:aws:ssm:us-east-2:361769570630:document/VegaPannaDailyPostgres"},
+    {"Sid":"OnlyBridgeTasks","Effect":"Allow","Action":"ssm:StartSession","Resource":"arn:aws:ecs:us-east-2:361769570630:task/vega-v2/*","Condition":{"StringEquals":{"aws:ResourceTag/VegaPurpose":"PannaDailyBridge"},"BoolIfExists":{"ssm:SessionDocumentAccessCheck":"true"}}},
+    {"Sid":"TerminateOnlyPannaSessions","Effect":"Allow","Action":"ssm:TerminateSession","Resource":"arn:aws:ssm:us-east-2:361769570630:session/panna-*"},
+    {"Sid":"FixtureLoginOnly","Effect":"Allow","Action":"ssm:GetParameter","Resource":"arn:aws:ssm:us-east-2:361769570630:parameter/vega/v2/panna-fixture-refresh-database-url"},
+    {"Sid":"ReadOnlyDatabaseGuard","Effect":"Allow","Action":["rds:DescribeDBInstances","cloudwatch:GetMetricStatistics"],"Resource":"*"}
+  ]
+}
