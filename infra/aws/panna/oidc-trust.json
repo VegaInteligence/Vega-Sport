@@ -1,0 +1,16 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"Federated": "arn:aws:iam::361769570630:oidc-provider/token.actions.githubusercontent.com"},
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {"StringEquals": {
+      "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+      "token.actions.githubusercontent.com:sub": "repo:VegaInteligence@188998341/Vega-Sport@1441213700:environment:v2-panna-refresh",
+      "token.actions.githubusercontent.com:repository_id": "1441213700",
+      "token.actions.githubusercontent.com:repository_owner_id": "188998341",
+      "token.actions.githubusercontent.com:ref": "refs/heads/main",
+      "token.actions.githubusercontent.com:workflow": "PannaData daily"
+    }}
+  }]
+}

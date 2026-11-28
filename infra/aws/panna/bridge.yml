@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Dedicated SQL-only external PannaData transport, creates no running tasks
+Parameters:
+  RdsHost:
+    Type: String
+    AllowedPattern: 'vega-football-db-postgres\.[a-z0-9-]+\.us-east-2\.rds\.amazonaws\.com'
+  ExistingExecutionRole:
+    Type: String
+  ReviewedBridgeImage:
+    Type: String
+    AllowedPattern: '.+@sha256:[a-f0-9]{64}'
+  AlarmTopicArn:
+    Type: String
+    Description: Existing SNS topic for operational alerts
+Resources:
+  DailyFreshness:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-panna-fixture-index-stale
+      AlarmDescription: No verified fixture index refresh in 26 hours
+      ActionsEnabled: false
+      Namespace: Vega/Panna
+      MetricName: FixtureIndexVerified
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 26
+      DatapointsToAlarm: 26
+      ComparisonOperator: LessThanThreshold
+      Threshold: 1
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlarmTopicArn]
+  BridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SessionChannels
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['ssmmessages:CreateControlChannel', 'ssmmessages:CreateDataChannel', 'ssmmessages:OpenControlChannel', 'ssmmessages:OpenDataChannel']
+                Resource: '*'
+  BridgeTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: vega-v2-panna-daily-bridge
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      Cpu: '256'
+      Memory: '512'
+      RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
+      ExecutionRoleArn: !Ref ExistingExecutionRole
+      TaskRoleArn: !GetAtt BridgeRole.Arn
+      ContainerDefinitions:
+        - Name: bridge
+          Image: !Ref ReviewedBridgeImage
+          Essential: true
+          EntryPoint: [/bin/sh, -c, 'exec /bin/sleep 1800']
+          LinuxParameters: {InitProcessEnabled: true}
+  PortDocument:
+    Type: AWS::SSM::Document
+    Properties:
+      Name: VegaPannaDailyPostgres
+      DocumentType: Session
+      Content:
+        schemaVersion: '1.0'
+        sessionType: Port
+        description: Fixed PannaData PostgreSQL transport
+        properties:
+          host: !Ref RdsHost
+          portNumber: '5432'
+          localPortNumber: '15432'
+          type: LocalPortForwarding
+Outputs:
+  TaskDefinition: {Value: !Ref BridgeTask}
+  TaskRoleArn: {Value: !GetAtt BridgeRole.Arn}
+  Document: {Value: !Ref PortDocument}

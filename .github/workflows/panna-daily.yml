@@ -1,0 +1,104 @@
+name: PannaData daily
+on:
+  push:
+    branches: [codex/panna-daily-fixtures]
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [preflight, connect, refresh]
+        default: preflight
+      cancellation_probe:
+        type: boolean
+        default: false
+permissions: {}
+concurrency:
+  group: vega-v2-panna-rds
+  cancel-in-progress: false
+env:
+  AWS_REGION: us-east-2
+  PYTHONPATH: backend
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  preflight:
+    if: >-
+      github.repository_id == '1441213700' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/codex/panna-daily-fixtures') ||
+       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.mode == 'preflight'))
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - run: python -m pip install -r backend/panna/requirements.txt
+      - run: ./infra/aws/panna/install-ssm-plugin.sh
+      - run: |
+          df -Pk "$RUNNER_TEMP"
+          sysctl -n hw.memsize
+          python infra/aws/panna/daily.py
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+  refresh:
+    if: >-
+      github.repository_id == '1441213700' && github.ref == 'refs/heads/main' &&
+      ((github.event_name == 'schedule' && vars.PANNA_DAILY_ENABLED == 'true') ||
+       (github.event_name == 'workflow_dispatch' &&
+        (inputs.mode == 'connect' || (inputs.mode == 'refresh' && vars.PANNA_MANUAL_REFRESH_ENABLED == 'true'))))
+    runs-on: macos-15-intel
+    environment: v2-panna-refresh
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PANNA_CONNECT_HOLD: ${{ inputs.cancellation_probe && inputs.mode == 'connect' && 'true' || 'false' }}
+      PANNA_BRIDGE_LAUNCHER: ${{ vars.PANNA_BRIDGE_LAUNCHER }}
+      PANNA_MODE: ${{ inputs.mode || 'refresh' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - run: python -m pip install -r backend/panna/requirements.txt
+      - run: ./infra/aws/panna/install-ssm-plugin.sh
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        id: aws_connect
+        if: env.PANNA_MODE == 'connect'
+        with:
+          role-to-assume: ${{ vars.PANNA_CONNECT_ROLE_ARN }}
+          aws-region: us-east-2
+          role-duration-seconds: 3600
+          role-session-name: panna-${{ github.run_id }}-${{ github.run_attempt }}
+          allowed-account-ids: '361769570630'
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        id: aws_refresh
+        if: env.PANNA_MODE == 'refresh'
+        with:
+          role-to-assume: ${{ vars.PANNA_REFRESH_ROLE_ARN }}
+          aws-region: us-east-2
+          role-duration-seconds: 3600
+          role-session-name: panna-${{ github.run_id }}-${{ github.run_attempt }}
+          allowed-account-ids: '361769570630'
+      - name: Run PannaData fixture operation
+        shell: bash
+        run: |
+          PANNA_RDS_HOST="$(aws rds describe-db-instances --db-instance-identifier vega-football-db-postgres --query 'DBInstances[0].Endpoint.Address' --output text)"
+          [[ "$PANNA_RDS_HOST" == vega-football-db-postgres.*.us-east-2.rds.amazonaws.com ]]
+          printf '::add-mask::%s\n' "$PANNA_RDS_HOST"
+          export PANNA_RDS_HOST
+          python infra/aws/panna/daily.py --mode "$PANNA_MODE"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Reconcile exact bridge on failure or cancellation
+        if: always() && (steps.aws_connect.outcome == 'success' || steps.aws_refresh.outcome == 'success')
+        run: python infra/aws/panna/daily.py --cleanup-only
