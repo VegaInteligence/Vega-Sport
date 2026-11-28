@@ -195,7 +195,10 @@ An invalidation never reaches a browser's own copy. Most answers say `max-age=0`
 
 The function answers the revalidations of `/api/league-history` with the digest of its four reads, in one statement, without building the answer. The share of requests the distribution answers by itself is measured on its access logs (GH149, `edge-cache-report.mjs`), not set by these ceilings.
 
-The function logs one line per request it receives (`{"request":"read","path":…,"status":…,"ms":…,"db":…,"queries":…,"conditional":…}`, the path without its query). Reads the distribution answers by itself leave none: the lines are the calls that reached the function. In CloudWatch Logs Insights, on `/aws/lambda/vega-v2-api`:
+The function logs one JSON record per request it receives. `path` omits query parameters. Only requests that reach the
+function appear here. `connect` marks any successful connection opening. `reconnect` marks an opening after the pool's first.
+`dbOpens` and `dbReopens` count individual openings, including those on retries. The `db` duration includes connection
+setup, waiting and query execution. Run these queries in CloudWatch Logs Insights on `/aws/lambda/vega-v2-api`.
 
 ```
 filter request = "read" | stats count(*) as calls, sum(conditional) as revalidations, avg(ms), avg(db) by path | sort calls desc
@@ -209,6 +212,16 @@ filter request = "read"
 | stats count(*) as calls, sum(if(status >= 500 and status < 600, 1, 0)) as errors,
     sum(if(conditional = false and db > 3000, 1, 0)) as over_sql_budget, pct(db, 95) as p95_sql_ms by route
 | sort errors desc, over_sql_budget desc
+```
+
+After deploying GH140, run the following query over a busy and a quiet period. For each route, divide the number of
+successful requests with `reconnect=true` by all successful requests that ran SQL. A failed parallel read can log its
+response while a sibling is still waiting for a connection, so the query uses completed 2xx and 3xx responses.
+
+```
+filter request = "read" and ispresent(connect) and queries > 0 and status >= 200 and status < 400
+| stats count(*) as requests, sum(dbOpens) as opens, sum(dbReopens) as reopens by route, connect, reconnect
+| sort route asc
 ```
 
 <!-- BEGIN VI-35 web ACL -->

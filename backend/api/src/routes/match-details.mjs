@@ -24,6 +24,7 @@
  * computed is null; a match not `not_started`, or with no side computed, is a 404.
  */
 import { createHash } from "node:crypto";
+import { float } from "../db.mjs";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { createDataVersions } from "../data-versions.mjs";
 import * as F from "../match-families.mjs";
@@ -57,6 +58,18 @@ const APPEARANCE_STATS = {
 };
 const displayColumns = Object.entries(APPEARANCE_STATS).map(([key, column]) => `a.${column} AS ${key}`).join(",");
 const byPlayer = (rows) => new Map(rows.map((row) => [row.player_id, row]));
+
+// A match's pass networks, its three families in one statement (GH141): each view's rows as
+// row_to_json gives them (the columns SELECT * gave), bound to the match's season and match as
+// the three statements were. Their reals are made the numbers the typed rows gave (`float`).
+const NETWORK_SQL = `SELECT
+  (SELECT coalesce(json_agg(t),'[]'::json) FROM api.match_network_rows t WHERE t.season_id=$1 AND t.match_id=$2) AS teams,
+  (SELECT coalesce(json_agg(n),'[]'::json) FROM api.match_network_node_rows n WHERE n.season_id=$1 AND n.match_id=$2) AS nodes,
+  (SELECT coalesce(json_agg(e),'[]'::json) FROM api.match_network_edge_rows e WHERE e.season_id=$1 AND e.match_id=$2) AS edges`;
+const reals = (names) => (row) => {
+  for (const name of names) row[name] = float(row[name]);
+  return row;
+};
 
 async function displayPlayerRows(read, f, rows) {
   if (f.status !== "finished") return rows;
@@ -151,12 +164,13 @@ async function body(read, f, suffix, params) {
     case "/advanced/players":
       return F.advancedPlayersBody(f.id, await read(`SELECT * FROM api.match_player_advanced_rows ${where}`, at));
     case "/advanced/network": {
-      const [teams, nodes, edges] = await Promise.all([
-        read(`SELECT * FROM api.match_network_rows ${where}`, at),
-        read(`SELECT * FROM api.match_network_node_rows ${where}`, at),
-        read(`SELECT * FROM api.match_network_edge_rows ${where}`, at),
-      ]);
-      return F.networkBody(f, teams, nodes, edges);
+      const [{ teams, nodes, edges }] = await read(NETWORK_SQL, at);
+      return F.networkBody(
+        f,
+        teams.map(reals(["window_until_s", "centralization"])),
+        nodes.map(reals(["avg_x", "avg_y", "betweenness", "clustering"])),
+        edges,
+      );
     }
     case "/heatmaps":
       return F.heatmapsBody(f.id, await read(`SELECT * FROM api.match_heatmap_rows ${where}`, at), params.get("frame") || "acting_ltr");
@@ -206,7 +220,7 @@ async function probable(read, req, id, params) {
 // GET /api/matches/{id}/players/display (FAILURE_MODES_OPTIMISATIONS.md GH137A): its published zeros change without a new
 // match revision, so it is validated by the data versions of what it reads; 60 s once the match is finished, 15 s before.
 // Its body ({ data }) and the content of its former tag (W/"match-display-<SHA-256 of data>") are unchanged.
-const FIXTURE_SQL = `SELECT f.*,c.* FROM api.fixtures f LEFT JOIN api.match_family_coverage c ON c.season_id=f.season_id AND c.match_id=f.match_id
+export const FIXTURE_SQL = `SELECT f.*,c.* FROM api.fixtures f LEFT JOIN api.match_family_coverage c ON c.season_id=f.season_id AND c.match_id=f.match_id
        WHERE f.match_id=api.internal_id('match',$1)`;
 export const DISPLAY_SPEC = {
   family: "match-display", data: true, ttl: [60, 15], maxBytes: 2 * 1024 * 1024,

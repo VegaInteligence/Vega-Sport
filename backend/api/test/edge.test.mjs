@@ -11,7 +11,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { adapt } from "../../../infra/aws/transport.mjs";
+import { createReader } from "../src/db.mjs";
 import { createHandler } from "../src/handler.mjs";
+import { gate, standIn, until } from "./pg-stand-in.mjs";
+
+const LINE_KEYS = ["conditional", "connect", "db", "dbOpens", "dbReopens", "ms", "path", "queries", "reconnect", "request", "route", "status"];
 
 const event = (path = "/api/x", headers = {}) => ({
   version: "2.0",
@@ -66,9 +70,11 @@ test("each request leaves one line: its path without its question, its status, i
   await handle(new Request("https://api.test/api/unknown?player=p_secret", { headers: { "If-None-Match": 'W/"x"' } }));
   assert.equal(lines.length, 2);
   const [health, unknown] = lines.map((line) => JSON.parse(line));
-  // GH204 (FAILURE_MODES_OPTIMISATIONS.md): its route too, `other` for a path no route serves.
-  assert.deepEqual(Object.keys(health).sort(), ["conditional", "db", "ms", "path", "queries", "request", "route", "status"]);
+  // GH204 (FAILURE_MODES_OPTIMISATIONS.md): its route too, `other` for a path no route serves; GH140: whether it opened
+  // the copy's connection (a read without a pool opens none).
+  assert.deepEqual(Object.keys(health).sort(), LINE_KEYS);
   assert.deepEqual([health.request, health.path, health.route, health.status, health.queries, health.conditional], ["read", "/api/health", "health", 200, 1, false]);
+  assert.deepEqual([health.connect, health.reconnect, health.dbOpens, health.dbReopens], [false, false, 0, 0]);
   assert.equal(typeof health.ms, "number");
   assert.equal(typeof health.db, "number");
   assert.deepEqual([unknown.path, unknown.route, unknown.status, unknown.conditional], ["/api/unknown", "other", 404, true]);
@@ -99,4 +105,78 @@ test("a log that fails takes no answer with it", async () => {
     },
   });
   assert.equal((await handle(new Request("https://api.test/api/health"))).status, 200);
+});
+
+// GH140 (FAILURE_MODES_OPTIMISATIONS.md, written before these tests): the reader of api-index.mjs (one connection) on
+// pg-pool's own pool over a stand-in for pg's client (pg-stand-in.mjs), the line of each request.
+const HEALTHY = [{ revision: "7", ready: true }];
+function copy(t, answer) {
+  const { Pool, base } = standIn(answer);
+  const reader = createReader("postgresql://vega_reader:s3cret@db.internal:5432/vega_v2", { Pool, max: 1, role: "vega_read", idleSessionMs: 120_000 });
+  t.after(() => void reader.end().catch(() => {}));
+  return { reader, base };
+}
+const opening = (line) => [line.status, line.queries, line.connect, line.reconnect, line.dbOpens, line.dbReopens];
+
+test("GH140-a–c, f, l: each line says whether its request opened the copy's connection, for the request that asked", async (t) => {
+  const held = gate();
+  let asked = 0;
+  const refused = Object.assign(new Error("canceling statement due to statement timeout"), { severity: "ERROR", code: "57014" });
+  const { reader, base } = copy(t, () => (asked++ === 0 ? held.then(() => refused) : HEALTHY));
+  const lines = [];
+  const handle = createHandler({ read: reader.read, log: (line) => lines.push(line) });
+  const errors = [];
+  const original = console.error;
+  console.error = (...args) => errors.push(args);
+  try {
+    // A asks first and holds the one connection; B waits for it. The base refuses A's statement: A's connection is
+    // dropped, and B's is opened inside A's callback, in A's async context.
+    const a = handle(new Request("https://api.test/api/health"));
+    const b = handle(new Request("https://api.test/api/health"));
+    await until(() => base.sent.length === 1);
+    held.open();
+    assert.deepEqual([(await a).status, (await b).status], [503, 200]);
+  } finally {
+    console.error = original;
+  }
+  // The refusal's own line, as before (alerts.yaml counts it); the request line says none of it.
+  assert.deepEqual(errors, [["read failed", "57014", "/api/health"]]);
+  const [la, lb] = lines.map((line) => JSON.parse(line));
+  assert.deepEqual(opening(la), [503, 1, true, false, 1, 0], "f: A opened the copy's first connection");
+  assert.deepEqual(opening(lb), [200, 1, true, true, 1, 1], "f: B's connection is B's");
+  // b: the next request reuses B's connection; c: a request without a statement opens none.
+  assert.equal((await handle(new Request("https://api.test/api/health"))).status, 200);
+  assert.equal((await handle(new Request("https://api.test/api/status"))).status, 200);
+  const [warm, none] = lines.slice(2).map((line) => JSON.parse(line));
+  assert.deepEqual(opening(warm), [200, 1, false, false, 0, 0], "b");
+  assert.deepEqual(opening(none), [200, 0, false, false, 0, 0], "c");
+  assert.deepEqual(base.clients.length, 2);
+  // l: the line's keys, booleans and integers only; nothing of the statement, its values, the error or the connection.
+  for (const line of lines) {
+    const parsed = JSON.parse(line);
+    assert.deepEqual(Object.keys(parsed).sort(), LINE_KEYS);
+    for (const key of ["connect", "reconnect"]) assert.equal(typeof parsed[key], "boolean", key);
+    for (const key of ["dbOpens", "dbReopens"]) assert.ok(Number.isInteger(parsed[key]), key);
+    for (const leak of ["SELECT", "publication", "canceling", "57014", "s3cret", "vega_reader", "db.internal", "vega_v2", "role"])
+      assert.ok(!line.includes(leak), `${leak} in ${line}`);
+  }
+});
+
+test("GH140-k: a log that throws, the counts wired, takes no answer with it; without a log no count is asked", async (t) => {
+  const { reader } = copy(t, () => HEALTHY);
+  const handle = createHandler({
+    read: reader.read,
+    log: () => {
+      throw new Error("log unavailable");
+    },
+  });
+  const response = await handle(new Request("https://api.test/api/health"));
+  assert.deepEqual([response.status, await response.json()], [200, { source: "AWS", status: "ok", revision: "7", release: null }]);
+  // Without a log, each statement reaches the reader as its route sent it; with one, it carries its request's count.
+  const seen = [];
+  const answer = async (...args) => (seen.push(args), HEALTHY);
+  await createHandler({ read: answer })(new Request("https://api.test/api/health"));
+  await createHandler({ read: answer, log: () => {} })(new Request("https://api.test/api/health"));
+  assert.deepEqual(seen.map((args) => args.length), [1, 3]);
+  assert.equal(typeof seen[1][2].opened, "function");
 });

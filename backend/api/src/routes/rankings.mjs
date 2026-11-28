@@ -391,6 +391,28 @@ async function matchOdds(read, params) {
 }
 
 /**
+ * A match minute by minute in one statement (GH141, FAILURE_MODES_OPTIMISATIONS.md): its strengths, only when its
+ * forecast can be read, and with them the latest forecast and in-play models, the line-up forecast, the clock and the
+ * goals and dismissals with a side in order. No row: nothing else is read (each join runs for the row only). The
+ * models and the line-up forecast are typed columns, under names none of them shares with the strengths (`has_…` says
+ * one was found); the events, integers and text, in JSON; the events and the clock bound to the row's season.
+ */
+export const LIVE_SQL = `SELECT s.*, f.*, m.*, l.*,
+    (SELECT c.minute FROM api.match_clocks c WHERE c.season_id=s.season_id AND c.match_key=s.match_key LIMIT 1) AS clock_minute,
+    (SELECT coalesce(json_agg(json_build_object('kind',e.kind,'minute',e.minute,'added',e.minute_added,'side',e.side) ORDER BY e.seq),'[]'::json)
+       FROM api.match_inplay_events e WHERE e.season_id=s.season_id AND e.match_key=s.match_key AND e.side IS NOT NULL) AS events
+  FROM api.match_strengths s
+  LEFT JOIN LATERAL (SELECT true AS has_forecast, x.home_base, x.home_slope, x.away_base, x.away_slope, x.rho
+    FROM api.forecast_models x ORDER BY x.fitted_at DESC, x.id DESC LIMIT 1) f ON true
+  LEFT JOIN LATERAL (SELECT true AS has_model, x.version, x.fitted_at, x.matches, x.q1, x.q2, x.q3, x.q4, x.q5, x.q6, x.after_90,
+      x.down, x.up, x.ahead, x.behind
+    FROM api.inplay_models x ORDER BY x.fitted_at DESC, x.id DESC LIMIT 1) m ON true
+  LEFT JOIN LATERAL (SELECT true AS has_lineups, x.home_shift, x.away_shift, x.home_strength, x.away_strength
+    FROM api.match_lineup_forecasts x WHERE x.match_key=s.match_key LIMIT 1) l ON true
+  WHERE s.match_key=api.internal_id('match',$1) AND s.home_elo IS NOT NULL AND s.away_elo IS NOT NULL
+    AND s.status IN ('finished','in_play','not_started')`;
+
+/**
  * A match minute by minute: win, draw and loss from the forecast's expected goals, the
  * score, the clock and the dismissals (dashboard/shared/inplay.js). A finished match runs to the 90th
  * minute, where its last point is its result; a match in play stops at its clock. A finished
@@ -407,22 +429,17 @@ async function liveProbability(read, params) {
   validateParams(params, ["match"]);
   const id = params.get("match");
   if (!MATCH.test(id || "")) reject(400, "Paramètre invalide.");
-  const [s] = await read("SELECT * FROM api.match_strengths WHERE match_key=api.internal_id('match',$1)", [id]);
+  const [s] = await read(LIVE_SQL, [id]);
   if (!s || s.home_elo === null || s.away_elo === null || !["finished", "in_play", "not_started"].includes(s.status)) reject(404, "Donnée indisponible.");
-  const at = [s.season_id, s.match_key];
-  const [[forecast], [model], events, [clock], [lineups]] = await Promise.all([
-    read("SELECT * FROM api.forecast_models ORDER BY fitted_at DESC, id DESC LIMIT 1"),
-    read("SELECT * FROM api.inplay_models ORDER BY fitted_at DESC, id DESC LIMIT 1"),
-    read("SELECT kind, minute, minute_added AS added, side FROM api.match_inplay_events WHERE season_id=$1 AND match_key=$2 AND side IS NOT NULL ORDER BY seq", at),
-    read("SELECT minute FROM api.match_clocks WHERE season_id=$1 AND match_key=$2", at),
-    read("SELECT home_shift, away_shift, home_strength, away_strength FROM api.match_lineup_forecasts WHERE match_key=$1", [s.match_key]),
-  ]);
+  // The row is the forecast (home_base, home_slope, away_base, away_slope, rho), the in-play model and the line-up forecast.
+  const forecast = s.has_forecast ? s : null, model = s.has_model ? s : null, lineups = s.has_lineups ? s : null;
+  const { events } = s;
   if (!forecast || !model) reject(404, "Donnée indisponible.");
   const finished = s.status === "finished";
   const goals = (side) => events.filter((e) => e.kind === "goal" && e.side === side).length;
   // A finished match whose goal events do not give its score has no timeline to show.
   if (finished && (goals("home") !== s.home_score || goals("away") !== s.away_score)) reject(404, "Donnée indisponible.");
-  const seen = Math.max(clock?.minute ?? 0, ...events.map((e) => e.minute), 0);
+  const seen = Math.max(s.clock_minute ?? 0, ...events.map((e) => e.minute), 0);
   // `?? null`: a base without migration 166 has neither column. An event past the 90th says extra time
   // as well: added time is minute 90 with `added`, and the source's matches carry no extra-time score.
   const extra = finished && ((s.home_score_et ?? null) !== null || (s.home_penalty_score ?? null) !== null || events.some((e) => e.minute > 90));

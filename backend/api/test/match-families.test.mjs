@@ -8,7 +8,10 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { context, get, skip } from "./context.mjs";
+import { context, counting, get, skip } from "./context.mjs";
+import { createHandler } from "../src/handler.mjs";
+import { networkBody } from "../src/match-families.mjs";
+import { FIXTURE_SQL } from "../src/routes/match-details.mjs";
 
 // The shared seed runs first (context.mjs); this file's database is the real match only.
 before(() => {
@@ -99,6 +102,53 @@ test("advanced team and player values, pass networks", { skip }, async () => {
   });
   assert.deepEqual(numbers(sorted(network)), numbers(sorted(source)));
   for (const t of network.networks) assert.ok(t.nodes.every((n, i) => !i || t.nodes[i - 1].passes >= n.passes));
+});
+
+// GH141-h, i (FAILURE_MODES_OPTIMISATIONS.md, written before these tests): the three families in one statement after the
+// fixture's, the body networkBody gives from the three native statements' rows, order included.
+test("GH141-h, i: a match's pass networks in two statements, the body of the three native statements", { skip }, async () => {
+  const ask = counting(), path = BASE + "/advanced/network";
+  const network = await ask(path);
+  assert.deepEqual([network.status, network.statements.length], [200, 2]);
+  const [f] = await context.reader.read(FIXTURE_SQL, ["m_08LEIz"]);
+  const at = [f.season_id, f.match_id];
+  const [teams, nodes, edges] = await Promise.all(["match_network_rows", "match_network_node_rows", "match_network_edge_rows"]
+    .map((view) => context.reader.read(`SELECT * FROM api.${view} WHERE season_id=$1 AND match_id=$2`, at)));
+  assert.ok(teams.length === 2 && nodes.length && edges.length, "the real match has both teams' networks");
+  assert.deepEqual(network.body, JSON.parse(JSON.stringify({ data: networkBody(f, teams, nodes, edges) })));
+  for (const [headers, method, status] of [[{}, "HEAD", 200], [{ "if-none-match": network.etag }, "GET", 304]]) {
+    const r = await ask(path, headers, method);
+    assert.deepEqual([r.status, r.etag, r.cache, r.statements.length], [status, network.etag, network.cache, 1], method);
+  }
+  const unknown = await ask("/api/matches/m_zzzzzz/advanced/network");
+  assert.deepEqual([unknown.status, unknown.statements.length], [404, 1]);
+});
+
+// GH141-i, j: a stand-in read, the fixture's statement and the families' one as JSON carries them (row_to_json): a real's
+// text for a finite one, a string for NaN and ±Infinity.
+test("GH141-i, j: a network not collected is a 404 in one statement; reals through JSON are the typed rows' numbers", async () => {
+  const fixture = { id: "m_aaaaa1", season_id: 2025, match_id: 1, revision: "3", status: "finished", home_team_id: "t_aaaaa1", network: "ok" };
+  const at = { season_id: 2025, match_id: 1 };
+  const teams = [
+    { ...at, internal_team_id: 2, team_id: "t_aaaaa2", team_name: "Union Sud", window_kind: "full", window_until_s: null, centralization: Infinity },
+    { ...at, internal_team_id: 1, team_id: "t_aaaaa1", team_name: "Olympique Été", window_kind: "full", window_until_s: 5400.5, centralization: Number.NaN },
+  ];
+  const node = (id, name, passes, reals) => ({ ...at, internal_team_id: 1, player_id: id, name, shirt: 10, passes, passes_received: 4, degree: 3, strength: 7,
+    avg_x: 0.1, avg_y: 52.25, betweenness: 0.3333333432674408, clustering: null, ...reals });
+  const nodes = [node("p_aaaab2", "Marc Petit", 12, { avg_x: -Infinity, betweenness: Number.NaN }), node("p_aaaab1", "Élie Durand", 30, {})];
+  const edges = [{ ...at, internal_team_id: 1, passes: 9, from_id: "p_aaaab1", from_name: "Élie Durand", from_shirt: 10, to_id: "p_aaaab2", to_name: "Marc Petit", to_shirt: null }];
+  const json = (rows) => JSON.parse(JSON.stringify(rows, (key, value) => (typeof value === "number" && !Number.isFinite(value) ? String(value) : value)));
+  const statements = [];
+  const read = (network) => async (sql) => {
+    statements.push(sql);
+    return /api\.fixtures/.test(sql) ? [{ ...fixture, network }] : [{ teams: json(teams), nodes: json(nodes), edges: json(edges) }];
+  };
+  const ask = (network) => createHandler({ read: read(network) })(new Request("https://api.test/api/matches/m_aaaaa1/advanced/network"));
+  const served = await ask("ok");
+  assert.deepEqual([served.status, statements.length], [200, 2]);
+  assert.deepEqual(await served.json(), JSON.parse(JSON.stringify({ data: networkBody(fixture, teams, nodes, edges) })));
+  statements.length = 0;
+  assert.deepEqual([(await ask("pending")).status, statements.length], [404, 1]);
 });
 
 test("heatmaps in both frames", { skip }, async () => {

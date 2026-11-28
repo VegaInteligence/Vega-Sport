@@ -61,6 +61,26 @@ async function revalidated(path, headers, first) {
   assert.match(statements[0], /api\.data_version\(/, `${path}: the 304's statement is the version`);
 }
 
+/** A handler of its own on the test base whose statements are recorded (GH141): `ask(path, headers, method)` gives the
+ * status, tag, freshness, Server-Timing, body (null for a 304 or a HEAD) and the statements the request ran. */
+export function counting() {
+  const statements = [];
+  const handle = createHandler({
+    read: (sql, ...rest) => (statements.push(sql), context.reader.read(sql, ...rest)), mediaBase: "https://media.test/", clock: () => context.now,
+    versions: { strict: true },
+  });
+  return async (path, headers = {}, method = "GET") => {
+    statements.length = 0;
+    const response = await handle(new Request("https://api.test" + path, { headers, method }));
+    heldTag(headers, response);
+    const text = response.status === 304 || method === "HEAD" ? "" : await response.text();
+    return {
+      status: response.status, etag: response.headers.get("etag"), cache: response.headers.get("cache-control"),
+      timing: response.headers.get("server-timing"), body: text ? JSON.parse(text) : null, statements: [...statements],
+    };
+  };
+}
+
 export async function get(path, headers = {}) {
   const response = await context.handle(new Request("https://api.test" + path, { headers }));
   heldTag(headers, response);
