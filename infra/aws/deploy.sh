@@ -17,6 +17,12 @@
 # on (backend/account/DEPLOYMENT.md; its preflight runs first); then a check of the home's personal read through the
 # distribution (infra/aws/smoke-favourites.mjs).
 #
+# DEPLOY_COMPONENTS=worker (VI-135; all, or unset, is the whole Deploy above): the worker and the backfill alone, under the
+# same state and lock: the image built or reused, its migration files compared with those of the deployed images
+# (infra/aws/migration_manifest.py), one ImageTag update of the existing worker stack using its deployed template, then the stack and the services
+# checked. Nothing else: no migration, no secret read or rotated (their versions only), no other stack (infra/aws/README.md,
+# Worker only).
+#
 # Environment: WORKER_DESIRED_COUNT (0, 1, or keep/unset: the count a Deploy saved when it stopped the services and could
 # not restore them, else the stack's, else 1 on a first install), BACKFILL_DESIRED_COUNT (unset: the count a Deploy saved
 # when it stopped the services and could not restore them, else the stack's: 1 while history is collected, 0 once it is), IMPORT_ARCHIVES
@@ -42,6 +48,8 @@ RELEASES="vega-v2-releases-$ACCOUNT-$AWS_REGION"
 STATE_BUCKET="vega-v2-deploy-state-$ACCOUNT-$AWS_REGION"
 SUBNETS=subnet-0233a9567335f56ce,subnet-04c9af303f55d9718,subnet-0e72516f361932c15
 TAG=${IMAGE_TAG:-$(git rev-parse HEAD)}
+COMPONENTS=${DEPLOY_COMPONENTS:-all}
+case "$COMPONENTS" in all|worker) ;; *) echo "DEPLOY_COMPONENTS is all or worker" >&2; exit 1 ;; esac
 # What is deployed is the commit $TAG and nothing else: the image, the two Lambda packages
 # and the templates are read from a clean export of that commit, never from the checkout.
 # (A checkout can be edited while the deploy runs, by hand or by a second session: the
@@ -51,6 +59,10 @@ if [ -z "${VEGA_V2_DEPLOY_EXPORT:-}" ]; then
   export_dir=$(mktemp -d)
   trap 'rm -rf "$export_dir"' EXIT
   git archive --format=tar "$TAG" backend infra dashboard | tar -xf - -C "$export_dir"
+  if [ "$COMPONENTS" = worker ] && ! grep -Fqx 'COMPONENTS=${DEPLOY_COMPONENTS:-all}' "$export_dir/infra/aws/deploy.sh"; then
+    echo "deploy: commit $TAG does not support worker mode" >&2
+    exit 1
+  fi
   (cd "$export_dir" && IMAGE_TAG=$TAG VEGA_V2_DEPLOY_EXPORT=1 bash infra/aws/deploy.sh)
   exit
 fi
@@ -59,6 +71,18 @@ case "$COUNT" in 0|1|keep) ;; *) echo "WORKER_DESIRED_COUNT is 0, 1 or keep" >&2
 MIGRATE_ROUNDS=${MIGRATE_WAIT_ROUNDS:-6}
 case "$MIGRATE_ROUNDS" in [1-9]|[1-9][0-9]) ;; *) echo "MIGRATE_WAIT_ROUNDS is 1 to 99" >&2; exit 1 ;; esac
 case "${BACKFILL_DESIRED_COUNT:-}" in ""|0|1) ;; *) echo "BACKFILL_DESIRED_COUNT is 0 or 1" >&2; exit 1 ;; esac
+# VI-135: what this run deploys: all (the default) or worker. A worker-only run refuses what it would not do rather than
+# leave it undone in silence.
+if [ "$COMPONENTS" = worker ]; then
+  asked=
+  [ "${IMPORT_ARCHIVES:-false}" = true ] && asked+=" IMPORT_ARCHIVES=true (the archive import);"
+  [ -n "${BACKFILL_DESIRED_COUNT:-}" ] && asked+=" BACKFILL_DESIRED_COUNT (the backfill keeps the stack's count);"
+  [ -n "${WAF_MODE:-}" ] && asked+=" WAF_MODE (the web ACL);"
+  if [ -n "$asked" ]; then
+    echo "deploy: DEPLOY_COMPONENTS=worker deploys the worker and the backfill alone, and this run asks for more:$asked a full Deploy's (components all); nothing is changed" >&2
+    exit 1
+  fi
+fi
 # Copies of the read API's function that may run at once (api.yaml, ReservedConcurrency).
 # Passed on every deploy: CloudFormation keeps a stack's previous value for a parameter
 # that is not. The login's connection limit follows it (backend/vega/migrate.py).
@@ -67,7 +91,7 @@ API_COPIES=32
 # adapter (vega/live/adapters.py) and turns on the schedule that starts it.
 ARCHIVES=${ARCHIVE_SOURCES_BUCKET:-}
 role=(); [ -n "${CFN_ROLE:-}" ] && role=(--role-arn "$CFN_ROLE")
-if [ -z "${PITCHAPI_API_KEY:-}" ] && [ -n "${PITCHAPI_API_KEY_FILE:-}" ]; then PITCHAPI_API_KEY=$(cat "$PITCHAPI_API_KEY_FILE"); export PITCHAPI_API_KEY; fi
+if [ "$COMPONENTS" = all ] && [ -z "${PITCHAPI_API_KEY:-}" ] && [ -n "${PITCHAPI_API_KEY_FILE:-}" ]; then PITCHAPI_API_KEY=$(cat "$PITCHAPI_API_KEY_FILE"); export PITCHAPI_API_KEY; fi
 [ "$(aws sts get-caller-identity --query Account --output text)" = "$ACCOUNT" ] || { echo "wrong AWS account" >&2; exit 1; }
 # The pinned archive sources live in the stack's own release bucket (data/sources/), next to
 # the function packages: nothing of the stack reads another bucket.
@@ -155,7 +179,9 @@ PREREQUISITES
   account_on=(Account=true)
   echo "account: on: every prerequisite is present; the account API is deployed at step 11 (stack vega-v2-account)"
 }
-account_preflight
+# A worker-only run (VI-135) reads neither switch: the account API, PannaData's login and the worker stack's Account and
+# Panna stay as they are.
+if [ "$COMPONENTS" = all ]; then account_preflight; else echo "account, panna: not read (worker only: the account API, PannaData's login and the worker stack's Account and Panna are kept)"; fi
 # --- end of the account preflight ---
 # --- PannaData's login (GH278, backend/panna/README.md) ---
 # One switch: SSM /vega/v2/panna-deploy (String), on or off, set by the owner. Absent, nothing of PannaData is touched.
@@ -180,16 +206,25 @@ panna_preflight() {
   panna_on=(Panna=true)
   echo "panna: on: the migrate task applies backend/panna/sql and sets the login vega_v2_panna"
 }
-panna_preflight
+if [ "$COMPONENTS" = all ]; then panna_preflight; fi
 # --- end of the PannaData switch ---
 
 # --- The Deploy's grants and its own state (GH157, GH157.3) -----------------------------------------------------------
 # The roles of deploy-roles.yaml are the owner's (the workflow cannot update them): this Deploy needs their grants of
-# the deploy state, observability and the scoped invocation of the read API (steps 11b and 11c).
-[ "$(output vega-v2-deploy-roles DeployGrants)" = 2 ] || {
-  echo "deploy: stack vega-v2-deploy-roles: its output DeployGrants is not 2: the owner updates it from the Mac with infra/aws/deploy-roles.yaml (infra/aws/README.md, One-time setup); nothing is changed" >&2
-  exit 1
-}
+# the deploy state, observability and the scoped invocation of the read API (steps 11b and 11c), version 2; a worker-only
+# run also pulls the worker's images (VI-135, ecr:GetDownloadUrlForLayer), version 3, which a full Deploy accepts too.
+if [ "$COMPONENTS" = worker ]; then
+  [ "$(output vega-v2-deploy-roles DeployGrants)" = 3 ] || {
+    echo "deploy: stack vega-v2-deploy-roles: its output DeployGrants is not 3: a worker-only Deploy reads the migration files of the worker's images in the registry (docker pull: ecr:GetDownloadUrlForLayer); the owner updates the stack from the Mac with infra/aws/deploy-roles.yaml (infra/aws/README.md, The Deploy's grants); nothing is changed" >&2
+    exit 1
+  }
+else
+  case "$(output vega-v2-deploy-roles DeployGrants)" in
+    2|3) ;;
+    *) echo "deploy: stack vega-v2-deploy-roles: its output DeployGrants is not 2 or 3: the owner updates it from the Mac with infra/aws/deploy-roles.yaml (infra/aws/README.md, One-time setup); nothing is changed" >&2
+       exit 1 ;;
+  esac
+fi
 # Who deploys: a GitHub run (its run and attempt), else a workstation's: host:<this machine>:<its process>:<a token of its
 # own, 32 random hex digits>. A workstation's run holds, from here, a lock every command it starts inherits (descriptor 9
 # on <DEPLOY_LOCK_DIR, /tmp>/vega-deploy-<token>.lock, infra/aws/run_lock.py): while any process of the run lives, it is
@@ -492,6 +527,33 @@ previous_template() {
     return 1
   fi
 }
+# What the services read from SSM, by version only (no value): a rotation gives another revision, which replaces their
+# tasks once so that they read it (step 2); a worker-only run compares it with the stack's (VI-135). ODDS: the optional
+# /vega/v2/odds-api-key (The Odds API, bookmakers' odds of the coming matches), created once.
+secrets_revision() {
+  local name revision=
+  for name in "$@"; do
+    call ssm get-parameter --name "$name" --query '[Parameter.Version,Parameter.LastModifiedDate]' --output text ||
+      { echo "deploy: the version of $name could not be read ($AWS_CODE)" >&2; exit 1; }
+    revision+="$name $AWS_OUT"$'\n'
+  done
+  SECRETS=$(printf '%s' "$revision" | sha256)
+}
+# The worker's image $IMAGE in the registry (step 3, and a worker-only run's): reused when the registry holds it (no build,
+# no push), built and pushed when it answers ImageNotFoundException; any other answer stops the run with nothing stopped.
+push_image() {
+  if call ecr describe-images --repository-name vega-v2-worker --image-ids imageTag="$IMAGE" --query 'imageDetails[0].imageDigest' --output text; then
+    echo "worker image $IMAGE: in the registry, reused (no build, no push)"
+  elif [ "$AWS_CODE" = ImageNotFoundException ]; then
+    aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY"
+    docker build --platform linux/arm64 -f backend/Dockerfile -t "$REGISTRY/vega-v2-worker:$IMAGE" .
+    docker push "$REGISTRY/vega-v2-worker:$IMAGE"
+    echo "worker image $IMAGE: built and pushed"
+  else
+    echo "deploy: the image $IMAGE could not be looked up in the repository ($AWS_CODE): nothing is stopped" >&2
+    exit 1
+  fi
+}
 # Stopped services may be restored at once only when nothing was submitted since they stopped, or when the worker stack,
 # with no operation in progress, still holds the image and template they ran (an update rolled back): GH157.3, the
 # intent before the stack's change. Never on the CLI's word: an answer can be lost after CloudFormation applied it.
@@ -534,9 +596,31 @@ on_exit() {
   fi
   exit "$code"
 }
-trap on_exit EXIT
+# A worker-only run's exit (VI-135): it never restores nor resets anything. What a full Deploy left in the state (services
+# it stopped and their saved counts, a candidate that may be on the stack, a migrate task not settled) is released as it
+# was found, for the next full Deploy; otherwise the state is released idle.
+inherited() { [ "$STATE_PHASE" = stopped ] || [ -n "$STATE_MIGRATE_TOKEN" ] || [ "$STATE_UNSAFE" = true ] || [ "$STATE_CHANGED" = true ]; }
+on_exit_worker() {
+  local code=$?
+  trap - EXIT
+  if [ "$code" != 0 ] && [ "$STATE" = on ]; then
+    if inherited; then release_state || true; else release_state --done || true; fi
+  fi
+  exit "$code"
+}
+if [ "$COMPONENTS" = worker ]; then trap on_exit_worker EXIT; else trap on_exit EXIT; fi
 trap 'exit 130' INT TERM HUP
 take_state
+# A worker-only run starts only from a state no full Deploy left unfinished, before any operation is awaited or a migrate
+# task settled (settle_migrate could replay one).
+if [ "$COMPONENTS" = worker ] && inherited; then
+  left=
+  [ "$STATE_PHASE" = stopped ] && left+=" the worker and the backfill stopped by a full Deploy (saved: worker ${STATE_BEFORE_WORKER:-?}, backfill ${STATE_BEFORE_BACKFILL:-?}), which the next full Deploy starts once its migrations succeed;"
+  [ -n "$STATE_MIGRATE_TOKEN" ] && left+=" the migrate task $STATE_MIGRATE_TOKEN, not settled, which the next full Deploy settles first;"
+  { [ "$STATE_CHANGED" = true ] || [ "$STATE_UNSAFE" = true ]; } && left+=" a candidate that may be on the worker stack (changed $STATE_CHANGED, unsafe $STATE_UNSAFE);"
+  echo "deploy: worker only: the Deploy state holds what a full Deploy left:$left a worker-only run neither restores nor resets it: run the Deploy with components all; nothing is changed" >&2
+  exit 1
+fi
 # The worker stack as it is: absent (a first install), else its parameters; any other answer stops here. A stack in
 # REVIEW_IN_PROGRESS was never created (a first install's change set never executed).
 WORKER_STACK=
@@ -547,6 +631,8 @@ elif ! { [ "$AWS_CODE" = ValidationError ] && [[ $AWS_ERROR == *"does not exist"
   echo "deploy: the stack vega-v2-worker could not be read ($AWS_CODE): nothing is changed" >&2
   exit 1
 fi
+# A worker-only run changes the worker stack alone: its operation in progress is the one it awaits.
+if [ "$COMPONENTS" = worker ]; then STACKS="vega-v2-worker:$AWS_REGION"; fi
 reconcile
 worker_param() {
   call cloudformation describe-stacks --stack-name vega-v2-worker --query "Stacks[0].Parameters[?ParameterKey=='$1'].ParameterValue" --output text ||
@@ -573,7 +659,7 @@ else
   echo "deploy: the repository vega-v2-worker could not be read ($AWS_CODE): nothing is stopped" >&2
   exit 1
 fi
-if [ -n "$WORKER_STACK" ] || [ "$REPO" = present ]; then
+if [ "$COMPONENTS" = all ] && { [ -n "$WORKER_STACK" ] || [ "$REPO" = present ]; }; then
   if ! call s3api head-bucket --bucket "$RELEASES"; then
     case "$AWS_CODE" in
       404|NoSuchBucket|NotFound)
@@ -583,6 +669,101 @@ if [ -n "$WORKER_STACK" ] || [ "$REPO" = present ]; then
     exit 1
   fi
 fi
+# --- VI-135: the worker alone (DEPLOY_COMPONENTS=worker; infra/aws/README.md, Worker only) ---
+# The existing worker stack's two services take the candidate's image and nothing else changes: the deployed template
+# (the candidate's own, by TemplateDigest), the tasks' pinned image (TaskImageTag: the migrate and archive task
+# definitions do not change), both service counts and the remaining stack parameters keep their deployed values. Only when the candidate holds the migration files of both deployed images: the services' (ImageTag) and the
+# tasks' (TaskImageTag), which an interrupted full Deploy may have advanced alone. Files compared, not the base's journal.
+if [ "$COMPONENTS" = worker ]; then
+  DIGEST=$(sha256 infra/aws/worker.yaml)
+  TASK_IMAGE= why=
+  if [ -z "$WORKER_STACK" ]; then
+    why="the stack vega-v2-worker does not exist (a first install): a full Deploy creates it"
+  elif [ "$REPO" = absent ]; then
+    why="the repository vega-v2-worker does not exist while the stack vega-v2-worker does: the owner recreates it (infra/aws/README.md)"
+  else
+    TASK_IMAGE=$(worker_param TaskImageTag)
+    stack_status vega-v2-worker "$AWS_REGION"
+    case "$STATUS" in
+      CREATE_COMPLETE|UPDATE_COMPLETE|UPDATE_ROLLBACK_COMPLETE|IMPORT_COMPLETE|IMPORT_ROLLBACK_COMPLETE)
+        if ! [[ $CUR_DIGEST =~ ^[a-f0-9]{64}$ ]]; then
+          why="the stack vega-v2-worker names no TemplateDigest (no Deploy recorded its template): a full Deploy applies and records the candidate's"
+        elif [ "$CUR_DIGEST" != "$DIGEST" ]; then
+          why="the stack's template (TemplateDigest ${CUR_DIGEST:0:12}) is not the candidate's infra/aws/worker.yaml (${DIGEST:0:12}): a template change is a full Deploy's"
+        elif ! [[ $TASK_IMAGE =~ ^[a-f0-9]{12,64}$ ]]; then
+          why="the stack's TaskImageTag is empty: the migrate and archive tasks would take the services' new image; a full Deploy pins it"
+        elif ! [[ $CUR_IMAGE =~ ^[a-f0-9]{12,64}$ ]]; then
+          why="the stack's ImageTag ('$CUR_IMAGE') is not an image identity"
+        elif ! [[ $CUR_COUNT =~ ^[01]$ && $CUR_BACKFILL =~ ^[01]$ ]]; then
+          why="the stack's counts are not 0 or 1 (DesiredCount '$CUR_COUNT', BackfillDesiredCount '$CUR_BACKFILL')"
+        elif [ "$COUNT" != keep ] && [ "$COUNT" != "$CUR_COUNT" ]; then
+          why="run a full Deploy to change the worker count and update its alarms"
+        fi ;;
+      *) why="the stack vega-v2-worker is $STATUS: CloudFormation cannot update it now" ;;
+    esac
+    # A secret rotated in SSM since the last full Deploy: the services' new tasks would read the new value while the logins
+    # still hold the old one (a full Deploy's migrate task sets them first).
+    if [ -z "$why" ]; then
+      collect_parameter=$(worker_param CollectUrlParameter)
+      calc_parameter=$(worker_param CalcUrlParameter)
+      pitch_parameter=$(worker_param PitchApiKeyParameter)
+      odds_parameter=$(worker_param OddsApiKeyParameter)
+      if [ -z "$collect_parameter" ] || [ -z "$calc_parameter" ] || [ -z "$pitch_parameter" ]; then
+        why="the worker stack must name the collect, calc and PitchAPI secret parameters"
+      elif ! [[ $CUR_SECRETS =~ ^[a-f0-9]{64}$ ]]; then
+        why="the stack vega-v2-worker names no SecretsRevision: a full Deploy records the revision of the services' secrets"
+      else
+        parameters=("$collect_parameter" "$calc_parameter" "$pitch_parameter" ${odds_parameter:+"$odds_parameter"})
+        TZ=UTC secrets_revision "${parameters[@]}"
+        if [ "$SECRETS" != "$CUR_SECRETS" ] && [ "${TZ:-}" != UTC ]; then
+          # Accept a digest recorded by a legacy full deploy from this workstation.
+          secrets_revision "${parameters[@]}"
+        fi
+        if [ "$SECRETS" != "$CUR_SECRETS" ]; then
+          why="the referenced secrets differ from the last full Deploy (SecretsRevision ${CUR_SECRETS:0:12}, now ${SECRETS:0:12}): run a full Deploy to reconcile them"
+        fi
+      fi
+    fi
+  fi
+  [ -z "$why" ] || { echo "deploy: worker only: $why; nothing is changed" >&2; exit 1; }
+  COUNT=$CUR_COUNT
+  BACKFILL=$CUR_BACKFILL
+  echo "== W1. Worker image (linux/arm64) of commit $TAG"
+  IMAGE=$(python3 infra/aws/image_identity.py) || { echo "deploy: the worker image's identity could not be computed: nothing is changed" >&2; exit 1; }
+  push_image
+  echo "== W2. Migration files of the candidate and of the deployed images (ImageTag $CUR_IMAGE, TaskImageTag $TASK_IMAGE)"
+  if [ "$IMAGE" != "$CUR_IMAGE" ] || [ "$IMAGE" != "$TASK_IMAGE" ]; then
+    aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY"
+  fi
+  code=0
+  python3 infra/aws/migration_manifest.py --registry "$REGISTRY" --candidate "$IMAGE" ImageTag="$CUR_IMAGE" TaskImageTag="$TASK_IMAGE" || code=$?
+  case "$code" in
+    0) ;;
+    3) echo "deploy: worker only: the candidate's migration files are not those of the deployed images (above): a migration is a full Deploy's (components all); the worker stack is unchanged" >&2; exit 1 ;;
+    *) echo "deploy: worker only: the images' migration files could not be read (above). Check repository access and the pinned images. A full Deploy refreshes expired pins" >&2; exit 1 ;;
+  esac
+  echo "== W3. Update worker ($COUNT tasks) and backfill ($BACKFILL tasks) to image $IMAGE"
+  hold_state
+  if ! previous_template ImageTag="$IMAGE"; then
+    echo "deploy: worker only: the update of vega-v2-worker did not complete (${AWS_CODE:-its waiter}): its outcome is CloudFormation's (the stack may hold the candidate already); nothing else is changed and the run ends without done. The next Deploy awaits any operation on the stack before it changes anything; a worker-only Deploy of this commit then finds the update made, or makes it once" >&2
+    exit 1
+  fi
+  [ "$AWS_CODE" = ValidationError ] && echo "worker stack: nothing to update (it holds this image and these counts already)"
+  echo "== W4. The worker stack and the services as deployed (the worker and the backfill only: no read API, no HTTP check)"
+  failed=
+  for pair in "ImageTag=$IMAGE" "TaskImageTag=$TASK_IMAGE" "DesiredCount=$COUNT" "BackfillDesiredCount=$BACKFILL" "TemplateDigest=$CUR_DIGEST"; do
+    key=${pair%%=*}
+    if call cloudformation describe-stacks --stack-name vega-v2-worker --query "Stacks[0].Parameters[?ParameterKey=='$key'].ParameterValue" --output text && [ "$AWS_OUT" = "${pair#*=}" ]; then continue; fi
+    failed+=" $key (${AWS_CODE:-$AWS_OUT}, not ${pair#*=})"
+  done
+  if [ -n "$failed" ]; then echo "worker stack: FAILED:$failed"; else echo "worker stack: ImageTag, TaskImageTag, DesiredCount, BackfillDesiredCount and TemplateDigest as deployed"; fi
+  node infra/aws/verify-deploy.mjs --services "vega-v2-worker=$COUNT@$(output vega-v2-worker WorkerTaskDefinition),vega-v2-backfill=$BACKFILL@$(output vega-v2-worker BackfillTaskDefinition)" || failed+=" services"
+  [ -z "$failed" ] || { echo "deploy: FAILED the checks above: the worker stack keeps what it was given; the run ends without done" >&2; exit 1; }
+  release_state --done
+  echo "done"
+  exit 0
+fi
+# --- end of the worker alone ---
 # A first install's target (GH157.3): saved as a stop's counts are, before anything is created; a failure afterwards
 # leaves it for the next run (keep). Never written over saved counts.
 if [ -z "$WORKER_STACK" ] && [ "$REPO" = absent ] && [ "$STATE_PHASE" != stopped ]; then
@@ -620,17 +801,8 @@ stack vega-v2-database database.yaml ${database[@]+"${database[@]}"}
 echo "== 2. Secrets"
 hold_state
 VEGA_ACCOUNT=$ACCOUNT VEGA_PANNA=$PANNA bash infra/aws/ci/secrets.sh
-# Optional, once: /vega/v2/odds-api-key (The Odds API, bookmakers' odds of the coming matches).
 ODDS=$(aws ssm get-parameter --name /vega/v2/odds-api-key --query Parameter.Name --output text 2>/dev/null || true)
-# What the services read from SSM, by version only (no value): a rotation gives another revision, which replaces their
-# tasks once so that they read it.
-SECRETS=
-for name in /vega/v2/collect-database-url /vega/v2/calc-database-url /vega/v2/pitchapi-key ${ODDS:+"$ODDS"}; do
-  call ssm get-parameter --name "$name" --query '[Parameter.Version,Parameter.LastModifiedDate]' --output text ||
-    { echo "deploy: the version of $name could not be read ($AWS_CODE)" >&2; exit 1; }
-  SECRETS+="$name $AWS_OUT"$'\n'
-done
-SECRETS=$(printf '%s' "$SECRETS" | sha256)
+TZ=UTC secrets_revision /vega/v2/collect-database-url /vega/v2/calc-database-url /vega/v2/pitchapi-key ${ODDS:+"$ODDS"}
 DIGEST=$(sha256 infra/aws/worker.yaml)
 worker=(ArchiveSourcesBucket="$ARCHIVES" OddsApiKeyParameter="$ODDS" SecretsRevision="$SECRETS" TemplateDigest="$DIGEST" ${account_on[@]+"${account_on[@]}"} ${panna_on[@]+"${panna_on[@]}"})
 
@@ -647,17 +819,7 @@ elif [ "$REPO" = absent ]; then
   echo "deploy: the repository vega-v2-worker does not exist while the stack vega-v2-worker does: the owner recreates it (infra/aws/README.md); nothing is stopped" >&2
   exit 1
 fi
-if call ecr describe-images --repository-name vega-v2-worker --image-ids imageTag="$IMAGE" --query 'imageDetails[0].imageDigest' --output text; then
-  echo "worker image $IMAGE: in the registry, reused (no build, no push)"
-elif [ "$AWS_CODE" = ImageNotFoundException ]; then
-  aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY"
-  docker build --platform linux/arm64 -f backend/Dockerfile -t "$REGISTRY/vega-v2-worker:$IMAGE" .
-  docker push "$REGISTRY/vega-v2-worker:$IMAGE"
-  echo "worker image $IMAGE: built and pushed"
-else
-  echo "deploy: the image $IMAGE could not be looked up in the repository ($AWS_CODE): nothing is stopped" >&2
-  exit 1
-fi
+push_image
 
 echo "== 4. Migrations and logins"
 # The migrate task of the image, durable (GH157.3): its intent in the state before RunTask (token, the worker stack's

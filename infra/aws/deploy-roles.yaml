@@ -338,11 +338,13 @@ Resources:
                 Action: 'iam:PassRole'
                 Resource: !GetAtt CloudFormationRole.Arn
               # ecr:DescribeRepositories: step 3 asks whether the repository exists (a first install) before anything stops
-              # (GH157-q: called since GH157, granted since the review of 26 November 2026).
+              # (GH157-q: called since GH157, granted since the review of 26 November 2026). ecr:GetDownloadUrlForLayer
+              # (VI-135, DeployGrants 3): a worker-only Deploy pulls the candidate's and the deployed images of this
+              # repository to compare their migration files (infra/aws/migration_manifest.py).
               - Sid: Image
                 Effect: Allow
                 Action: ['ecr:BatchCheckLayerAvailability', 'ecr:InitiateLayerUpload', 'ecr:UploadLayerPart', 'ecr:CompleteLayerUpload',
-                         'ecr:PutImage', 'ecr:BatchGetImage', 'ecr:DescribeImages', 'ecr:DescribeRepositories']
+                         'ecr:PutImage', 'ecr:BatchGetImage', 'ecr:GetDownloadUrlForLayer', 'ecr:DescribeImages', 'ecr:DescribeRepositories']
                 Resource: !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/vega-v2-worker'
               - Sid: RegistryLogin
                 Effect: Allow
@@ -445,10 +447,11 @@ Outputs:
   # (backend/account/DEPLOYMENT.md, section 3).
   AccountGrants: {Value: '2'}
   # Read by deploy.sh's preflight. Version 1 covers the Deploy state and observability
-  # (GH157, GH171, GH204); version 2 adds the read API's scoped origin invocation (GH257).
-  # The owner updates this stack before the next Deploy.
+  # (GH157, GH171, GH204); version 2 adds the read API's scoped origin invocation (GH257);
+  # version 3 the pull of the worker's images (VI-135), which a worker-only Deploy requires
+  # and a full Deploy does not (it accepts 2 or 3). The owner updates this stack.
   DeployStateBucket: {Value: !Ref DeployStateBucket}
-  DeployGrants: {Value: '2'}
+  DeployGrants: {Value: '3'}
   PilotRoleArn: {Value: !GetAtt PilotRole.Arn}
   DeployRoleArn: {Value: !GetAtt DeployRole.Arn}
   CloudFormationRoleArn: {Value: !GetAtt CloudFormationRole.Arn}

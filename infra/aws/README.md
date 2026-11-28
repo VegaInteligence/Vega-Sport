@@ -131,6 +131,21 @@ CI exercises more public readers through the real handler and the disposable Pos
 unrelated populations, and the paths, status codes and timings exercised by the shared contract tests. The origin
 probes cover a small sample after release. A direct Invoke does not flush PostgreSQL buffers.
 
+### Worker only (VI-135)
+
+Run `gh workflow run "Deploy" -f components=worker` to update the worker and the backfill in their shared CloudFormation stack. From a workstation, use `DEPLOY_COMPONENTS=worker AWS_PROFILE=statarena bash infra/aws/deploy.sh`. Worker mode uses the deployed worker and backfill counts. Full Deploy applies count changes together with the worker alarms. The `components` input defaults to `all`.
+
+Worker mode needs the existing `vega-v2-worker` stack on the commit's worker template, a pinned `TaskImageTag`, and `DeployGrants` 3 (see [The Deploy's grants](#the-deploys-grants-owner-once-before-the-next-deploy)). It takes the shared Deploy lock and verifies the SSM versions for the secrets referenced by the services. The full Deploy handles first installation, template or migration changes, secret rotation, and the recovery of an interrupted migration.
+
+The workflow builds or reuses the commit's immutable image. It compares the core, account, and Panna migrations and the `vega/migrate.py` entry point with the images named by both `ImageTag` and `TaskImageTag`. An interrupted full deploy can advance the latter before updating the services. The comparison establishes equivalence between the image artifacts. The full Deploy validates the live migration journal.
+
+The CloudFormation update uses the deployed template and sets `ImageTag`. The final check verifies the stack parameters and the two ECS deployments, including their counts and the primary task definitions. A run with the same image still checks ECS. If the API response is lost during an update, rerun the same commit to reconcile the CloudFormation result and verify the services.
+
+
+When specifying a commit from a workstation, select one that includes worker mode. Secret versions use UTC timestamps. A worker run also accepts a matching legacy digest from the current workstation time zone.
+
+The shared ECR repository keeps twenty images. Periodic full deployments refresh the migration, archive, and live image references. Use full Deploy to refresh a pin whose image has expired.
+
 ### Takeover and first install (FAILURE_MODES_OPTIMISATIONS.md GH157.3)
 
 One run deploys at a time: the one holding `s3://vega-v2-deploy-state-<account>-us-east-2/state.json`, the one object of a private, versioned bucket the roles stack creates (One-time setup), so that a first install takes the same lock as any Deploy, before anything is created. Another run's state is never taken over for its age (a suspended workstation, a stalled job wake up), nor on a word alone: a Deploy takes it over when GitHub says that run's attempt `completed` (the workflow's token, `actions: read`; a hosted runner's machine is gone with its job), or, for a workstation's run (`host:<host>:<pid>:<token>`, the host being its short name and a digest of its machine identity, `python3 infra/aws/run_lock.py host`; a machine without one, or with a placeholder, deploys from GitHub Actions only), once its lock is found in this machine's lock directory and free: the run holds from its start a lock that every command it starts inherits (`/tmp/vega-deploy-<token>.lock`, `DEPLOY_LOCK_DIR`, `infra/aws/run_lock.py`; the empty file stays once the run ends), so a shell killed alone while its `aws cloudformation deploy` goes on (its change set created, then executed) still holds it. A lock not found there — the run of another machine (of any name, a clone), this machine's before a restart or a cleaning of /tmp — or a name without a token proves nothing: the owner attests the run dead once its processes are known gone (the machine off or restarted; or the run's shell and every command it started, `aws` among them, stopped), then runs the Deploy:
@@ -156,8 +171,11 @@ A first install is one where the worker stack and the repository are both missin
 ### The Deploy's grants (owner, once, before the next Deploy)
 
 The batch of 26 November 2026 needs new grants and a bucket: the roles stack creates `vega-v2-deploy-state-<account>-<region>` (the Deploy's state); the deploy role reads and writes its `state.json` alone, deploys `vega-v2-edge-logs` (us-east-1), asks whether the repository and the release bucket exist (`ecr:DescribeRepositories`, `s3:ListBucket` on that bucket) and lists the cluster's tasks; the CloudFormation role creates the edge logs' delivery and saved queries (us-east-1), the RDS log group, the dashboard, the Contributor Insights rule and the EventBridge rules of the alarms as their handlers do (their tags, the rules' targets), and may do to the two buckets what AWS's handlers do (the managed policy `vega-v2-cloudformation-buckets`). `backend/tests/test_deploy_grants.py` checks each call of the Deploy against the deploy role, and the buckets' grants against AWS's handler schemas (not against AWS itself). GH257 adds only `lambda:InvokeFunction` on the unqualified ARN of `vega-v2-api` to the Deploy role. The owner applies
-`infra/aws/deploy-roles.yaml` using the One-time setup command before the next Deploy. The workflow's preflight
-requires `DeployGrants` to read `2` before making changes.
+`infra/aws/deploy-roles.yaml` using the One-time setup command before the next Deploy.
+
+VI-135 grants `ecr:GetDownloadUrlForLayer` on `vega-v2-worker` so the worker mode can compare the image artifacts.
+After the change reaches `main`, apply the roles stack with the One-time setup command to publish `DeployGrants` 3
+before using worker mode. Full mode accepts grants versions 2 and 3.
 
 The worker collects whatever fails around the collection: the planner, the calculator, the image copies and the daily pass log their error and the loop goes on (`planner error=…`, `calculator error=…`, `media error=…`, `daily step=<step> error=… retry_at=…`). A step of the daily pass that failed (`analyze`, `archives`, `due`, `sources`, `elo`, `season <id>`) is tried again an hour later, not at the next round. An error of ours shows as `WORKER_<CLASS>@<file>:<line>`, a database error as `DATABASE_<sqlstate>`.
 
