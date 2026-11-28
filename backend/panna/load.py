@@ -62,10 +62,16 @@ class Output:
 
 
 def drift(dataset, schema):
-    """The differences between a file's schema and the dataset's columns: added, removed, retyped, and the columns read
-    through a declared exact conversion ({name: {from, to, rule}}, registry.CONVERTIBLE)."""
+    """The differences between a file's schema and the dataset's columns: added, removed, retyped, the columns read
+    through a declared exact conversion ({name: {from, to, rule}}, registry.CONVERTIBLE), and whether the file holds
+    the dataset's extension: all of its columns, since any of them without the others is drift (FAILURE_MODES.md
+    section 9)."""
     source = {f.name: str(f.type) for f in schema}
-    expected = {c.name: c.pg_type for c in dataset.columns}
+    columns = list(dataset.columns)
+    extended = dataset.extension is not None and any(c.name in source for c in dataset.extension.columns)
+    if extended:
+        columns += dataset.extension.columns
+    expected = {c.name: c.pg_type for c in columns}
     added = sorted(set(source) - set(expected))
     removed = sorted(set(expected) - set(source))
     retyped, conversions = [], {}
@@ -77,24 +83,42 @@ def drift(dataset, schema):
             conversions[name] = {"from": source[name], "to": expected[name], "rule": rule}
         else:
             retyped.append(name)
-    return added, removed, retyped, conversions
+    return added, removed, retyped, conversions, extended
 
 
 def checked(dataset, path, name):
     """The file's drift refused (SCHEMA_DRIFT) or its conversions, then its index (LOSSY_CONVERSION refused there)."""
     schema = pq.ParquetFile(path).schema_arrow
-    added, removed, retyped, conversions = drift(dataset, schema)
+    added, removed, retyped, conversions, extended = drift(dataset, schema)
     if added or removed or retyped:
         raise Failure("SCHEMA_DRIFT", name, added=added, removed=removed, retyped=retyped)
-    return Indexed(path, dataset, conversions, name)
+    return Indexed(path, dataset, conversions, name, extended)
+
+
+# A key's extension segment that is not stored yet (write's targets).
+NEW = "new"
+
+
+def key_digests(indexed, wanted):
+    """{key id: digest of its rows}, and for an extended object {key id: digest of their added columns, or None when
+    every added value of the key is NULL (no extension segment)}."""
+    base, ext, valued = {}, {}, defaultdict(int)
+    for k, _, span, ext_span, n in indexed.pieces(wanted):
+        base.setdefault(k, hashlib.sha256()).update(span)
+        if ext_span is not None:
+            ext.setdefault(k, hashlib.sha256()).update(ext_span)
+            valued[k] += n
+    return {k: h.digest() for k, h in base.items()}, {k: h.digest() if valued[k] else None for k, h in ext.items()}
 
 
 class Indexed:
     """What pass A learnt of one file: each row's key id, the keys, their counts, runs and editions; and that every
     value of a converted column is an exact integer, else the whole object is refused before anything is written."""
 
-    def __init__(self, path, dataset, conversions=None, name=None):
+    def __init__(self, path, dataset, conversions=None, name=None, extended=False):
         self.path, self.dataset, self.conversions = path, dataset, dict(conversions or {})
+        # The dataset of the object's added columns when it holds them (FAILURE_MODES.md section 9), else None.
+        self.extension = dataset.extension if extended else None
         pf = pq.ParquetFile(path)
         self.source_rows = pf.metadata.num_rows
         self.row_groups = pf.metadata.num_row_groups
@@ -151,10 +175,12 @@ class Indexed:
 
     def pieces(self, wanted, batch_rows=BATCH_ROWS):
         """For the keys whose id is set in `wanted` (a bool array): (key id, rows as a RecordBatch, their canonical
-        encoding as bytes), in source order for each key, one piece per batch the key has rows in."""
+        encoding as bytes, the encoding of their added columns or None, how many of them hold an added value), in
+        source order for each key, one piece per batch the key has rows in."""
         pf = pq.ParquetFile(self.path)
         position = 0
-        names = [c.name for c in self.dataset.columns]
+        added = list(self.extension.columns) if self.extension else []
+        names = [c.name for c in self.dataset.columns] + [c.name for c in added]
         for batch in pf.iter_batches(batch_size=batch_rows, columns=names, use_threads=True):
             batch = encode.convert(batch, self.conversions)
             n = batch.num_rows
@@ -167,11 +193,19 @@ class Indexed:
             sorted_codes = codes[order]
             rows = batch.take(pa.array(order, pa.int64()))
             spans = encode.Spans(encode.encode_rows(rows, self.dataset.columns))
+            ext_spans, valued = None, np.zeros(len(order) + 1, dtype=np.int64)
+            if added:
+                ext_spans = encode.Spans(encode.encode_rows(rows, added))
+                holds = np.zeros(len(order), dtype=bool)
+                for c in added:
+                    holds |= ~rows.column(c.name).is_null().to_numpy(zero_copy_only=False)
+                valued[1:] = np.cumsum(holds)
             cuts = np.flatnonzero(np.diff(sorted_codes)) + 1
             starts = np.concatenate(([0], cuts))
             ends = np.concatenate((cuts, [len(sorted_codes)]))
             for a, b in zip(starts.tolist(), ends.tolist()):
-                yield int(sorted_codes[a]), rows.slice(a, b - a), spans.span(a, b)
+                yield (int(sorted_codes[a]), rows.slice(a, b - a), spans.span(a, b),
+                       ext_spans.span(a, b) if ext_spans is not None else None, int(valued[b] - valued[a]))
 
 
 def as_csv(table):
@@ -224,22 +258,24 @@ class Run:
 
     # --- the run --------------------------------------------------------------------------------------------------
     def check_registry(self):
+        for needs, present in (
+                ("002_panna_variants.sql", "to_regclass('panna.current_generations') IS NOT NULL"),
+                ("003_panna_segment_index.sql", "to_regclass('panna_data.opta_events_segment_id') IS NOT NULL "
+                                                "AND to_regclass('panna_data.opta_fixtures_segment_id') IS NOT NULL"),
+                ("005_panna_fixture_extension.sql", "to_regclass('panna_data.opta_fixtures_ext') IS NOT NULL AND EXISTS ("
+                 "SELECT 1 FROM pg_catalog.pg_attribute WHERE attrelid = to_regclass('panna.manifest') "
+                 "AND attname = 'extension_segment_id' AND NOT attisdropped)")):
+            if not self.session.read(lambda c: c.execute(f"SELECT {present}").fetchone()[0]):
+                raise Failure("SCHEMA_VERSION", needs=f"backend/panna/sql/{needs}")
         rows = self.session.read(lambda c: c.execute(
             "SELECT dataset, source_ordinal, name, pg_type, physical_ordinal FROM panna.columns ORDER BY 1, 2").fetchall())
         stored = defaultdict(list)
         for dataset, ordinal, name, pg_type, physical in rows:
             stored[dataset].append((ordinal, name, pg_type, physical))
-        for d in registry.DATASETS.values():
+        for d in registry.TABLES.values():
             mine = [(i, c.name, c.pg_type, c.physical) for i, c in enumerate(d.columns)]
             if stored.get(d.name) != mine:
                 raise Failure("REGISTRY_MISMATCH", d.name)
-        if not self.session.read(lambda c: c.execute(
-                "SELECT to_regclass('panna.current_generations') IS NOT NULL").fetchone()[0]):
-            raise Failure("SCHEMA_VERSION", needs="backend/panna/sql/002_panna_variants.sql")
-        if not self.session.read(lambda c: c.execute(
-                "SELECT to_regclass('panna_data.opta_events_segment_id') IS NOT NULL "
-                "AND to_regclass('panna_data.opta_fixtures_segment_id') IS NOT NULL").fetchone()[0]):
-            raise Failure("SCHEMA_VERSION", needs="backend/panna/sql/003_panna_segment_index.sql")
 
     def start(self):
         def unit(c):
@@ -316,8 +352,10 @@ class Run:
         indexed = checked(dataset, path, asset.name)
         schema = [[f.name, str(f.type)] for f in indexed.schema]
         conversions = indexed.conversions or None
+        extension = indexed.extension.name if indexed.extension else None
         self.out.emit("asset", name=asset.name, sha256=asset.sha256, bytes=asset.bytes, source_rows=indexed.source_rows,
-                      **({"conversions": {c: v["from"] for c, v in indexed.conversions.items()}} if conversions else {}))
+                      **({"conversions": {c: v["from"] for c, v in indexed.conversions.items()}} if conversions else {}),
+                      **({"extension": extension} if extension else {}))
         decisions, orphans, first_seen, scope_load = self.decide(dataset, indexed, asset)
         # Each row's outcome, and a scoped run's checks, before anything of the object is written.
         outcome_of = {}
@@ -349,10 +387,11 @@ class Run:
                       (dataset.name, asset.origin, asset.container, asset.name))
             stream = c.execute("SELECT stream_id FROM panna.streams WHERE origin = %s AND container = %s AND name = %s",
                                (asset.origin, asset.container, asset.name)).fetchone()[0]
-            c.execute("""INSERT INTO panna.loads (stream_id, receipt_id, run_id, as_of, scope_load_id, conversions)
-                         VALUES (%s, %s, %s, %s, %s, %s)
+            c.execute("""INSERT INTO panna.loads (stream_id, receipt_id, run_id, as_of, scope_load_id, conversions, extension)
+                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                          ON CONFLICT (run_id, stream_id, receipt_id) DO NOTHING""",
-                      (stream, receipt, self.run_id, self.as_of, scope_load, json.dumps(conversions) if conversions else None))
+                      (stream, receipt, self.run_id, self.as_of, scope_load, json.dumps(conversions) if conversions else None,
+                       extension))
             load, status = c.execute("SELECT load_id, status FROM panna.loads WHERE run_id = %s AND stream_id = %s AND receipt_id = %s",
                                      (self.run_id, stream, receipt)).fetchone()
             return stream, load, status
@@ -365,11 +404,15 @@ class Run:
             return
         eligible = np.array([outcome_of[k] in ELIGIBLE for k in range(len(indexed.keys))], dtype=bool)
         self.current = asset.name
-        written, reused, rows, digests = self.write(dataset, asset, indexed, eligible, outcome_of, decisions, stream, load)
-        self.complete(dataset, asset, indexed, eligible, outcome_of, decisions, orphans, first_seen, stream, load, counts, digests)
+        written, reused, rows, digests, ext_digests = self.write(dataset, asset, indexed, eligible, outcome_of, decisions,
+                                                                 stream, load)
+        self.complete(dataset, asset, indexed, eligible, outcome_of, decisions, orphans, first_seen, stream, load, counts,
+                      digests, ext_digests)
         self.out.emit("load", name=asset.name, status="complete", segments_written=written, rows_written=rows,
                       segments_reused=reused, outcomes=dict(counts),
-                      **({"conversions": sorted(indexed.conversions)} if indexed.conversions else {}))
+                      **({"conversions": sorted(indexed.conversions)} if indexed.conversions else {}),
+                      **({"extension": extension, "extended_keys": sum(1 for d in ext_digests.values() if d)}
+                         if extension else {}))
         self.remember(dataset, asset, indexed, decisions, load)
         self.evict(path, owned)
 
@@ -419,32 +462,37 @@ class Run:
 
     # --- B and C: what is new, and its rows ------------------------------------------------------------------------
     def write(self, dataset, asset, indexed, eligible, outcome_of, decisions, stream, load):
+        """Each eligible key's pair of segments: its rows, and for an extended object their added columns (none when
+        all are NULL). Each segment is stored once; the manifest names the pair of every key whose pair changed."""
+        ext = indexed.extension
         keys = [indexed.keys[k] for k in np.flatnonzero(eligible).tolist()]
-        stored = defaultdict(dict)
-        for key, digest, segment in self.session.read(lambda c: c.execute(
-                "SELECT key, digest, segment_id FROM panna.segments WHERE dataset = %s AND key = ANY(%s)", (dataset.name, keys)).fetchall()):
-            stored[key][bytes(digest)] = segment
+        names = [dataset.name] + ([dataset.extension.name] if dataset.extension else [])
+        stored, stored_ext = defaultdict(dict), defaultdict(dict)
+        for name, key, digest, segment in self.session.read(lambda c: c.execute(
+                "SELECT dataset, key, digest, segment_id FROM panna.segments WHERE dataset = ANY(%s) AND key = ANY(%s)",
+                (names, keys)).fetchall()):
+            (stored if name == dataset.name else stored_ext)[key][bytes(digest)] = segment
         state_rows = self.session.read(lambda c: c.execute(
-            """SELECT DISTINCT ON (m.key) m.key, m.segment_id, m.load_id = %s
+            """SELECT DISTINCT ON (m.key) m.key, m.segment_id, m.extension_segment_id, m.load_id = %s
                FROM panna.manifest m JOIN panna.loads l ON l.load_id = m.load_id
                WHERE m.stream_id = %s AND (l.status = 'complete' OR m.load_id = %s) ORDER BY m.key, m.load_id DESC""",
             (load, stream, load)).fetchall())
-        state = {key: segment for key, segment, _ in state_rows}
-        mine = {key for key, _, own in state_rows if own}
-        previous = dict(self.session.read(lambda c: c.execute(
-            """SELECT DISTINCT ON (m.key) m.key, m.segment_id FROM panna.manifest m JOIN panna.loads l ON l.load_id = m.load_id
-               WHERE m.stream_id = %s AND l.status = 'complete' ORDER BY m.key, m.load_id DESC""", (stream,)).fetchall()))
-        previous = {k: s for k, s in previous.items() if s is not None}
-        digests = {}
-        if stored or previous:
-            hashers = {}
-            for k, _, span in indexed.pieces(eligible):
-                hashers.setdefault(k, hashlib.sha256()).update(span)
-            digests = {k: h.digest() for k, h in hashers.items()}
-        target = {}  # key id -> existing segment id, or None (new)
+        state = {key: (segment, extension) for key, segment, extension, _ in state_rows}
+        mine = {key for key, _, _, own in state_rows if own}
+        previous = {key: (segment, extension) for key, segment, extension in self.session.read(lambda c: c.execute(
+            """SELECT DISTINCT ON (m.key) m.key, m.segment_id, m.extension_segment_id FROM panna.manifest m
+               JOIN panna.loads l ON l.load_id = m.load_id
+               WHERE m.stream_id = %s AND l.status = 'complete' ORDER BY m.key, m.load_id DESC""", (stream,)).fetchall())
+            if segment is not None}
+        digests, ext_digests = {}, {}
+        if stored or previous or ext is not None:
+            digests, ext_digests = key_digests(indexed, eligible)
+        target = {}  # key id -> (its segment id, or None: new; its extension segment: an id, None (none) or NEW)
         for k in np.flatnonzero(eligible).tolist():
             key = indexed.keys[k]
-            target[k] = stored.get(key, {}).get(digests[k]) if k in digests else None
+            segment = stored.get(key, {}).get(digests[k]) if k in digests else None
+            extension = stored_ext.get(key, {}).get(ext_digests[k], NEW) if ext_digests.get(k) is not None else None
+            target[k] = (segment, extension)
         # A scoped run writes its plan's keys only (at most max_rows rows): no share of the stream to guard.
         if previous and self.scoped_keys(dataset) is None:
             here = set(indexed.keys)
@@ -454,19 +502,20 @@ class Run:
             if len(previous) >= self.churn_min and share > self.churn_limit and not self.allow_churn:
                 self.session.unit(lambda c: c.execute("UPDATE panna.loads SET status = 'refused', reason = 'CHURN_GUARD' WHERE load_id = %s", (load,)))
                 raise Stop("CHURN_GUARD", changed=changed, previous=len(previous))
-        # What needs an entry in this load's manifest: a key whose current segment is not its target.
-        need_new = np.zeros(len(indexed.keys), dtype=bool)
+        # What needs an entry in this load's manifest: a key whose current pair is not its target.
+        need = np.zeros(len(indexed.keys), dtype=bool)
         reuse = []
-        for k, segment in target.items():
+        projected = 0
+        for k, (segment, extension) in target.items():
             key = indexed.keys[k]
             if key in mine:
                 continue
-            if segment is None:
-                need_new[k] = True
-            elif state.get(key) != segment:
+            if segment is None or extension is NEW:
+                need[k] = True
+                projected += int(indexed.counts[k]) * ((segment is None) * dataset.bytes_per_row
+                                                       + (extension is NEW) * (ext.bytes_per_row if ext else 0))
+            elif state.get(key) != (segment, extension):
                 reuse.append(k)
-        rows_to_write = int(indexed.counts[need_new].sum())
-        projected = rows_to_write * dataset.bytes_per_row
         if self.ceiling is not None:
             size = self.session.read(lambda c: c.execute("SELECT pg_database_size(current_database())").fetchone()[0])
             if size + projected > self.ceiling:
@@ -476,77 +525,103 @@ class Run:
             "SELECT coalesce(max(chunk_no) + 1, 0) FROM panna.chunks WHERE load_id = %s", (load,)).fetchone()[0])
         # Reused segments: manifest entries only, in batches.
         for i in range(0, len(reuse), 5000):
-            batch = reuse[i: i + 5000]
             self.budget()
-            entries = [(indexed.keys[k], target[k], k) for k in batch]
-            self.commit_chunk(dataset, indexed, stream, load, chunk_no, [], entries, digests, decisions, outcome_of)
+            items = [{"k": k, "table": None, "segment": target[k][0], "extension": target[k][1]} for k in reuse[i: i + 5000]]
+            self.commit_chunk(dataset, indexed, stream, load, chunk_no, items, decisions, outcome_of)
             chunk_no += 1
-        if not need_new.any():
-            return 0, len(reuse), 0, self.all_digests(indexed, eligible, digests)
-        pending, hashers, collected = defaultdict(list), defaultdict(hashlib.sha256), defaultdict(int)
+        # Existing segments the new entries name: reused alone, or beside a new extension (loads.segments_reused).
+        reused = len(reuse) + sum(1 for k in np.flatnonzero(need).tolist() if target[k][0] is not None)
+        if not need.any():
+            return 0, reused, 0, *self.all_digests(indexed, eligible, digests, ext_digests)
+        pending, hashers, ext_hashers = defaultdict(list), defaultdict(hashlib.sha256), defaultdict(hashlib.sha256)
+        valued, collected = defaultdict(int), defaultdict(int)
         chunk, chunk_rows, chunk_bytes = [], 0, 0
-        for k, piece, span in indexed.pieces(need_new):
+        for k, piece, span, ext_span, n in indexed.pieces(need):
             pending[k].append(piece)
             hashers[k].update(span)
-            collected[k] += piece.num_rows
             chunk_bytes += len(span)
+            if ext_span is not None:
+                ext_hashers[k].update(ext_span)
+                valued[k] += n
+                chunk_bytes += len(ext_span)
+            collected[k] += piece.num_rows
             if collected[k] < indexed.counts[k]:
                 continue
             digest = hashers.pop(k).digest()
-            if k in digests and digests[k] != digest:
+            ext_digest = None
+            if ext is not None:
+                hashed = ext_hashers.pop(k).digest()
+                ext_digest = hashed if valued.pop(k, 0) else None
+            if (k in digests and digests[k] != digest) or (k in ext_digests and ext_digests[k] != ext_digest):
                 raise Failure("UNSTABLE_READ", asset.name)
             digests[k] = digest
-            chunk.append((k, pa.Table.from_batches(pending.pop(k)), digest))
+            if ext is not None:
+                ext_digests[k] = ext_digest
+            chunk.append({"k": k, "table": pa.Table.from_batches(pending.pop(k)), "digest": digest, "segment": target[k][0],
+                          "ext_digest": ext_digest, "extension": target[k][1]})
             chunk_rows += int(indexed.counts[k])
             if chunk_rows >= self.chunk_rows or chunk_bytes >= CHUNK_BYTES:
                 self.budget()
-                self.commit_chunk(dataset, indexed, stream, load, chunk_no, chunk, [], None, decisions, outcome_of)
-                written, rows = written + len(chunk), rows + chunk_rows
+                w, r = self.commit_chunk(dataset, indexed, stream, load, chunk_no, chunk, decisions, outcome_of)
+                written, rows = written + w, rows + r
                 chunk_no += 1
                 chunk, chunk_rows, chunk_bytes = [], 0, 0
         if chunk:
             self.budget()
-            self.commit_chunk(dataset, indexed, stream, load, chunk_no, chunk, [], None, decisions, outcome_of)
-            written, rows = written + len(chunk), rows + chunk_rows
-        return written, len(reuse), rows, self.all_digests(indexed, eligible, digests)
+            w, r = self.commit_chunk(dataset, indexed, stream, load, chunk_no, chunk, decisions, outcome_of)
+            written, rows = written + w, rows + r
+        return written, reused, rows, *self.all_digests(indexed, eligible, digests, ext_digests)
 
-    def all_digests(self, indexed, eligible, digests):
-        """The digest of every eligible key, for the completion's check: those of passes B and C, the others hashed."""
+    def all_digests(self, indexed, eligible, digests, ext_digests):
+        """The digests of every eligible key, for the completion's check: those of passes B and C, the others hashed."""
         missing = np.zeros(len(indexed.keys), dtype=bool)
         for k in np.flatnonzero(eligible).tolist():
             if k not in digests:
                 missing[k] = True
         if missing.any():
-            hashers = {}
-            for k, _, span in indexed.pieces(missing):
-                hashers.setdefault(k, hashlib.sha256()).update(span)
-            digests.update({k: h.digest() for k, h in hashers.items()})
-        return digests
+            more, more_ext = key_digests(indexed, missing)
+            digests.update(more)
+            ext_digests.update(more_ext)
+        return digests, ext_digests
 
-    def commit_chunk(self, dataset, indexed, stream, load, chunk_no, segments, reused, digests, decisions, outcome_of):
-        """One transaction: new segments (ledger, rows, server digests checked), manifest entries (new and reused)."""
+    def commit_chunk(self, dataset, indexed, stream, load, chunk_no, items, decisions, outcome_of):
+        """One transaction: the chunk's new segments of both datasets (ledger, rows, server digests checked) and the
+        manifest entry of each of its keys, naming the key's pair. Returns the segments and rows the chunk holds."""
         started = time.monotonic()
         timing = {}
+        ext = indexed.extension
+        new = [(it, dataset, it["digest"]) for it in items if it["table"] is not None and it["segment"] is None]
+        new += [(it, ext, it["ext_digest"]) for it in items if it["table"] is not None and it["extension"] is NEW]
         ids = []
-        if segments:
+        if new:
             ids = [r[0] for r in self.session.read(lambda c: c.execute(
-                "SELECT nextval('panna.segments_segment_id_seq') FROM generate_series(1, %s)", (len(segments),)).fetchall())]
-        tables = []
-        for (k, table, _), segment in zip(segments, ids):
+                "SELECT nextval('panna.segments_segment_id_seq') FROM generate_series(1, %s)", (len(new),)).fetchall())]
+        assigned, tables = {}, defaultdict(list)
+        for (it, d, _), segment in zip(new, ids):
+            assigned[(it["k"], d.name)] = segment
+            table = it["table"].select([c.name for c in d.columns])
             n = table.num_rows
             table = table.add_column(0, "segment_id", pa.array(np.full(n, segment, dtype=np.int32)))
             table = table.add_column(1, "ordinal", pa.array(np.arange(n, dtype=np.int32)))
-            tables.append(table)
-        payload = as_csv(pa.concat_tables(tables)) if tables else b""
-        columns = ", ".join(['segment_id', 'ordinal'] + [f'"{c.name}"' for c in dataset.columns])
-        keys = [indexed.keys[k] for k, _, _ in segments] + [key for key, _, _ in reused]
-        rows = sum(t.num_rows for t in tables)
+            tables[d.name].append(table)
+        payloads = {name: as_csv(pa.concat_tables(t)) for name, t in tables.items()}
+        datasets = [d for d in (dataset, ext) if d is not None and d.name in payloads]
+        keys = [indexed.keys[it["k"]] for it in items]
+        rows = sum(t.num_rows for ts in tables.values() for t in ts)
+        payload_bytes = sum(len(b) for b in payloads.values())
         timing["encode_ms"] = round((time.monotonic() - started) * 1000, 1)
 
-        def manifest_row(k, segment):
+        def pair(it):
+            segment = it["segment"] if it["segment"] is not None else assigned[(it["k"], dataset.name)]
+            extension = assigned[(it["k"], ext.name)] if it["extension"] is NEW else it["extension"]
+            return segment, extension
+
+        def manifest_row(it):
+            k = it["k"]
             runs = indexed.runs[k]
-            flat = [v for pair in runs for v in pair] if len(runs) > 1 else None
-            return (stream, indexed.keys[k], load, segment, runs[0][0], int(indexed.counts[k]), flat)
+            flat = [v for run in runs for v in run] if len(runs) > 1 else None
+            segment, extension = pair(it)
+            return (stream, indexed.keys[k], load, segment, runs[0][0], int(indexed.counts[k]), flat, extension)
 
         def unit(c):
             began = time.monotonic()
@@ -555,43 +630,50 @@ class Run:
                 return False
             if present:
                 raise Failure("PARTIAL_CHUNK", load=load, chunk=chunk_no)
-            if segments:
+            if new:
                 with c.cursor().copy("COPY panna.segments (segment_id, dataset, key, digest, rows, flag, day, first_load_id, first_as_of) FROM STDIN") as copy:
-                    for (k, table, digest), segment in zip(segments, ids):
-                        copy.write_row((segment, dataset.name, indexed.keys[k], digest, table.num_rows,
-                                        outcome_of[k], decisions[k].day, load, self.as_of))
-                with c.cursor().copy(f"COPY panna_data.{dataset.name} ({columns}) FROM STDIN WITH (FORMAT csv)") as copy:
-                    copy.write(payload)
+                    for (it, d, digest), segment in zip(new, ids):
+                        k = it["k"]
+                        copy.write_row((segment, d.name, indexed.keys[k], digest, int(indexed.counts[k]), outcome_of[k],
+                                        decisions[k].day, load, self.as_of))
+                for d in datasets:
+                    columns = ", ".join(["segment_id", "ordinal"] + [f'"{col.name}"' for col in d.columns])
+                    with c.cursor().copy(f"COPY panna_data.{d.name} ({columns}) FROM STDIN WITH (FORMAT csv)") as copy:
+                        copy.write(payloads[d.name])
                 copied = time.monotonic()
                 timing["copy_ms"] = round((copied - began) * 1000, 1)
-                server = dict(c.execute(encode.sql_digests(dataset.name, dataset.columns), (ids,)).fetchall())
+                for d in datasets:
+                    mine = [(it, digest, segment) for (it, dd, digest), segment in zip(new, ids) if dd is d]
+                    server = dict(c.execute(encode.sql_digests(d.name, d.columns), ([s for _, _, s in mine],)).fetchall())
+                    for it, digest, segment in mine:
+                        if bytes(server.get(segment, b"")) != digest:
+                            raise Failure("VERIFY_MISMATCH", key=indexed.keys[it["k"]], segment_id=segment, dataset=d.name)
                 timing["verify_ms"] = round((time.monotonic() - copied) * 1000, 1)
-                for (k, _, digest), segment in zip(segments, ids):
-                    if bytes(server.get(segment, b"")) != digest:
-                        raise Failure("VERIFY_MISMATCH", key=indexed.keys[k], segment_id=segment)
-            with c.cursor().copy("COPY panna.manifest (stream_id, key, load_id, segment_id, first_row, row_count, runs) FROM STDIN") as copy:
-                for (k, _, _), segment in zip(segments, ids):
-                    copy.write_row(manifest_row(k, segment))
-                for _, segment, k in reused:
-                    copy.write_row(manifest_row(k, segment))
+            with c.cursor().copy("COPY panna.manifest (stream_id, key, load_id, segment_id, first_row, row_count, runs, "
+                                 "extension_segment_id) FROM STDIN") as copy:
+                for it in items:
+                    copy.write_row(manifest_row(it))
+            reused = sum(1 for it in items if it["segment"] is not None)
             c.execute("INSERT INTO panna.chunks (load_id, chunk_no, segments, rows, payload_bytes) VALUES (%s, %s, %s, %s, %s)",
-                      (load, chunk_no, len(keys), rows, len(payload)))
+                      (load, chunk_no, len(keys), rows, payload_bytes))
             c.execute("""UPDATE panna.loads SET segments_written = segments_written + %s, segments_reused = segments_reused + %s,
-                         rows_written = rows_written + %s WHERE load_id = %s""", (len(segments), len(reused), rows, load))
+                         rows_written = rows_written + %s WHERE load_id = %s""", (len(new), reused, rows, load))
             c.execute("""UPDATE panna.runs SET heartbeat_at = now(), rows_written = rows_written + %s,
-                         segments_written = segments_written + %s WHERE run_id = %s""", (rows, len(segments), self.run_id))
+                         segments_written = segments_written + %s WHERE run_id = %s""", (rows, len(new), self.run_id))
             return True
         if self.session.unit(unit):
             self.rows_written += rows
-            self.segments_written += len(segments)
-            self.out.emit("chunk", name=self.current, chunk=chunk_no, segments=len(segments), reused=len(reused), rows=rows,
-                          bytes=len(payload), unit_ms=round((time.monotonic() - started) * 1000, 1), **timing)
+            self.segments_written += len(new)
+            self.out.emit("chunk", name=self.current, chunk=chunk_no, segments=len(new),
+                          reused=sum(1 for it in items if it["segment"] is not None), rows=rows, bytes=payload_bytes,
+                          unit_ms=round((time.monotonic() - started) * 1000, 1), **timing)
+        return len(new), rows
 
     # --- D: the load's completion -----------------------------------------------------------------------------------
     def complete(self, dataset, asset, indexed, eligible, outcome_of, decisions, orphans, first_seen, stream, load, counts,
-                 digests):
+                 digests, ext_digests):
         present = set(indexed.keys[k] for k in np.flatnonzero(eligible).tolist())
-        expected = {indexed.keys[k]: digests[k] for k in np.flatnonzero(eligible).tolist()}
+        expected = {indexed.keys[k]: (digests[k], ext_digests.get(k)) for k in np.flatnonzero(eligible).tolist()}
         expected_rows = counts.get("eligible", 0) + counts.get("eligible_orphan", 0)
         scope_rows = []
         stored = {r[0]: r[1:] for r in self.session.read(lambda c: c.execute(
@@ -611,15 +693,23 @@ class Run:
         def unit(c):
             # Conservation: what the base holds now, not what the loader remembers having written. A chunk acknowledged
             # then lost (a crash-restart), or any key whose current segment is not this generation's, stops here.
-            found = {key: (bytes(digest) if digest is not None else None, rows or 0) for key, digest, rows in c.execute(
-                """SELECT DISTINCT ON (m.key) m.key, s.digest, s.rows
+            # Both segments of the pair: an extension whose digest or row count is not the generation's is stale too.
+            found = {key: (bytes(digest) if digest is not None else None, rows or 0,
+                           bytes(ext_digest) if ext_digest is not None else None, ext_rows or 0)
+                     for key, digest, rows, ext_digest, ext_rows in c.execute(
+                """SELECT DISTINCT ON (m.key) m.key, s.digest, s.rows, x.digest, x.rows
                    FROM panna.manifest m JOIN panna.loads l ON l.load_id = m.load_id
                    LEFT JOIN panna.segments s ON s.segment_id = m.segment_id
+                   LEFT JOIN panna.segments x ON x.segment_id = m.extension_segment_id
                    WHERE m.stream_id = %s AND (l.status = 'complete' OR m.load_id = %s) AND m.key = ANY(%s)
                    ORDER BY m.key, m.load_id DESC""", (stream, load, list(expected))).fetchall()}
-            missing = sum(1 for key in expected if found.get(key, (None, 0))[0] is None)
-            stale = sum(1 for key, digest in expected.items() if found.get(key, (None, 0))[0] not in (None, digest))
-            rows_found = sum(rows for digest, rows in found.values() if digest is not None)
+            none = (None, 0, None, 0)
+            missing = sum(1 for key in expected if found.get(key, none)[0] is None)
+            stale = sum(1 for key, (digest, ext_digest) in expected.items()
+                        if found.get(key, none)[0] is not None
+                        and (found[key][0] != digest or found[key][2] != ext_digest
+                             or (ext_digest is not None and found[key][3] != found[key][1])))
+            rows_found = sum(f[1] for f in found.values() if f[0] is not None)
             if missing or stale or rows_found != expected_rows:
                 raise Failure("CONSERVATION", asset.name, missing=missing, stale=stale, rows=rows_found, expected_rows=expected_rows)
             c.execute("""INSERT INTO panna.manifest (stream_id, key, load_id, segment_id)

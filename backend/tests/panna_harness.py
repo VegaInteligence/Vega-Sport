@@ -20,6 +20,21 @@ import pyarrow.parquet as pq
 FIXTURE_SCHEMA = pa.schema([(name, pa.string()) for name in (
     "match_id", "match_date", "match_status", "home_team", "away_team", "home_team_id", "away_team_id",
     "home_score", "away_score", "home_score_ht", "away_score_ht", "competition", "season")])
+# The 14 columns opta_fixtures.parquet holds after those 13 since the release asset of 28 Nov 2026, 14:18 UTC
+# (asset 804814591, backend/panna/FAILURE_MODES.md section 9), in its order and types.
+FIXTURE_ADDED = [("venue_id", pa.string()), ("venue_name", pa.string()), ("venue_latitude", pa.float64()),
+                 ("venue_longitude", pa.float64()), ("venue_neutral", pa.bool_()), ("local_date", pa.string()),
+                 ("local_time", pa.string()), ("match_week", pa.string()), ("coverage_level", pa.string()),
+                 ("var", pa.string()), ("referee_id", pa.string()), ("referee_name", pa.string()),
+                 ("attendance", pa.float64()), ("match_officials_json", pa.string())]
+FIXTURE_EXT_SCHEMA = pa.schema(list(FIXTURE_SCHEMA) + [pa.field(n, t) for n, t in FIXTURE_ADDED])
+
+
+def extended(row, **values):
+    """A fixture row with the 14 added columns, NULL unless given."""
+    return {**row, **{name: values.get(name) for name, _ in FIXTURE_ADDED}}
+
+
 EVENT_SCHEMA = pa.schema([
     ("match_id", pa.string()), ("event_id", pa.int64()), ("type_id", pa.int64()), ("player_id", pa.string()),
     ("player_name", pa.string()), ("team_id", pa.string()), ("minute", pa.int64()), ("second", pa.int64()),

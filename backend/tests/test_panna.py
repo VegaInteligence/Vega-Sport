@@ -46,6 +46,7 @@ AS_OF = "2026-11-01"
 RELEASE = "opta-latest"
 SENTINEL = "Sentinelle Évian"  # a value that must never reach the loader's output (GH278-aj)
 FIXTURE_COLUMNS = [f.name for f in h.FIXTURE_SCHEMA] if h else []
+EXT_COLUMNS = [f.name for f in h.FIXTURE_EXT_SCHEMA] if h else []
 EVENT_COLUMNS = [f.name for f in h.EVENT_SCHEMA] if h else []
 
 
@@ -89,6 +90,32 @@ EXPECTED_G1 = {
     "unresolved": {"f-seriea-x", "f-seriea-y", "f-myst-2021"},
     "deferred": {f"f-l1-d{i:02d}" for i in range(40)},
 }
+
+
+def fixtures_ext_g1():
+    """fixtures_g1 with the 14 added columns (GH278.F-b): every edge value among six eligible keys; f-l1-1, f-myst-2022
+    and f-l1-today all NULL; values on a historical and a deferred key, never stored."""
+    nan, inf = float("nan"), float("inf")
+    values = {
+        "f-epl-2122": dict(venue_id="v-1", venue_name=SENTINEL, venue_latitude=51.5549, venue_longitude=-0.1084,
+                           venue_neutral=True, local_date="2021-08-14", local_time="17:30:00", match_week="1",
+                           coverage_level="15", var="1", referee_id="r-1", referee_name='Quote "Ref"\nline',
+                           attendance=52000.0, match_officials_json='[{"id":"o1","type":"Main","name":"Évian \\"x\\"\\n"}]'),
+        "f-mls-2021": dict(venue_id="", venue_name="", venue_latitude=nan, venue_longitude=-0.0, venue_neutral=False,
+                           local_date="", local_time="", match_week="", coverage_level="", var="", referee_id="",
+                           referee_name="", attendance=inf, match_officials_json=""),
+        "f-wcq-2021": dict(venue_latitude=5e-324, venue_longitude=1e308, attendance=-inf,
+                           referee_name="tab\tname\\slash", match_officials_json="{}"),
+        "f-afcon-2021": dict(venue_name="Stade Ahmadou Ahidjo", venue_neutral=False, attendance=0.0),
+        "f-wc-2022": dict(venue_name="Al Bayt ∂", venue_neutral=True, local_time="19:00:00"),
+        "f-l1-2": dict(attendance=-0.0),
+        "f-epl-2021a": dict(venue_name="historical venue", attendance=1.0),
+        "f-l1-d00": dict(venue_name="deferred venue"),
+    }
+    return [h.extended(r, **values.get(r["match_id"], {})) for r in fixtures_g1()]
+
+
+EXTENDED_KEYS = {"f-epl-2122", "f-mls-2021", "f-wcq-2021", "f-afcon-2021", "f-wc-2022", "f-l1-2"}
 
 
 def ligue1_events(changed=False, added=False, shift=0.0):
@@ -907,6 +934,197 @@ class PannaTest(unittest.TestCase):
             self.assertNotIn(SENTINEL, text)
             self.assertNotIn(PASSWORD, text)
             self.assertNotIn("Mbappé", text)
+
+    # --- GH278.F-a to j: the fixtures' 14 added columns (FAILURE_MODES.md section 9) -------------------------------
+    def serve_fixtures(self, rows, schema):
+        release = release_g1()
+        release["opta_fixtures.parquet"] = h.parquet_bytes(rows, schema, row_group_size=7)
+        self.upstream.serve(RELEASE, release)
+        return release["opta_fixtures.parquet"]
+
+    def fixtures_load(self):
+        return self.count("SELECT max(l.load_id) FROM panna.loads l JOIN panna.streams s USING (stream_id) "
+                          "WHERE s.dataset = 'opta_fixtures' AND l.status = 'complete'")
+
+    def fixture_rows(self, load):
+        cursor = self.admin.execute("SELECT * FROM panna.fixture_rows(%s) ORDER BY source_ordinal", (load,))
+        return [d.name for d in cursor.description], cursor.fetchall()
+
+    def expected_fixture_rows(self, rows):
+        return [(i, *(r[c] for c in EXT_COLUMNS)) for i, r in enumerate(rows) if r["match_id"] in EXPECTED_G1["eligible"]]
+
+    def assert_generation(self, load, rows):
+        columns, back = self.fixture_rows(load)
+        self.assertEqual(columns, ["source_ordinal"] + EXT_COLUMNS)
+        self.assert_rows_equal(back, self.expected_fixture_rows(rows), columns)
+        for row in back:
+            self.assertTrue(all(type(v) in (str, float, bool, int, type(None)) for v in row))
+
+    def segment_ids(self, dataset):
+        return dict(self.admin.execute("SELECT key, segment_id FROM panna.segments WHERE dataset = %s", (dataset,)).fetchall())
+
+    def entries(self, load):
+        return {k: (s, e) for k, s, e in self.admin.execute(
+            "SELECT key, segment_id, extension_segment_id FROM panna.manifest WHERE load_id = %s", (load,)).fetchall()}
+
+    def table_rows(self):
+        return (self.count("SELECT count(*) FROM panna_data.opta_fixtures"),
+                self.count("SELECT count(*) FROM panna_data.opta_fixtures_ext"))
+
+    def test_GH278_F_a_b_j_an_extended_object_keeps_every_column(self):
+        rows = fixtures_ext_g1()
+        self.serve_fixtures(rows, h.FIXTURE_EXT_SCHEMA)
+        probe = self.cli("probe", "--as-of", AS_OF, "--release", RELEASE, "--asset", "opta_fixtures.parquet")
+        (reported,) = [line for line in self.lines(probe) if line.get("event") == "object"]
+        self.assertEqual(reported["outcomes"], {"eligible": 9, "historical": 7, "unresolved": 3, "deferred": 40})
+        self.assertEqual(reported["extension"], "opta_fixtures_ext")
+        done = self.run_load("opta_fixtures.parquet")
+        self.assertEqual(self.last(done)["status"], "complete")
+        eligible = sorted((r for r in rows if r["match_id"] in EXPECTED_G1["eligible"]), key=lambda r: r["match_id"])
+        self.assert_rows_equal([g[2:] for g in self.stored("opta_fixtures", FIXTURE_COLUMNS)],
+                               [tuple(r[c] for c in FIXTURE_COLUMNS) for r in eligible], FIXTURE_COLUMNS)
+        self.assertEqual(set(self.segment_ids("opta_fixtures_ext")), EXTENDED_KEYS)
+        added = EXT_COLUMNS[len(FIXTURE_COLUMNS):]
+        self.assert_rows_equal([g[2:] for g in self.stored("opta_fixtures_ext", added)],
+                               [tuple(r[c] for c in added) for r in eligible if r["match_id"] in EXTENDED_KEYS], added)
+        load = self.fixtures_load()
+        self.assertEqual(self.count("SELECT extension FROM panna.loads WHERE load_id = %s", load), "opta_fixtures_ext")
+        entries = self.entries(load)
+        self.assertEqual({k for k, (_, e) in entries.items() if e is not None}, EXTENDED_KEYS)
+        self.assertEqual(set(entries), EXPECTED_G1["eligible"])
+        self.assert_generation(load, rows)
+        verify = self.cli("verify")
+        self.assertEqual((self.last(verify)["segments"], self.last(verify)["mismatched"]), (9 + 6, 0))
+        # GH278.F-j: a tampered added value is named by its segment.
+        self.admin.execute("UPDATE panna_data.opta_fixtures_ext SET attendance = 52001 WHERE segment_id = "
+                           "(SELECT segment_id FROM panna.segments WHERE dataset = 'opta_fixtures_ext' AND key = 'f-epl-2122')")
+        tampered = self.cli("verify", expect=1)
+        (mismatch,) = [line for line in self.lines(tampered) if line.get("event") == "mismatch"]
+        self.assertEqual((mismatch["dataset"], mismatch["key"]), ("opta_fixtures_ext", "f-epl-2122"))
+        for out in (probe, done, verify, tampered):
+            for value in (SENTINEL, "Ahmadou", "Bayt", "historical venue", "17:30"):
+                self.assertNotIn(value, out.stdout + out.stderr)
+
+    def test_GH278_F_c_d_f_both_schemas_share_the_13_column_segments(self):
+        rows, plain = fixtures_ext_g1(), fixtures_g1()
+        # c: a 13-column generation, then the extended object with the same 13 values.
+        self.serve_fixtures(plain, h.FIXTURE_SCHEMA)
+        self.run_load("opta_fixtures.parquet")
+        first, segments = self.fixtures_load(), self.segment_ids("opta_fixtures")
+        self.assertIsNone(self.count("SELECT extension FROM panna.loads WHERE load_id = %s", first))
+        self.serve_fixtures(rows, h.FIXTURE_EXT_SCHEMA)
+        self.run_load("opta_fixtures.parquet")
+        second = self.fixtures_load()
+        self.assertEqual(self.segment_ids("opta_fixtures"), segments)
+        self.assertEqual(self.table_rows(), (9, 6))
+        self.assertEqual({k: s for k, (s, _) in self.entries(second).items()}, {k: segments[k] for k in EXTENDED_KEYS})
+        self.assert_generation(second, rows)
+        self.assertEqual(dict(self.admin.execute("SELECT key, segment_id FROM panna.segments_as_of(%s)", (first,)).fetchall()), segments)
+        with self.assertRaises(psycopg.errors.InvalidParameterValue):
+            self.fixture_rows(first)
+        # f: the same extended object again.
+        replay = self.run_load("opta_fixtures.parquet")
+        third = self.fixtures_load()
+        self.assertEqual((self.last(replay)["rows_written"], self.entries(third), self.table_rows()), (0, {}, (9, 6)))
+        self.assert_generation(third, rows)
+        # d: the 13-column object, then the extended one again: nothing written, entries without then with extensions.
+        self.serve_fixtures(plain, h.FIXTURE_SCHEMA)
+        self.assertEqual(self.last(self.run_load("opta_fixtures.parquet"))["rows_written"], 0)
+        fourth = self.fixtures_load()
+        self.assertEqual(self.entries(fourth), {k: (segments[k], None) for k in EXTENDED_KEYS})
+        with self.assertRaises(psycopg.errors.InvalidParameterValue):
+            self.fixture_rows(fourth)
+        self.serve_fixtures(rows, h.FIXTURE_EXT_SCHEMA)
+        self.assertEqual(self.last(self.run_load("opta_fixtures.parquet"))["rows_written"], 0)
+        fifth = self.fixtures_load()
+        self.assertEqual(self.entries(fifth), self.entries(second))
+        self.assertEqual(self.table_rows(), (9, 6))
+        self.assert_generation(fifth, rows)
+        self.assert_generation(second, rows)
+
+    def test_GH278_F_e_a_correction_writes_only_its_segments(self):
+        rows = fixtures_ext_g1()
+        self.serve_fixtures(rows, h.FIXTURE_EXT_SCHEMA)
+        self.run_load("opta_fixtures.parquet")
+        first = self.fixtures_load()
+        before = self.entries(first)
+        g2 = [dict(r) for r in rows]
+        at = {r["match_id"]: r for r in g2}
+        at["f-epl-2122"]["home_score"] = "2"
+        at["f-mls-2021"].update(attendance=41000.0, match_officials_json='[{"id":"o2"}]')
+        at["f-l1-1"]["venue_name"] = "Stade Pierre-Mauroy"
+        at["f-l1-2"]["attendance"] = None
+        self.serve_fixtures(g2, h.FIXTURE_EXT_SCHEMA)
+        self.run_load("opta_fixtures.parquet")
+        second = self.fixtures_load()
+        self.assertEqual(self.table_rows(), (9 + 1, 6 + 2))
+        changed = self.entries(second)
+        self.assertEqual(set(changed), {"f-epl-2122", "f-mls-2021", "f-l1-1", "f-l1-2"})
+        self.assertNotEqual(changed["f-epl-2122"][0], before["f-epl-2122"][0])
+        self.assertEqual(changed["f-epl-2122"][1], before["f-epl-2122"][1])
+        self.assertEqual(changed["f-mls-2021"][0], before["f-mls-2021"][0])
+        self.assertNotIn(changed["f-mls-2021"][1], (None, before["f-mls-2021"][1]))
+        self.assertIsNotNone(changed["f-l1-1"][1])
+        self.assertEqual(changed["f-l1-2"], (before["f-l1-2"][0], None))
+        self.assert_generation(first, rows)
+        self.assert_generation(second, g2)
+        self.assertEqual(self.last(self.cli("verify"))["mismatched"], 0)
+
+    def test_GH278_F_g_any_other_fixtures_schema_is_drift(self):
+        rows = fixtures_ext_g1()
+        retyped = lambda name, kind: h.pa.schema([h.pa.field(f.name, kind) if f.name == name else f for f in h.FIXTURE_EXT_SCHEMA])
+        cases = {
+            "match_week": h.parquet_bytes(rows, h.FIXTURE_EXT_SCHEMA, drop=("match_week",)),
+            "roof": h.parquet_bytes(rows, h.FIXTURE_EXT_SCHEMA, extra_columns=[("roof", h.pa.string(), [None] * len(rows))]),
+            "venue_neutral": h.parquet_bytes([dict(r, venue_neutral=None if r["venue_neutral"] is None else str(r["venue_neutral"]))
+                                              for r in rows], retyped("venue_neutral", h.pa.string())),
+            "attendance": h.parquet_bytes([dict(r, attendance=None) for r in rows], retyped("attendance", h.pa.int64())),
+        }
+        for column, data in cases.items():
+            release = release_g1()
+            release["opta_fixtures.parquet"] = data
+            self.upstream.serve(RELEASE, release)
+            done = self.run_load("opta_fixtures.parquet", expect=1)
+            (error,) = [line for line in self.lines(done) if line.get("event") == "error"]
+            self.assertEqual(error["code"], "SCHEMA_DRIFT", column)
+            self.assertIn(column, error["added"] + error["removed"] + error["retyped"])
+            self.assertEqual(self.table_rows(), (0, 0))
+
+    def test_GH278_F_h_s1s_scoped_segment_is_kept_by_the_extended_generation(self):
+        # S1's state in production: one key loaded alone from a 13-column object (a scoped plan, run --plan).
+        data = self.serve_fixtures(fixtures_g1(), h.FIXTURE_SCHEMA)
+        path = self.scratch / "plain.parquet"
+        path.write_bytes(data)
+        ordinal = [r["match_id"] for r in fixtures_g1()].index("f-l1-2")
+        plan = {"as_of": AS_OF, "release": RELEASE, "fixtures": "current",
+                "assets": [{"origin": "github", "container": RELEASE, "name": "opta_fixtures.parquet",
+                            "sha256": h.sha256(data), "bytes": len(data), "path": str(path), "dataset": "opta_fixtures"}],
+                "scope": {"dataset": "opta_fixtures", "keys": ["f-l1-2"], "ordinals": [ordinal], "max_rows": 1}}
+        (self.scratch / "plan.json").write_text(json.dumps(plan))
+        scoped = self.cli("run", "--plan", str(self.scratch / "plan.json"))
+        self.assertEqual(self.last(scoped)["status"], "complete")
+        pilot = self.segment_ids("opta_fixtures")
+        self.assertEqual(set(pilot), {"f-l1-2"})
+        self.serve_fixtures(fixtures_ext_g1(), h.FIXTURE_EXT_SCHEMA)
+        self.run_load("opta_fixtures.parquet")
+        load = self.fixtures_load()
+        self.assertEqual(self.segment_ids("opta_fixtures")["f-l1-2"], pilot["f-l1-2"])
+        self.assertEqual(self.entries(load)["f-l1-2"][0], pilot["f-l1-2"])
+        self.assertIsNotNone(self.entries(load)["f-l1-2"][1])
+        self.assertEqual(self.table_rows(), (9, 6))
+        self.assert_generation(load, fixtures_ext_g1())
+        self.assertEqual(self.count("SELECT count(*) FROM panna.canonical_applications"), 0)
+        self.assertEqual(self.last(self.cli("verify"))["mismatched"], 0)
+
+    def test_GH278_F_i_a_base_without_005_is_refused(self):
+        self.serve_fixtures(fixtures_ext_g1(), h.FIXTURE_EXT_SCHEMA)
+        self.admin.execute("ALTER TABLE panna_data.opta_fixtures_ext RENAME TO opta_fixtures_ext_hidden")
+        try:
+            done = self.run_load("opta_fixtures.parquet", expect=1)
+        finally:
+            self.admin.execute("ALTER TABLE panna_data.opta_fixtures_ext_hidden RENAME TO opta_fixtures_ext")
+        self.assertIn("005_panna_fixture_extension.sql", done.stdout)
+        self.assertEqual(self.count("SELECT count(*) FROM panna.receipts"), 0)
 
     def migrate(self, password=None, backend=ROOT):
         env = {k: v for k, v in os.environ.items() if not k.startswith("V2_")}

@@ -40,8 +40,8 @@ export PYTHONPATH=backend
 The base: SSM `/vega/v2/panna-deploy` set to `on`, then a Deploy. It creates `/vega/v2/password-panna` and
 `/vega/v2/panna-database-url` (`postgresql://vega_v2_panna:…@<endpoint>:5432/vega_v2?sslmode=verify-full`), applies
 `backend/panna/sql` (`001_panna.sql`, `002_panna_variants.sql`, `003_panna_segment_index.sql`) with the migrate task and
-sets the login `vega_v2_panna` (4 connections, insert and read only). The loader refuses a base without all three
-(`SCHEMA_VERSION`, naming the file).
+sets the login `vega_v2_panna` (4 connections, insert and read only). The loader refuses a base without 002, 003 or
+`005_panna_fixture_extension.sql` (`SCHEMA_VERSION`, naming the file); 004 is S1's (`pilot`).
 The loader reads the URL from `V2_PANNA_DATABASE_URL` (or `--database-url`) and verifies TLS with the bundled RDS CA.
 Through a local port forward to the private base: `--via 127.0.0.1:<port>` (TLS still checks the endpoint's name).
 
@@ -201,6 +201,46 @@ python3 -m panna pilot revert --application <id> --reviewer <who> --via 127.0.0.
   by the identity proof, the parent's chronology and final, a complete approval). As the owner,
   `ALTER ROLE vega_v2_panna NOLOGIN`, and keep the switch `off` (or absent): with it `on`, the next Deploy's migrate
   task sets `LOGIN` and the password again.
+
+## Fixtures with the 14 added columns (`GH278.F`, FAILURE_MODES.md section 9)
+
+Since the release asset of 28 Nov 2026 14:18 UTC, `opta_fixtures.parquet` holds 27 columns. The 13 of H1 keep their
+segments and digests in `panna_data.opta_fixtures`; a key unchanged there, S1's included, is not written again. The 14
+added values of a key are one segment of `panna_data.opta_fixtures_ext` (none when all are NULL). The manifest entry
+names both. A 13-column object still loads as before.
+
+Bounded sequence for one fixtures-only batch, from the Mac, nothing else in the plan:
+
+```sh
+pip install -r backend/requirements.txt -r backend/panna/requirements.txt
+export PYTHONPATH=backend
+# 1. 005 alone, as the owner, through the repository's panna runner (prints "panna applied=['005_panna_fixture_extension.sql'] total=5").
+#    No core migration, no password set, no switch changed.
+python3 -c 'import os, psycopg; from vega.migrate import migrate_panna
+with psycopg.connect(os.environ["OWNER_URL"], autocommit=True) as c: print("panna applied=%s total=%s" % migrate_panna(c))'
+# 2. The object pinned by its manifest (digest, size, asset id, local path): exit 0, outcomes 111,584 eligible,
+#    152,507 historical, 6,104 deferred at as-of 2026-11-28, "extension": "opta_fixtures_ext".
+python3 -m panna probe --manifest "$M" --asset opta_fixtures.parquet --as-of 2026-11-28
+# 3. The load (V2_PANNA_DATABASE_URL in the environment only), bounded; then its replay, which writes nothing.
+python3 -m panna run --manifest "$M" --asset opta_fixtures.parquet --as-of 2026-11-28 --via 127.0.0.1:<port> \
+  --max-seconds 1800 --database-ceiling-bytes <bytes>
+python3 -m panna verify --run <run id>
+python3 -m panna run --manifest "$M" --asset opta_fixtures.parquet --as-of 2026-11-28 --via 127.0.0.1:<port>
+```
+
+The 27 columns of the current generation, each row with its source ordinal, read by the owner (read-only session);
+`panna.fixture_rows` refuses a load of a 13-column object:
+
+```sql
+SELECT f.* FROM panna.fixture_rows((
+  SELECT l.load_id FROM panna.loads l JOIN panna.streams s USING (stream_id) JOIN panna.runs u ON u.run_id = l.run_id
+  WHERE s.dataset = 'opta_fixtures' AND s.name = 'opta_fixtures.parquet' AND l.status = 'complete'
+    AND coalesce(jsonb_typeof(u.plan->'scope'), 'null') = 'null' ORDER BY l.load_id DESC LIMIT 1)) f
+```
+
+A source ordinal is the one of the object that last changed the key's pair: exact for a first generation and its
+replays. Not in this batch: events, `pilot` on a 27-column object (its packet is computed over the file's columns, so
+S1's scope of 13 fields is refused `SCOPE_PACKET_DIGEST`), and any other family.
 
 ## Not in H1 (pass H2)
 

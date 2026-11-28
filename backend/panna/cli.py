@@ -94,7 +94,7 @@ def parser():
     retry.add_argument("--force", action="store_true", help="resume it even though a later run completed")
     explain = sub.add_parser("explain", help="the plan of the server's verification of the latest segments")
     add_database(explain)
-    explain.add_argument("--dataset", required=True, choices=sorted(registry.DATASETS))
+    explain.add_argument("--dataset", required=True, choices=sorted(registry.TABLES))
     explain.add_argument("--last-segments", type=int, default=20)
     status = sub.add_parser("status", help="what the base holds")
     add_database(status)
@@ -228,6 +228,8 @@ def classify_one(entry, scratch, as_of, out, keys, session, digests, index):
                "outcomes": dict(outcomes)}
     if indexed.conversions:
         summary["conversions"] = {c: v["from"] for c, v in indexed.conversions.items()}
+    if indexed.extension:
+        summary["extension"] = indexed.extension.name
     if digests:
         summary["rows_to_write"] = rows_to_write(dataset, indexed, outcome_of, session)
         summary["projected_bytes"] = summary["rows_to_write"] * dataset.bytes_per_row
@@ -247,7 +249,7 @@ def rows_to_write(dataset, indexed, outcome_of, session):
     if not stored:
         return int(indexed.counts[eligible].sum())
     hashers = {}
-    for k, _, span in indexed.pieces(eligible):
+    for k, _, span, _, _ in indexed.pieces(eligible):
         hashers.setdefault(k, hashlib.sha256()).update(span)
     return sum(int(indexed.counts[k]) for k, h in hashers.items() if h.digest() not in stored.get(indexed.keys[k], ()))
 
@@ -374,7 +376,7 @@ def cmd_explain(args, out):
     """EXPLAIN (ANALYZE, BUFFERS) of the server's verification of the dataset's latest segments: the statement each chunk
     runs, on the base as it is (GH278-at). The plan names indexes, ids and counts, never a row's value."""
     from . import encode
-    dataset = registry.DATASETS[args.dataset]
+    dataset = registry.TABLES[args.dataset]
     session = Session(database_url(args), via=args.via, lock=False)
     try:
         c = session.conn
@@ -432,7 +434,7 @@ def cmd_verify(args, out):
             by_dataset[dataset].append((segment, key, bytes(digest)))
         mismatched = 0
         for name, rows in by_dataset.items():
-            dataset = registry.DATASETS[name]
+            dataset = registry.TABLES[name]
             for i in range(0, len(rows), 1000):
                 part = rows[i: i + 1000]
                 server = dict(c.execute(encode.sql_digests(dataset.name, dataset.columns), ([r[0] for r in part],)).fetchall())

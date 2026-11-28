@@ -15,7 +15,7 @@ FIRST_DAY = datetime.date(2021, 1, 1)
 PENDING_DAYS = 3
 
 # Arrow type names a source column may have for each stored type (string and large_string both hold UTF-8 text).
-ACCEPTED = {"text": {"string", "large_string"}, "bigint": {"int64"}, "double precision": {"double"}}
+ACCEPTED = {"text": {"string", "large_string"}, "bigint": {"int64"}, "double precision": {"double"}, "boolean": {"bool"}}
 # Another source type a column may have, read by an exact conversion (backend/panna/FAILURE_MODES.md GH278-am): the
 # release of 28 Nov 2026 stores the six integer columns of events_EPL.parquet and events_Scottish_Premiership.parquet
 # as double. Every value of the object must be an exact integer within ±2^53, else the object is refused
@@ -40,6 +40,9 @@ class Dataset:
     # Bytes of a stored row for the projections, as panna.datasets holds them (001). Measured with the B-tree of 003
     # (README, Measured): events 308 at 30.8 M rows, under 330; fixtures 232, over 220 by 1.3 MB for the whole file.
     bytes_per_row: int
+    # Columns a later schema of the same object adds, all together, stored beside the dataset's own as segments of
+    # this other dataset (backend/panna/FAILURE_MODES.md section 9). None: the dataset has one schema.
+    extension: "Dataset | None" = None
 
     def matches(self, container, name):
         return container == RELEASE and bool(self.pattern.fullmatch(name))
@@ -48,12 +51,24 @@ class Dataset:
         return sorted(self.columns, key=lambda c: c.physical)
 
 
+# The 14 columns opta_fixtures.parquet holds after its 13 since the asset of 28 Nov 2026, 14:18 UTC, in its order;
+# their place in panna_data.opta_fixtures_ext puts the fixed-width ones first. Never an asset of its own. Measured on
+# that asset: 1,119 bytes a row with the B-tree (5,547 rows; match_officials_json 811 bytes on average).
+FIXTURES_EXT = Dataset(
+    "opta_fixtures_ext", re.compile(r"(?!)"),
+    (Column("venue_id", "text", 4), Column("venue_name", "text", 5), Column("venue_latitude", "double precision", 0),
+     Column("venue_longitude", "double precision", 1), Column("venue_neutral", "boolean", 3),
+     Column("local_date", "text", 6), Column("local_time", "text", 7), Column("match_week", "text", 8),
+     Column("coverage_level", "text", 9), Column("var", "text", 10), Column("referee_id", "text", 11),
+     Column("referee_name", "text", 12), Column("attendance", "double precision", 2),
+     Column("match_officials_json", "text", 13)),
+    key="match_id", depends=None, bytes_per_row=1150)
 FIXTURES = Dataset(
     "opta_fixtures", re.compile(r"opta_fixtures\.parquet"),
     tuple(Column(n, "text", i) for i, n in enumerate((
         "match_id", "match_date", "match_status", "home_team", "away_team", "home_team_id", "away_team_id",
         "home_score", "away_score", "home_score_ht", "away_score_ht", "competition", "season"))),
-    key="match_id", depends=None, bytes_per_row=220)
+    key="match_id", depends=None, bytes_per_row=220, extension=FIXTURES_EXT)
 EVENTS = Dataset(
     "opta_events", re.compile(r"events_[A-Za-z0-9_]+\.parquet"),
     (Column("match_id", "text", 10), Column("event_id", "bigint", 0), Column("type_id", "bigint", 1),
@@ -65,6 +80,8 @@ EVENTS = Dataset(
     key="match_id", depends="opta_fixtures", bytes_per_row=330)
 DATASETS = {d.name: d for d in (FIXTURES, EVENTS)}
 FAMILIES = {"opta_fixtures": FIXTURES, "opta_events": EVENTS}
+# Every table of panna_data and its columns, extensions included (panna.columns, verify, explain).
+TABLES = {**DATASETS, FIXTURES_EXT.name: FIXTURES_EXT}
 
 
 def dataset_of(container, name):

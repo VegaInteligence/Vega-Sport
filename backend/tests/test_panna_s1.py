@@ -1051,16 +1051,17 @@ class PannaS1Test(unittest.TestCase):
         self.assertEqual(self.count("SELECT count(*) FROM pg_namespace WHERE nspname LIKE 'panna%'"), 0)
         for table in ("core.match_score_observations", "core.match_score_selections", "core.observation_batches"):
             self.assertIsNotNone(self.x("SELECT to_regclass(%s)", (table,)).fetchone()[0], table)
-        # The panna files up to 003 (H1), H1 rows loaded, then 004: H1's rows unchanged.
+        # The panna files up to 003 (H1) and 005 (the loader needs it, FAILURE_MODES.md section 9; it does not need 004),
+        # H1 rows loaded, then 004: H1's rows unchanged.
         copy = Path(tempfile.mkdtemp(dir=self.tmp.name)) / "backend"
         shutil.copytree(ROOT / "vega", copy / "vega", ignore=shutil.ignore_patterns("__pycache__"))
         shutil.copytree(ROOT / "sql", copy / "sql")
         shutil.copytree(ROOT / "account" / "sql", copy / "account" / "sql")
         (copy / "panna" / "sql").mkdir(parents=True)
-        for name in ("001_panna.sql", "002_panna_variants.sql", "003_panna_segment_index.sql"):
+        for name in ("001_panna.sql", "002_panna_variants.sql", "003_panna_segment_index.sql", "005_panna_fixture_extension.sql"):
             shutil.copy(ROOT / "panna" / "sql" / name, copy / "panna" / "sql" / name)
         self.migrate(PASSWORD, backend=copy)
-        self.assertEqual(self.count("SELECT count(*) FROM panna_admin.applied"), 3)
+        self.assertEqual(self.count("SELECT count(*) FROM panna_admin.applied"), 4)
         # The pilot on that base (the login, H1's tables, no 004): refused before anything is written.
         early = [opta_row()] + others(2, "no004")
         path, data = self.opta_file(early, "no004")
@@ -1079,7 +1080,7 @@ class PannaS1Test(unittest.TestCase):
         before = {t: self.x(f"SELECT md5(string_agg(t::text, '|' ORDER BY t::text)) FROM {t} t").fetchone()[0] for t in tables}
         self.assertGreater(self.count("SELECT count(*) FROM panna.segments"), 1)
         done = self.migrate(PASSWORD)
-        self.assertIn("panna applied=1 total=4", done.stdout)
+        self.assertIn("panna applied=1 total=5", done.stdout)
         after = {t: self.x(f"SELECT md5(string_agg(t::text, '|' ORDER BY t::text)) FROM {t} t").fetchone()[0] for t in tables}
         self.assertEqual(after, before)
 
