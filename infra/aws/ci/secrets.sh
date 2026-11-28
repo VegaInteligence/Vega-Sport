@@ -3,7 +3,8 @@
 # the three login passwords and the status page's key (random, generated here), the
 # PitchAPI key (from the workflow secret) and the connection URLs built from the
 # database stack's endpoint. With VEGA_ACCOUNT=on (deploy.sh, once SSM /vega/v2/account-deploy
-# is on), the account API's too: the login's password, its URL and the pass key.
+# is on), the account API's too: the login's password, its URL and the pass key. With VEGA_PANNA=on (deploy.sh, once
+# SSM /vega/v2/panna-deploy is on), PannaData's loader's: the login's password and its URL (backend/panna/README.md).
 # Values go through mode-0600 files, never the command line, the log or the shell trace.
 set -euo pipefail
 umask 077
@@ -15,6 +16,7 @@ read_secret() { aws ssm get-parameter --name "$1" --with-decryption --query Para
 
 roles=(collect calc read)
 [ "${VEGA_ACCOUNT:-}" = on ] && roles+=(account)
+[ "${VEGA_PANNA:-}" = on ] && roles+=(panna)
 for role in "${roles[@]}"; do
   openssl rand -hex 24 | tr -d '\n' > "$work/$role"
   put "/vega/v2/password-$role" "$work/$role"
@@ -44,6 +46,10 @@ for role in "${roles[@]}"; do
   password=$(read_secret "/vega/v2/password-$role")
   if [ "$role" = read ] || [ "$role" = account ]; then
     printf 'postgresql://vega_v2_%s:%s@%s:5432/vega_v2' "$role" "$password" "$endpoint" > "$work/url-$role"
+  elif [ "$role" = panna ]; then
+    # The loader runs outside AWS with the RDS CA it carries (backend/certs); through a port forward (--via), TLS
+    # still verifies the endpoint's name.
+    printf 'postgresql://vega_v2_%s:%s@%s:5432/vega_v2?sslmode=verify-full' "$role" "$password" "$endpoint" > "$work/url-$role"
   else
     printf 'postgresql://vega_v2_%s:%s@%s:5432/vega_v2?sslmode=verify-full&sslrootcert=/app/rds-ca.pem' "$role" "$password" "$endpoint" > "$work/url-$role"
   fi

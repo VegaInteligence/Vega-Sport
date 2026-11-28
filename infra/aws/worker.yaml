@@ -21,7 +21,7 @@ Parameters:
   BackfillDesiredCount: {Type: Number, Default: 0, AllowedValues: [0, 1], Description: 'The backfill service: 1 while history is collected, 0 once it is.'}
   CollectUrlParameter: {Type: String, Default: /vega/v2/collect-database-url}
   CalcUrlParameter: {Type: String, Default: /vega/v2/calc-database-url}
-  PasswordParameterPrefix: {Type: String, Default: /vega/v2/password, Description: 'SecureStrings <prefix>-collect, -calc, -read (and -account)'}
+  PasswordParameterPrefix: {Type: String, Default: /vega/v2/password, Description: 'SecureStrings <prefix>-collect, -calc, -read (and -account, -panna)'}
   PitchApiKeyParameter: {Type: String, Default: /vega/v2/pitchapi-key}
   OddsApiKeyParameter:
     Type: String
@@ -41,8 +41,17 @@ Parameters:
     Default: 'false'
     AllowedValues: ['true', 'false']
     Description: 'true: the migrate task applies backend/account/sql and sets the login vega_v2_account (<prefix>-account)'
+  # PannaData's loader (GH278, backend/panna/README.md): true once SSM /vega/v2/panna-deploy is on (deploy.sh), then
+  # kept. The migrate task then gets the login's password, which makes it apply backend/panna/sql and set the login
+  # vega_v2_panna (backend/vega/migrate.py). Off, the task names no parameter that may not exist.
+  Panna:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'true: the migrate task applies backend/panna/sql and sets the login vega_v2_panna (<prefix>-panna)'
 Conditions:
   HasAccount: !Equals [!Ref Account, 'true']
+  HasPanna: !Equals [!Ref Panna, 'true']
   HasTaskImage: !Not [!Equals [!Ref TaskImageTag, '']]
   HasTemplateDigest: !Not [!Equals [!Ref TemplateDigest, '']]
   HasArchiveSources: !Not [!Equals [!Ref ArchiveSourcesBucket, '']]
@@ -235,6 +244,10 @@ Resources:
             - !If
               - HasAccount
               - {Name: V2_ACCOUNT_PASSWORD, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-account'}
+              - !Ref AWS::NoValue
+            - !If
+              - HasPanna
+              - {Name: V2_PANNA_PASSWORD, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-panna'}
               - !Ref AWS::NoValue
           LogConfiguration:
             LogDriver: awslogs

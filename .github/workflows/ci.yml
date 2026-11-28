@@ -99,6 +99,9 @@ jobs:
       - uses: actions/setup-node@v7
         with: {node-version: '24', package-manager-cache: false}
       - run: pip install -r backend/requirements.txt
+      # PannaData's loader (backend/panna) runs outside AWS with pyarrow, which the worker image does not hold; its
+      # end-to-end suite (test_panna.py) needs it, and under CI=true a missing prerequisite fails it.
+      - run: pip install -r backend/panna/requirements.txt
       # The base preloads pg_stat_statements (database.yaml); the service's server does once restarted with it
       # (backend/tests/test_statement_statistics.py, FAILURE_MODES_OPTIMISATIONS.md GH171).
       - name: Preload pg_stat_statements as the base does

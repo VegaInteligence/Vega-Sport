@@ -65,6 +65,8 @@ SUITES = {
     "VEGA_V2_RECEIPTS_TEST_DSN": "vega_v2_receipts_test",
     # The bases cloned from a template instead of the migrations replayed (test_template_base.py).
     "VEGA_V2_CLONE_TEST_DSN": "vega_v2_clone_test",
+    # PannaData's loader, its schema and its login (test_panna.py, backend/panna/FAILURE_MODES.md GH278).
+    "VEGA_V2_PANNA_TEST_DSN": "vega_v2_panna_test",
 }
 
 
