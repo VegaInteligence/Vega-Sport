@@ -20,6 +20,21 @@ import pyarrow.parquet as pq
 FIXTURE_SCHEMA = pa.schema([(name, pa.string()) for name in (
     "match_id", "match_date", "match_status", "home_team", "away_team", "home_team_id", "away_team_id",
     "home_score", "away_score", "home_score_ht", "away_score_ht", "competition", "season")])
+# The 14 columns opta_fixtures.parquet holds after those 13 since the release asset of 28 Nov 2026, 14:18 UTC
+# (asset 804814591, backend/panna/FAILURE_MODES.md section 9), in its order and types.
+FIXTURE_ADDED = [("venue_id", pa.string()), ("venue_name", pa.string()), ("venue_latitude", pa.float64()),
+                 ("venue_longitude", pa.float64()), ("venue_neutral", pa.bool_()), ("local_date", pa.string()),
+                 ("local_time", pa.string()), ("match_week", pa.string()), ("coverage_level", pa.string()),
+                 ("var", pa.string()), ("referee_id", pa.string()), ("referee_name", pa.string()),
+                 ("attendance", pa.float64()), ("match_officials_json", pa.string())]
+FIXTURE_EXT_SCHEMA = pa.schema(list(FIXTURE_SCHEMA) + [pa.field(n, t) for n, t in FIXTURE_ADDED])
+
+
+def extended(row, **values):
+    """A fixture row with the 14 added columns, NULL unless given."""
+    return {**row, **{name: values.get(name) for name, _ in FIXTURE_ADDED}}
+
+
 EVENT_SCHEMA = pa.schema([
     ("match_id", pa.string()), ("event_id", pa.int64()), ("type_id", pa.int64()), ("player_id", pa.string()),
     ("player_name", pa.string()), ("team_id", pa.string()), ("minute", pa.int64()), ("second", pa.int64()),
@@ -150,8 +165,11 @@ class Upstream:
         data = self.releases[tag][name]
         return {"id": 1000 + index, "name": name, "size": len(data),
                 "digest": None if name in self.no_digest else "sha256:" + sha256(data),
-                "updated_at": "2026-11-28T03:00:00Z",
+                "updated_at": self.updated.get(name, "2026-11-28T03:00:00Z"),
                 "browser_download_url": f"http://127.0.0.1:{self.port}/download/{tag}/{name}"}
+
+    # An asset's listing update instant (GH278.F-p), by name; the default otherwise.
+    updated = {}
 
     def serve(self, tag, assets):
         self.releases[tag] = dict(assets)
@@ -177,6 +195,8 @@ class Relay:
         # S1 (test_panna_s1.py, GH278.S1-o): cut only the COMMIT that follows a message holding these bytes (the name
         # of a function the transaction called), not the first COMMIT of the run.
         self.cut_commit_after = None
+        # GH278.F-l: cut the connection, unsent, at the first client message holding these bytes (a chunk's statement).
+        self.drop_on = None
         self.drops = 0
         self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -212,6 +232,10 @@ class Relay:
                     with self.lock:
                         if self.drop_after is not None and state["sent"] + len(data) >= self.drop_after:
                             self.drop_after = None
+                            self.drops += 1
+                            break
+                        if self.drop_on is not None and self.drop_on in data:
+                            self.drop_on = None
                             self.drops += 1
                             break
                         if self.cut_commit_after is not None and self.cut_commit_after in data:

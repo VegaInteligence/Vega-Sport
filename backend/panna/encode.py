@@ -1,6 +1,7 @@
 """The canonical encoding of a row, as the loader computes it from Arrow and the server from the stored row
 (backend/panna/FAILURE_MODES.md, Rules: Segments). Per value: `N` for NULL; `T<octets>:<text>`; `I<integer>`;
-`D<the IEEE-754 bits as a signed 64-bit integer>`, any NaN as the canonical quiet NaN (PostgreSQL's own). The values
+`D<the IEEE-754 bits as a signed 64-bit integer>`, any NaN as the canonical quiet NaN (PostgreSQL's own); `B1` or `B0`
+for a boolean (FAILURE_MODES.md section 9). The values
 of a row in the source's column order, each followed by `|`, then a newline. A segment's digest is the SHA-256 of its
 rows' encodings in source order. Injective: the octet count delimits text, the bits are the double itself."""
 
@@ -65,6 +66,8 @@ def encode_column(array, pg_type):
         bits = values.view(np.int64).copy()
         bits[np.isnan(values)] = QUIET_NAN
         out = pc.binary_join_element_wise(_s("D"), pc.cast(pa.array(bits, pa.int64()), _STR), _s(""))
+    elif pg_type == "boolean":
+        out = pc.if_else(array.cast(pa.bool_()), _s("B1"), _s("B0"))
     else:
         raise ValueError(f"no canonical encoding for {pg_type}")
     return pc.if_else(pc.is_null(array), _s("N"), out)
@@ -105,6 +108,8 @@ def sql_value(name, pg_type, alias="d"):
         return f"coalesce('I' || {c}::text, 'N')"
     if pg_type == "double precision":
         return f"coalesce('D' || (('x' || encode(float8send({c}), 'hex'))::bit(64)::bigint)::text, 'N')"
+    if pg_type == "boolean":
+        return f"CASE WHEN {c} IS NULL THEN 'N' WHEN {c} THEN 'B1' ELSE 'B0' END"
     raise ValueError(pg_type)
 
 

@@ -8,6 +8,8 @@
   any test or code, when the user narrowed the period to 2021/22 onwards and the plan moved to deduplicated segments.
   GitHub #278, Linear VI-177.
   GH278-as to ay were added after Fable's review of H1 (M1, M2, m3 to m5, one nit), before their tests and fixes.
+  Section 9 (GH278.F-a to j, the fixtures' 14 added columns) was written on 28 Nov 2026 before its tests and code;
+  GH278.F-k to r and the rules marked *(review F)* after Fable's review of that lot, before their tests and code.
   Section 8 (S1, GH278.S1-a to t) and the amendments of GH278-ai and GH278-al were written on 28 Nov 2026, after
   Hugo approved the S1 scheme, before their tests and code.
 - **Pass H1 (this document's sections 1 to 6):** the Opta fixtures and their event children (`opta-latest`:
@@ -325,7 +327,86 @@ sources are not part of S1.
 | GH278.S1-p | Privileges (GH278-ai amended) | as GH278-ai |
 | GH278.S1-q | A scope purge of a match holding a selection, as `vega_collect`; the restore's inventory | the match, its selection and keys removed, observations and batch kept; `open_matchday_restore` accepts the inventory and has reviewed 185, 186 |
 | GH278.S1-r | `ROLLBACK.sql` after an application (GH278-al amended); *(review)* on a base without the schema `core`, the roles existing | as GH278-al; no error |
-| GH278.S1-s | The migrations: without the switch; with it; on a base holding H1 rows; `pilot apply` on a base the login reaches without 004 (added on 28 Nov after the first green run, before its test) | 185 and 186 applied, the panna files not; then 004 too; H1's rows, segments, manifests and scope unchanged; the pilot refused before any write (`SCHEMA_VERSION` naming `004_panna_canonical.sql`, exit 1), no receipt |
+| GH278.S1-s | The migrations: without the switch; with it; on a base holding H1 rows; `pilot apply` on a base the login reaches without 004 (added on 28 Nov after the first green run, before its test). *(Amended with section 9, after its code: the loader now needs 005, so the base before 004 holds 001–003 and 005, which does not depend on 004; 004 then applies alone, total 5)* | 185 and 186 applied, the panna files not; then 004 too; H1's rows, segments, manifests and scope unchanged; the pilot refused before any write (`SCHEMA_VERSION` naming `004_panna_canonical.sql`, exit 1), no receipt |
 | GH278.S1-t | Everything `pilot` prints | ids, codes, digests, counts and the pair; no password or credential URL |
 | GH278.S1-u | *(review)* After the pilot alone (one scoped fixtures load), an events-only `run`, and `prep` | `DEPENDENCY_MISSING` (exit 1), no events written, as GH278-t |
 | GH278.S1-v | *(review)* 186 applied online while a transaction holds a row of `core.matches` for 5 s, a second writer of `core.matches` arriving meanwhile | the migrate task waits for the first and applies 186 (exit 0); the second writer does not wait behind it |
+
+## 9. The fixtures' added columns (`opta_fixtures.parquet` of 28 Nov 2026, 14:18 UTC)
+
+Written on 28 Nov 2026 before the tests `GH278.F-*` of `backend/tests/test_panna.py` and before the code, after H1
+refused the release asset 804814591 (SHA-256 `9382c16a…efd163`) with `SCHEMA_DRIFT`: after H1's 13 columns it holds
+14 more, `venue_id`, `venue_name` (string), `venue_latitude`, `venue_longitude` (double), `venue_neutral` (bool),
+`local_date`, `local_time`, `match_week`, `coverage_level`, `var`, `referee_id`, `referee_name` (string), `attendance`
+(double), `match_officials_json` (string). Fixtures only: nothing of events, core or S1's functions changes.
+
+### 9.1 Rules
+
+- **Two schemas.** A fixtures object has H1's 13 columns, or those and all 14 added ones, each in its own Arrow type
+  (`bool` is stored as `boolean`). Anything else (an added column missing, a 28th column, another type) is
+  `SCHEMA_DRIFT` naming the columns, and nothing of the object is written.
+- **The 13 columns as before.** Their segment (`opta_fixtures`), encoding and digest are H1's whatever the schema. A
+  key whose 13 values did not change keeps its segment and is not written again, S1's segment included.
+- **The extension.** The 14 values of a key's rows, in the same row order, are one segment of the dataset
+  `opta_fixtures_ext`, with its own digest over those 14 columns (a boolean is `B1` or `B0`), stored once in
+  `panna_data.opta_fixtures_ext`. A key whose 14 values are NULL in every row has no extension segment. The manifest
+  entry names both segments (`segment_id`, `extension_segment_id`), and the load names the extension it read
+  (`panna.loads.extension`, NULL for a 13-column object). An entry is written when either segment changes: the 13
+  values, the 14, or the schema (a 13-column object after an extended one, or the reverse).
+- **Reading.** `panna.fixture_rows(load)` gives a complete extended fixtures load's generation, one row per stored
+  source row: `source_ordinal`, then the 27 values in the object's column order, in their types. A load without the
+  extension is refused (`invalid_parameter_value`): 13 columns are never shown with 14 invented NULLs. *(review F)* So
+  is a load of a scoped run: its other keys' entries may come from a 13-column object.
+  `panna_data.opta_fixtures_current`, `panna.segments_as_of` and S1's functions read the 13 columns as before.
+- **As H1 otherwise.**
+  - The churn guard counts the keys whose pair of segments changed.
+  - The completion's conservation check covers both segments of every eligible key.
+  - `verify` recomputes the digests of both datasets.
+  - A scoped load writes the two segments of its keys and nothing else.
+  - Ingestion never calls core: no score, link or selection changes because a fixtures object was loaded.
+- **Source ordinals.** A manifest entry keeps the first row and the runs of the load that wrote it. *(review F)* For
+  `opta_fixtures`, an entry is also written when only a key's rows moved in the object (the same pair, another first
+  row or runs), with no row written, so `fixture_rows` gives every generation's exact ordinals. Events keep H1's rule.
+- **Order of generations.** *(review F)* A full load whose object is older than its stream's current full
+  generation is refused before any write (`OLDER_GENERATION`, exit 1, naming the current digest). Each instant is the
+  object's update instant in its run's plan (this activation's, as S1 ranks them), else its receipt's. The same object
+  again is a replay. With either instant unknown, nothing is refused (the runbook's manifests carry both). A scoped
+  load (S1's pilot) is neither ordered nor counted as the current generation. An older object kept as an earlier
+  revision (27 Nov before 28 Nov) is loaded first.
+- **Migration 005** (`backend/panna/sql/005_panna_fixture_extension.sql`) adds the dataset and its 14 columns, the
+  table and its B-tree, the two columns, the function (the owner's: the login gets no new function, GH278-ai
+  unchanged) and the login's `SELECT` and `INSERT` on the new table. It is online: catalog changes, no
+  rewrite of H1's tables, the new foreign key validated over NULLs. The loader refuses a base without 005
+  (`SCHEMA_VERSION` naming it). H1's loader must not run on a base with 005: it writes no extension pair.
+
+### 9.2 Cases
+
+| # | Situation | Expected |
+|---|---|---|
+| GH278.F-a | `probe` of an extended object | no drift; the outcomes of its 13 columns; the object reports its extension |
+| GH278.F-b | A first load of an extended object whose 14 values hold every edge value (NULL and empty strings, NaN, ±inf, −0.0, true, false and NULL booleans, non-ASCII, quotes, newlines, a JSON text); a key whose 14 values are all NULL | every eligible row's 13 values in `opta_fixtures` and 14 in `opta_fixtures_ext`, the server's digests equal; `fixture_rows` gives each eligible source row's ordinal and 27 values equal to the source (doubles bit for bit), columns in the object's order; the all-NULL key has no extension segment and its 14 values come back NULL; nothing historical, deferred or unresolved stored; no value in the output |
+| GH278.F-c | Backward: a 13-column generation, then the extended object with the same 13 values | no row of `opta_fixtures` written, every key keeps its segment id; extension segments written; the first generation still readable, `fixture_rows` refuses it |
+| GH278.F-d | Forward: an extended generation, then the 13-column object, then the extended object again | accepted, 0 rows written each time; the keys that had an extension get an entry without it, then with it again; `fixture_rows` refuses the middle load and reads the other two equal |
+| GH278.F-e | Corrections in a next extended generation: one key's score, another's attendance and officials, a third gaining its first added value, a fourth losing its only one | one base segment and two extension segments written, every other segment reused; four entries; `fixture_rows` of each generation equals its own source |
+| GH278.F-f | A replay of the same extended object | 0 rows written in both tables, no manifest entry, the load complete, `fixture_rows` equal |
+| GH278.F-g | One added column missing; a 28th column; `venue_neutral` as string; `attendance` as int64 | `SCHEMA_DRIFT` naming the column, nothing written |
+| GH278.F-h | S1's state (a scoped load of one key of a 13-column object), then the extended object. *(review F)* The test's scoped load is this branch's; 005 over rows written by `main`'s loader is the rehearsal's (9.3) | the scoped key keeps its segment id and gains its extension; `verify` 0 mismatch |
+| GH278.F-i | A base without 005 | refused before any receipt (`SCHEMA_VERSION` naming 005), exit 1 |
+| GH278.F-j | A tampered extension row | `verify` names its segment in `opta_fixtures_ext` |
+| GH278.F-k | *(review F)* An extended load stopped by `--max-seconds 0`, then `retry`; one killed after a committed chunk, then `retry` | complete; the generation exact; no row, segment or entry twice |
+| GH278.F-l | *(review F)* The link cut when an extended chunk sends its extension rows; the answer to that chunk's COMMIT lost | one drop each; the chunk rolled back and written again, or found committed; the generation exact |
+| GH278.F-m | *(review F)* A committed entry whose extension link is lost before the load completes | `CONSERVATION` (stale), exit 1, the load not completed; `retry` refuses again |
+| GH278.F-n | *(review F)* A next generation changing only the 14 values of most keys | `CHURN_GUARD`, nothing written; `--allow-churn` writes the extension segments only |
+| GH278.F-o | *(review F)* A scoped plan of one key of the extended object | its two segments and one entry naming both; no other key, tombstone or scope row; `fixture_rows` refuses that load; a later full load reuses both segments |
+| GH278.F-p | *(review F)* An object older than the current generation; the current object again | `OLDER_GENERATION`, nothing written, the current generation unchanged; a replay |
+| GH278.F-q | *(review F)* Two rows swapped in the next object, their values unchanged | 0 rows written; one entry for each moved key, same segments; `fixture_rows` gives each generation its own ordinals |
+
+### 9.3 Rehearsal on the real objects (evidence, not a test)
+
+A clone of the S1 rehearsal base (production at 184, then 185, 186 and panna 001–004, the pilot published by `main`'s
+loader), then 005, then the 27 Nov object (13 columns) as a full generation, then the 28 Nov object (27 columns), each
+load stopped once and resumed by `retry`. Expected: 005 alone; S1's rows unchanged. The 28 Nov load writes the 25
+changed base segments (the coordinator's keywise comparison) and the 5,547 extension segments, and moved keys get
+their entries. `verify` finds no mismatch. The 27 Nov object reloaded is refused `OLDER_GENERATION`. A replay writes
+nothing. `fixture_rows` equals the coordinator's oracle. The same sequence without the entries of moved keys
+(a mutation) fails the oracle's ordinals.
