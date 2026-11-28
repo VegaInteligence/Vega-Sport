@@ -84,6 +84,10 @@ const FIXTURE_COLUMNS = `f.id,f.season,f.native_season,f.day,f.time_utc,f.status
  f.home_team_id,f.home_name,f.home_image_url,f.away_team_id,f.away_name,f.away_image_url,
  f.league_id,f.league_name,f.league_image_url,f.edition_emblem_url,f.score_home,f.score_away,f.score_penalty_home,f.score_penalty_away`;
 
+/** The forecast column `fixture()` reads, for the api.fixtures row `f`: null unless the match is to come and has one. */
+export const FORECAST_COLUMN = `(SELECT json_build_object('home_win',mf.home_win,'draw',mf.draw,'away_win',mf.away_win) FROM api.match_forecasts mf
+ WHERE f.status='not_started' AND mf.match_key=f.match_id) AS forecast`;
+
 /** The model's forecast of a match to come (api.match_forecasts' shares), as the site reads it; null without one. */
 export function forecastOf(f) {
   const r4 = (v) => Math.round(Number(v) * 10000) / 10000;
@@ -184,8 +188,7 @@ export async function fixturePage(req, p, read) {
       return send(req, null, 200, { etag: tag(req, g.version), ttl: PAGE_TTL });
   }
   const direction = order.toUpperCase();
-  const rows = `SELECT ${FIXTURE_COLUMNS},(SELECT json_build_object('home_win',mf.home_win,'draw',mf.draw,'away_win',mf.away_win) FROM api.match_forecasts mf
- WHERE f.status='not_started' AND mf.match_key=f.match_id) AS forecast FROM api.fixtures f ${terms.length ? "WHERE " + terms.join(" AND ") : ""}
+  const rows = `SELECT ${FIXTURE_COLUMNS},${FORECAST_COLUMN} FROM api.fixtures f ${terms.length ? "WHERE " + terms.join(" AND ") : ""}
  ORDER BY f.day ${direction} NULLS LAST,f.id ${direction} LIMIT ${bind(args.limit + 1)}`;
   const [r] = await read(`SELECT g.*,(SELECT coalesce(json_agg(r),'[]'::json) FROM (${rows}) r) AS rows FROM (${publication}) g`, binds);
   if (!r) reject(503, "Publication indisponible.");
@@ -226,8 +229,7 @@ export async function seasonFixtures(req, p, read) {
   // and the answer's bytes (more than 4 MiB), are the same 413 no-store for them, never a 200 an edge would keep nor a
   // 304. The bytes are known only from the answer: they read the season, rows included, as the GET does (a
   // revalidation costs the GET's statement).
-  const rows = `SELECT ${FIXTURE_COLUMNS},(SELECT json_build_object('home_win',mf.home_win,'draw',mf.draw,'away_win',mf.away_win) FROM api.match_forecasts mf
- WHERE f.status='not_started' AND mf.match_key=f.match_id) AS forecast FROM api.fixtures f
+  const rows = `SELECT ${FIXTURE_COLUMNS},${FORECAST_COLUMN} FROM api.fixtures f
  WHERE ${SEASON_SELECTION}
  ORDER BY f.day ASC NULLS LAST,f.id ASC LIMIT ${SEASON_FIXTURES_MAX + 1}`;
   const [r] = await read(`SELECT g.*,(SELECT coalesce(json_agg(r),'[]'::json) FROM (${rows}) r) AS rows FROM (${publication}) g`, [league, season]);

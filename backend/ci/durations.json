@@ -120,6 +120,7 @@
 "test_panna_deploy.PannaDeployTest.test_on_creates_the_login_s_secrets_then_the_worker_then_its_migrate_task": 10.3,
 "test_panna_deploy.PannaDeployTest.test_on_then_off_passes_panna_false_and_keeps_the_secrets": 19.2,
 "test_panna_infra": 1.0,
+"test_panna_s1": 71.3,
 "test_pilot": 0.7,
 "test_pilot_bounds": 0.7,
 "test_player_fact_snapshot": 2.4,

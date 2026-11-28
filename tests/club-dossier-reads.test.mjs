@@ -70,6 +70,8 @@ function clubSeason({ coming, played, bare = [], blank = [] }) {
       stats: !detailed || empty ? [] : statList(n),
       shots,
       appearances: detailed ? squad(id, league.id, day) : [],
+      // A match to come's forecast as the club read gives it after GH139 (`forecasts`), none for every fifth.
+      forecast: finished || n % 5 === 0 ? null : { home: 0.4 + n / 1000, draw: 0.25, away: 0.35 - n / 1000 },
     });
   }
   return fixtures;
@@ -145,8 +147,9 @@ function record(f, { shots, players, summary }) {
 const newestFirst = (a, b) => b.day.localeCompare(a.day) || b.id.localeCompare(a.id);
 const CLUB_PARAMS = ["season", "leagues", "league", "generation", "v", "team", "page", "limit", "include", "detail"];
 
-/** /api/read/club, /api/read/clubs and /api/read/league over `fixtures`; every request is logged. */
-function readApi(fixtures, { combinedTooLargePage } = {}) {
+/** /api/read/club, /api/read/clubs and /api/read/league over `fixtures`; every request is logged. `forecasts`: the club
+ * read's matches to come carry their forecast (GH139). */
+function readApi(fixtures, { combinedTooLargePage, forecasts = false } = {}) {
   const log = [], refused = [];
   const answer = (u) => {
     const q = u.searchParams,
@@ -197,7 +200,7 @@ function readApi(fixtures, { combinedTooLargePage } = {}) {
           .sort((a, b) => a.id.localeCompare(b.id))
           .map((c) => ({ id: c.id, name: c.name, country: c.country, providerCountry: c.country, imageUrl: null, seasons: [] })),
         teams: context.map((id) => ({ id, name: NAMES[id], imageUrl: null, country: "FRA", leagueIds: [LEAGUE.id], sampleMatches: 1, seasons: [SEASON] })),
-        fixtures: shown.map(fixtureRow),
+        fixtures: shown.map((f) => ({ ...fixtureRow(f), ...(forecasts && f.status === "not_started" && { forecast: f.forecast }) })),
         matches: shown.filter((f) => f.detailed).map((f) => record(f, { shots: includes.has("shots"), players: includes.has("appearances") })),
         appearances,
       },
@@ -427,4 +430,18 @@ test("GH138-e: an oversized combined page reloads both complete reads", async ()
   assert.deepEqual(dossier.coverage, { played: 16, analysed: 16, empty: false });
   assert.deepEqual(ids(dossier.upcoming), earliestToCome(fixtures, 6));
   assert.equal(dossier.data.appearances.length, 16 * 16);
+});
+
+// GH139-j: holds before GH139's change; it pins what « Prochains matchs » relies on (FAILURE_MODES_OPTIMISATIONS.md).
+test("GH139-j: the next six matches keep the club read's forecasts, in the 413 fallback too", async () => {
+  for (const combinedTooLargePage of [undefined, "2"]) {
+    const fixtures = clubSeason({ coming: 26, played: 16 });
+    const api = readApi(fixtures, { combinedTooLargePage, forecasts: true }),
+      context = { manifest: MANIFEST(true), season: SEASON },
+      site = loadSite(api, context);
+    const dossier = await pageDossier(site.scout, api, context);
+    const given = new Map(fixtures.map((f) => [f.id, f.forecast]));
+    assert.deepEqual(dossier.upcoming.map((m) => [m.id, m.forecast]), earliestToCome(fixtures, 6).map((id) => [id, given.get(id)]));
+    assert.ok(dossier.upcoming.some((m) => m.forecast === null) && dossier.upcoming.some((m) => m.forecast?.draw === 0.25));
+  }
 });

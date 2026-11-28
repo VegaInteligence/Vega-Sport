@@ -1572,3 +1572,66 @@ production's times and bytes after the change.
 ### GH138-e — Une réponse combinée de 25 rencontres dépasse le plafond
 
 La première page combinée peut passer et la deuxième renvoyer 413 PAGE_TOO_LARGE. La fiche reprend la lecture initiale des tirs et des apparitions séparément. Les pages suivantes gardent la version de leur première réponse. Le dossier présente les mêmes résultats, les prochains matchs et les apparitions. Les autres erreurs suivent le traitement habituel.
+
+## GH139. The club dossier's next matches: their forecasts in the club read (GH #139, VI-79; 28 Nov 2026, base `55321f39`)
+
+Read in the code (`55321f39`): « Prochains matchs » (`Upcoming`, `ClubScoutTabs.jsx`) shows up to six matches to come,
+each with the club's chances (`UpcomingChances`, drawn twice a row: under the name on a narrow card, beside the
+difficulty on a wide one), and each asks `/api/forecasts/match` on its own: six requests for six matches. The club
+report (`server/report-data.js`) asks it for its three next matches. Both read the base forecast's three shares only,
+which `api.match_forecasts` holds and `/api/fixtures` already gives each match to come (`fixture()`, `matches.mjs`); the
+club read (`actors.mjs`) does not. `forecast.refresh` (`vega/forecast.py`) rewrites a season's forecasts without an
+edition's version or a publication: the club's version (`actorVersion`) and a pinned read's tag (`readEtag`) would call
+an answer unchanged after its forecasts changed.
+
+### GH139.1 Rules
+
+- **In the club read.** Each fixture of `/api/read/club` whose status is `not_started` carries `forecast`: the three
+  shares of `api.match_forecasts` for the fixture's own sides, rounded to four decimals as `/api/forecasts/match` gives
+  its `forecast`; `null` when the match has none. Every page, detail and `include`. Another status has no such field,
+  as before; the league and player reads are unchanged. No other forecast (line-ups, grid, form) and no new route.
+- **The field is the marker.** A match to come whose fixture has the field (shares or `null`) is shown from it and its
+  own read is not asked. A fixture without it comes from an API before GH139 or from a kept answer: that match is read
+  on its own, as before. Decided per fixture, whichever of the site and the API is deployed first.
+- **Shown as before.** « Prochains matchs »: the same six matches in the same order, V the club's own share (home share
+  at home, away share away), N the draw, D the opponent's, the same `share()` text and bars in both copies of the row,
+  nothing without a forecast. The report: the same three matches, whole percentages, null without a forecast. The
+  Match page keeps its own read (`MatchPreview.jsx`: line-ups, grid, form).
+- **Versioned reads.** The club's version is read in its one statement with the club's matches to come in the scope
+  and their shares: a forecast written, changed or deleted changes it, so a held answer gets a 200 and a page fenced by
+  the previous `v` a 409 (the dossier reads again from the first page). Unchanged data: the same version, a 304 in the
+  same two statements. The club's form becomes `club-3`. Another club's forecast changes nothing. The league, player
+  and pool-match versions are computed as before.
+- **Pinned reads.** A read named by its publication (`generation`) takes the same projection, read in its answer's
+  statement, into its tag (`periodKey`, as `/api/read/presence` and `/api/read/discipline`): a forecast changed under
+  the same publication gives another tag, never a 304. The publication's checks are unchanged (409 for another one).
+  Trade-off: a conditional or HEAD pinned club read runs its two statements (the club's ids, the answer) where a held
+  tag took the publication's one; a changed one took three. The site's `media=1` reads already ran the answer.
+- **No request added.** The versioned read keeps its statements (two for a 304, three for a 200), the pinned GET its
+  two; no request per fixture. GH138 holds: one read per page with `include=appearances,shots`, 25 a page, its fences,
+  the 413 fallback (its two reads carry the field too).
+
+### GH139.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| GH139-a | A club read with a match to come that has a forecast (seed: `m_aaaaa6`, `t_aaaaa2` at home to `t_aaaaa3`), full, summary, `include=appearances,shots` | the fixture's `forecast` is `/api/forecasts/match`'s home, draw, away (0.5123, 0.2501, 0.2376) for both clubs; their finished fixtures and the league read's fixtures have no `forecast` |
+| GH139-b | The same match without a forecast | `forecast: null` on its fixture |
+| GH139-c | Versioned read; only that forecast changed, then deleted (no edition version, no publication) | each time both clubs' versions change: the held tag gets a 200 with the new value, the previous `v` a 409; `t_aaaaa1` (no match to come), the league and the player keep theirs; restored, every version is back |
+| GH139-d | Versioned read, nothing changed | the same version, a 304 in two statements |
+| GH139-e | Pinned read (`generation=7`); only the forecast changed, then deleted | each time the held tag gets a 200 with the new value; unchanged, a 304; `generation=6` a 409 |
+| GH139-f | « Prochains matchs »: six matches whose fixtures carry the field, home and away, one `null` | each row's V/N/D from the field, oriented to the club, the text `/api/forecasts/match` gave; no match's own read; nothing for the `null` one |
+| GH139-g | The same matches without the field, or some with it | the own read for the fixtures without it only, shown as before |
+| GH139-h | Report, a read whose fixtures carry the field (one `null`) | the three next matches' shares from it; no `/api/forecasts/match`; null shares for the `null` one |
+| GH139-i | Report, a read without the field, or mixed | `/api/forecasts/match` for the fixtures without it only, as before |
+| GH139-j | The dossier's pages carry the field | the next six matches keep it, in the 413 fallback too |
+| GH139-k | Browser, PSG 2026/2027 (coordinator) | before: six `/api/forecasts/match` for the dossier; after: none, the same V/N/D labels |
+
+GH139-a: `backend/api/test/actors.test.mjs`; b–e: `backend/api/test/versioned-reads.test.mjs` (a disposable
+database); f–g: `tests/club-missing-render.test.mjs`; h–i: `tests/report-data.test.mjs`; j:
+`tests/club-dossier-reads.test.mjs` (holds before the change: it pins what the rows rely on); k: the coordinator's
+Chromium run.
+
+### GH139-l — Refresh the chances from the current club summary
+
+On focus after the cache lifetime, the existing summary revalidates even when the publication is unchanged. The upcoming card takes a forecast field from that summary for the same club and season. An explicit null or a refreshed status other than not_started clears the chances. An upcoming fixture with a missing field keeps the dossier or its legacy fallback. Match order and the club's side still come from the dossier. The existing summary refresh supplies the new values in one read.

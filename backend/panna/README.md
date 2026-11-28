@@ -132,11 +132,75 @@ file's `probe` count, flat `verify_ms` (about 130 ms per 50 000-row chunk on the
 ## Rollback
 
 Stop the loader, set `/vega/v2/panna-deploy` to `off` (not deleted) and run a Deploy: it passes `Panna=false`, so the
-migrate task no longer gets the login's password. Then, as the owner, run `backend/panna/ROLLBACK.sql`: it drops
-`panna`, `panna_data`, `panna_admin` and, unless another database of the server still uses them, the two roles. The
-next Deploys leave them dropped while the switch stays `off`. Nothing of the football schemas references them. A bad
-load alone: its segments are content-addressed, so a corrected generation of the source adds its new segments and the
-manifest makes it current; nothing is deleted.
+migrate task no longer gets the login's password. Then, as the owner, run `backend/panna/ROLLBACK.sql`: it revokes the
+group's rights on `core` (S1), then drops `panna`, `panna_data`, `panna_admin` (with them S1's application receipts,
+`panna.canonical_applications`, and identity reviews, `panna.identity_reviews`) and, unless another database of the
+server still uses them, the two roles. S1's business data stays in `core`: the three tables and their rows, a
+published pair, the Opta key and the provider value `opta`. The next Deploys leave the roles dropped while the switch
+stays `off`. Nothing of the football schemas references them. A bad load alone: its segments are content-addressed,
+so a corrected generation of the source adds its new segments and the manifest makes it current; nothing is deleted.
+
+## S1: one fixture's half-time pair on one Vega match (`pilot`)
+
+The first business write (FAILURE_MODES.md section 8, the dictionary Hugo approved on 28 Nov 2026): the half-time
+pair of one Opta fixture, read from its stored segment, published into the existing cells
+`core.matches.home_score_ht` and `away_score_ht` of one existing Vega match, with its provenance. Five tables:
+`core.observation_batches`, `core.match_score_observations` (both lexemes of each pair kept, the goals when
+`^[0-9]{1,3}$`), `core.match_score_selections` (which observation governs a match's phase) in
+`backend/sql/186_match_score_observations.sql`, after the enum value `opta` alone in `185_core_provider_opta.sql`;
+`panna.canonical_applications` and `panna.identity_reviews` in `backend/panna/sql/004_panna_canonical.sql`. Only
+SECURITY DEFINER functions write them. The login executes `panna.apply_score_segment`, `panna.revert_score_application`
+and the read `core.score_pair_verdict`, and reads the two panna tables; core's two writing functions are reached only
+through the panna ones.
+
+```sh
+S=/path/to/scope-manifest.json   # as_of_utc; scope {asset, published_asset_sha256, source_ordinals_zero_based,
+                                 # source_match_keys (one), match_ids (one), maximum_fixture_rows, packet_sha256};
+                                 # source {release_asset_updated_at}; target {match_id, public_id, season_id,
+                                 # competition_season_id, home_team_id, away_team_id, match_date, status, parent_source}
+M=/path/to/frozen-manifest.json  # the one asset, its sha256, bytes, updated_at and local path
+python3 -m panna pilot check --scope "$S" --manifest "$M" --as-of 2026-11-28 --scratch "$W"   # no database: the object
+#   against its scope; with V2_PANNA_DATABASE_URL, also the verdict it would get (read only, no lock, nothing written)
+python3 -m panna pilot apply --scope "$S" --manifest "$M" --as-of 2026-11-28 --reviewer <who> --via 127.0.0.1:<port> --scratch "$W"
+python3 -m panna pilot revert --application <id> --reviewer <who> --via 127.0.0.1:<port>
+```
+
+- **Scope, before any write (exit 2):** the object's SHA-256 (`SCOPE_ASSET_DIGEST`), its issue instant
+  (`SCOPE_ISSUED_AT`), one key (`SCOPE_CARDINALITY`), one match (`SCOPE_MATCHES`), the key's rows at exactly the given
+  ordinals (`SCOPE_KEY_ABSENT`, `SCOPE_ORDINALS`, `SCOPE_MAX_ROWS`), the SHA-256 of their 13 fields as one JSON line
+  each (`SCOPE_PACKET_DIGEST`), the scope's own as-of (`SCOPE_AS_OF`). `apply` then runs the H1 loader restricted to
+  that key (plan `scope`: the other rows `out_of_scope`, counted, never written; no scope row, tombstone or churn
+  guard for them) and `panna.apply_score_segment` on the load it completed.
+- **Statuses:** `published` (the cells changed, revision and the versions of the edition then the match once),
+  `unchanged` (they already held the pair: provenance only), exit 0; `observed` (`INVALID_PAIR`,
+  `CHRONOLOGY_ABSENT`, `CHRONOLOGY_UNCLEAR`), `pending_identity`, `quarantined` (`STALE_APPROVAL`,
+  `PARENT_OWNED_BY_SNAPSHOT`, `GENERATION_NOT_ORDERABLE`, a rejected identity), `conflict` (`DUPLICATE_SOURCE_ROWS`,
+  `HALF_TIME_ABOVE_FINAL`, `CHRONOLOGY_CONTRADICTS`), `superseded` (`OLDER_GENERATION`), exit 1. The line
+  `application` gives the receipt's id, the pair, the cells and revisions before and after, the observations, the
+  capture of the former cells (origin `other`) and the identity decision. A replay changes nothing of the business:
+  its status stays `published`, with `changed: false`. Each activation is ranked by its own issue instant (the run's
+  plan), so the same bytes published again later rank as new; an instant after the database's clock is refused.
+- **Approval:** the target's nine fields are compared with the parent under its lock, NULL included; an approval
+  lacking one is refused by the database too. It holds neither the cells nor the revision: before `apply`, compare
+  the `cells` and `revision` that `pilot check` prints with the capture the approval was made on.
+- **Writers:** `Store.save_matches` neither writes nor compares the two cells of a selected phase. The Pitch
+  normalizer of production (2f5a2d8f) emits neither cell, so its writer leaves a published pair as it is; the guard
+  protects against a row that carries them. Snapshot sources never get an Opta key (their parents are refused).
+- **Rollout, repeatable:** CI green on the reviewed commit; the migrate task applies 185 and 186 (online, without the
+  switch; 186 waits for a pause in the writes of `core.matches`, at most 60 s, without queueing ahead of the writers,
+  then holds its lock only until it commits; else it fails whole and runs again); with `/vega/v2/panna-deploy` on, it applies the panna files: on a base where H1's
+  001–003 are applied, `panna applied=1 total=4`; on production's base, where Panna was never switched on,
+  `panna applied=4 total=4`, and the same run creates the login. Once 185 and 186 are applied, an older image's
+  migrate task refuses the base (`MIGRATIONS_UNKNOWN`, exit 4): this commit reaches `main` before the next Deploy.
+  Then `pilot check` without and with the login, the comparison above, `pilot apply`, a second `pilot apply`
+  (`published`, `changed: false`), the reads through `api.match_list` (the served match routes show no half-time
+  cell). Undo a publication with `pilot revert --application <id> --reviewer <who>` (the cells go back to what this
+  selection found; the reviewer is in the command's line).
+- **After the pilot, disable the login** until Hugo decides on an approval the login cannot write: the login still
+  writes H1's panna tables, so with its credentials a forged segment could reach `panna.apply_score_segment` (bounded
+  by the identity proof, the parent's chronology and final, a complete approval). As the owner,
+  `ALTER ROLE vega_v2_panna NOLOGIN`, and keep the switch `off` (or absent): with it `on`, the next Deploy's migrate
+  task sets `LOGIN` and the password again.
 
 ## Not in H1 (pass H2)
 

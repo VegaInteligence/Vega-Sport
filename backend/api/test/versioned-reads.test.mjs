@@ -163,3 +163,53 @@ test("an actor's version follows the editions of his own matches, no other", { s
   for (let i = 0; i < OWN.length; i++) assert.notEqual(written[i], start[i], OWN[i]);
   await owner.query("DELETE FROM ops.resource_versions WHERE resource_kind='competition_season' AND resource_id=$1", [other.id]);
 });
+
+// GH139 (FAILURE_MODES_OPTIMISATIONS.md, written before the change): forecast.refresh rewrites agg.match_forecasts without
+// an edition's version or a publication. m_aaaaa6, t_aaaaa2 at home to t_aaaaa3, is the seed's match to come.
+test("GH139-b–e: a club's validators follow its matches to come's forecasts, no other", { skip }, async () => {
+  const M6 = "match_id=api.internal_id('match','m_aaaaa6')";
+  const sides = ["t_aaaaa2", "t_aaaaa3"].map((team) => `/api/read/club?season=2025/2026&leagues=all&team=${team}`);
+  const paths = [...sides, sides[0] + "&generation=7"];
+  const read = async (path, headers) => {
+    const { response, body } = await get(path, headers);
+    return { status: response.status, etag: response.headers.get("etag"), version: body?.meta.version,
+      forecast: body?.data.fixtures.find((f) => f.id === "m_aaaaa6")?.forecast };
+  };
+  const others = async () => Promise.all([club, league, player].map(async (path) => (await get(path)).body.meta.version));
+  const start = await Promise.all(paths.map((path) => read(path))), kept = await others();
+  assert.deepEqual(start.map((r) => r.forecast), Array(3).fill({ home: 0.5123, draw: 0.2501, away: 0.2376 }));
+  // GH139-d: nothing changed: a 304, in two statements for the versioned reads.
+  for (const [i, path] of paths.entries()) {
+    const again = await get(path, { "if-none-match": start[i].etag });
+    assert.equal(again.response.status, 304, path);
+    if (i < 2) assert.equal(queries(again.response), 2, path);
+  }
+  await owner.query(`CREATE TEMP TABLE gh139 AS SELECT * FROM agg.match_forecasts WHERE ${M6}`);
+  try {
+    let held = start;
+    // GH139-c and e: only the forecast changed, then (GH139-b) deleted: null, never left out.
+    for (const [change, want] of [
+      [`UPDATE agg.match_forecasts SET home_win=0.6,draw=0.25,away_win=0.15 WHERE ${M6}`, { home: 0.6, draw: 0.25, away: 0.15 }],
+      [`DELETE FROM agg.match_forecasts WHERE ${M6}`, null],
+    ]) {
+      await owner.query(change);
+      const now = await Promise.all(paths.map((path, i) => read(path, { "if-none-match": held[i].etag })));
+      for (const [i, path] of paths.entries()) {
+        assert.equal(now[i].status, 200, `${path}: the tag held before ${change}`);
+        assert.deepEqual(now[i].forecast, want, path);
+        if (i === 2) continue;
+        assert.notEqual(now[i].version, held[i].version, path);
+        assert.equal((await get(`${path}&limit=1&page=2&v=${held[i].version}`)).response.status, 409, path);
+      }
+      assert.deepEqual(await others(), kept, "t_aaaaa1, the league and the player");
+      held = now;
+    }
+    assert.equal((await get(sides[0] + "&generation=6")).response.status, 409);
+  } finally {
+    await owner.query(`DELETE FROM agg.match_forecasts WHERE ${M6}`);
+    await owner.query("INSERT INTO agg.match_forecasts SELECT * FROM gh139");
+    await owner.query("DROP TABLE gh139");
+  }
+  // The same forecast again: the same versions.
+  assert.deepEqual((await Promise.all(sides.map((path) => read(path)))).map((r) => r.version), start.slice(0, 2).map((r) => r.version));
+});

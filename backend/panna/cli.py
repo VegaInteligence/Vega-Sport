@@ -18,7 +18,7 @@ import psycopg
 
 from . import registry, scope, sources
 from .db import AlreadyRunning, LinkLost, Session
-from .load import ELIGIBLE, Failure, Output, Run, checked, today
+from .load import ELIGIBLE, INDEX_LOAD, Failure, Output, Run, checked, today
 
 DEFAULT_SCRATCH = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "vega-panna"
 
@@ -101,6 +101,8 @@ def parser():
     verify = sub.add_parser("verify", help="the server's digest of each segment against the ledger")
     add_database(verify)
     verify.add_argument("--run", type=int)
+    from . import pilot
+    pilot.add_parser(sub, add_database)
     return top
 
 
@@ -198,7 +200,7 @@ def classify_one(entry, scratch, as_of, out, keys, session, digests, index):
         index["decided"] = by_key
         out.emit("audit", name=asset.name, labelled_out_played_from_2021=scope.audit(indexed.fixture_rows))
     else:
-        if index["decided"] is None and session is not None:
+        if index["decided"] is None and session is not None and session.read(lambda c: c.execute(INDEX_LOAD).fetchone()):
             rows = session.read(lambda c: c.execute(
                 "SELECT key, state, reason, day, vega_season FROM panna.scope WHERE dataset = 'opta_fixtures'").fetchall())
             index["decided"] = {k: scope.Decision(s, r, d, v) for k, s, r, d, v in rows} or None
@@ -444,8 +446,23 @@ def cmd_verify(args, out):
     return 1 if mismatched else 0
 
 
+def cmd_pilot(args, out):
+    """S1 (FAILURE_MODES.md section 8): one Opta key, one Vega match, under its scope manifest (backend/panna/pilot.py)."""
+    from . import pilot
+    try:
+        if args.step == "revert":
+            return pilot.revert(args, out, database_url(args))
+        if args.step == "check":
+            return pilot.check(args, out, args.database_url or os.environ.get("V2_PANNA_DATABASE_URL"), str(DEFAULT_SCRATCH))
+        return pilot.apply(args, out, database_url(args), runner(), str(DEFAULT_SCRATCH))
+    except pilot.ScopeRefused as refused:
+        out.emit("pilot_end", status="refused", reason=refused.code, exit=2, **refused.fields)
+        print(f"panna: {refused.code}", file=sys.stderr)
+        return 2
+
+
 COMMANDS = {"probe": cmd_probe, "prep": cmd_prep, "run": cmd_run, "retry": cmd_retry, "status": cmd_status, "verify": cmd_verify,
-            "explain": cmd_explain}
+            "explain": cmd_explain, "pilot": cmd_pilot}
 
 
 def main(argv=None):

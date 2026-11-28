@@ -117,6 +117,23 @@ test("each side carries its match's scoring, alike in the league summary and the
   for (const m of summary.matches) assert.deepEqual(sides(m), want[m.id], m.id);
 });
 
+test("GH139-a: a club's match to come carries the base forecast /api/forecasts/match gives; no other fixture does", { skip }, async () => {
+  // FAILURE_MODES_OPTIMISATIONS.md GH139 (written before the read). Seed: m_aaaaa6, t_aaaaa2 at home to t_aaaaa3, is the
+  // match to come with a forecast.
+  const { forecast } = (await get("/api/forecasts/match?match=m_aaaaa6")).body;
+  const shares = { home: forecast.home, draw: forecast.draw, away: forecast.away };
+  assert.deepEqual(shares, { home: 0.5123, draw: 0.2501, away: 0.2376 });
+  for (const team of ["t_aaaaa2", "t_aaaaa3"])
+    for (const query of ["", "&detail=summary", "&include=appearances,shots"]) {
+      const { fixtures } = (await get(`/api/read/club?${scope}&team=${team}${query}`)).body.data;
+      assert.deepEqual(fixtures.find((f) => f.id === "m_aaaaa6")?.forecast, shares, team + query);
+      assert.ok(fixtures.every((f) => f.status === "not_started" || !Object.hasOwn(f, "forecast")), team + query);
+    }
+  const league = (await get("/api/read/league?season=2025/2026&league=l_3FJFUl&detail=summary&limit=100")).body.data;
+  assert.ok(league.fixtures.some((f) => f.id === "m_aaaaa6"));
+  assert.ok(league.fixtures.every((f) => !Object.hasOwn(f, "forecast")), "the league read is as before");
+});
+
 test("profile errors", { skip }, async () => {
   assert.equal((await get(`/api/read/player?${scope}&player=bad`)).response.status, 400);
   assert.equal((await get(`/api/read/club?${scope}&team=t_aaaaa1&include=goals`)).response.status, 400);

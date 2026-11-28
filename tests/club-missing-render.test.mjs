@@ -204,7 +204,7 @@ test("set pieces: counter-attacks and set pieces together are unknown when one t
   assert.doesNotMatch(markup, /1,6 xG créés|NaN/);
 });
 
-const tabs = await load("ClubScoutTabs.jsx", {
+const tabStubs = {
   ...common,
   "./UI.jsx": { Segments: () => null, Skeleton: () => null },
   "./ResearchUI.jsx": { BookmarkButton: () => null },
@@ -227,7 +227,8 @@ const tabs = await load("ClubScoutTabs.jsx", {
   // The squad tab's absents (lot 2 of « Blessés et suspendus »): not rendered by these tests.
   "./Absences.jsx": { AbsenceBoard: () => null, AbsenceCoverage: () => null, AbsenceMark: () => null },
   "../services/team-absences.js": { absenceView: () => null, useTeamAbsences: () => ({}) },
-});
+};
+const tabs = await load("ClubScoutTabs.jsx", tabStubs);
 
 test("coming matches: no fabricated difficulty, the reason told apart", () => {
   const member = { id: "t_m", name: "Membre", position: 6 };
@@ -244,6 +245,74 @@ test("coming matches: no fabricated difficulty, the reason told apart", () => {
   // Outside the league: rated by its club Elo among the league's clubs, else « sans Elo ».
   assert.match(rowOf(markup.replaceAll("<a", "<tr"), "Ailleurs"), /sans Elo/);
   assert.match(rowOf(markup.replaceAll("<a", "<tr"), "Europe"), /Elo 1990 : centile 95[\s\S]*Difficulté 5 sur 5/);
+});
+
+// GH139-f/g (FAILURE_MODES_OPTIMISATIONS.md, written before the change): a coming match's chances come from its fixture
+// in the club read (`forecast`, null without one); a fixture without the field (an API before GH139) asks the match's own
+// read. The real share() and matchForecast(); the hook records what it is asked and answers as /api/forecasts/match.
+test("GH139-f/g: the next matches' chances from the club read, a match's own read only without them", async () => {
+  const { share } = await import("../dashboard/frontend/src/services/forecasts.js");
+  const { matchForecast } = await import("../dashboard/frontend/src/services/cup-matches.js");
+  const own = {
+    m_1: { home: 0.5123, draw: 0.2501, away: 0.2376 }, m_2: { home: 0.2, draw: 0.3, away: 0.5 }, m_3: null,
+    m_4: { home: 0.0452, draw: 0.1054, away: 0.8494 }, m_5: { home: 0.7, draw: 0.2, away: 0.1 }, m_6: { home: 0.34, draw: 0.33, away: 0.33 },
+  };
+  const ids = Object.keys(own), asked = [];
+  let summary;
+  const read = await load("ClubScoutTabs.jsx", {
+    ...tabStubs,
+    "../hooks/FootballContext.jsx": {
+      useFootball: () => ({ ...tabStubs["../hooks/FootballContext.jsx"].useFootball(), data: summary }),
+    },
+    "../services/forecasts.js": {
+      share,
+      useMatchForecast: (id, enabled = true) => {
+        asked.push([id, enabled]);
+        return enabled && own[id] ? { match: id, forecast: { ...own[id], homeGoals: 1.4, awayGoals: 1.1, score: [1, 1] } } : null;
+      },
+    },
+    "../services/cup-matches.js": { matchForecast },
+  });
+  // Home, then away, in turn.
+  const self = { id: "t_a", name: "Club A" };
+  const render = (carried) => {
+    asked.length = 0;
+    const upcoming = ids.map((id, i) => {
+      const other = { id: `t_${i}`, name: `Adversaire ${i}` };
+      return { id, date: `2026-12-0${i + 1}`, home: i % 2 ? other : self, away: i % 2 ? self : other, league: "Ligue", ...(carried.includes(id) && { forecast: own[id] }) };
+    });
+    return [...html(e(read.Upcoming, { dossier: { id: "t_a", season: "2026/2027", clubs: [], upcoming } })).matchAll(/aria-label="(Victoire [^"]*)"/g)].map((m) => m[1]);
+  };
+  const fetched = () => [...new Set(asked.filter(([, enabled]) => enabled).map(([id]) => id))];
+  // V the club's own share, N the draw, D the opponent's; twice a row (narrow and wide); nothing for m_3.
+  const want = ids.flatMap((id, i) => {
+    const f = own[id], home = i % 2 === 0;
+    return f ? Array(2).fill(`Victoire ${share(home ? f.home : f.away)}, Nul ${share(f.draw)}, Défaite ${share(home ? f.away : f.home)}`) : [];
+  });
+  assert.deepEqual(render(ids), want);
+  assert.deepEqual(fetched(), [], "no match's own read when the club read carries its forecast");
+  assert.deepEqual(render([]), want);
+  assert.deepEqual(fetched(), ids, "an API before GH139: each match's own read, as before");
+  assert.deepEqual(render(["m_1", "m_3", "m_5"]), want);
+  assert.deepEqual(fetched(), ["m_2", "m_4", "m_6"]);
+
+  // GH139-l: the club summary revalidated while the dossier remained cached.
+  summary = {
+    meta: { actor: { kind: "club", id: "t_a" }, currentSeason: "2026/2027" },
+    fixtures: [
+      { id: "m_1", status: "not_started", forecast: { home: 0.6, draw: 0.2, away: 0.2 } },
+      { id: "m_2", status: "not_started", forecast: null },
+      { id: "m_4", status: "finished" },
+    ],
+  };
+  assert.deepEqual(render(ids), [
+    "Victoire 60 %, Nul 20 %, Défaite 20 %",
+    "Victoire 60 %, Nul 20 %, Défaite 20 %",
+    ...want.slice(6),
+  ]);
+  assert.deepEqual(fetched(), []);
+  summary.meta.currentSeason = "2025/2026";
+  assert.deepEqual(render(ids), want);
 });
 
 test("results and expected: each pair on the same matches", () => {

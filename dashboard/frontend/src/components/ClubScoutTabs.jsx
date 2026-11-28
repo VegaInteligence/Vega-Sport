@@ -508,6 +508,20 @@ export function Overview({ dossier, onTab, base = dossier }) {
 
 export function Upcoming({ dossier, limit = 6 }) {
   const shown = dossier.upcoming.slice(0, limit);
+  // The summary refreshes on focus even while the detailed dossier stays cached.
+  const summary = useFootball()?.data;
+  const sameClubRead =
+    summary?.meta?.actor?.kind === "club" &&
+    summary.meta.actor.id === dossier.id &&
+    summary.meta.currentSeason === dossier.season;
+  const currentForecasts = new Map();
+  for (const fixture of sameClubRead ? summary.fixtures || [] : []) {
+    if (fixture.status && fixture.status !== "not_started") {
+      currentForecasts.set(fixture.id, null);
+    } else if (Object.hasOwn(fixture, "forecast")) {
+      currentForecasts.set(fixture.id, fixture.forecast);
+    }
+  }
   const opponentOf = (match) =>
     match.home.id === dossier.id ? match.away : match.home;
   // An opponent outside the league (Europe, cups) is placed by its club Elo among the
@@ -522,6 +536,9 @@ export function Upcoming({ dossier, limit = 6 }) {
     <div className={c.matchList}>
       {shown.map((match) => {
         const home = match.home.id === dossier.id;
+        const forecast = currentForecasts.has(match.id)
+          ? currentForecasts.get(match.id)
+          : match.forecast;
         const opponent = opponentOf(match);
         // A member of the reference keeps its place; a difficulty needs a measured centile
         // (never level 1 by default), and the label says which of the two is missing.
@@ -553,7 +570,7 @@ export function Upcoming({ dossier, limit = 6 }) {
                   )}
                 </span>
                 {/* On a narrow card the difficulty's column is hidden: the chances come under the name. */}
-                <UpcomingChances match={match} home={home} narrow />
+                <UpcomingChances matchId={match.id} forecast={forecast} home={home} narrow />
               </span>
             </span>
             <span className={c.matchScore}>
@@ -596,7 +613,7 @@ export function Upcoming({ dossier, limit = 6 }) {
                         : "sans Elo"}
                   </small>
                 )}
-                <UpcomingChances match={match} home={home} />
+                <UpcomingChances matchId={match.id} forecast={forecast} home={home} />
               </span>
             </span>
             <span className={c.matchComp}>{match.league}</span>
@@ -607,9 +624,13 @@ export function Upcoming({ dossier, limit = 6 }) {
   );
 }
 
-/** The club's chances in a match to come, from its side: win, draw, loss. Nothing without a forecast. */
-function UpcomingChances({ match, home, narrow = false }) {
-  const forecast = matchForecast(useMatchForecast(match.id)?.forecast);
+/** The club's chances in a match to come, from its side: win, draw, loss. Nothing without a forecast.
+ * The club read gives each match to come its forecast (null without one); a read before it gives
+ * none, and the match's own read is asked (GH139). */
+function UpcomingChances({ matchId, forecast: supplied, home, narrow = false }) {
+  const carried = supplied !== undefined;
+  const own = useMatchForecast(matchId, !carried)?.forecast;
+  const forecast = matchForecast(carried ? supplied : own);
   if (!forecast) return null;
   const parts = [
     ["V", "Victoire", home ? forecast.home : forecast.away],
