@@ -140,6 +140,9 @@ CALLS = {
     ("ecr", "get-login-password"): [(["ecr:GetAuthorizationToken"], ["*"])],
     ("docker", "push"): [(["ecr:BatchCheckLayerAvailability", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart",
                            "ecr:CompleteLayerUpload", "ecr:PutImage"], [REPOSITORY])],
+    # VI-135: a worker-only Deploy reads the migration files of the deployed images (migration_manifest.py): their
+    # manifest, then their layers.
+    ("docker", "pull"): [(["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"], [REPOSITORY])],
     ("ecs", "run-task"): [(["ecs:RunTask"], [f"arn:aws:ecs:{REGION}:{ACCOUNT}:task-definition/vega-v2-migrate:12",
                                              f"arn:aws:ecs:{REGION}:{ACCOUNT}:task-definition/vega-v2-archives:3"]),
                           (["iam:PassRole"], [f"arn:aws:iam::{ACCOUNT}:role/vega-v2-worker-TaskRole-ABC",
@@ -162,7 +165,8 @@ CALLS = {
 KMS = [(["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey"], ["arn:aws:kms:us-east-2:361769570630:key/0000"])]
 
 SCRIPTS = {"deploy.sh": AWS / "deploy.sh", "ci/secrets.sh": AWS / "ci/secrets.sh", "deploy_state.py": AWS / "deploy_state.py",
-           "verify-deploy.mjs": AWS / "verify-deploy.mjs", "smoke-public-reads.mjs": AWS / "smoke-public-reads.mjs"}
+           "verify-deploy.mjs": AWS / "verify-deploy.mjs", "smoke-public-reads.mjs": AWS / "smoke-public-reads.mjs",
+           "migration_manifest.py": AWS / "migration_manifest.py"}
 
 
 def shell_code(line):
@@ -198,9 +202,11 @@ def calls_in_scripts():
             pairs = []
             if path.suffix == ".sh":
                 pairs += re.findall(r"(?<![\w-])(?:aws|call)\s+(?:--region\s+\S+\s+)?([a-z0-9]+)\s+([a-z][a-z0-9-]*)", code)
-                pairs += [("docker", "push")] if re.search(r"(?<![\w-])docker\s+push\b", code) else []
+                pairs += [("docker", op) for op in ("push", "pull") if re.search(rf"(?<![\w-])docker\s+{op}\b", code)]
             elif path.suffix == ".py":
                 pairs += re.findall(r'\baws\(\s*"([a-z0-9]+)",\s*"([a-z0-9-]+)"', line)
+                # The registry's calls a Python script makes through docker (VI-135, migration_manifest.py).
+                pairs += [("docker", op) for op in re.findall(r'\bdocker\(\s*"(push|pull)"', line)]
             else:
                 pairs += re.findall(r'"aws",\s*\[\s*"([a-z0-9]+)",\s*"([a-z0-9-]+)"', line)
             for pair in pairs:
@@ -236,6 +242,18 @@ class DeployRoleTest(unittest.TestCase):
         self.assertFalse(granted(policy, "lambda:InvokeFunctionUrl", API_FUNCTION))
         self.assertFalse(granted(policy, "lambda:InvokeFunction", API_FUNCTION.replace("vega-v2-api", "vega-v2-account-front")))
         self.assertFalse(granted(policy, "lambda:InvokeFunction", API_FUNCTION + ":preview"))
+
+    def test_VI135_the_worker_only_deploy_reads_the_worker_repository_alone(self):
+        """A worker-only Deploy pulls the candidate's and the deployed images (migration_manifest.py): ecr:BatchGetImage
+        and ecr:GetDownloadUrlForLayer on vega-v2-worker, in the statement that grants its push, and nowhere else; the
+        grants' version says so (3), so that the worker-only Deploy can refuse an older roles stack before anything."""
+        found = calls_in_scripts()
+        self.assertIn(("docker", "pull"), found, "the scan sees the manifest's pulls")
+        policy = statements("DeployRole")
+        for action in ("ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"):
+            self.assertEqual(granted(policy, action, REPOSITORY), ["Image"], action)
+            self.assertEqual(granted(policy, action, REPOSITORY.replace("vega-v2-worker", "vega-v2-other")), [], action)
+        self.assertEqual(re.search(r"\n  DeployGrants: \{Value: '(\d+)'\}", ROLES)[1], "3")
 
     def test_GH157_q_the_us_east_1_calls_name_their_region(self):
         """A stack or a parameter of us-east-1 is granted there, not only in the role's own region."""
