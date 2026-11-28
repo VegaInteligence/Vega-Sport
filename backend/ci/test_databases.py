@@ -67,6 +67,8 @@ SUITES = {
     "VEGA_V2_CLONE_TEST_DSN": "vega_v2_clone_test",
     # PannaData's loader, its schema and its login (test_panna.py, backend/panna/FAILURE_MODES.md GH278).
     "VEGA_V2_PANNA_TEST_DSN": "vega_v2_panna_test",
+    # PannaData's S1: the half-time pair of one Vega match (test_panna_s1.py, backend/panna/FAILURE_MODES.md section 8).
+    "VEGA_V2_PANNA_S1_TEST_DSN": "vega_v2_panna_s1_test",
 }
 
 

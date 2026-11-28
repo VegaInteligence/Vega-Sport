@@ -174,6 +174,9 @@ class Relay:
         self.rate = 0
         self.drop_after = None
         self.cut_commit = False
+        # S1 (test_panna_s1.py, GH278.S1-o): cut only the COMMIT that follows a message holding these bytes (the name
+        # of a function the transaction called), not the first COMMIT of the run.
+        self.cut_commit_after = None
         self.drops = 0
         self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -211,6 +214,9 @@ class Relay:
                             self.drop_after = None
                             self.drops += 1
                             break
+                        if self.cut_commit_after is not None and self.cut_commit_after in data:
+                            self.cut_commit_after = None
+                            self.cut_commit = True
                         # The simple-query message of a COMMIT ('Q', its length, the text, NUL), as psycopg sends it.
                         if self.cut_commit and b"Q\x00\x00\x00\x0bCOMMIT\x00" in data:
                             self.cut_commit = False

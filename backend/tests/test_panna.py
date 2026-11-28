@@ -191,8 +191,10 @@ ELSEWHERE = """SELECT count(*) FROM pg_shdepend s JOIN pg_database d ON d.oid = 
 
 
 def drop_login(admin):
-    if not admin.execute(ELSEWHERE).fetchone()[0]:
-        admin.execute("DROP ROLE IF EXISTS vega_v2_panna")
+    """The documented rollback (ROLLBACK.sql): the group's rights on core revoked (S1, GH278-al amended), the panna
+    schemas dropped, then the roles unless another database of the server still grants to vega_panna. Without the
+    revocation, a base the suite leaves keeps S1's grants on core and holds the login on every other base's server."""
+    admin.execute((ROOT / "panna" / "ROLLBACK.sql").read_text())
 
 
 @required(psycopg is not None and h is not None and local(DSN),
@@ -201,7 +203,6 @@ class PannaTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.admin = psycopg.connect(DSN, autocommit=True)
-        cls.admin.execute("DROP SCHEMA IF EXISTS panna_data, panna, panna_admin CASCADE")
         drop_login(cls.admin)
         env = {k: v for k, v in os.environ.items() if not k.startswith("V2_")}
         env.update(V2_MIGRATION_DATABASE_URL=DSN, V2_PANNA_PASSWORD=PASSWORD, PYTHONPATH=str(ROOT))
@@ -217,7 +218,6 @@ class PannaTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.upstream.close()
-        cls.admin.execute("DROP SCHEMA IF EXISTS panna_data, panna, panna_admin CASCADE")
         drop_login(cls.admin)
         cls.admin.close()
         cls.tmp.cleanup()
@@ -862,6 +862,32 @@ class PannaTest(unittest.TestCase):
                     login.execute(statement)
         limit = self.count("SELECT rolconnlimit FROM pg_roles WHERE rolname = 'vega_v2_panna'")
         self.assertEqual(limit, 4)
+        # Amended for S1 (FAILURE_MODES.md section 8): no S1 table of core read or written, the two panna receipt tables
+        # read only; the schema core used for its score functions alone.
+        for statement in ("SELECT 1 FROM core.match_score_observations", "SELECT 1 FROM core.observation_batches",
+                          "SELECT 1 FROM core.match_score_selections", "SELECT 1 FROM core.provider_ids",
+                          "DELETE FROM panna.canonical_applications", "UPDATE panna.identity_reviews SET is_current = false"):
+            with self.subTest(statement=statement):
+                with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                    login.execute(statement)
+        self.assertEqual(login.execute("SELECT count(*) FROM panna.canonical_applications").fetchone()[0], 0)
+        self.assertTrue(self.count("SELECT has_schema_privilege('vega_v2_panna', 'core', 'USAGE')::int") == 1)
+        # What the login executes beyond what every role does (PUBLIC, seen through a role granted nothing): the S1 read
+        # and the two panna entry points, and H1's panna.segments_as_of (001_panna.sql), which S1 leaves as it is.
+        self.admin.execute("DROP ROLE IF EXISTS panna_public_probe")
+        self.admin.execute("CREATE ROLE panna_public_probe NOLOGIN")
+        self.addCleanup(self.admin.execute, "DROP ROLE IF EXISTS panna_public_probe")
+        granted = {r[0] for r in self.admin.execute(
+            """SELECT p.oid::regprocedure::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+               WHERE n.nspname IN ('core', 'panna') AND has_function_privilege('vega_v2_panna', p.oid, 'EXECUTE')
+                 AND NOT has_function_privilege('panna_public_probe', p.oid, 'EXECUTE')""").fetchall()}
+        # Amended after Fable's review (M1): core's two writing functions are reached only through the panna ones.
+        self.assertEqual({g.split("(")[0] for g in granted}, {"core.score_pair_verdict", "panna.apply_score_segment",
+                                                             "panna.revert_score_application", "panna.segments_as_of"})
+        for table in ("core.match_score_observations", "core.match_score_selections", "core.observation_batches"):
+            for right in ("INSERT", "UPDATE", "DELETE", "TRUNCATE"):
+                self.assertEqual(self.count("SELECT has_table_privilege('vega_collect', %s, %s)::int", table, right), 0,
+                                 (table, right))
 
     def test_GH278_ak_verify_names_a_tampered_segment(self):
         self.run_load("opta_fixtures.parquet", "events_EPL.parquet")
@@ -903,6 +929,14 @@ class PannaTest(unittest.TestCase):
         self.assertEqual(self.count("SELECT count(*) FROM pg_roles WHERE rolname IN ('vega_v2_panna', 'vega_panna')"), 2 if shared else 0)
         self.assertEqual(self.count("SELECT count(*) FROM pg_tables WHERE schemaname IN ('core', 'agg', 'ops', 'api')"), football)
         self.assertEqual(self.count("SELECT count(*) FROM core.matches"), matches)
+        # Amended for S1: the roles keep no right in this database (their grants on core revoked before the drop), and
+        # the business tables of S1 and the provider value stay.
+        self.assertEqual(self.count("""SELECT count(*) FROM pg_shdepend s JOIN pg_database d ON d.oid = s.dbid
+                                       WHERE d.datname = current_database() AND s.refclassid = 'pg_authid'::regclass
+                                         AND s.refobjid IN (SELECT oid FROM pg_roles WHERE rolname IN ('vega_panna', 'vega_v2_panna'))"""), 0)
+        for table in ("core.match_score_observations", "core.match_score_selections", "core.observation_batches"):
+            self.assertIsNotNone(self.admin.execute("SELECT to_regclass(%s)", (table,)).fetchone()[0], table)
+        self.assertEqual(self.count("SELECT count(*) FROM pg_enum WHERE enumtypid = 'core.provider'::regtype AND enumlabel = 'opta'"), 1)
         # GH278-ah: without V2_PANNA_PASSWORD, nothing of panna.
         done = self.migrate()
         self.assertEqual(done.returncode, 0, done.stderr)

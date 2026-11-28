@@ -31,6 +31,9 @@ FAMILY_TABLES = {
 # it writes "INT" for the Turkish second division (TFF 1. Lig, all clubs Turkish), which made
 # its matches read as international ones.
 COMPETITION_COUNTRIES = {"l_1BFfna": "TUR"}
+# The cells of core.matches each score phase of core.match_score_selections governs (186; backend/panna/FAILURE_MODES.md
+# section 8): a selected pair is written by its arbitration only, whatever this writer's row holds.
+GOVERNED_CELLS = {"half_time": ("home_score_ht", "away_score_ht")}
 
 ENTITY_TABLE = {
     "competition": "competitions",
@@ -622,6 +625,14 @@ class Store:
                         (mid,),
                     ).fetchone()
                     old_scopes = {(None, current[2]), (None, current[3])}
+                    # A phase whose pair another source's observation governs (core.match_score_selections, 186;
+                    # backend/panna/FAILURE_MODES.md section 8): its two cells are not this writer's to write, nor to
+                    # compare. Read under the match's lock, which the publication takes too.
+                    for (phase,) in self.conn.execute(
+                        "SELECT score_phase FROM core.match_score_selections WHERE match_id=%s", (mid,)
+                    ).fetchall():
+                        for column in GOVERNED_CELLS.get(phase, ()):
+                            row.pop(column, None)
                     moved = current[:2] != (competition_season_id, sid)
                     if moved:
                         # The provider names another edition (or /date had none and the

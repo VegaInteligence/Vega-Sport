@@ -8,6 +8,8 @@
   any test or code, when the user narrowed the period to 2021/22 onwards and the plan moved to deduplicated segments.
   GitHub #278, Linear VI-177.
   GH278-as to ay were added after Fable's review of H1 (M1, M2, m3 to m5, one nit), before their tests and fixes.
+  Section 8 (S1, GH278.S1-a to t) and the amendments of GH278-ai and GH278-al were written on 28 Nov 2026, after
+  Hugo approved the S1 scheme, before their tests and code.
 - **Pass H1 (this document's sections 1 to 6):** the Opta fixtures and their event children (`opta-latest`:
   `opta_fixtures.parquet`, the `events_<competition>.parquet` files), every column, through the real CLI, into the
   schemas `panna` and `panna_data`. **Pass H2** (section 7) covers the other families and formats, the tunnel task, the
@@ -18,7 +20,8 @@
 - **Tests:** `backend/tests/test_panna.py` (the CLI against a loopback upstream, a disposable PostgreSQL 18 and a TCP
   relay; the migrate task and the rollback in GH278-ah/al), `backend/tests/test_panna_infra.py` (the templates, the
   image, `secrets.sh` run against a stand-in `aws`), `backend/tests/test_panna_deploy.py` (the real `deploy.sh` with
-  the switch). Real-file controls are evidence runs, not tests.
+  the switch), and for S1 `backend/tests/test_panna_s1.py` (the real Pitch writer, migrate task, CLI and
+  PostgreSQL 18). Real-file controls are evidence runs, not tests.
 
 ## 0. Terms
 
@@ -151,10 +154,10 @@
 | # | Situation | Expected |
 |---|---|---|
 | GH278-ah | `migrate` without `V2_PANNA_PASSWORD`; with it, twice; a recorded file changed | nothing of panna; applied once, recorded with its SHA-256, the login set (4 connections); the run stops |
-| GH278-ai | The login tries `DELETE`, `TRUNCATE`, `DROP`, `ALTER`, `CREATE`, or reads `core`, `agg`, `ops`, `api` | denied |
+| GH278-ai | The login tries `DELETE`, `TRUNCATE`, `DROP`, `ALTER`, `CREATE`, or reads `core`, `agg`, `ops`, `api` | denied. Amended for S1 (section 8), before its tests: the login may use the schema `core` and execute only `core.score_pair_verdict` (a read) and the two functions `panna.apply_score_segment` and `panna.revert_score_application`, beside H1's `panna.segments_as_of` (unchanged; this sentence omitted it until the suite named it, 28 Nov). Amended again on 28 Nov after Fable's review (M1), before its tests: `core.publish_score_pair` and `core.revert_score_selection` are reached only through those two panna functions (SECURITY DEFINER, the same owner), so the login cannot call them with lexemes, a key, a match, a batch or an instant of its own; a direct call is denied. The login still writes H1's panna tables, so a forged segment can reach `panna.apply_score_segment`: the database bounds that call by origin `opta`, a Pitch-owned parent, the identity proof, the half-time phase, the parent's own chronology and final, a complete approval and an instant not in the future. A one-fixture bound the login cannot write (an approval seeded by a migration) is Hugo's decision; until then the login is disabled after the pilot (README, S1). It still reads and writes no `core` table, and it reads `panna.canonical_applications` and `panna.identity_reviews` without writing them. The schema's usage also reaches what every role (`PUBLIC`) already executes in `core`: pure helpers and `core.table_results` (an edition's results by team, read-only, called by the SportScore source as `vega_collect`), left as they are. `vega_collect` holds no `INSERT`, `UPDATE`, `DELETE` or `TRUNCATE` on the three S1 core tables and no right on their sequences. `PUBLIC` executes none of the five functions |
 | GH278-aj | `status`, `verify`, and every error | counts, digests, names, reasons; no row value, password or credential URL |
 | GH278-ak | `verify` after a run | every segment's server digest equals its ledger digest; a tampered row is named by its segment |
-| GH278-al | Removing the integration (`backend/panna/README.md`, Rollback) | `panna`, `panna_data`, `panna_admin` and the two roles dropped; football schemas, rows and logins unchanged |
+| GH278-al | Removing the integration (`backend/panna/README.md`, Rollback) | `panna`, `panna_data`, `panna_admin` and the two roles dropped; football schemas, rows and logins unchanged. Amended for S1, before its tests: the login's grants on `core` (the schema, the score functions) are revoked before the role is dropped. Business data does not live in `panna`, so these stay: the three S1 core tables and their rows, the published half-time pair, the Opta key of `core.provider_ids` and the `opta` provider value. The targeted revert (GH278.S1-n) is how a publication is undone |
 | GH278-ay | The switch set to `off` after `on` (m4) | the Deploy passes `Panna=false`: the migrate task no longer gets the password, the alarm no longer counts the login, so a rollback is not undone by the next Deploy; an absent switch passes nothing |
 
 ## 7. Pass H2 (not covered by H1, nothing of it claimed)
@@ -165,3 +168,164 @@
 - The transient tunnel task, its session document, the role trusted by the workflow, the daily workflow and its
   stale alarm, the second-day churn measurement.
 - The retirement of the collectors PannaData replaces, one scope at a time after validation.
+
+## 8. S1: the half-time pair of one existing Vega match (the PSG–Roma pilot)
+
+Hugo approved the S1 scheme and the PSG–Roma pilot only on 28 Nov 2026 (`schema-vega-propose`, the final dictionary).
+This section and the amendments of GH278-ai and GH278-al were written that day, before their tests
+(`backend/tests/test_panna_s1.py`) and the code. Fable's review of that evening (M1, M2, m3 to m7) amended the rules
+marked *(review)* below and cases l, m, n, p, r, and added u and v, before their tests and code. S2 and later, other matches, the scheduler and the retirement of
+sources are not part of S1.
+
+### 8.1 Rules
+
+- **One key, one match.** An application names one Opta key and one Vega match through a scope manifest. The scope
+  manifest is the report of the real object, and it holds:
+  - the object's digest;
+  - the ordinals of the key's rows;
+  - the key and the match id;
+  - the maximum row count;
+  - the digest of each row's 13 lexical fields (the packet);
+  - the parent the approval saw.
+
+  Any other cardinality is refused before anything is written. Reading or hashing the whole file authorizes nothing
+  beyond the key. The run writes the key's segment, manifest entry and scope row only: no other key, segment, scope
+  row or observation.
+- **The load.** It is an H1 run of `opta_fixtures.parquet` restricted to the key (`panna.runs.plan.scope`).
+  - The receipt keeps the object's digest and row count.
+  - The load's outcomes count the key's rows (`eligible`) and the others (`out_of_scope`), and add up to the footer.
+  - The manifest entry keeps the key's ordinals.
+  - No tombstone is written, and no scope row of another key.
+  - *(review)* A scoped load is never the fixtures index of a later events load: after the pilot alone (no complete
+    unscoped fixtures load), an events-only `run` or `prep` is refused `DEPENDENCY_MISSING`, as GH278-t.
+- **The application.** `panna.apply_score_segment` reads the stored segment and its receipt, never values the caller
+  supplies. It keeps one row of `panna.canonical_applications` per (segment, rule version, target relation), updated
+  in place, under lock, as its state changes. The states are published, unchanged, observed, pending_identity,
+  quarantined, conflict, superseded and reverted.
+- **Lexemes.** `^[0-9]{1,3}$` parses a lexeme into goals; any other form, the empty string included, is kept as text
+  with NULL goals. A pair is valid when both sides parse. An invalid or incomplete pair is kept and can never win.
+- **Contradictory rows.** Rows of the key whose four score lexemes differ give `conflict / DUPLICATE_SOURCE_ROWS`: no
+  observation and no publication, and the segment keeps every row and ordinal. Equal rows keep their multiplicity in
+  the segment and give one observation.
+- **Batch.** One `core.observation_batches` row per published object version: distributor `pannadata`, object name,
+  member path NULL, content digest, `issued_at` (the release asset's update instant when the listing gives it),
+  first sight, source URL and schema digest.
+- **Observations.** Each batch gives the key's `half_time` pair and its `final_reported` pair, both of origin `opta`:
+  - source key: the Opta key;
+  - source dataset: `opta_fixtures`;
+  - both lexemes kept;
+  - `effective_at` *(review)*: this activation's issue instant, the object's update instant in the run's own plan
+    (`panna.runs.plan`, its asset's `updated_at`), not the first one a receipt or a batch kept for the same bytes;
+    else the batch's `issued_at`; else the run's as-of day at 00:00 UTC.
+
+  A replay (the same batch at the same instant) adds nothing. Any other activation adds an observation
+  (`revision_no` + 1), even with the same pair, so the latest activation ranks first: A (t1), B (t2), then the same
+  bytes as A again (t3) give three observations and the selection follows A, B, A; A (t1), A' with the same pair
+  (t3), then B dated t2 received late: B is superseded. An activation without an instant, when the key already has
+  an observation from another batch, cannot be ordered; nor can an instant more than five minutes after the
+  database's clock, which would outrank every later real generation. Both: no observation,
+  `quarantined / GENERATION_NOT_ORDERABLE`.
+- **Candidate.** For an origin, key and phase, the candidate is the valid complete pair with the largest
+  (`effective_at`, `revision_no`); a NULL `effective_at` comes last.
+- **Identity.** It is recorded in `panna.identity_reviews` (entity match, origin opta, the key). The anchor is
+  `linked` when all of these hold:
+  - it exists, and its parent is Pitch's: source `pitchapi`, no key of a snapshot source;
+  - its date is the source's day;
+  - its two teams carry the source's oriented names, normalised;
+  - its final score equals the source's final pair;
+  - no other match of that day joins the same two teams.
+
+  The arbitrated half-time pair is never part of the proof. The other decisions:
+  - `ambiguous`: another candidate exists;
+  - `no_candidate`: there is no anchor;
+  - `rejected`: a check fails, with its code.
+
+  A replay with the same decision and evidence adds no review row. One review is current per key.
+- **Ownership.** A parent whose source is a snapshot provider (`open_matchday`, `openfootball`, `openligadb`,
+  `international_results`), or that holds a key of one, gives `quarantined / PARENT_OWNED_BY_SNAPSHOT`:
+  - the review is `rejected` with that code and `chosen_id` NULL;
+  - no `core.provider_ids` row is written;
+  - the observations stay;
+  - the next snapshot runs normally.
+
+  Any other non-Pitch parent gives `quarantined / PARENT_NOT_PITCH`.
+- **Approval.** The parent the scope manifest expects (season, edition, teams, date, status, source) is read again
+  under the parent's lock. Any difference gives `quarantined / STALE_APPROVAL`: nothing is written in core except the
+  batch and its observations. *(review)* The approval names nine fields (`match_id`, `public_id`, `season_id`,
+  `competition_season_id`, `home_team_id`, `away_team_id`, `match_date`, `status`, `parent_source`).
+  `core.publish_score_pair` and `core.score_pair_verdict` refuse an approval that lacks one or names another match
+  (`invalid_parameter_value`, nothing written). Each field is compared NULL included: an expected NULL holds only
+  against NULL. The approval holds neither the parent's cells nor its revision: the operator compares those
+  `pilot check` prints with the capture before `apply` (README).
+- **Protections.** Each failure leaves no selection and no change to the match:
+  - a half-time pair above the final pair (the source's or the parent's): `conflict / HALF_TIME_ABOVE_FINAL`;
+  - the parent's first-half goals in `core.match_events`, per side, differing from the pair:
+    `conflict / CHRONOLOGY_CONTRADICTS`;
+  - *(review, the code's rule since the first version)* a first-half goal that is an own goal, or whose team is
+    neither side's: `observed / CHRONOLOGY_UNCLEAR`, the side it counts for not being certain;
+  - no goal chronology at all: `observed / CHRONOLOGY_ABSENT`.
+- **Locks.** The application takes, in this order:
+  1. the Opta key's advisory lock;
+  2. the advisory lock `pitchapi:match:<key>` that `Store.save_matches` takes;
+  3. the parent row;
+  4. its keys.
+
+  The resource versions come last, the edition's then the match's.
+- **Publication.** The selection (match, `half_time`) names the winning Opta observation. The two cells change
+  together, once, with `revision` + 1, `updated_at`, and the versions of the edition then the match. Cells that
+  already hold the pair get the selection and no business change (`unchanged`). A replay changes no business row,
+  revision, version or data mark.
+- **Capture.** Before an unattributed pair (no selection) is replaced, the parent's two cells are captured as an
+  observation: origin `other`, source key the Vega match id, source dataset `core.matches`, no batch and no
+  `effective_at`. The old value, even partial, stays readable and never takes Opta's authority. *(review)* When a
+  selection starts on cells that already hold the pair, they are captured too if the match's latest capture differs
+  from them: the latest capture is always the cells as they were when the current selection began.
+- **Corrections.** A later valid Opta observation takes the selection, and the earlier application becomes
+  `superseded`. An older generation received late does not. An invalid or missing pair keeps the last valid one.
+- **Writers.** `Store.save_matches` never writes the cells of a phase a selection governs.
+- **Revert.** `panna.revert_score_application` re-arbitrates only while the application owns the selection: the
+  selection is removed, the captured cells are restored (or kept when nothing was captured), with `revision` + 1 and
+  the versions once. Otherwise the application is only marked `reverted`. *(review)* What is restored is the cells as
+  they were when this selection began, never an earlier selection's capture; nothing changes when they already hold
+  it. The request's reviewer is in the command's output line (no column of the approved tables holds it).
+- **Purge and restore.** A scope purge removes a match's selection (by cascade) and its keys, and keeps the
+  observations and the batch. `open_matchday_restore` counts `core.match_score_selections` among a match's
+  dependencies, and has reviewed 185 and 186.
+- **Migrations.**
+  - `185_core_provider_opta.sql` adds `opta` alone.
+  - `186_match_score_observations.sql` adds the three core tables, the three functions and the revocations; both are
+    online. *(review)* Its one lock on an existing table, for the key of `core.match_score_selections` on
+    `core.matches` (SHARE ROW EXCLUSIVE, which the collector's writes wait for), is asked without queueing (NOWAIT,
+    again every 50 ms, for at most 60 s) as the file's last step, and held only until the file commits. A base
+    written without a pause for 60 s refuses 186: the migrate task fails, nothing of 186 stays, it can run again.
+  - *(review)* `ROLLBACK.sql` runs on a base without the schema `core` while the roles exist on the server.
+  - `backend/panna/sql/004_panna_canonical.sql` adds the two panna tables, their two functions and the login's
+    grants, after 001–003. Only the migrate task with `V2_PANNA_PASSWORD` applies it.
+  - H1's rows are untouched.
+
+### 8.2 Cases
+
+| # | Situation | Expected |
+|---|---|---|
+| GH278.S1-a | The normal path: a parent written by Pitch (HT NULL/NULL, final 2–2, first-half goals 1–1), the key's row with HT `'1'`/`'1'` and final `'2'`/`'2'` | review `linked`; one batch; observations opta `half_time` 1–1, opta `final_reported` 2–2 and the `other` capture NULL/NULL; the selection; the cells 1–1, `revision` + 1, the edition's then the match's versions + 1 each; the Opta key in `core.provider_ids`; the application `published` (source rows 1, target rows 1); `api.match_list` under `vega_read` gives 1–1. A replay: `published` kept, no business row, revision, version or data mark changes |
+| GH278.S1-b | What the scoped run writes | in panna: one segment, one fixture row, one manifest entry with the key's ordinal, one scope row; the receipt's digest and full row count; the load's outcomes `eligible` 1 and `out_of_scope` the rest; the plan's scope |
+| GH278.S1-c | A scope manifest that does not fit the object: another digest, a key absent, two rows of the key, another ordinal, a changed lexeme (packet digest), two keys or two matches, more rows than allowed; or whose target lacks one of the nine fields the approval saw (`match_id`, `public_id`, `season_id`, `competition_season_id`, `home_team_id`, `away_team_id`, `match_date`, `status`, `parent_source`; added on 28 Nov after the first green run, before its test) or names another match | refused before any write (exit 2), naming the check (`SCOPE_TARGET` for the target); nothing in panna or core |
+| GH278.S1-d | Pitch→Opta→Pitch and Opta→Pitch→Opta, Pitch's row carrying half-time cells | the cells stay 1–1; Pitch's other columns written as before; the re-application `published`, unchanged business rows |
+| GH278.S1-e | The parent already holds 1–1, unattributed | selection recorded; application `unchanged`; no revision, version or data mark; no capture |
+| GH278.S1-f | The parent holds another valid pair (0–2) | Opta wins: the capture `other` 0–2 readable; cells 1–1; `revision` + 1 |
+| GH278.S1-g | Invalid or incomplete lexemes (`''`, `'x'`, `'1000'`, NULL) | observation kept with NULL goals; `observed / INVALID_PAIR`; no selection; cells unchanged; a later valid generation publishes |
+| GH278.S1-h | Two rows of the key with different half-time lexemes; two identical rows | `conflict / DUPLICATE_SOURCE_ROWS`, no observation, no publication; identical rows: one observation, published once, the segment holds both rows |
+| GH278.S1-i | A half-time pair above the final; a chronology that contradicts it; no goal chronology | `conflict / HALF_TIME_ABOVE_FINAL`; `conflict / CHRONOLOGY_CONTRADICTS`; `observed / CHRONOLOGY_ABSENT`; none publishes |
+| GH278.S1-j | No anchor yet, then Pitch creates it; another match of the same two teams that day; another date, other teams, another final; the key linked to another match | `pending_identity` (`no_candidate`), observation kept, then `linked` and published on the same id; `ambiguous`; `rejected` with its code; `rejected` (`KEY_LINKED_ELSEWHERE`). None of them adds a link or publishes |
+| GH278.S1-k | A parent of Open Matchday | `quarantined / PARENT_OWNED_BY_SNAPSHOT`, review `rejected` with that code and `chosen_id` NULL, no `core.provider_ids` row, observations kept; the next Open Matchday snapshot of that edition runs |
+| GH278.S1-l | The parent changed since the approval (status, edition); *(review)* an expected NULL where the parent holds a value (`public_id`); an approval lacking a field or naming another match, given to `panna.apply_score_segment` by the login outside the CLI; `pilot check` with the database | `quarantined / STALE_APPROVAL`; core.matches and core.provider_ids unchanged; `STALE_APPROVAL`; `invalid_parameter_value`, nothing written; the check's preview gives the same verdicts (exit 1), and `published` (exit 0) on the approved parent, writing nothing |
+| GH278.S1-m | Generations A (t1), B (t2), *(review)* the same bytes as A again (t3); an older generation (t0) received late; one dated after the database's clock; a generation without `issued_at` once the key has observations; *(review)* A (t1), A' with the same pair (t3), then B dated t2 received late | three observations, the selection follows A, B, A, `revision` + 1 at each change, the earlier applications `superseded`; the late one observed, not selected; the future one `quarantined / GENERATION_NOT_ORDERABLE`, no observation; `quarantined / GENERATION_NOT_ORDERABLE`; B `superseded / OLDER_GENERATION`, the cells stay A's |
+| GH278.S1-n | Revert while owner; re-apply; revert of a superseded application; *(review)* a revert in a cycle that began on cells already holding the pair, after an earlier cycle's capture | selection removed, captured cells restored, `revision` + 1, `reverted`, the line names its reviewer; published again; only marked `reverted`; the cells stay as that cycle found them |
+| GH278.S1-o | `Store.save_matches` and an application at once on the same match; an application whose COMMIT answer is lost | no deadlock, both commit, cells 1–1; the retry changes nothing more (one revision) |
+| GH278.S1-p | Privileges (GH278-ai amended) | as GH278-ai |
+| GH278.S1-q | A scope purge of a match holding a selection, as `vega_collect`; the restore's inventory | the match, its selection and keys removed, observations and batch kept; `open_matchday_restore` accepts the inventory and has reviewed 185, 186 |
+| GH278.S1-r | `ROLLBACK.sql` after an application (GH278-al amended); *(review)* on a base without the schema `core`, the roles existing | as GH278-al; no error |
+| GH278.S1-s | The migrations: without the switch; with it; on a base holding H1 rows; `pilot apply` on a base the login reaches without 004 (added on 28 Nov after the first green run, before its test) | 185 and 186 applied, the panna files not; then 004 too; H1's rows, segments, manifests and scope unchanged; the pilot refused before any write (`SCHEMA_VERSION` naming `004_panna_canonical.sql`, exit 1), no receipt |
+| GH278.S1-t | Everything `pilot` prints | ids, codes, digests, counts and the pair; no password or credential URL |
+| GH278.S1-u | *(review)* After the pilot alone (one scoped fixtures load), an events-only `run`, and `prep` | `DEPENDENCY_MISSING` (exit 1), no events written, as GH278-t |
+| GH278.S1-v | *(review)* 186 applied online while a transaction holds a row of `core.matches` for 5 s, a second writer of `core.matches` arriving meanwhile | the migrate task waits for the first and applies 186 (exit 0); the second writer does not wait behind it |

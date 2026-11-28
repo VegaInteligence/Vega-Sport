@@ -95,6 +95,7 @@
 "test_panna": 69.7,
 "test_panna_deploy": 53.2,
 "test_panna_infra": 1.8,
+"test_panna_s1": 71.3,
 "test_pilot": 1.0,
 "test_pilot_bounds": 0.4,
 "test_player_fact_snapshot": 2.4,

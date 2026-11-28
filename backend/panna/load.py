@@ -28,6 +28,12 @@ BATCH_ROWS = 65_536
 CHUNK_ROWS = 50_000
 CHUNK_BYTES = 64 << 20
 ELIGIBLE = ("eligible", "eligible_orphan")
+# The fixtures index an events load decides by: the latest complete fixtures load of a run whose plan is not scoped.
+# A scoped load (S1's pilot: one key) is no index of the other fixtures (FAILURE_MODES.md section 8, review m3).
+INDEX_LOAD = """SELECT l.load_id, r.sha256 FROM panna.loads l JOIN panna.streams s USING (stream_id) JOIN panna.receipts r USING (receipt_id)
+                JOIN panna.runs u ON u.run_id = l.run_id
+                WHERE s.dataset = 'opta_fixtures' AND l.status = 'complete' AND coalesce(jsonb_typeof(u.plan->'scope'), 'null') = 'null'
+                ORDER BY l.load_id DESC LIMIT 1"""
 
 
 class Failure(Exception):
@@ -191,6 +197,30 @@ class Run:
         self.index_sha = None
         self.fixtures_failed = False
         self.current = None  # the asset being written, named by each chunk's line
+        # S1 (FAILURE_MODES.md section 8): a run restricted to the keys its plan names, in one dataset. Every other row
+        # of the object is out of scope: counted, never written, no scope row, no tombstone.
+        self.scope = plan.get("scope")
+
+    def scoped_keys(self, dataset):
+        if not self.scope or self.scope.get("dataset") != dataset.name:
+            return None
+        return set(self.scope["keys"])
+
+    def check_scope(self, indexed, asset, outcome_of):
+        """The scoped keys as the plan names them: each present, at the plan's ordinals, eligible, within its rows."""
+        scope = self.scope
+        ordinals = []
+        for k, key in enumerate(indexed.keys):
+            if key in scope["keys"]:
+                if outcome_of[k] != "eligible":
+                    raise Failure("SCOPE_KEY_NOT_ELIGIBLE", asset.name, outcome=outcome_of[k])
+                ordinals += [start + i for start, length in indexed.runs[k] for i in range(length)]
+        if not ordinals:
+            raise Failure("SCOPE_KEY_ABSENT", asset.name)
+        if sorted(ordinals) != sorted(scope["ordinals"]):
+            raise Failure("SCOPE_ORDINALS", asset.name, found=len(ordinals))
+        if len(ordinals) > scope["max_rows"]:
+            raise Failure("SCOPE_MAX_ROWS", asset.name, found=len(ordinals))
 
     # --- the run --------------------------------------------------------------------------------------------------
     def check_registry(self):
@@ -289,6 +319,23 @@ class Run:
         self.out.emit("asset", name=asset.name, sha256=asset.sha256, bytes=asset.bytes, source_rows=indexed.source_rows,
                       **({"conversions": {c: v["from"] for c, v in indexed.conversions.items()}} if conversions else {}))
         decisions, orphans, first_seen, scope_load = self.decide(dataset, indexed, asset)
+        # Each row's outcome, and a scoped run's checks, before anything of the object is written.
+        outcome_of = {}
+        counts = defaultdict(int)
+        scoped = self.scoped_keys(dataset)
+        for k, key in enumerate(indexed.keys):
+            d = decisions[k]
+            outcome = d.outcome(self.as_of, orphan=k in orphans, first_seen=first_seen.get(key))
+            if scoped is not None and key not in scoped:
+                outcome = "out_of_scope"
+            outcome_of[k] = outcome
+            counts[outcome] += int(indexed.counts[k])
+        if indexed.null_rows:
+            counts["unresolved" if scoped is None else "out_of_scope"] += indexed.null_rows
+        if sum(counts.values()) != indexed.source_rows:
+            raise Failure("CONSERVATION", asset.name)
+        if scoped is not None:
+            self.check_scope(indexed, asset, outcome_of)
 
         def begin(c):
             c.execute("""INSERT INTO panna.receipts (origin, container, name, asset_id, sha256, bytes, updated_at, source_rows,
@@ -310,17 +357,6 @@ class Run:
                                      (self.run_id, stream, receipt)).fetchone()
             return stream, load, status
         stream, load, status = self.session.unit(begin)
-        outcome_of = {}
-        counts = defaultdict(int)
-        for k, key in enumerate(indexed.keys):
-            d = decisions[k]
-            outcome = d.outcome(self.as_of, orphan=k in orphans, first_seen=first_seen.get(key))
-            outcome_of[k] = outcome
-            counts[outcome] += int(indexed.counts[k])
-        if indexed.null_rows:
-            counts["unresolved"] += indexed.null_rows
-        if sum(counts.values()) != indexed.source_rows:
-            raise Failure("CONSERVATION", asset.name)
         if status == "complete":
             self.out.emit("load", name=asset.name, status="complete", segments_written=0, rows_written=0, segments_reused=0,
                           outcomes=dict(counts), resumed=True)
@@ -372,9 +408,7 @@ class Run:
     def fixture_index(self):
         if self.index is not None:
             return self.index, self.index_load, self.index_sha
-        found = self.session.read(lambda c: c.execute(
-            """SELECT l.load_id, r.sha256 FROM panna.loads l JOIN panna.streams s USING (stream_id) JOIN panna.receipts r USING (receipt_id)
-               WHERE s.dataset = 'opta_fixtures' AND l.status = 'complete' ORDER BY l.load_id DESC LIMIT 1""").fetchone())
+        found = self.session.read(lambda c: c.execute(INDEX_LOAD).fetchone())
         if found is None:
             raise Failure("DEPENDENCY_MISSING", needs="opta_fixtures")
         rows = self.session.read(lambda c: c.execute(
@@ -411,7 +445,8 @@ class Run:
         for k in np.flatnonzero(eligible).tolist():
             key = indexed.keys[k]
             target[k] = stored.get(key, {}).get(digests[k]) if k in digests else None
-        if previous:
+        # A scoped run writes its plan's keys only (at most max_rows rows): no share of the stream to guard.
+        if previous and self.scoped_keys(dataset) is None:
             here = set(indexed.keys)
             changed = sum(1 for k, key in enumerate(indexed.keys) if key in previous and
                           (not eligible[k] or target.get(k) != previous[key])) + sum(1 for key in previous if key not in here)
@@ -563,6 +598,9 @@ class Run:
             "SELECT key, state, outcome, reason, day, vega_season, next_eligible_on FROM panna.scope WHERE dataset = %s",
             (dataset.name,)).fetchall())}
         keys = range(len(indexed.keys)) if dataset is registry.FIXTURES else orphans
+        scoped = self.scoped_keys(dataset)
+        if scoped is not None:
+            keys = [k for k in keys if indexed.keys[k] in scoped]
         for k in keys:
             key, d, outcome = indexed.keys[k], decisions[k], outcome_of[k]
             following = d.day if outcome == "deferred" else None
@@ -589,7 +627,10 @@ class Run:
                            SELECT DISTINCT ON (m.key) m.key, m.segment_id FROM panna.manifest m JOIN panna.loads l ON l.load_id = m.load_id
                            WHERE m.stream_id = %s AND (l.status = 'complete' OR m.load_id = %s) ORDER BY m.key, m.load_id DESC) m
                          WHERE m.segment_id IS NOT NULL AND NOT (m.key = ANY(%s))
-                         ON CONFLICT DO NOTHING""", (stream, load, stream, load, list(present)))
+                           AND (%s::text[] IS NULL OR m.key = ANY(%s::text[]))
+                         ON CONFLICT DO NOTHING""",
+                      (stream, load, stream, load, list(present), sorted(scoped) if scoped is not None else None,
+                       sorted(scoped) if scoped is not None else None))
             if scope_rows:
                 c.execute("CREATE TEMPORARY TABLE panna_scope_in (LIKE panna.scope) ON COMMIT DROP")
                 with c.cursor().copy("""COPY panna_scope_in (dataset, key, state, outcome, reason, day, vega_season, next_eligible_on,
