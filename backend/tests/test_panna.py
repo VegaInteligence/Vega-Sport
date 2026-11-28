@@ -909,8 +909,12 @@ class PannaTest(unittest.TestCase):
                WHERE n.nspname IN ('core', 'panna') AND has_function_privilege('vega_v2_panna', p.oid, 'EXECUTE')
                  AND NOT has_function_privilege('panna_public_probe', p.oid, 'EXECUTE')""").fetchall()}
         # Amended after Fable's review (M1): core's two writing functions are reached only through the panna ones.
+        # Amended for S3 (FAILURE_MODES.md section 10): its five entry points, nothing of core.
         self.assertEqual({g.split("(")[0] for g in granted}, {"core.score_pair_verdict", "panna.apply_score_segment",
-                                                             "panna.revert_score_application", "panna.segments_as_of"})
+                                                             "panna.revert_score_application", "panna.segments_as_of",
+                                                             "panna.action_batch", "panna.put_action_sets",
+                                                             "panna.place_action_sets", "panna.action_set_encoding",
+                                                             "panna.action_set_digest"})
         for table in ("core.match_score_observations", "core.match_score_selections", "core.observation_batches"):
             for right in ("INSERT", "UPDATE", "DELETE", "TRUNCATE"):
                 self.assertEqual(self.count("SELECT has_table_privilege('vega_collect', %s, %s)::int", table, right), 0,

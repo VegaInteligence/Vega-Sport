@@ -156,7 +156,7 @@
 | # | Situation | Expected |
 |---|---|---|
 | GH278-ah | `migrate` without `V2_PANNA_PASSWORD`; with it, twice; a recorded file changed | nothing of panna; applied once, recorded with its SHA-256, the login set (4 connections); the run stops |
-| GH278-ai | The login tries `DELETE`, `TRUNCATE`, `DROP`, `ALTER`, `CREATE`, or reads `core`, `agg`, `ops`, `api` | denied. Amended for S1 (section 8), before its tests: the login may use the schema `core` and execute only `core.score_pair_verdict` (a read) and the two functions `panna.apply_score_segment` and `panna.revert_score_application`, beside H1's `panna.segments_as_of` (unchanged; this sentence omitted it until the suite named it, 28 Nov). Amended again on 28 Nov after Fable's review (M1), before its tests: `core.publish_score_pair` and `core.revert_score_selection` are reached only through those two panna functions (SECURITY DEFINER, the same owner), so the login cannot call them with lexemes, a key, a match, a batch or an instant of its own; a direct call is denied. The login still writes H1's panna tables, so a forged segment can reach `panna.apply_score_segment`: the database bounds that call by origin `opta`, a Pitch-owned parent, the identity proof, the half-time phase, the parent's own chronology and final, a complete approval and an instant not in the future. A one-fixture bound the login cannot write (an approval seeded by a migration) is Hugo's decision; until then the login is disabled after the pilot (README, S1). It still reads and writes no `core` table, and it reads `panna.canonical_applications` and `panna.identity_reviews` without writing them. The schema's usage also reaches what every role (`PUBLIC`) already executes in `core`: pure helpers and `core.table_results` (an edition's results by team, read-only, called by the SportScore source as `vega_collect`), left as they are. `vega_collect` holds no `INSERT`, `UPDATE`, `DELETE` or `TRUNCATE` on the three S1 core tables and no right on their sequences. `PUBLIC` executes none of the five functions |
+| GH278-ai | The login tries `DELETE`, `TRUNCATE`, `DROP`, `ALTER`, `CREATE`, or reads `core`, `agg`, `ops`, `api` | denied. Amended for S1 (section 8), before its tests: the login may use the schema `core` and execute only `core.score_pair_verdict` (a read) and the two functions `panna.apply_score_segment` and `panna.revert_score_application`, beside H1's `panna.segments_as_of` (unchanged; this sentence omitted it until the suite named it, 28 Nov). Amended again on 28 Nov after Fable's review (M1), before its tests: `core.publish_score_pair` and `core.revert_score_selection` are reached only through those two panna functions (SECURITY DEFINER, the same owner), so the login cannot call them with lexemes, a key, a match, a batch or an instant of its own; a direct call is denied. The login still writes H1's panna tables, so a forged segment can reach `panna.apply_score_segment`: the database bounds that call by origin `opta`, a Pitch-owned parent, the identity proof, the half-time phase, the parent's own chronology and final, a complete approval and an instant not in the future. A one-fixture bound the login cannot write (an approval seeded by a migration) is Hugo's decision; until then the login is disabled after the pilot (README, S1). It still reads and writes no `core` table, and it reads `panna.canonical_applications` and `panna.identity_reviews` without writing them. The schema's usage also reaches what every role (`PUBLIC`) already executes in `core`: pure helpers and `core.table_results` (an edition's results by team, read-only, called by the SportScore source as `vega_collect`), left as they are. `vega_collect` holds no `INSERT`, `UPDATE`, `DELETE` or `TRUNCATE` on the three S1 core tables and no right on their sequences. `PUBLIC` executes none of the five functions. Amended for S3 (section 10), before its tests changed: the login also executes `panna.action_batch`, `panna.put_action_sets`, `panna.place_action_sets`, `panna.action_set_encoding` and `panna.action_set_digest` (SECURITY DEFINER, the same owner), reads S3's own relations (`core.observation_sets`, `core.observation_set_revisions`, `core.match_action_sets`, `core.match_actions`, the views `core.match_action_qualifiers` and `core.current_match_action_sets`, `panna.action_field_exceptions`, `panna.source_set_memberships`, and the events objects' batches through the view `panna.action_batches`) and inserts into the two staging tables only; it still reads no other `core` table (`core.observation_batches` included) and writes none |
 | GH278-aj | `status`, `verify`, and every error | counts, digests, names, reasons; no row value, password or credential URL |
 | GH278-ak | `verify` after a run | every segment's server digest equals its ledger digest; a tampered row is named by its segment |
 | GH278-al | Removing the integration (`backend/panna/README.md`, Rollback) | `panna`, `panna_data`, `panna_admin` and the two roles dropped; football schemas, rows and logins unchanged. Amended for S1, before its tests: the login's grants on `core` (the schema, the score functions) are revoked before the role is dropped. Business data does not live in `panna`, so these stay: the three S1 core tables and their rows, the published half-time pair, the Opta key of `core.provider_ids` and the `opta` provider value. The targeted revert (GH278.S1-n) is how a publication is undone |
@@ -327,7 +327,7 @@ sources are not part of S1.
 | GH278.S1-p | Privileges (GH278-ai amended) | as GH278-ai |
 | GH278.S1-q | A scope purge of a match holding a selection, as `vega_collect`; the restore's inventory | the match, its selection and keys removed, observations and batch kept; `open_matchday_restore` accepts the inventory and has reviewed 185, 186 |
 | GH278.S1-r | `ROLLBACK.sql` after an application (GH278-al amended); *(review)* on a base without the schema `core`, the roles existing | as GH278-al; no error |
-| GH278.S1-s | The migrations: without the switch; with it; on a base holding H1 rows; `pilot apply` on a base the login reaches without 004 (added on 28 Nov after the first green run, before its test). *(Amended with section 9, after its code: the loader now needs 005, so the base before 004 holds 001–003 and 005, which does not depend on 004; 004 then applies alone, total 5)* | 185 and 186 applied, the panna files not; then 004 too; H1's rows, segments, manifests and scope unchanged; the pilot refused before any write (`SCHEMA_VERSION` naming `004_panna_canonical.sql`, exit 1), no receipt |
+| GH278.S1-s | The migrations: without the switch; with it; on a base holding H1 rows; `pilot apply` on a base the login reaches without 004 (added on 28 Nov after the first green run, before its test). *(Amended with section 9, after its code: the loader now needs 005, so the base before 004 holds 001–003 and 005, which does not depend on 004; 004 then applies alone, total 5)* *(Amended with section 10, after its code: 006 is applied with 004 in the last migration, total 6, `panna applied=2 total=6`; 187 is among core's files)* | 185 and 186 applied, the panna files not; then 004 too; H1's rows, segments, manifests and scope unchanged; the pilot refused before any write (`SCHEMA_VERSION` naming `004_panna_canonical.sql`, exit 1), no receipt |
 | GH278.S1-t | Everything `pilot` prints | ids, codes, digests, counts and the pair; no password or credential URL |
 | GH278.S1-u | *(review)* After the pilot alone (one scoped fixtures load), an events-only `run`, and `prep` | `DEPENDENCY_MISSING` (exit 1), no events written, as GH278-t |
 | GH278.S1-v | *(review)* 186 applied online while a transaction holds a row of `core.matches` for 5 s, a second writer of `core.matches` arriving meanwhile | the migrate task waits for the first and applies 186 (exit 0); the second writer does not wait behind it |
@@ -411,7 +411,112 @@ their entries. `verify` finds no mismatch. The 27 Nov object reloaded is refused
 nothing. `fixture_rows` equals the coordinator's oracle. The same sequence without the entries of moved keys
 (a mutation) fails the oracle's ordinals.
 
-## 10. Hosted fixture-index refresh
+## 10. S3: Opta's detailed actions, one physical copy (`core.match_actions`)
+
+Written on 28 Nov 2026 before the tests `GH278.A-*` of `backend/tests/test_panna_s3.py` and before the code, after Hugo
+approved the full schema (`core.observation_sets`, `core.observation_set_revisions`, `core.match_action_sets`,
+`core.match_actions`, `panna.action_field_exceptions`, `panna.source_set_memberships`, the view
+`core.match_action_qualifiers`) and the backfill from 2021/22. Inputs and the first real cohort:
+`s3-actions-preflight-20261128/OPUS-BRIEF.md` (scratch). The `events_*.parquet` objects only; the compact chronology
+(`opta_events.parquet`), FBref's `events.parquet` and the tournament timing file are other products, not read here.
+
+### 10.1 Rules
+
+- **One copy.** A match's actions (the rows of one `match_id` of one object, in the object's physical order) are one
+  *set*: `core.observation_sets` (origin `opta`, product `match_actions`, subject, schema, content digest, row count),
+  its header `core.match_action_sets` (the two labels) and its rows `core.match_actions` (ordinal 0 to n−1). The same
+  content from another object, generation or run is the same set: nothing is copied twice. Nothing is written to
+  `panna_data.opta_events` or to `panna.segments` for events by this command.
+- **Subject and schema.** `subject_key` is `match:<octets>:<native key>`, never a Vega id. `schema_key` is
+  `arrow:` then each column of the object as `name:type` in the object's order, comma-separated (`!` after the type
+  of a non-nullable field). The object must hold exactly the 17 columns of H1's events, in any order; `match_id`,
+  `player_id`, `player_name`, `team_id`, `qualifier_json`, `competition`, `season` as `string` or `large_string`;
+  `event_id`, `type_id`, `minute`, `second`, `outcome`, `period_id` as `int64` or `double`; `x`, `y`, `end_x`, `end_y`
+  as `double`. Anything else is `SCHEMA_DRIFT`, the object refused before any write.
+- **Content digest.** SHA-256 of H1's canonical encoding (`backend/panna/encode.py`) of the 17 source values of each
+  row, in the object's column order and the source's own types (`T`, `I`, `D`), rows in source order; a double's `D`
+  is its exact IEEE bits (a NaN keeps its own). Without NaN, an `int64` object's set digest equals H1's segment digest
+  of the same key. The server recomputes it from the stored rows, header, exceptions and schema before the unit
+  commits; a difference aborts the unit (`VERIFY_MISMATCH`).
+- **Exact values.** `int64` codes go to the `bigint` columns. A `double` code (EPL and Scottish Premiership) goes there
+  when it is a finite integer, not −0.0, within [−2^63, 2^63); else the column is NULL and
+  `panna.action_field_exceptions` keeps its 8 IEEE bytes (`float_bits`, big-endian). A coordinate goes to its
+  `double precision` column (±inf and −0.0 included) except a NaN, kept as an exception the same way. A label is the
+  header's when constant over the set (NULL included); else the header is NULL and each row holding a value has a
+  `text_value` exception. No exception row for the normal case; a NULL in the source is a NULL without exception. A
+  text holding U+0000, which PostgreSQL's text cannot hold, refuses the object (`UNSTORABLE_TEXT`).
+- **Scope.** H1's decision of each key (the fixtures index, then H1's orphan rule): `eligible` and
+  `eligible_orphan` keys are stored; every other row is counted, never written. The plan pins the fixtures object
+  (`fixtures`, `sha256:<hex>`): when the index is another generation, `FIXTURES_VERSION_MISMATCH`, nothing written.
+  A plan's `select` narrows the eligible keys: `keys` (an allowlist), `key_range` (`[low, high)` on the native key),
+  `vega_seasons`; the others are `out_of_selection`. Successive selections of one object compose.
+- **Provenance.** One `core.observation_batches` row per object version (distributor `pannadata`, the object's name,
+  its SHA-256, `opta-latest#<asset id>`, the first activation's instant, the object's URL, the SHA-256 of its
+  `schema_key`). `panna.source_set_memberships` keeps, per batch and subject, the set and the subject's rows in the
+  object as half-open ranges of physical row numbers (`source_runs`), `ordinal_map` NULL (ordinals follow those rows
+  in order). Differential: a subject gets a row when it is new in the stream, its set changed or its rows moved;
+  otherwise nothing (a daily replay writes no row). A subject absent from a later object is counted
+  (`absent_from_object`); no tombstone, no retraction, no empty set: an absence is not an attested retraction.
+- **Revisions.** Per (origin, product, subject): the first set seen is revision 1, current. A different set from a
+  later activation (`effective_at`, the run's plan instant of the object) is revision n+1, current, the previous not
+  current. The current set again is nothing new. A→B→A gives three revisions and two sets. An instant in the future
+  is refused (`FUTURE_INSTANT`). A different set at an instant earlier than the current revision's is a non-current
+  revision (history, the current kept); at the same instant from another object, a `conflict`: both sets and
+  memberships kept, no revision, counted. An object older than its stream's current generation is refused before any
+  write (`OLDER_GENERATION`, H1's rule).
+- **Units.** One transaction per chunk of whole sets (`--chunk-rows`): the new sets (rows, header, exceptions, the
+  server's digest), the memberships and revisions of every subject of the chunk, the chunk's ledger row in
+  `panna.chunks`. A unit run again after a lost link or a lost COMMIT answer finds what committed; a killed run is
+  resumed by `retry`. Sets already stored are never sent again. *(Amended on 28 Nov after the first whole-object measurement, before its fix: the staging tables kept every deleted row, 1,060 MB for 3.5 M actions, autovacuum not run during the load.)* The staging tables stay at about one chunk: the loader vacuums them after each committed chunk (the login holds `MAINTAIN` on those two tables only), and autovacuum is set to reach them within 10,000 dead rows. The completion checks conservation in the base: each
+  selected eligible subject's state in the stream names a set of its digest, row count and runs.
+- **Identity.** No `core.matches` or `core.provider_ids` row is created. The view `core.current_match_action_sets`
+  resolves a subject's current set to a Vega match through `core.provider_ids` (`match`, `opta`, the native key,
+  current); without a link it stays pending (`match_id` NULL).
+- **Privileges.** The login (group `vega_panna`) reads the S3 relations and executes the entry points
+  `panna.action_batch`, `panna.put_action_set`, `panna.place_action_set`, `panna.action_set_encoding`; it has no
+  INSERT, UPDATE, DELETE or TRUNCATE on them, nor has `vega_collect`; PUBLIC executes none of them.
+- **Rollback.** Once `panna.action_field_exceptions` or `panna.source_set_memberships` holds a row, `ROLLBACK.sql`
+  refuses and removes nothing (those rows are the only copy of their values); the core S3 tables are never dropped.
+
+### 10.2 Cases
+
+| # | Situation | Expected |
+|---|---|---|
+| GH278.A-a | A first load of an `int64` object: three eligible keys (one with rows in two runs), one historical, one deferred, one without fixture in the window; constant labels | three sets, each row's 17 values restored in order (ordinals 0..n−1), set digest = H1's encoding and the server's; memberships with their runs; revision 1 current; one batch; no exception; no row in `panna_data.opta_events` or `panna.segments` for events; the others counted |
+| GH278.A-b | A `double` object with every edge value: integral codes, −0.0, NaN with a payload, ±inf, 0.5, 2^63 in codes; NaN, −0.0, ±inf coordinates; NULLs, empty strings, non-ASCII, quotes, newlines and a duplicated key in `qualifier_json`; labels varying within a set, a NULL among them | integral codes in `bigint`, the others NULL with exact `float_bits`; NaN coordinates as exceptions, the rest in the columns; label exceptions as the rule says; the readback rebuilds every value bit for bit; `core.match_action_qualifiers` lists the pairs in order with the duplicate |
+| GH278.A-c | A column missing; an 18th; `x` as string; `type_id` as int32; a text holding U+0000 | `SCHEMA_DRIFT` naming it, or `UNSTORABLE_TEXT`; nothing written for that object |
+| GH278.A-d | The same object again (a replay) | 0 sets, actions, exceptions, memberships and revisions; the load complete |
+| GH278.A-e | A next generation changing one value of one key and moving another key's rows; then the first generation's bytes again (A→B→A) | one new set, revision 2; the moved key a membership with its new runs, no set, no revision; then no set written, revision 3 naming the first set: two contents, three activations |
+| GH278.A-f | One key in two objects with the same rows; then a third object at the same instant with other rows for it | one set, two memberships, one revision; then both sets kept, `conflict` counted, the current revision unchanged |
+| GH278.A-g | A run stopped by `--max-seconds 0` then `retry`; one killed after a committed chunk then `retry`; the answer to a chunk's COMMIT lost | complete; every set, membership and revision once; the restored rows exact |
+| GH278.A-h | An object older than the stream's current generation | `OLDER_GENERATION`, nothing written |
+| GH278.A-i | Another runner holds the loader's lock; two sessions putting the same set at once through the function | exit 4; one set |
+| GH278.A-j | An asset of the plan unreachable (no file, its URL answering 404), another reachable | the first fails, nothing written for it, no tombstone or revision change; the second loaded; the run failed (exit 1) |
+| GH278.A-k | A file whose bytes differ from the plan's digest | `DIGEST_MISMATCH`, nothing written for it |
+| GH278.A-l | A plan selecting two keys, then one selecting a key range, then the whole object | each run writes only its own keys' sets, the others `out_of_selection`; the last writes only what remained; no set twice |
+| GH278.A-m | The plan's fixtures pin not the index's generation; a base without 187 or 006 | `FIXTURES_VERSION_MISMATCH`; `SCHEMA_VERSION` naming the file; nothing written |
+| GH278.A-n | The login inserting into the S3 tables directly; `vega_collect` doing so; PUBLIC executing the functions; `panna.put_action_set` called with rows that do not give the declared digest | each refused (privilege); `VERIFY_MISMATCH`, nothing stored |
+| GH278.A-o | A subject with a current Opta key in `core.provider_ids`, another without | the first resolves to its match in `core.current_match_action_sets`, the other pending; no row of `core.matches` or `core.provider_ids` written |
+| GH278.A-p | `actions verify` on a sound base, then after an action row changed as owner | 0 mismatch; then the set named |
+| GH278.A-q | `ROLLBACK.sql` once S3 rows exist | refused, nothing removed |
+
+### 10.3 The first real cohort (evidence, not a test)
+
+The wave-0 cohort of `s3-actions-preflight-20261128` (scratch): the fixtures object `9382c16a…efd163` loaded by H1 as
+the index, then the four objects (Brazilian Serie A, EPL, Ligue 1, Saudi League) restricted to their eight keys
+(`select.keys`), on a local clone of the S1 rehearsal base (production at 184, 185, 186, panna 001–005) after 187 and
+006. Expected: 14,235 actions in 8 sets; every row's 17 values, rebuilt from the base by an independent script with
+the oracle's encoding, equal to `pilot-row-oracle.jsonl` and each set's `set_oracle_sha256`; EPL's codes as `double`;
+the queries of `expected-readback.sql` without violation, query 3 holding no resolved subject (all eight pending);
+a replay writes nothing; a run killed after a chunk and resumed is exact; bytes per action measured (heap, TOAST,
+indexes) and projected to the 120,899,239 served actions.
+
+### Restore integration (GH278.A-restore)
+
+- Migration 187 adds no physical Vega match reference. A current action set can resolve through provider_ids only. If a live action set already resolves to one of the 35 restored match IDs, or would resolve through an Open Matchday provider key inserted by the restore, refuse before applying any change. On apply, lock the provider keys and the underlying action-set/revision tables before checking.
+- An unrelated published Opta action set and its action row survive dry-run, restore and replay unchanged. Restoring the 35 still preserves the 70 sides of signed Elo.
+
+## 11. Hosted fixture-index refresh
 
 | Case | Setup | Expected |
 | --- | --- | --- |

@@ -1080,7 +1080,8 @@ class PannaS1Test(unittest.TestCase):
         before = {t: self.x(f"SELECT md5(string_agg(t::text, '|' ORDER BY t::text)) FROM {t} t").fetchone()[0] for t in tables}
         self.assertGreater(self.count("SELECT count(*) FROM panna.segments"), 1)
         done = self.migrate(PASSWORD)
-        self.assertIn("panna applied=1 total=5", done.stdout)
+        # Amended with section 10: 006 (S3) is applied with 004.
+        self.assertIn("panna applied=2 total=6", done.stdout)
         after = {t: self.x(f"SELECT md5(string_agg(t::text, '|' ORDER BY t::text)) FROM {t} t").fetchone()[0] for t in tables}
         self.assertEqual(after, before)
 

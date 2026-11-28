@@ -101,8 +101,9 @@ def parser():
     verify = sub.add_parser("verify", help="the server's digest of each segment against the ledger")
     add_database(verify)
     verify.add_argument("--run", type=int)
-    from . import pilot
+    from . import actions, pilot
     pilot.add_parser(sub, add_database)
+    actions.add_parser(sub, add_database, add_bounds)
     return top
 
 
@@ -346,7 +347,8 @@ def cmd_retry(args, out):
     url = database_url(args)
     session = Session(url, via=args.via, lock=False)
     try:
-        query = "SELECT run_id, token, plan FROM panna.runs WHERE status <> 'complete'"
+        # S3's action runs resume by `actions retry` (FAILURE_MODES.md section 10), never here.
+        query = "SELECT run_id, token, plan FROM panna.runs WHERE status <> 'complete' AND coalesce(plan->>'product', '') <> 'match_actions'"
         found = session.read(lambda c: c.execute(
             query + (" AND run_id = %s" if args.run else "") + " ORDER BY run_id DESC LIMIT 1",
             (args.run,) if args.run else ()).fetchone())
@@ -463,8 +465,14 @@ def cmd_pilot(args, out):
         return 2
 
 
+def cmd_actions(args, out):
+    """S3 (FAILURE_MODES.md section 10): Opta's detailed actions stored once (backend/panna/actions.py)."""
+    from . import actions
+    return actions.main(args, out, database_url(args), runner(), bounds_of, DEFAULT_SCRATCH)
+
+
 COMMANDS = {"probe": cmd_probe, "prep": cmd_prep, "run": cmd_run, "retry": cmd_retry, "status": cmd_status, "verify": cmd_verify,
-            "explain": cmd_explain, "pilot": cmd_pilot}
+            "explain": cmd_explain, "pilot": cmd_pilot, "actions": cmd_actions}
 
 
 def main(argv=None):

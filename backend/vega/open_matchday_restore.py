@@ -34,6 +34,7 @@ MATCHES = "core.matches"
 BINDINGS = "core.provider_ids"
 ELO = "agg.team_elo"
 MATCH_STATS = "core.team_match_stats"
+ACTION_DEPENDENCIES = {"core.observation_sets", "core.observation_set_revisions", "core.match_action_sets"}
 ENRICHMENT_COLUMNS = {"home_score_ht", "away_score_ht", "revision", "updated_at"}
 # Relations naming a match created after the reviewed captures: 141, 143, the Fjelstul World Cup Database's pair
 # (137_worldcup_database.sql), football-data.co.uk's (140_football_data.sql), the players' run's recorded exclusions
@@ -109,7 +110,9 @@ REFS = {
 # core.match_score_selections (match_id, integer, REFERENCES core.matches ON DELETE CASCADE), the pair another source's
 # observation governs, which names a match (ADDED_DEPENDENCIES, checked for occupancy like the others; S1 never selects
 # on a parent of Open Matchday, so none of the restored matches has a row there), and functions; no column of
-# core.matches or agg.power_runs. A later migration needs its own review here.
+# core.matches or agg.power_runs. 187 (GH278 S3) stores native action subjects and revisions without any physical
+# Vega match reference. Its current-set view resolves through provider_ids, so a restored binding must not
+# make an existing native action subject attach to one of the 35. A later migration needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
                     "168_nation_world_ranking.sql", "169_player_level_measured.sql",
@@ -118,7 +121,8 @@ REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_season
                     "175_player_award.sql", "176_match_probable_lineups.sql", "177_league_history_lean_reads.sql",
                     "178_match_grades_on_arrival.sql", "179_statement_statistics.sql", "180_matchday_rounds.sql",
                     "181_match_absences.sql", "182_data_versions.sql", "183_read_receipts.sql",
-                    "184_retire_read_receipts.sql", "185_core_provider_opta.sql", "186_match_score_observations.sql")
+                    "184_retire_read_receipts.sql", "185_core_provider_opta.sql", "186_match_score_observations.sql",
+                    "187_match_action_sets.sql")
 
 
 class Refusal(RuntimeError):
@@ -380,11 +384,18 @@ def restore(conn, before, after, apply):
         expected = captured - {MATCHES}
         require(expected <= set(checks) <= expected | ADDED_DEPENDENCIES, "unreviewed destination dependency inventory")
         if apply:
-            locked = set(checks) | {v[0] for v in REFS.values()} | {MATCHES, "core.competitions", "agg.power_runs",
-                                                                 "ops.resource_versions"}
+            locked = set(checks) | ACTION_DEPENDENCIES | {v[0] for v in REFS.values()} | {
+                MATCHES, "core.competitions", "agg.power_runs", "ops.resource_versions"
+            }
             conn.execute(sql.SQL("LOCK TABLE {} IN SHARE ROW EXCLUSIVE MODE NOWAIT").format(sql.SQL(", ").join(map(typed, sorted(locked)))))
         guard_references(conn, before, parents)
         needed = current_state(conn, facts, parents, bindings, allow_enrichment=True)
+        action_collision = conn.execute("""
+            SELECT 1 FROM core.current_match_action_sets
+            WHERE match_id=ANY(%s) OR (origin='open_matchday' AND source_match_key=ANY(%s))
+            LIMIT 1
+        """, (list(IDS), [row["provider_key"] for row in bindings])).fetchone()
+        require(action_collision is None, "unexpected dependent action set")
         elo_state = verify_elo(conn, elo, bits, run, after["at"], needed)
         guard_sequence(conn)
         for table, predicates in checks.items():
