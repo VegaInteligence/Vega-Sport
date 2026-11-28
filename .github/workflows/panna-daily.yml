@@ -62,7 +62,6 @@ jobs:
       PANNA_CONNECT_HOLD: ${{ inputs.cancellation_probe && inputs.mode == 'connect' && 'true' || 'false' }}
       PANNA_BRIDGE_LAUNCHER: ${{ vars.PANNA_BRIDGE_LAUNCHER }}
       PANNA_MODE: ${{ inputs.mode || 'refresh' }}
-      PANNA_RDS_HOST: ${{ secrets.PANNA_RDS_HOST }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -90,8 +89,14 @@ jobs:
           role-duration-seconds: 3600
           role-session-name: panna-${{ github.run_id }}-${{ github.run_attempt }}
           allowed-account-ids: '361769570630'
-      - name: Refresh PannaData fixture index
-        run: python infra/aws/panna/daily.py --mode "$PANNA_MODE"
+      - name: Run PannaData fixture operation
+        shell: bash
+        run: |
+          PANNA_RDS_HOST="$(aws rds describe-db-instances --db-instance-identifier vega-football-db-postgres --query 'DBInstances[0].Endpoint.Address' --output text)"
+          [[ "$PANNA_RDS_HOST" == vega-football-db-postgres.*.us-east-2.rds.amazonaws.com ]]
+          printf '::add-mask::%s\n' "$PANNA_RDS_HOST"
+          export PANNA_RDS_HOST
+          python infra/aws/panna/daily.py --mode "$PANNA_MODE"
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Reconcile exact bridge on failure or cancellation
