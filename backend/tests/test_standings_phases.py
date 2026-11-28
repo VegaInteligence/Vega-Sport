@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from prerequisites import required  # noqa: E402
 from vega import sources  # noqa: E402
 from vega.sources import SourceError, sportscore  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -131,14 +132,10 @@ class ReplayedRules(unittest.TestCase):
 class VeikkausliigaPhases(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_classements_test":
             raise RuntimeError("dedicated local test DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         build(cls.db)
 
     @classmethod

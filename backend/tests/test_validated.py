@@ -14,6 +14,7 @@ DSN = os.environ.get("VEGA_V2_VALIDATED_TEST_DSN")
 
 from vega.seasons import season_id, sporting_season
 from vega.store import round_stage
+from template_base import fresh
 
 
 class SeasonRuleTest(unittest.TestCase):
@@ -70,7 +71,7 @@ class ValidatedStoreTest(unittest.TestCase):
             or target.path != "/vega_v2_validated_test"
         ):
             raise RuntimeError("dedicated local validated DB required")
-        from vega.store import connect_local, migrate, Store
+        from vega.store import connect_local, Store
         from vega.normalize import normalize_family
 
         cls.normalize = staticmethod(normalize_family)
@@ -82,7 +83,7 @@ class ValidatedStoreTest(unittest.TestCase):
             is not True
         ):
             raise RuntimeError("test DB must be empty")
-        migrate(cls.db)
+        cls.db = fresh(DSN, cls.db)
         cls.store = Store(cls.db)
 
     @classmethod

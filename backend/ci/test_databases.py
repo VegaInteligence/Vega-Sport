@@ -63,6 +63,8 @@ SUITES = {
     "VEGA_V2_DATA_VERSIONS_TEST_DSN": "vega_v2_data_versions_test",
     # The receipts' retirement (test_read_receipts_retired.py, FAILURE_MODES_OPTIMISATIONS.md GH137R.3).
     "VEGA_V2_RECEIPTS_TEST_DSN": "vega_v2_receipts_test",
+    # The bases cloned from a template instead of the migrations replayed (test_template_base.py).
+    "VEGA_V2_CLONE_TEST_DSN": "vega_v2_clone_test",
 }
 
 

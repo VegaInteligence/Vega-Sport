@@ -30,6 +30,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 from prerequisites import required  # noqa: E402
 from test_player_grade_reasons import AWARD_2020, league  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -71,13 +72,11 @@ class AwardYear2020ProductionOrderTest(unittest.TestCase):
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_grades_test":
             raise RuntimeError("dedicated local grades DB required")
         from vega import models, power
-        from vega.store import Store, connect_local, migrate
+        from vega.store import Store, connect_local
         from vega.worker import Worker
 
         cls.power = power
-        db = cls.db = connect_local(DSN)
-        db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(db)
+        db = cls.db = fresh(DSN)
         with db.transaction():
             for label in ("2020/2021", "2021/2022"):
                 Store(db).season(label)

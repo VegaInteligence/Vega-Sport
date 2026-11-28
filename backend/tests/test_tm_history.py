@@ -39,6 +39,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from prerequisites import required  # noqa: E402
 from vega import sources
 from vega.sources import SourceError, http, tm_history
+from template_base import fresh
 
 try:
     import psycopg
@@ -249,14 +250,10 @@ class PureTest(unittest.TestCase):
 class LoadTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_tm_history_test":
             raise RuntimeError("dedicated local DB vega_v2_tm_history_test required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         x = cls.db.execute
         x("""INSERT INTO core.competitions(id, name) VALUES (1, 'Premier League'), (2, 'LaLiga'), (3, 'Bundesliga'), (4, 'Serie A'),
              (5, 'Ligue 1'), (6, 'Eredivisie')""")

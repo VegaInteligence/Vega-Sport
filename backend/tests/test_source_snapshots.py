@@ -31,6 +31,7 @@ REPO = ROOT.parent
 sys.path.insert(0, str(ROOT))
 from vega import sources
 from vega.sources import SourceError, cups, curated, open_matchday, open_matchday_history, snapshot
+from template_base import fresh
 
 try:
     import psycopg
@@ -188,14 +189,10 @@ def baseline_digest(body):
 class SnapshotDatabase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_snapshots_test":
             raise RuntimeError("dedicated local snapshots DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
 
     @classmethod
     def tearDownClass(cls):

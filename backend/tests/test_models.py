@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega import models
 from vega.models import half_up
+from template_base import fresh
 
 try:
     import psycopg
@@ -53,11 +54,9 @@ class ModelsTest(unittest.TestCase):
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_models_test":
             raise RuntimeError("dedicated local models DB required")
         from vega.calculator import refresh_competition_season
-        from vega.store import Store, connect_local, migrate
+        from vega.store import Store
 
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         with cls.db.transaction():
             Store(cls.db).season("2025/2026")
         cls.facts = cls.build()

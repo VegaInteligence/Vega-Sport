@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from prerequisites import required  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -75,16 +76,13 @@ def explain(db, sql, args, analyze=False, generic=False):
 class Plans(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
         import test_nation_match_copies as nations
         import test_standings_phases as standings
 
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_classements_test":
             raise RuntimeError("dedicated local test DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         standings.build(cls.db)
         nations.build(cls.db)
         # Volume enough for the planner to choose as it does on the review's base (30 000 SportScore rows over 1 500

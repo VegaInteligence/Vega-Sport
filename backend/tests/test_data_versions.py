@@ -49,8 +49,9 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from prerequisites import required  # noqa: E402
 from vega import migrate as migration
-from vega.store import Store, connect_local, migrate
+from vega.store import Store, migrate
 from vega.worker import Worker
+from template_base import fresh
 
 DSN = os.environ.get("VEGA_V2_DATA_VERSIONS_TEST_DSN")
 TRIGGERS = {"vega_change_insert", "vega_change_update", "vega_change_delete", "vega_change_truncate"}
@@ -64,9 +65,7 @@ class DataVersionsTest(unittest.TestCase):
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_data_versions_test":
             raise RuntimeError("dedicated local vega_v2_data_versions_test required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         # Probes of this test: a plain table, a partitioned one, read by api views; a json and a jsonb column.
         x = cls.db.execute
         x("CREATE TABLE core.gh137a_plain(id int PRIMARY KEY, label text, doc json, docb jsonb)")

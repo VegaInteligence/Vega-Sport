@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 from archive_fixtures import RECENT_GOALS, make_sources
 from vega import archives
+from template_base import fresh
 
 try:
     import psycopg
@@ -53,14 +54,10 @@ class PureTest(unittest.TestCase):
 class ImportTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_archives_test":
             raise RuntimeError("dedicated local archives DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         cls.sources = tempfile.TemporaryDirectory()
         make_sources(cls.sources.name)
 

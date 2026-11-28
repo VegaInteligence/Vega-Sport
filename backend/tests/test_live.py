@@ -17,6 +17,7 @@ from vega.live.broadcast import AppSyncPublisher, MemoryPublisher
 from vega.live.ingestor import Ingestor, main
 from vega.live.model import Event, LiveError, TeamStats
 from vega.live.store import DynamoStore, MemoryStore
+from template_base import fresh
 
 DSN = os.environ.get("VEGA_V2_LIVE_TEST_DSN")
 KICKOFF = datetime(2025, 9, 20, 19, 0, tzinfo=timezone.utc)
@@ -128,14 +129,12 @@ class PureTest(unittest.TestCase):
 class IngestorTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import Store, connect_local, migrate
+        from vega.store import Store
 
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_live_test":
             raise RuntimeError("dedicated local live DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         x = cls.db.execute
         with cls.db.transaction():
             Store(cls.db).season("2025/2026")

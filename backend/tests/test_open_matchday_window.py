@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 from prerequisites import required  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -100,10 +101,9 @@ class WindowBase(unittest.TestCase):
 
     def setUp(self):
         from vega.sources import open_matchday_history
-        from vega.store import connect_local, migrate
+        from vega.store import connect_local
 
-        self.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(self.db)
+        type(self).db = fresh(DSN, self.db)
         self.x = self.db.execute
         self.collect = connect_local(DSN)
         self.addCleanup(self.collect.close)

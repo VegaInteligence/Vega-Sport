@@ -4,6 +4,7 @@ import os, sys, unittest
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
+from template_base import fresh
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -24,7 +25,7 @@ class StoreTest(unittest.TestCase):
             or target.path != "/vega_v2_store_test"
         ):
             raise RuntimeError("dedicated local store DB required")
-        from vega.store import connect_local, migrate, Store
+        from vega.store import connect_local, Store
         from vega.normalize import normalize_family, NormalizationError
         from vega.jobs import enqueue, claim
 
@@ -42,7 +43,7 @@ class StoreTest(unittest.TestCase):
             is not True
         ):
             raise RuntimeError("test DB must be empty")
-        migrate(cls.db)
+        cls.db = fresh(DSN, cls.db)
         cls.store = Store(cls.db)
 
     @classmethod

@@ -21,6 +21,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega import scope  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -34,14 +35,10 @@ KEPT, NAMED = "l_purgeA", "l_purgeB"  # two removed PitchAPI leagues (scope.REMO
 class PurgeUnderRolesTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_scope_purge_test":
             raise RuntimeError("dedicated local scope purge DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
 
     @classmethod
     def tearDownClass(cls):

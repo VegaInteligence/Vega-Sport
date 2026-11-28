@@ -1,0 +1,16 @@
+== before
+# tests 436
+# pass 435
+# fail 1
+# cancelled 0
+# skipped 0
+# duration_ms 618178.534784
+not ok 102 - GH220-t the followed players' matches of the week read the week's fixtures only, never the season's
+== after
+# tests 436
+# pass 435
+# fail 1
+# cancelled 0
+# skipped 0
+# duration_ms 304994.71248
+not ok 102 - GH220-t the followed players' matches of the week read the week's fixtures only, never the season's

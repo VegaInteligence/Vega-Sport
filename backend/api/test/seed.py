@@ -12,7 +12,8 @@ from cup_samples import SAMPLES
 from vega.sources import cups, curated
 from vega import archives, power
 from vega.worker import publish
-from vega.store import Store, connect_local, migrate
+from vega.store import Store
+from template_base import fresh
 
 TEAMS = {1: ("t_aaaaa1", "Olympique Été", "FRA"), 2: ("t_aaaaa2", "Racing Club", "FRA"), 3: ("t_aaaaa3", "Stade Nord", None), 4: ("t_aaaaa4", "Union Sud", "FRA")}
 # Players: (id, key, name, team); stats per match: (match, minutes, level, goals, xg, shots, passes ok/att, position, starter, saves, prevented),
@@ -39,9 +40,7 @@ MATCHES = [
 
 
 def main(dsn):
-    db = connect_local(dsn)
-    db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-    migrate(db)
+    db = fresh(dsn)
     with db.transaction():
         Store(db).season("2025/2026")
     x = db.execute

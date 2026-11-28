@@ -11,7 +11,8 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega.pilot import Pilot
-from vega.store import Store, connect_local, migrate
+from vega.store import Store, connect_local
+from template_base import fresh
 
 DSN = os.environ.get("VEGA_V2_PILOT_TEST_DSN")
 
@@ -31,7 +32,7 @@ class PilotTest(unittest.TestCase):
             "SELECT to_regnamespace('core') IS NOT NULL OR to_regnamespace('agg') IS NOT NULL OR to_regnamespace('ops') IS NOT NULL"
         ).fetchone()[0]:
             raise RuntimeError("pilot test DB must be empty")
-        migrate(cls.db)
+        cls.db = fresh(DSN, cls.db)
 
     @classmethod
     def tearDownClass(cls):
