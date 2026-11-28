@@ -151,7 +151,7 @@ export function buildClubReport({ id, season, read, clubs, projection, forecasts
   const upcoming = (data.fixtures || []).filter((f) => f.status === "not_started" && (f.home_team?.id === id || f.away_team?.id === id))
     .sort((a, b) => String(a.time_utc || a.date).localeCompare(String(b.time_utc || b.date))).slice(0, 3)
     .map((f) => {
-      const home = f.home_team?.id === id, forecast = forecasts[f.id]?.forecast || null;
+      const home = f.home_team?.id === id, forecast = (Object.hasOwn(f, "forecast") ? f.forecast : forecasts[f.id]?.forecast) || null;
       const p = (side) => num(forecast?.[side]) == null ? null : round(forecast[side] * 100, 0);
       return { id: f.id, date: f.date, league: f.league?.name || null, home, opponent: home ? f.away_team?.name : f.home_team?.name,
         opponentImageUrl: (home ? f.away_team?.image_url : f.home_team?.image_url) || null,
@@ -258,14 +258,16 @@ export async function loadReport(id, { season, get = apiGet, today = new Date() 
     ]);
     if (!read) return null;
     const league = (read.data?.competitions || []).find((c) => !String(c.country || "").startsWith("INT"));
-    const coming = (read.data?.fixtures || []).filter((f) => f.status === "not_started" && (f.home_team?.id === id || f.away_team?.id === id))
-      .sort((a, b) => String(a.time_utc || a.date).localeCompare(String(b.time_utc || b.date))).slice(0, 3);
+    // The club read gives each match to come its forecast (null without one); a read before it gives none (GH139).
+    const unread = (read.data?.fixtures || []).filter((f) => f.status === "not_started" && (f.home_team?.id === id || f.away_team?.id === id))
+      .sort((a, b) => String(a.time_utc || a.date).localeCompare(String(b.time_utc || b.date))).slice(0, 3)
+      .filter((f) => !Object.hasOwn(f, "forecast"));
     const [projection, ...forecasts] = await Promise.all([
       league ? quiet(get("/api/forecasts/season", { competition: league.id, season: s })) : null,
-      ...coming.map((f) => quiet(get("/api/forecasts/match", { match: f.id }))),
+      ...unread.map((f) => quiet(get("/api/forecasts/match", { match: f.id }))),
     ]);
     return buildClubReport({ id, season: s, read, clubs, projection,
-      forecasts: Object.fromEntries(coming.map((f, i) => [f.id, forecasts[i]]).filter(([, f]) => f)) }, today);
+      forecasts: Object.fromEntries(unread.map((f, i) => [f.id, forecasts[i]]).filter(([, f]) => f)) }, today);
   }
   const [match, stats, grades, live] = await Promise.all([
     get(`/api/matches/${id}`),

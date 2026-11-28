@@ -102,18 +102,20 @@ export function scopeVersion(read, shape, scope, now) {
 
 /**
  * The version of a read made of the editions `source` gives (a statement of their ids,
- * with `values`): `key` names the read's form and what it is of.
+ * with `values`): `key` names the read's form and what it is of. `extra`: a statement of one
+ * more value the read is made from, with the same `values`, read in the same statement (a
+ * club's forecasts, GH139); without it, the version is the one before it.
  */
-export async function editionsVersion(read, key, source, values, now) {
+export async function editionsVersion(read, key, source, values, now, { extra = null } = {}) {
   const [row] = await read(
     `SELECT coalesce(json_agg(json_build_array(e.id,coalesce(v.version,0),p.retrieved_at,p.match_count,
-        p.finished_count,p.collected_count,p.team_count) ORDER BY e.id),'[]'::json) AS editions
+        p.finished_count,p.collected_count,p.team_count) ORDER BY e.id),'[]'::json) AS editions${extra ? `,(${extra}) AS extra` : ""}
      FROM (${source}) e
      LEFT JOIN api.versions v ON v.resource_kind='competition_season' AND v.resource_id=e.id
      LEFT JOIN api.editions p ON p.competition_season_id=e.id`,
     values,
   );
-  return sha([...key, row?.editions ?? [], Math.floor(now / DAY)]).slice(0, 16);
+  return sha([...key, row?.editions ?? [], Math.floor(now / DAY), ...(extra ? [row?.extra ?? null] : [])]).slice(0, 16);
 }
 
 /**
