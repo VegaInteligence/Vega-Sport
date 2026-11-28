@@ -9,6 +9,19 @@
 - La page détaillée du PSG a été comparée champ par champ sur la même version API. Les données sont identiques, avec les identifiants d'apparitions attendus en plus sur les matchs combinés.
 - Les 1 139 tests du site et les quatre vérifications navigateur de ONLY=D passent. La suite du site utilise Node 24.18.0 et Bun 1.4.5. Les six tests d'intégration de l'API demandent un DSN jetable.
 
+## CI : le Deploy en six parts et le Python en trois (28 novembre 2026, branche `ci/parts-du-deploy`, PR #286)
+
+- Demande (28 nov., après la fusion de #280) : s'attaquer au plafond restant, les parts du Deploy ; puis, à la lecture du premier run de la PR, passer aussi le Python de deux à trois parts. Linear non consulté (règle de l'utilisateur pour ce dossier).
+- Constat (run 46101676263) : 1 391 s de tests du Deploy en quatre parts de 369 à 442 s. Le temps est du travail : un `deploy.sh` fait environ 180 appels aux outils simulés, 22 à 68 ms chacun, sans attente à retirer. `test_account_deploy` restait d'un seul bloc de 160 à 257 s selon le run, et faisait de deploy-1 le job le plus lent quel que soit l'équilibrage.
+- Fait : `durations.UNIT_BY_METHOD` compte aussi `test_account_deploy` et `test_panna_deploy` (chaque test y construit son propre état) ; `changed_suites.PARTS` passe le Deploy de 4 à 6 parts et le Python de 2 à 3 ; `durations.json` refait sur les six journaux du run 46161337080 de main, après #289 et ses neuf tests du Deploy de plus (262 s par part du Deploy, 170 s par part Python).
+- Tests d'abord : `test_ci_zones.py` g, i2, i3 modifiés et i3b ajouté, 4 échecs avant, 24/24 après ; pour le Python, g et i2 modifiés d'abord, 2 échecs, 24/24 après.
+- Mesuré dans GitHub Actions, Deploy en six parts et Python encore en deux (run 46152209159) : parts du Deploy 203 à 237 s, contre 249 à 396 s sur les trois autres runs complets du jour aux mêmes tests. Le run complet n'y gagne pas (384 s, contre 368 à 426 s) : `python-2` dure 369 s, avec `test_panna_s1` (65 s) arrivé par #285 et des suites Python plus lentes ce run-là (600 s pour 436 s de poids, cause non établie).
+- Ce run est rouge sans rapport avec la branche : le test du site « R3 » (`tests/preference-render-matches.test.mjs`) lit l'heure réelle et contient un match du 28 nov. à 12 h 30 UTC ; main échoue de même depuis. Les PR #287 et #290 le corrigent ; non touché ici.
+- Vérifié en local (PostgreSQL 18.6 en UTC, Docker réel) : les neuf parts passent, 1 377 tests joués une fois chacun. Preuves : `docs/audits/2026-11-28/preuves/ci-parts-deploy/EVIDENCE.md`.
+- Le commentaire de `.github/workflows/ci.yml` n'est pas retouché : le jeton qui pousse n'a pas le droit de modifier un workflow.
+- **Non vérifié** : les durées dans GitHub Actions avec le Python en trois parts.
+- Reste : la part API (4 min 14 s à 6 min 24 s, une seule entrée) devient le plafond d'un run complet ; la découper demande de traiter la base partagée entre ses fichiers et le relevé de couverture commun au passage.
+
 ## CI : bases de test clonées d'un modèle au lieu des migrations rejouées (28 novembre 2026, branche `ci/base-modele-par-job`)
 
 - Demande (28 nov.) : « Pourquoi les CI/CD mettent autant de temps ? », puis choix du levier « Base modèle par job ». Linear non consulté (règle de l'utilisateur pour ce dossier).
@@ -20,7 +33,8 @@
 - Vérifié en local, la branche sans adaptation sur PostgreSQL 18.6 et Node 24 : groupe Python 1 223 tests OK en 421 s (9 sautés : Docker, pgvector), API 436/436 en 316 s, comptes 110/110. Avant/après sur PostgreSQL 16 (une ligne de 056 adaptée dans une copie jetable) : aucun test ne change d'issue, Python 1 371 s → 455 s, API 618 s → 305 s. Preuves : `docs/audits/2026-11-28/preuves/ci-base-modele/EVIDENCE.md`.
 - GitHub Actions, PR #280 (run 46096786041) : tout vert, suites du Deploy comprises ; run entier 401 s contre 656 à 811 s pour les trois derniers runs de main ; python-1 191 s, python-2 280 s (477–689 s et 437–670 s), api 297 s (359–635 s) ; 88 et 103 bases clonées en 8,2 s et 17,6 s.
 - `backend/ci/durations.json` refait par `durations.py` sur les six journaux Python et Deploy de ce run : les parts Python passent de 149/238 s à 194/193 s, celles du Deploy de 218–350 s à 287–288 s. **Non vérifié** : l'effet de ces poids, à lire au run suivant.
-- Reste : les parts du Deploy sont le plafond d'un run complet (1 151 s de tests en quatre parts ; six parts donneraient 191 à 194 s) ; règle `src/services/` qui lance tout le backend pour une PR frontend (#274, #276) ; Auto-fix non activé sur la PR (l'app refuse de la rattacher à la session).
+- Fusionnée le 28 nov. (PR #280, main `2f5a2d8fe1`) sur un run vert ; runs de la PR entre 401 et 456 s. Un échec local isolé de `test_GH171_d` (le texte d'une entrée de `pg_stat_statements` non retrouvé, sur un serveur déjà saturé par le passage précédent) : non reproduit en six relances, vert en CI, cause non établie.
+- Reste : règle `src/services/` qui lance tout le backend pour une PR frontend (#274, #276) ; le plafond du Deploy est traité dans la section au-dessus.
 
 ## PannaData · backfill AWS et actualisation quotidienne
 
