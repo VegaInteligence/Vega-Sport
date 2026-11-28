@@ -1384,6 +1384,33 @@ answers made for each failure); GH202-e: `backend/tests/test_account_deploy.py` 
 here: CloudWatch's own evaluation (Contributor Insights, the EventBridge metrics, the dashboard's widgets), real
 production answers.
 
+## GH196. Require green CI for the commit deployed to AWS
+
+Manual Deploy pins both the checkout and `IMAGE_TAG` to `github.sha`. The CI check runs before the AWS role is
+assumed. It uses the checkout's HEAD and the GitHub runner's repository ID, ref and SHA.
+
+The check reads every page of runs for that SHA from the repository's `ci.yml`. Deploy considers push and manual CI
+runs on `main` from the same repository. Both run every suite. The highest eligible run number and its current
+attempt determine the result. A completed success allows Deploy to continue and records the SHA and run link.
+
+| Case | Expected result |
+|---|---|
+| GH196-a | A successful push, manual CI run or rerun allows the matching SHA. |
+| GH196-b, c | A failed, cancelled, incomplete or pending CI blocks Deploy. An older success cannot replace a newer result. |
+| GH196-d, e | Deploy requires a `main` CI run for the exact checkout and repository. A missing CI, another ref or a different checkout blocks the job. |
+| GH196-f | A failed API call or malformed response blocks Deploy with an explanation. |
+| GH196-g, h | The check uses Git and GitHub CLI before authentication. The workflow uses the same SHA for checkout and packaging. |
+
+The tests execute the check in a temporary Git repository with a simulated GitHub CLI. Run
+`python3 -m unittest discover -s backend/tests -p test_deploy_ci_guard.py -v` from the repository root.
+
+Manual dispatch provides approval for this GitHub workflow. A rerun retains the original workflow revision, so
+deployments started before this change keep their original workflow.
+[GitHub Actions reruns](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
+
+Direct invocations of `infra/aws/deploy.sh` are outside this workflow's authorization path. The audit's automatic
+trigger depends on component deployment (VI-135) and a production environment approval rule.
+
 ## GH129. The match page's season read once; the player page's reads without waste (GH #129, VI-69)
 
 Seen in production on 25 Nov 2026 (`optimisations-suite-2611/reference/lectures.log`): Brentford–Everton opened at
