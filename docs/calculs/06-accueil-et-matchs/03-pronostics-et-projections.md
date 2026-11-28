@@ -25,7 +25,23 @@ Modèle ajusté sur les 63 560 matchs de clubs des saisons jusqu'à 2025/2026, j
 
 Le « taux de base » est la fréquence des trois résultats dans l'historique, la même pour tous les matchs. Calibration de la victoire à domicile : parmi les matchs annoncés entre 50 et 60 % (2 196 matchs, 54,5 % en moyenne), 54,6 % ont été gagnés ; entre 30 et 40 %, 36,0 % pour 35,3 % annoncés ; entre 70 et 80 %, 75,3 % pour 74,0 %. Les nuls sont un peu sous-estimés (24,6 % annoncés, 25,5 % observés). La correction des petits scores change peu (1,0207 contre 1,0212 sans elle).
 
-Aucune comparaison avec les cotes de clôture n'a été faite : la base n'en contient pas.
+### Face aux cotes de clôture (28 novembre 2026)
+
+Mesuré en lecture seule avec [evaluate_forecast.py](../../../backend/tools/evaluate_forecast.py) (`from-api`, `add-odds`, `report`) : le point du coup d'envoi de chaque match joué (`/api/forecasts/live` : l'Elo seul avec les coefficients en service, sans la forme) contre la moyenne des cotes de clôture de football-data.co.uk, marge retirée. Sept championnats (Premier League, LaLiga, Bundesliga, Serie A, Ligue 1, Liga Portugal, Eredivisie), 2025/2026 et 2026/2027 jusqu'au 22 novembre. Sur 3 129 matchs joués, 38 n'ont pas de point (leurs événements de but ne donnent pas leur score) et 61 partent du pronostic relu avec les compositions, un autre pronostic, laissé de côté : 3 030 matchs lus, 3 027 avec une cote.
+
+| | Perte logarithmique, 1-N-2 | Brier | Plus de 2,5 buts |
+|---|---:|---:|---:|
+| Fréquences des matchs lus, les mêmes pour tous | 1,0722 | 0,6488 | 0,6878 |
+| Vega | 0,9790 | 0,5819 | 0,6824 |
+| Cotes de clôture | 0,9622 | 0,5714 | 0,6667 |
+
+- **Écart** : +0,0169 pour Vega, intervalle à 95 % de +0,0109 à +0,0242 (rééchantillonnage des matchs). La forme, absente de ce point, vaut environ 0,005 sur les matchs non vus (plus bas).
+- **Nuls** : 23,1 % annoncés, 25,0 % joués (24,7 % pour le marché). Là où le marché donne 27 % ou plus (1 104 matchs), Vega annonce 25,6 %, le marché 29,3 %, et 30,6 % se sont joués.
+- **Nombre de buts** : sur « plus de 2,5 buts », Vega fait à peine mieux que la fréquence (0,6824 contre 0,6878) ; le marché, 0,6667. Le modèle attend 2,8 à 2,9 buts par match dans les sept championnats ; il s'en est joué de 2,58 (Serie A) à 3,33 (Eredivisie). Un facteur par championnat mesuré sur une saison et appliqué à l'autre dégrade pourtant le pronostic (+0,004 et +0,003, mesuré le 27 novembre sur le premier relevé) : ce n'est pas la correction.
+- **Désaccords** : quand Vega et le marché diffèrent de plus de 10 points sur la victoire à domicile (519 matchs, 17 %), 1,0649 pour Vega contre 1,0128 ; à moins de 3 points (1 029 matchs), 0,9535 contre 0,9494.
+- **Favori** : calibré (annoncé entre 70 et 80 %, 74,5 % en moyenne : 74,8 % de victoires ; au-dessus de 80 %, 85,2 % annoncés, 84,1 % joués).
+
+Limites : sept premières divisions seulement ; les cinq coefficients sont ceux d'aujourd'hui, ajustés sur une base qui contient ces matchs, et les niveaux de départ de l'Elo sont ceux de tout l'historique (les deux favorisent Vega) ; la cote de clôture est la référence la plus dure ; les 38 matchs sans point ne sont pas tirés au hasard. Les fichiers de football-data.co.uk des saisons en cours ne sont pas dans la base : l'outil les lit, donnés à la main. Un premier relevé, le 27 novembre, mêlait les 61 matchs partis des compositions : 0,9801 contre 0,9631 sur 3 081 matchs, le même écart.
 
 ## La forme récente (version 2)
 
@@ -82,6 +98,30 @@ La carte « Probabilités » affiche alors ce pronostic, dit ce que vaut chaque 
 Ces matchs ne jugent rien de la justesse : elle se lira sur `agg.match_lineup_forecasts` (conservé après le match, avec l'heure du premier calcul de chaque pronostic) quand il y en aura quelques centaines.
 
 Seules les compositions confirmées sont lues : le « dernier onze » ou le onze « probable » du fournisseur ne déplace pas le pronostic.
+
+## Les pronostics gardés (migration 185, 28 novembre 2026)
+
+`forecast.refresh` vide `agg.match_forecasts` de la saison et y écrit les matchs encore à jouer : une fois un match joué, rien ne disait ce qui avait été annoncé pour lui. Depuis la migration 185, la même passe tient `agg.match_forecast_log`, une ligne par match : **le dernier pronostic écrit avant le coup d'envoi** (forme comprise, avant les compositions, qui gardent leur table), avec de quoi refaire sa grille de scores (les buts attendus des deux côtés, ρ), les deux forces, les deux formes, la version du modèle, l'heure de sa première et de sa dernière écriture et le coup d'envoi pour lequel il a été écrit.
+
+- Une ligne n'est écrite que si le match commence après l'écriture et dans les quatorze jours (l'horizon de la forme). Un match en cours, que la base dit encore « à jouer » jusqu'à la lecture du score, est pronostiqué de nouveau mais sa ligne ne bouge plus. Un match qui n'a qu'un jour, sans heure, est écrit pour la dernière fois la veille.
+- Une passe sans modèle laisse le journal tel quel ; un match supprimé emporte sa ligne, et une ligne ne retient pas un match que sa source retire.
+- Un match reporté après l'écriture de sa ligne la garde jusqu'à ce qu'il revienne dans les quatorze jours ; l'outil écarte et compte une ligne écrite plus de quinze jours avant le match joué.
+- Lecture : `api.match_forecast_log` (la ligne, l'état du match, son score à la 90ᵉ minute, sa compétition, ses deux équipes). Aucune route ne la sert et aucune page ne change.
+
+Le journal part vide : il se jugera quand quelques centaines de matchs y seront joués (`evaluate_forecast.py from-log`).
+
+## Rejouer ces vérifications
+
+[evaluate_forecast.py](../../../backend/tools/evaluate_forecast.py) écrit une entrée versionnée (`vega-forecast-evaluation-input/1`) puis un rapport en JSON canonique, les mêmes octets pour la même entrée, son sha256 dedans. Quatre origines, que le rapport rappelle :
+
+| Commande | Ce qu'elle juge | Lit |
+|---|---|---|
+| `from-log` | les pronostics gardés : ce qui a été publié | la base (`VEGA_EVALUATE_DSN`, rôle de lecture) |
+| `from-api --base … --from … --to …` | le point du coup d'envoi des matchs joués : l'Elo seul, coefficients d'aujourd'hui | l'API publique |
+| `backtest --cutoff AAAA-MM-JJ` (`--no-form` pour l'Elo seul) | un modèle ajusté strictement avant la date, sur les matchs d'après | la base (rôle de calcul), ou un fichier écrit par `--write-observed` |
+| `synthetic --seed N` | rien de réel : pour les tests | — |
+
+`add-odds --odds fichiers.csv` ajoute la moyenne des cotes de clôture aux matchs que les lignes désignent, par la règle du lecteur d'archives (`footballdata.pair` : aucune liste d'orthographes ; un nom se reconnaît à partir de trois de ses lignes, un fichier de quelques lignes ne relie donc rien) ; un match que les fichiers ne désignent pas garde la cote qu'il avait. `report` écrit le rapport. Toute comparaison avec le marché ne lit que les matchs qui ont les deux, et dit combien. Les tableaux des 12 et 14 novembre de cette page ont été calculés hors du dépôt, avant l'outil ; `backtest` les refait. L'outil n'est pas dans l'image du worker : `from-log` et `backtest` se lancent d'un poste ou d'une tâche qui a le dépôt et l'accès à la base ; une lecture qui échoue arrête la commande (code 4) sans rien écrire.
 
 ## La projection d'un championnat
 

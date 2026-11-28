@@ -282,6 +282,14 @@ class OpenMatchdayRolesTest(RolesBase):
         self.calc.execute("""INSERT INTO agg.match_forecasts(match_id, season_id, home_win, draw, away_win, home_goals, away_goals, likely_home,
                                                            likely_away, home_elo, away_elo, model_id)
                              SELECT id, season_id, .4, .3, .3, 1.5, 1.3, 1, 1, 1500, 1490, %s FROM core.matches WHERE id = %s""", (model, match))
+        # With it since 185 (FAILURE_MODES.md §89.1-j): the forecast kept before the kick-off, which stays once the match is played.
+        self.calc.execute("""INSERT INTO agg.match_forecast_log(match_id, season_id, home_win, draw, away_win, home_goals, away_goals, rho, home_elo,
+                                                              away_elo, home_form, away_form, model_version, kickoff_at, first_computed_at, computed_at)
+                             SELECT id, season_id, .4, .3, .3, 1.5, 1.3, 0, 1500, 1490, 0, 0, 'controlled', now() + interval '1 day', now(), now()
+                             FROM core.matches WHERE id = %s""", (match,))
+
+    def kept(self):
+        return [r[0] for r in self.calc.execute("SELECT match_id FROM agg.match_forecast_log ORDER BY 1").fetchall()]
 
     def forecasts(self):
         return [r[0] for r in self.calc.execute("SELECT match_id FROM agg.match_forecasts ORDER BY 1").fetchall()]
@@ -297,6 +305,7 @@ class OpenMatchdayRolesTest(RolesBase):
         self.assertNotIn(self.key("2026-11-29"), found)
         self.assertEqual(found[self.key("2026-11-01", "North FC", "South FC")][3:], [3, 1])
         self.assertEqual(self.forecasts(), [self.fixture])
+        self.assertEqual(self.kept(), [self.fixture])  # a fixture moved keeps its match, and its kept forecast (89.1-f)
         [after] = self.read({"path": path, "etag": before["etag"]})
         self.assertEqual((after["status"], after["conditional"]), (200, 200))
         # The edition's body (table-v1): the moved fixture with its forecast, the corrected result.
@@ -362,6 +371,7 @@ class OpenMatchdayRolesTest(RolesBase):
                     self.assertEqual(self.failures(), [])
                     if dependent == "forecast":
                         self.assertEqual(self.forecasts(), [self.fixture])  # the collection never writes agg
+                        self.assertEqual(self.kept(), [])  # the kept forecast held nothing and went with its match (89.1-j)
                 else:
                     self.assertEqual(outcome[0], "ok")
                     self.assertGreaterEqual(outcome[2], 1)

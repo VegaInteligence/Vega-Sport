@@ -802,6 +802,79 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(forecast.refresh(self.db, 2025), (0, 0))
         self.assertEqual(self.one("SELECT (SELECT count(*) FROM agg.match_forecasts), (SELECT count(*) FROM agg.season_projections)"), (0, 0))
 
+    def test_zzzz_the_forecasts_published_are_kept(self):
+        # 185 (FAILURE_MODES.md §89.1): the last forecast written before a match's kick-off stays once it is played.
+        from vega import forecast
+
+        sys.path.insert(0, str(ROOT / "tools"))
+        import evaluate_forecast
+
+        x = self.db.execute
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,kickoff_at)
+             VALUES (9110,1,2025,'pitchapi','not_started',1,2, now() + interval '2 days'),
+                    (9111,1,2025,'pitchapi','not_started',3,4, now() - interval '10 minutes'),
+                    (9112,1,2025,'pitchapi','not_started',5,6, now() + interval '60 days')""")
+        # A day without an hour: three days ahead, and today's (its kick-off is read as 00:00 UTC, already past).
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,match_date)
+             VALUES (9113,1,2025,'pitchapi','not_started',7,8, (now() AT TIME ZONE 'UTC')::date + 3),
+                    (9114,1,2025,'pitchapi','not_started',2,1, (now() AT TIME ZONE 'UTC')::date)""")
+        self.addCleanup(x, "DELETE FROM core.matches WHERE id BETWEEN 9110 AND 9114")
+        log = lambda: x("SELECT match_id FROM agg.match_forecast_log ORDER BY 1").fetchall()  # noqa: E731
+        row = lambda: self.one("SELECT first_computed_at, computed_at, home_win, draw, away_win FROM agg.match_forecast_log WHERE match_id = 9110")  # noqa: E731
+        minimum, forecast.MIN_FIT = forecast.MIN_FIT, 20
+        try:
+            forecast.refresh(self.db, 2025)
+            # The five are forecast as before; two are kept: 9111 is under way though the base still calls it « to
+            # play » and 9114's day has begun (89.1-a), 9112 is further ahead than the form's horizon (89.1-b).
+            self.assertTrue({9110, 9111, 9112, 9113, 9114} <= {m for (m,) in x("SELECT match_id FROM agg.match_forecasts").fetchall()})
+            self.assertEqual(log(), [(9110,), (9113,)])
+            self.assertEqual(self.one("""SELECT l.kickoff_at = m.match_date::timestamp AT TIME ZONE 'UTC'
+                                         FROM agg.match_forecast_log l JOIN core.matches m ON m.id = l.match_id WHERE l.match_id = 9113""")[0], True)
+            kept = self.one("""SELECT (l.home_win, l.draw, l.away_win, l.home_goals, l.away_goals, l.home_elo, l.away_elo, l.home_form, l.away_form)
+                                    = (f.home_win, f.draw, f.away_win, f.home_goals, f.away_goals, f.home_elo, f.away_elo, f.home_form, f.away_form),
+                                 l.model_version, l.rho = o.rho, l.kickoff_at = m.kickoff_at, l.first_computed_at = l.computed_at
+                               FROM agg.match_forecast_log l JOIN agg.match_forecasts f USING (match_id)
+                               JOIN agg.forecast_models o ON o.id = f.model_id JOIN core.matches m ON m.id = l.match_id
+                               WHERE l.match_id = 9110""")
+            self.assertEqual(kept, (True, forecast.MODEL_VERSION, True, True, True))
+            # 89.1-c: a second pass keeps one row and its first writing's time, and replaces the rest.
+            first = row()
+            x("UPDATE agg.match_forecast_log SET home_win = 0.123 WHERE match_id = 9110")  # what the next pass must replace
+            forecast.refresh(self.db, 2025)
+            again = row()
+            self.assertEqual(log(), [(9110,), (9113,)])
+            self.assertEqual(again[0], first[0])
+            self.assertGreater(again[1], first[1])
+            self.assertEqual(again[2:], first[2:])
+            # 89.1-h: the read, under the match's public id.
+            self.assertEqual(self.one("SELECT count(*), min(home_win + draw + away_win) > 0.999 FROM api.match_forecast_log WHERE match_key = 9110"), (1, True))
+            # 89.1-a: once the match has kicked off, a pass forecasts it again and its row does not move.
+            x("UPDATE core.matches SET kickoff_at = clock_timestamp() WHERE id = 9110")
+            forecast.refresh(self.db, 2025)
+            self.assertEqual(row(), again)
+            # 89.1-e: played, it is no longer forecast and its row stays; the evaluator's export reads it with its result.
+            x("UPDATE core.matches SET status = 'finished', home_score = 2, away_score = 1 WHERE id = 9110")
+            forecast.refresh(self.db, 2025)
+            self.assertEqual(row(), again)
+            self.assertEqual(self.one("SELECT count(*) FROM agg.match_forecasts WHERE match_id = 9110")[0], 0)
+            exported = evaluate_forecast.log_rows(self.db)
+            self.assertEqual([(r["home_goals"], r["away_goals"]) for r in exported], [(2, 1)])
+            self.assertAlmostEqual(exported[0]["home_win"], again[2], places=6)
+            self.assertEqual(len(evaluate_forecast.from_log(exported)["matches"]), 1)
+            # The backtest's export: the matches the model is fitted on, each with its day and its two strengths before it.
+            observed = evaluate_forecast.observed_rows(self.db)
+            self.assertGreaterEqual(len(observed), 56)
+            self.assertTrue({"match", "date", "competition", "elo_home", "elo_away", "neutral", "home_goals", "away_goals", "home", "away",
+                             "home_xg", "away_xg"} <= set(observed[0]))
+        finally:
+            forecast.MIN_FIT = minimum
+        # 89.1-d: a pass without a model empties the forecasts as before and leaves the log as it is.
+        self.assertEqual(forecast.refresh(self.db, 2025), (0, 0))
+        self.assertEqual(log(), [(9110,), (9113,)])
+        # 89.1-g: a match deleted takes its row with it.
+        x("DELETE FROM core.matches WHERE id BETWEEN 9110 AND 9114")
+        self.assertEqual(log(), [])
+
     def test_zzzzz_every_competition_s_matches_are_forecast(self):
         # Every competition has its predictions (the user, 17 Nov 2026): a complementary source's league (open-matchday's
         # National League) is projected like a league, and every match still to play between two rated teams is

@@ -98,6 +98,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026, et les corrections de l'aud
 | Agrégats saison côté base | 025_player_season_rollups.sql (ancien backend, supprimé le 10 novembre 2026), [performance.mjs](../../backend/api/src/routes/performance.mjs), [calculator.py](../../backend/vega/calculator.py), migrations 128–131 |
 | Indicateurs club du serveur (version 2) | [club_indicators.py](../../backend/vega/club_indicators.py) |
 | Évaluation datée du xG de Vega | [evaluate_xg.py](../../backend/tools/evaluate_xg.py) |
+| Évaluation des pronostics de match (pronostics gardés, API, rejeu daté, cotes de clôture) | [evaluate_forecast.py](../../backend/tools/evaluate_forecast.py) |
 
 ## Audit du 16 novembre 2026
 
