@@ -42,7 +42,8 @@ ENRICHMENT_COLUMNS = {"home_score_ht", "away_score_ht", "revision", "updated_at"
 # graded on arrival of their statistics (178_match_grades_on_arrival.sql). Each is still checked for occupancy.
 ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals", "core.worldcup_matches", "core.footballdata_matches",
                       "agg.player_grade_exclusions", "core.team_side_corrections", "core.international_goals",
-                      "agg.match_probable_lineups", "agg.match_probable_lineup_players", "agg.match_grade_arrivals"}
+                      "agg.match_probable_lineups", "agg.match_probable_lineup_players", "agg.match_grade_arrivals",
+                      "core.match_score_selections"}
 # The Fjelstul World Cup Database's own match keys (137_worldcup_database.sql): text keys of core.worldcup_matches, never
 # an id of core.matches.
 FJELSTUL_MATCH_KEYS = frozenset({"core.worldcup_matches", "core.worldcup_appearances", "core.worldcup_goals",
@@ -102,8 +103,13 @@ REFS = {
 # 183 (GH137R) records additional season marks for the restored matches and events. It adds no match FK or column;
 # its receipt tables and the functions reading/writing them are independent of the restore. 184 (GH137R.3) removes what
 # 183 added (the season marks' triggers, the receipt tables and their functions) and keeps 182: an applied restore marks
-# the tables it writes whole, as after 182; no table, no column, nothing naming a match. A later migration needs its own
-# review here.
+# the tables it writes whole, as after 182; no table, no column, nothing naming a match. 185 (GH278 S1) adds the value
+# opta to core.provider: no relation. 186 (GH278 S1) adds core.observation_batches and core.match_score_observations
+# (keyed by a source's own match key, text: no column naming a Vega match, so independent of the restored ids) and
+# core.match_score_selections (match_id, integer, REFERENCES core.matches ON DELETE CASCADE), the pair another source's
+# observation governs, which names a match (ADDED_DEPENDENCIES, checked for occupancy like the others; S1 never selects
+# on a parent of Open Matchday, so none of the restored matches has a row there), and functions; no column of
+# core.matches or agg.power_runs. A later migration needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
                     "168_nation_world_ranking.sql", "169_player_level_measured.sql",
@@ -112,7 +118,7 @@ REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_season
                     "175_player_award.sql", "176_match_probable_lineups.sql", "177_league_history_lean_reads.sql",
                     "178_match_grades_on_arrival.sql", "179_statement_statistics.sql", "180_matchday_rounds.sql",
                     "181_match_absences.sql", "182_data_versions.sql", "183_read_receipts.sql",
-                    "184_retire_read_receipts.sql")
+                    "184_retire_read_receipts.sql", "185_core_provider_opta.sql", "186_match_score_observations.sql")
 
 
 class Refusal(RuntimeError):
