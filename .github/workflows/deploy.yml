@@ -43,6 +43,14 @@ jobs:
     timeout-minutes: 150
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      # The commit goes on only once ci.yml's newest run for it on main (a push or a manual run) completed green;
+      # anything else stops the job here, before any AWS credential (FAILURE_MODES_OPTIMISATIONS.md GH196).
+      - name: Full CI green for this commit (infra/aws/ci/check_deploy_ci.py)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 infra/aws/ci/check_deploy_ci.py
       - name: AWS session (vega-v2-deploy)
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
