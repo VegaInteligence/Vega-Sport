@@ -31,6 +31,9 @@ COPY backend/sql sql
 # The account's tables, applied by the migrate task apart from the football schemas, only once the
 # account is on (vega/migrate.py ACCOUNT_SQL, backend/account/DEPLOYMENT.md section 4).
 COPY backend/account/sql account/sql
+# PannaData's tables (backend/panna/sql), applied by the migrate task once SSM /vega/v2/panna-deploy is on
+# (vega/migrate.py PANNA_SQL). Nothing else of the loader: it runs outside AWS (backend/panna/README.md).
+COPY backend/panna/sql panna/sql
 # The archive import: its builders, the honours collector and the edition script, with the
 # site's shared/archive.js.
 COPY backend/archives backend/archives
