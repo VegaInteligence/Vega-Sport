@@ -478,7 +478,7 @@ class Store:
             )
         self._versions.clear()
 
-    def _scopes(self, mid, tables):
+    def _scopes(self, mid, tables, *, season_id):
         scopes = set()
         for table in tables:
             cols = self.columns[table]
@@ -490,9 +490,11 @@ class Store:
             scopes.update(
                 self.conn.execute(
                     sql.SQL(
-                        "SELECT DISTINCT " + select + " FROM core.{} WHERE match_id=%s"
+                        "SELECT DISTINCT "
+                        + select
+                        + " FROM core.{} WHERE season_id=%s AND match_id=%s"
                     ).format(sql.Identifier(table)),
-                    (mid,),
+                    (season_id, mid),
                 )
             )
         return scopes
@@ -781,7 +783,7 @@ class Store:
             ).fetchone()
             changed = not prior or bytes(prior[0] or b"") != fingerprint
             if changed:
-                scopes = self._scopes(mid, tables) | {(None, home), (None, away)}
+                scopes = self._scopes(mid, tables, season_id=sid) | {(None, home), (None, away)}
                 for table in reversed(tables):
                     self.conn.execute(
                         sql.SQL(
@@ -814,7 +816,7 @@ class Store:
                     "UPDATE core.matches SET revision=revision+1,updated_at=now() WHERE id=%s",
                     (mid,),
                 )
-                self._dirty(mid, eid, scopes | self._scopes(mid, tables))
+                self._dirty(mid, eid, scopes | self._scopes(mid, tables, season_id=sid))
             self.conn.execute(
                 "INSERT INTO ops.family_state(match_id,family,fingerprint,status,last_success_at,last_attempt_at) VALUES(%s,%s,%s,%s,now(),now()) ON CONFLICT(match_id,family) DO UPDATE SET fingerprint=EXCLUDED.fingerprint,status=EXCLUDED.status,last_success_at=now(),last_attempt_at=now(),updated_at=now()",
                 (mid, family, fingerprint, batch.coverage),
