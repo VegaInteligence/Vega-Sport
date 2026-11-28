@@ -173,7 +173,8 @@ def bridge(action, stage):
 def open_tunnel(target, transcript):
     if not re.fullmatch(r"ecs:vega-v2_[a-f0-9]{32}_[a-zA-Z0-9_-]+", target):
         raise Stop("INVALID_BRIDGE_TARGET")
-    with transcript.open("wb") as log:
+    flags = os.O_CREAT | os.O_TRUNC | os.O_WRONLY | os.O_NOFOLLOW
+    with os.fdopen(os.open(transcript, flags, 0o600), "wb") as log:
         return subprocess.Popen([*AWS, "ssm", "start-session", "--target", target, "--document-name", DOCUMENT, "--cli-read-timeout", "12"],
                                 stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
 
@@ -186,6 +187,18 @@ def await_tunnel(process, transcript):
             return
         time.sleep(1)
     raise Stop("BRIDGE_PORT_UNREADY")
+
+
+def session_transcript(scratch):
+    """Keep only the private port-forward transcript across GitHub cancellation steps."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return scratch / "ssm.private"
+    run_state = Path(os.environ["RUNNER_TEMP"]) / ("vega-panna-connect-" + run_key())
+    run_state.mkdir(mode=0o700, exist_ok=True)
+    if run_state.is_symlink() or run_state.stat().st_uid != os.getuid():
+        raise Stop("UNSAFE_SESSION_STATE")
+    run_state.chmod(0o700)
+    return run_state / "ssm.private"
 
 
 def close(tunnel, transcript, stage):
@@ -201,6 +214,9 @@ def close(tunnel, transcript, stage):
             ids = re.findall(r"Starting session with SessionId: ([A-Za-z0-9_-]+)", transcript.read_text(errors="replace"))
             for session_id in set(ids):
                 aws("ssm", "terminate-session", "--session-id", session_id)
+            if ids:
+                transcript.unlink(missing_ok=True)
+                emit("bridge_sessions_terminated", count=len(set(ids)))
     finally:
         result = bridge("cleanup", stage)
         emit("bridge_cleanup", state=result["state"])
@@ -276,7 +292,7 @@ def verify_connection(dsn, endpoint):
 
 def connect(scratch):
     guard()
-    transcript = scratch / "ssm.private"
+    transcript = session_transcript(scratch)
     tunnel = None
     try:
         target = bridge("start", scratch)["target"]
@@ -292,7 +308,7 @@ def connect(scratch):
 
 def refresh(scratch, args):
     guard()
-    transcript = scratch / "ssm.private"
+    transcript = session_transcript(scratch)
     tunnel = None
     try:
         target = bridge("start", scratch)["target"]
@@ -320,7 +336,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="panna-daily-", dir=os.environ.get("RUNNER_TEMP")) as directory:
         scratch = Path(directory)
         if args.cleanup_only:
-            close(None, scratch / "ssm.private", scratch)
+            close(None, session_transcript(scratch), scratch)
             return
         if args.mode == "connect":
             connect(scratch)
