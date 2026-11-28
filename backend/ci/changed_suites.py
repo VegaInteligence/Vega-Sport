@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 # The Deploy's end-to-end and template suites (test_deploy_flow.py plays the real deploy.sh with BuildKit and the
 # real migrations: about ten minutes on its own). They run in their own matrix entry, beside the other suites.
-DEPLOY_MODULES = ("test_deploy_flow", "test_account_deploy", "test_deploy_grants")
+DEPLOY_MODULES = ("test_deploy_flow", "test_account_deploy", "test_deploy_grants", "test_panna_deploy")
 
 EVERYTHING = (r"\.github/workflows/ci\.yml$", r"backend/ci/")
 
@@ -58,7 +58,7 @@ ZONES = {
     "python": (r"backend/(?!api/test/|account/test/)", r"infra/aws/"),
     # What deploy.sh runs or ships (infra/aws/*.py, the migrations, the API bundles, the image) and its tests.
     "deploy": (
-        r"infra/aws/", r"backend/sql/", r"backend/api/", r"backend/account/", r"backend/Dockerfile$",
+        r"infra/aws/", r"backend/sql/", r"backend/panna/sql/", r"backend/api/", r"backend/account/", r"backend/Dockerfile$",
         r"backend/requirements\.txt$", r"backend/vega/migrate\.py$", r"\.github/workflows/deploy\.yml$",
         r"backend/tests/(" + "|".join(DEPLOY_MODULES) + r"|deploy_fakes|deploy_repo|prerequisites)\.py$",
         r"backend/tests/fixtures/",

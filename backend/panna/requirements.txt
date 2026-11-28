@@ -1,0 +1,4 @@
+# The loader runs outside AWS (the Mac, a GitHub runner); none of this enters the worker image.
+pyarrow==24.0.0
+numpy==2.5.0
+psycopg[binary]==3.3.9
