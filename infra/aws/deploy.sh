@@ -157,6 +157,31 @@ PREREQUISITES
 }
 account_preflight
 # --- end of the account preflight ---
+# --- PannaData's login (GH278, backend/panna/README.md) ---
+# One switch: SSM /vega/v2/panna-deploy (String), on or off, set by the owner. Absent, nothing of PannaData is touched.
+# Off: Panna=false on the worker and alerts stacks, so the migrate task no longer gets the login's password (a rollback,
+# backend/panna/ROLLBACK.sql, is then not undone by the next Deploy); the secrets stay in SSM.
+# On: secrets.sh creates the login's password and URL (/vega/v2/password-panna, /vega/v2/panna-database-url),
+# the migrate task applies backend/panna/sql and sets vega_v2_panna (4 connections), and the connections alarm counts
+# them. The loader itself runs outside AWS; nothing of it is deployed.
+PANNA=off
+panna_on=()
+panna_preflight() {
+  local switch
+  switch=$(ssm_value /vega/v2/panna-deploy)
+  case "$switch" in
+    ""|None) echo "panna: off (no SSM parameter /vega/v2/panna-deploy): nothing of PannaData is deployed (backend/panna/README.md)"; return 0 ;;
+    off) echo "panna: off (/vega/v2/panna-deploy is off): Panna=false, the migrate task no longer sets the login (backend/panna/README.md)"
+         panna_on=(Panna=false); return 0 ;;
+    on) ;;
+    *) echo "panna: /vega/v2/panna-deploy holds neither value allowed: it must be on or off; nothing is changed" >&2; exit 1 ;;
+  esac
+  PANNA=on
+  panna_on=(Panna=true)
+  echo "panna: on: the migrate task applies backend/panna/sql and sets the login vega_v2_panna"
+}
+panna_preflight
+# --- end of the PannaData switch ---
 
 # --- The Deploy's grants and its own state (GH157, GH157.3) -----------------------------------------------------------
 # The roles of deploy-roles.yaml are the owner's (the workflow cannot update them): this Deploy needs their grants of
@@ -594,7 +619,7 @@ database=(); [ "$ACCOUNT" = on ] && database=(--parameter-overrides Account=true
 stack vega-v2-database database.yaml ${database[@]+"${database[@]}"}
 echo "== 2. Secrets"
 hold_state
-VEGA_ACCOUNT=$ACCOUNT bash infra/aws/ci/secrets.sh
+VEGA_ACCOUNT=$ACCOUNT VEGA_PANNA=$PANNA bash infra/aws/ci/secrets.sh
 # Optional, once: /vega/v2/odds-api-key (The Odds API, bookmakers' odds of the coming matches).
 ODDS=$(aws ssm get-parameter --name /vega/v2/odds-api-key --query Parameter.Name --output text 2>/dev/null || true)
 # What the services read from SSM, by version only (no value): a rotation gives another revision, which replaces their
@@ -607,7 +632,7 @@ for name in /vega/v2/collect-database-url /vega/v2/calc-database-url /vega/v2/pi
 done
 SECRETS=$(printf '%s' "$SECRETS" | sha256)
 DIGEST=$(sha256 infra/aws/worker.yaml)
-worker=(ArchiveSourcesBucket="$ARCHIVES" OddsApiKeyParameter="$ODDS" SecretsRevision="$SECRETS" TemplateDigest="$DIGEST" ${account_on[@]+"${account_on[@]}"})
+worker=(ArchiveSourcesBucket="$ARCHIVES" OddsApiKeyParameter="$ODDS" SecretsRevision="$SECRETS" TemplateDigest="$DIGEST" ${account_on[@]+"${account_on[@]}"} ${panna_on[@]+"${panna_on[@]}"})
 
 echo "== 3. Worker image (linux/arm64) of commit $TAG"
 IMAGE=$(python3 infra/aws/image_identity.py) || { echo "deploy: the worker image's identity could not be computed: nothing is stopped" >&2; exit 1; }
@@ -680,7 +705,7 @@ if [ "$FRESH" = false ] && [ "$STATE_PHASE" != stopped ] && [ -n "$CUR_DIGEST" ]
   # parameter's previous value: the services' task definitions do not change), and its migrations run while the worker
   # and the backfill collect.
   hold_state
-  previous_template TaskImageTag="$IMAGE" ${account_on[@]+"${account_on[@]}"}
+  previous_template TaskImageTag="$IMAGE" ${account_on[@]+"${account_on[@]}"} ${panna_on[@]+"${panna_on[@]}"}
   migrate_task --online
   case "$MIGRATE_CODE" in
     0) STOP=false; echo "migrations applied while the worker and the backfill run" ;;
@@ -796,7 +821,7 @@ watch_worker=true; [ "$COUNT" = 0 ] && watch_worker=false
 watch_backfill=true; [ "$BACKFILL" = 0 ] && watch_backfill=false
 watch_live=false; [ -n "${LIVE_PROVIDER:-}" ] && watch_live=true
 stack vega-v2-alerts alerts.yaml --parameter-overrides AlertEmail="$alert_email" AlertEmail2="$alert_email2" WatchWorker="$watch_worker" WatchBackfill="$watch_backfill" WatchLive="$watch_live" \
-  ${account_on[@]+"${account_on[@]}"}
+  ${account_on[@]+"${account_on[@]}"} ${panna_on[@]+"${panna_on[@]}"}
 stack vega-v2-alerts-edge alerts-edge.yaml --region us-east-1 --parameter-overrides AlertEmail="$alert_email" AlertEmail2="$alert_email2" \
   DistributionId="$(output vega-v2-api DistributionId)" ApiDomain="${media#https://}"
 # --- end of alerts ---

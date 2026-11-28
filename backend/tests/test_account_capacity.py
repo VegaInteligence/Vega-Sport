@@ -44,9 +44,12 @@ class AccountCapacityTest(unittest.TestCase):
         self.assertGreaterEqual(self.idle_ms, 30_000)
         self.assertLessEqual(self.idle_ms, 120_000)
 
-    def test_the_four_logins_fit_the_instance(self):
-        self.assertEqual(set(migrate.LOGINS), {"collect", "calc", "read", "account"})
-        self.assertEqual(sum(migrate.CONNECTION_LIMITS.values()), 96)
+    # The PannaData loader's login (backend/panna/FAILURE_MODES.md GH278-ah): 4 connections, one runner and its
+    # reconnections.
+    def test_the_five_logins_fit_the_instance(self):
+        self.assertEqual(set(migrate.LOGINS), {"collect", "calc", "read", "account", "panna"})
+        self.assertEqual(migrate.CONNECTION_LIMITS["panna"], 4)
+        self.assertEqual(sum(migrate.CONNECTION_LIMITS.values()), 100)
         self.assertLessEqual(sum(migrate.CONNECTION_LIMITS.values()), 200)
 
 

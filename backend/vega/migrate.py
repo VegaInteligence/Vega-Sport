@@ -11,7 +11,9 @@ The account's files (backend/account/sql, account/sql in the image) run only whe
 V2_ACCOUNT_PASSWORD is set: after the football migrations, before the logins (the login
 joins the group 001 creates), with their own record (backend/account/FAILURE_MODES.md
 M1 to M9). The football suites, which drop and rebuild core, agg, ops and api at will,
-never set it. Nothing secret is printed.
+never set it. PannaData's files (backend/panna/sql, panna/sql in the image) run the same
+way when V2_PANNA_PASSWORD is set, after the account's, recorded in panna_admin.applied
+(backend/panna/FAILURE_MODES.md GH278-ah). Nothing secret is printed.
 """
 
 import hashlib
@@ -27,7 +29,7 @@ from psycopg import sql
 from .store import migrate
 from .worker import connect
 
-LOGINS = ("collect", "calc", "read", "account")
+LOGINS = ("collect", "calc", "read", "account", "panna")
 # A connection limit per login keeps the instance's connections for the others.
 # read: the read API's function keeps one connection per copy, and a deploy leaves the old
 # copies beside the new ones until the base closes their idle sessions: twice the copies
@@ -40,53 +42,82 @@ READ_MARGIN = 4
 # ReservedConcurrentExecutions), twice for a deploy, plus a diagnostic session
 # (backend/tests/test_account_capacity.py).
 ACCOUNT_MARGIN = 2
-CONNECTION_LIMITS = {"collect": 6, "calc": 4, "read": 2 * 32 + READ_MARGIN, "account": 2 * 8 + ACCOUNT_MARGIN}
+# panna: PannaData's loader (backend/panna), one runner at a time (an advisory lock) on one connection, which it opens
+# again after a lost link while the server may still hold the old one: 4 (backend/panna/FAILURE_MODES.md GH278-ah).
+PANNA_CONNECTIONS = 4
+CONNECTION_LIMITS = {"collect": 6, "calc": 4, "read": 2 * 32 + READ_MARGIN, "account": 2 * 8 + ACCOUNT_MARGIN,
+                     "panna": PANNA_CONNECTIONS}
 ACCOUNT_SQL = Path(__file__).resolve().parents[1] / "account" / "sql"
 ACCOUNT_LOCK = "SELECT pg_advisory_xact_lock(hashtext('vega-account-migrations'))"
+PANNA_SQL = Path(__file__).resolve().parents[1] / "panna" / "sql"
+PANNA_LOCK = "SELECT pg_advisory_xact_lock(hashtext('vega-panna-migrations'))"
 
 
 class AccountMigrationError(RuntimeError):
     pass
 
 
-def account_files(directory=ACCOUNT_SQL):
+class PannaMigrationError(RuntimeError):
+    pass
+
+
+def component_files(directory, error, label):
     files = sorted(p for p in Path(directory).glob("*.sql") if re.fullmatch(r"\d{3}_[a-z0-9_]+\.sql", p.name))
     if not files:
-        raise AccountMigrationError(f"ACCOUNT_SQL_MISSING no NNN_name.sql file in {directory}")
+        raise error(f"{label}_SQL_MISSING no NNN_name.sql file in {directory}")
     return files
 
 
-def migrate_account(conn, directory=ACCOUNT_SQL):
-    """Apply the account's files in the order of their names, each once, in its own transaction with its record.
+def account_files(directory=ACCOUNT_SQL):
+    return component_files(directory, AccountMigrationError, "ACCOUNT")
 
-    The record is account_admin.applied, owned by the owner and granted to no one. A recorded file whose bytes
-    changed stops the run. Returns (the names applied now, the number recorded).
+
+def panna_files(directory=PANNA_SQL):
+    return component_files(directory, PannaMigrationError, "PANNA")
+
+
+def migrate_component(conn, files, admin, lock, error, label):
+    """Apply a component's files in the order of their names, each once, in its own transaction with its record.
+
+    The record is <admin>.applied, owned by the owner and granted to no one. A recorded file whose bytes changed stops
+    the run. Returns (the names applied now, the number recorded).
     """
-    files = account_files(directory)
     with conn.transaction():
-        conn.execute(ACCOUNT_LOCK)
-        conn.execute("CREATE SCHEMA IF NOT EXISTS account_admin")
-        conn.execute("REVOKE ALL ON SCHEMA account_admin FROM PUBLIC")
-        conn.execute(
-            """CREATE TABLE IF NOT EXISTS account_admin.applied (
+        conn.execute(lock)
+        conn.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(admin)))
+        conn.execute(sql.SQL("REVOKE ALL ON SCHEMA {} FROM PUBLIC").format(sql.Identifier(admin)))
+        conn.execute(sql.SQL(
+            """CREATE TABLE IF NOT EXISTS {}.applied (
                  name text PRIMARY KEY, sha256 text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())"""
-        )
+        ).format(sql.Identifier(admin)))
     applied = []
     for path in files:
         source = path.read_bytes()
         sha = hashlib.sha256(source).hexdigest()
         with conn.transaction():
-            conn.execute(ACCOUNT_LOCK)
-            row = conn.execute("SELECT sha256 FROM account_admin.applied WHERE name = %s", (path.name,)).fetchone()
+            conn.execute(lock)
+            row = conn.execute(sql.SQL("SELECT sha256 FROM {}.applied WHERE name = %s").format(sql.Identifier(admin)),
+                               (path.name,)).fetchone()
             if row:
                 if row[0] != sha:
-                    raise AccountMigrationError(f"ACCOUNT_SQL_CHANGED {path.name}: applied with sha256 {row[0]}, the file is {sha}")
+                    raise error(f"{label}_SQL_CHANGED {path.name}: applied with sha256 {row[0]}, the file is {sha}")
                 continue
             conn.execute(source.decode("utf-8"))
-            conn.execute("INSERT INTO account_admin.applied (name, sha256) VALUES (%s, %s)", (path.name, sha))
+            conn.execute(sql.SQL("INSERT INTO {}.applied (name, sha256) VALUES (%s, %s)").format(sql.Identifier(admin)),
+                         (path.name, sha))
         applied.append(path.name)
-    total = conn.execute("SELECT count(*) FROM account_admin.applied").fetchone()[0]
+    total = conn.execute(sql.SQL("SELECT count(*) FROM {}.applied").format(sql.Identifier(admin))).fetchone()[0]
     return applied, total
+
+
+def migrate_account(conn, directory=ACCOUNT_SQL):
+    """The account's files (backend/account/FAILURE_MODES.md M1 to M9), recorded in account_admin.applied."""
+    return migrate_component(conn, account_files(directory), "account_admin", ACCOUNT_LOCK, AccountMigrationError, "ACCOUNT")
+
+
+def migrate_panna(conn, directory=PANNA_SQL):
+    """PannaData's files (backend/panna/FAILURE_MODES.md GH278-ah), recorded in panna_admin.applied."""
+    return migrate_component(conn, panna_files(directory), "panna_admin", PANNA_LOCK, PannaMigrationError, "PANNA")
 
 
 def owner_url(env):
@@ -237,6 +268,9 @@ def main(env=os.environ, argv=()):
     account = bool(env.get("V2_ACCOUNT_PASSWORD"))
     if account:
         account_files()  # before anything changes: an image without the account's files stops here
+    panna = bool(env.get("V2_PANNA_PASSWORD"))
+    if panna:
+        panna_files()  # the same for PannaData's
     with connect(url) as conn:
         unknown, changed, pending = plan(conn, vector=env.get("V2_VECTOR") == "1")
         if unknown:
@@ -259,6 +293,13 @@ def main(env=os.environ, argv=()):
         if account:
             done, total = migrate_account(conn)
             line += f" account applied={len(done)} total={total}"
+        if panna:
+            try:
+                done, total = migrate_panna(conn)
+            except PannaMigrationError as stopped:
+                print(f"{line} {stopped}", file=sys.stderr, flush=True)
+                return 1
+            line += f" panna applied={len(done)} total={total}"
         try:
             logins = ensure_logins(conn, env)
         except LoginsRefused as refused:

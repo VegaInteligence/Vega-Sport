@@ -268,12 +268,16 @@ class AlertsTest(unittest.TestCase):
         self.assertEqual(float(prop(alarm_named(self.alerts, "vega-v2-api-slow"), "Threshold")), 0.8 * timeout * 1000)
         logins = sum(migrate.CONNECTION_LIMITS.values())
         owner_margin = int(one(r"owner's margin: (\d+)", self.alerts, "owner's margin"))
-        # The account's login counts once the account is switched on (Account=true, backend/account/FAILURE_MODES.md W11).
+        # The account's login counts once the account is switched on (Account=true, backend/account/FAILURE_MODES.md W11),
+        # the PannaData loader's once /vega/v2/panna-deploy is on (Panna=true, backend/panna/FAILURE_MODES.md GH278-ah).
         threshold = prop(alarm_named(self.alerts, "vega-v2-db-connections"), "Threshold")
-        with_account, without = (float(n) for n in re.fullmatch(r"!If \[Account, (\d+), (\d+)\]", threshold).groups())
-        self.assertEqual(with_account, logins + owner_margin)
-        self.assertEqual(without, logins - migrate.CONNECTION_LIMITS["account"] + owner_margin)
-        self.assertLess(with_account, INSTANCE_CONNECTIONS * 0.5)
+        both, account, panna, neither = (float(n) for n in re.fullmatch(
+            r"!If \[Account, !If \[Panna, (\d+), (\d+)\], !If \[Panna, (\d+), (\d+)\]\]", threshold).groups())
+        self.assertEqual(both, logins + owner_margin)
+        self.assertEqual(account, logins - migrate.CONNECTION_LIMITS["panna"] + owner_margin)
+        self.assertEqual(panna, logins - migrate.CONNECTION_LIMITS["account"] + owner_margin)
+        self.assertEqual(neither, logins - migrate.CONNECTION_LIMITS["account"] - migrate.CONNECTION_LIMITS["panna"] + owner_margin)
+        self.assertLess(both, INSTANCE_CONNECTIONS * 0.5)
 
     def test_alarms_name_what_the_other_stacks_create(self):
         function = one(r"^      FunctionName: (\S+)$", API, "API function name")

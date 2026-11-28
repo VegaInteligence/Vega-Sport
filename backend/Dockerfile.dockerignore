@@ -7,6 +7,8 @@
 !backend/sql/**
 !backend/account/sql
 !backend/account/sql/**
+!backend/panna/sql
+!backend/panna/sql/**
 !dashboard/shared/archive.js
 !dashboard/shared/archive-text.js
 !dashboard/shared/openfootball-history.js
