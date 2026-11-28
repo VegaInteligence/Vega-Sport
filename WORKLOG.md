@@ -1,5 +1,14 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Lecture paginée de la fiche club — GH138 (28 novembre 2026)
+
+- [Vega-Sport #138](https://github.com/VegaInteligence/Vega-Sport/issues/138) et [VI-78](https://linear.app/vegainteligence/issue/VI-78) sont suivis sur la branche codex/vega-sport-138-club-read-20261128. Sol coordonne le travail et l'intégration.
+- La fiche charge les tirs et les apparitions ensemble, une fois par page. Les pages gardent leur limite de 25 rencontres. Les lectures combinées de 50 ont renvoyé PAGE_TOO_LARGE sur le PSG en 2024/25 et en 2025/26.
+- Dans Chromium avec la même génération publiée (25853217), le PSG 2026/27 passe de quatre requêtes historiques à deux. Les réponses contiennent les mêmes 42 rencontres, 16 matchs détaillés et 333 apparitions. Le calendrier affiche les prochains matchs. Le rapport serveur utilise sa lecture dédiée aux apparitions.
+- La revue Fable a motivé un repli sur les deux lectures d'origine lorsque l'API renvoie 413 PAGE_TOO_LARGE. Le test GH138-e échoue avant le repli, puis passe avec le calendrier, les résultats et les apparitions complets. Le test navigateur accepte les nouvelles tentatives prévues par le lecteur. Sa mesure D1 utilise les pages du PSG qui tiennent sous le plafond.
+- La page détaillée du PSG a été comparée champ par champ sur la même version API. Les données sont identiques, avec les identifiants d'apparitions attendus en plus sur les matchs combinés.
+- Les 1 139 tests du site et les quatre vérifications navigateur de ONLY=D passent. La suite du site utilise Node 24.18.0 et Bun 1.4.5. Les six tests d'intégration de l'API demandent un DSN jetable.
+
 ## PannaData · backfill AWS et actualisation quotidienne
 
 - Nouveau périmètre demandé le 28 novembre : toutes les données PannaData à partir de la saison 2021/22 (année civile 2021 pour les compétitions annuelles) jusqu’à la date de chaque collecte. Recalculer l’espace dans cette fenêtre avant tout nouveau palier. RDS est à 120 Gio, aucun import définitif à cet instant.

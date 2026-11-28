@@ -21,6 +21,11 @@ The batch of 26 Nov 2026 (branch `codex/audit-suite-2611`, base `e4014803`) adds
 - **GH137M** (VI-77, with GH145, VI-85): `/api/matchdays`, the route production's counts of revalidations name first,
   read from the editions asked instead of `api.fixtures`; the same answers and validators, no longer edge time.
 
+The change of 28 Nov 2026 (branch `codex/vega-sport-138-club-read-20261128`, base `3149041d`) adds, written before its
+tests:
+
+- **GH138** (VI-78): the club dossier's history, its shots and its appearances in one read per page.
+
 A first version of these sections was numbered 62 to 64 in the shared register; the review of 25 Nov 2026 (19:29 Paris)
 asked for these names and for the corrections marked « review » below, each written here before its test changed.
 
@@ -1502,3 +1507,68 @@ club's passing network and the photos on match line-ups. The read API keeps its 
 Here “cold” means a GET straight to the handler with no validator or cached HTTP body. PostgreSQL buffers can already
 be populated. The plan reports distinguish shared blocks hit and read. The API's summed SQL time has a 3 s budget;
 a statement still has its existing 8 s limit.
+
+## GH138. The club dossier's history: its shots and its appearances in one read per page (GH #138, VI-78; 28 Nov 2026, base `3149041d`)
+
+Read in production by the coordinator on 28 Nov 2026 (Chromium on the public site, read only): the page of Paris
+Saint-Germain 2026/2027 (`t_41iFW3`) read the club's history four times, `/api/read/club?include=shots` and
+`?include=appearances`, two pages of 25 each, both with the same 42 fixtures (26 to come, then 16 finished, every one
+with its details) and the second with the 333 appearances; each family's first page held the 25 furthest matches to come,
+with no match record and no appearance. Read in the code (`3149041d`): the dossier (`loadDossier`, `club-scout.js`) reads
+the two families side by side, and each of their pages works out the same fixtures, match records, context teams (each
+one's leagues and counts) and competitions (`actorQuery`, `actors.mjs`); only the shot lists and the appearances differ.
+The route takes both families in one request (`include` is a comma-separated set): asked `include=shots,appearances`
+with 50 a page that day, it answered the 42 fixtures in one page of 910,804 bytes, with the same fixture ids and statuses,
+the same 16 match ids and the 333 appearances.
+
+### GH138.1 Rules
+
+- **One read per page, both families.** The dossier asks `/api/read/club` once per page with `include=appearances,shots`,
+  always in that order (one address for the edge and the browsers), in the scope it read before: the season, the club,
+  `leagues=all`, the publication or the club's version. Its pages keep 25 matches, the first read alone and the others
+  two at a time (`readCompactPages`, `parallelPages`). A season of N fixtures takes ⌈N/25⌉ requests instead of
+  2 × ⌈N/25⌉: two for PSG's 42 instead of four, three for a calendar of 60 instead of six.
+- **The same dossier.** A match record is the shots read's (shot list, statistics, coverage) with the club's appearance
+  ids in `players`, which nothing in the dossier reads; a fixture is there once (twice before, once per family, which
+  `clubMatchIndex` merged by id); the appearances, teams and competitions are those of the separate reads. Every figure
+  is unchanged: record and rows, ranks, centiles and indices, squad, formations, shot profile, game states,
+  competitions, coverage, the next matches.
+- **Every fixture, every page.** No `played` filter (the API takes it on `/api/read/league` only; a club read naming it
+  is a 400): the matches to come stay in the read, and with them the next six matches (by kick-off), each competition's
+  matches and the season's coverage. A club with matches to come only, a finished match without its details (its fixture
+  and score, no record), a match without team statistics or shots show what they showed; a match to come has no
+  statistic. Every page of the total is read and checked as before (the count of pages, the total, each id once, the
+  first page's version `v` or the publication fencing the others): no cap on the history.
+- **25 a page, not 50.** The route refuses an answer over 2 MiB (413 `PAGE_TOO_LARGE`, `maxBytes` in `actors.mjs`), and
+  a refused page fails the whole dossier. PSG's page of 50 weighed 910,804 bytes with 16 detailed matches: at most about
+  57 KB for each with its shots and appearances (the 42 fixture rows counted in). Fifty detailed matches would be about
+  2.8 MB: a season read once it is over (about 60 matches for PSG in 2025/2026), and the current one from about 37
+  detailed matches in a page, would be refused. At 25, a page of detailed matches is about 1.4 MB. Limit: these sizes
+  are one club's on one day; a combined page is heavier than the appearances page it replaces by its shot lists, so a
+  club whose pages were near the cap could pass it where the appearances page did not.
+- **Others unchanged.** The page's own read of the club (`detail=summary`, 100 a page), the season before's
+  (`usePreviousSeasonRows`), the cohort's reads, the match preview's `include=appearances` (`MatchContext.jsx`) and the
+  API. The report (`server/report-data.js`) keeps its one read of 100 with the appearances: it uses no shot list, so the
+  shots would add an unused payload and save no request.
+- **Kept.** The dossier's cache per publication, season and club, shared by the provider's early start and the profile;
+  one more attempt after a failure, then the error and « Réessayer »; a 409 between two pages read again from the first;
+  the versioned read (no publication in the address, `v` on the next pages); a link's publication (`?v=`);
+  cancellation; the page's layout and states.
+
+### GH138.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| GH138-a | A club's season of 42 fixtures in two competitions (26 to come, then 16 finished: one without its details, one without team statistics or shots), read by the club's version | two requests, `include=appearances,shots`, `limit=25`, pages 1 and 2 once each, the same season, club and `leagues=all`, page 2 fenced by page 1's version; no `include=shots` or `include=appearances` alone (four requests before) |
+| GH138-b | The same club | the dossier the two separate reads gave, figure for figure (the records' appearance ids aside): the next six matches in order, the competitions with their matches and finished counts, coverage 16 played and 15 analysed, rows, squad, formations, shot profile, game states; each fixture once; the finished match without details counted played, with no row, statistic, shot or appearance; no statistic for a match to come |
+| GH138-c | 60 fixtures, the first two pages to come only | three requests (six before), pages 1 to 3, every fixture once, the next six matches the earliest to come |
+| GH138-d | A club with matches to come only (30) in two competitions, read pinned to the publication | two requests, each naming the publication; coverage 0 played, empty; the next six in order; both competitions, none finished; no record, row or appearance |
+| GH138-e | Browser, PSG 2026/2027 on the public read API (desktop) | the history in ⌈total/25⌉ requests of `include=appearances,shots` (two that day; four before), every page once and answered 200, the club, season and `leagues=all` of the page; « Prochains matchs » and « Derniers matchs » both listed; the squad's table filled; no page error |
+
+GH138-a–d: `tests/club-dossier-reads.test.mjs` (`club-scout.js` and `compact-reads.js` with their real code, the
+network answered as `actors.mjs` answers); e: `tests/e2e/club-page.e2e.mjs` (D1–D3, `ONLY=D`). Not verifiable here:
+production's times and bytes after the change.
+
+### GH138-e — Une réponse combinée de 25 rencontres dépasse le plafond
+
+La première page combinée peut passer et la deuxième renvoyer 413 PAGE_TOO_LARGE. La fiche reprend la lecture initiale des tirs et des apparitions séparément. Les pages suivantes gardent la version de leur première réponse. Le dossier présente les mêmes résultats, les prochains matchs et les apparitions. Les autres erreurs suivent le traitement habituel.
