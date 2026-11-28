@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS panna_sync.work (
   run_id bigint,
   UNIQUE (handler, asset_name, digest, cutoff, fixture_pin)
 );
+ALTER TABLE panna_sync.work ADD COLUMN IF NOT EXISTS result jsonb;
 CREATE INDEX IF NOT EXISTS panna_sync_ready ON panna_sync.work (status, next_at, id);
 INSERT INTO panna_sync.sources(source_key)
 VALUES ('github:opta-latest'), ('github:other-releases'), ('r2:catalog'), ('archives-and-native-formats')

@@ -1,6 +1,6 @@
 """Single hosted PannaData queue runner. Source bytes stay in local scratch."""
 from datetime import UTC, datetime, timedelta
-import importlib
+from importlib.util import find_spec
 import json
 import os
 from pathlib import Path
@@ -107,11 +107,20 @@ class Queue:
               FROM pick WHERE w.id=pick.id RETURNING w.*,w.attempt AS fence
             """, {"now": now, "until": now + LEASE}).fetchone()
 
-    def finish(self, job, state, reason, due, run_id=None):
+    def finish(self, job, state, reason, due, run_id=None, result=None):
         return self.conn.execute("""
-          UPDATE panna_sync.work SET status=%s,reason=%s,next_at=%s,lease_until=NULL,run_id=coalesce(%s,run_id)
+          UPDATE panna_sync.work SET status=%s,reason=%s,next_at=%s,lease_until=NULL,run_id=coalesce(%s,run_id),
+              result=coalesce(%s,result)
           WHERE id=%s AND attempt=%s AND status='leased'
-        """, (state, reason, due, run_id, job["id"], job["fence"])).rowcount == 1
+        """, (state, reason, due, run_id, Jsonb(result) if result is not None else None,
+              job["id"], job["fence"])).rowcount == 1
+
+    def fixture_run(self, lease):
+        row = self.conn.execute("""
+          SELECT run_id FROM panna_sync.work WHERE handler='fixtures' AND status='verified'
+            AND digest=%s AND cutoff=%s AND asset_name=%s
+        """, (lease["digest"], lease["cutoff"], ASSET)).fetchone()
+        return row and row[0]
 
     def heartbeat(self):
         state = self.conn.execute("SELECT state FROM panna_sync.sources WHERE source_key=%s", (SOURCE,)).fetchone()[0]
@@ -229,16 +238,64 @@ def run_product(job, scratch, endpoint, seconds, monitor):
     return last[0]
 
 
-def identity_handler():
-    if os.environ.get("PANNA_IDENTITY_READY") != "true":
-        return None
-    try:
-        module = importlib.import_module("panna.identity")
-    except ModuleNotFoundError as error:
-        if error.name != "panna.identity":
-            raise
-        return None
-    return getattr(module, "run_hosted_identity", None)
+def identity_ready():
+    return os.environ.get("PANNA_IDENTITY_READY") == "true" and find_spec("panna.teams") is not None
+
+
+def identity_load(writer, endpoint, fixture_run, lease):
+    with product_connection(writer, endpoint) as db:
+        rows = db.execute("""
+          SELECT l.load_id FROM panna.loads l
+          JOIN panna.runs r ON r.run_id=l.run_id
+          JOIN panna.receipts p ON p.receipt_id=l.receipt_id
+          JOIN panna.streams s ON s.stream_id=l.stream_id
+          WHERE r.run_id=%s AND r.status='complete' AND l.status='complete'
+            AND l.extension='opta_fixtures_ext' AND coalesce(jsonb_typeof(r.plan->'scope'),'null')='null'
+            AND s.name=%s AND s.origin='github' AND s.container='opta-latest'
+            AND s.dataset='opta_fixtures' AND p.sha256=%s AND l.as_of=%s
+        """, (fixture_run, ASSET, bytes.fromhex(lease["digest"]), lease["cutoff"])).fetchall()
+    if len(rows) != 1:
+        raise Stop("IDENTITY_FIXTURE_LOAD_NOT_VERIFIED")
+    return rows[0][0]
+
+
+def identity_receipt(writer, endpoint, load_id, reviewer, lease):
+    with product_connection(writer, endpoint) as db:
+        return db.execute("""
+          SELECT u.run_id,u.counts,u.writes FROM panna.identity_runs u
+          JOIN panna.loads l ON l.load_id=u.load_id
+          JOIN panna.runs r ON r.run_id=l.run_id
+          JOIN panna.receipts p ON p.receipt_id=l.receipt_id
+          JOIN panna.streams s ON s.stream_id=l.stream_id
+          WHERE u.load_id=%s AND u.reviewer=%s AND u.finished_at IS NOT NULL AND u.run_id>0
+            AND r.status='complete' AND l.status='complete'
+            AND l.extension='opta_fixtures_ext' AND coalesce(jsonb_typeof(r.plan->'scope'),'null')='null'
+            AND s.name=%s AND s.origin='github' AND s.container='opta-latest'
+            AND s.dataset='opta_fixtures' AND p.sha256=%s AND l.as_of=%s
+          ORDER BY u.run_id DESC LIMIT 1
+        """, (load_id, reviewer, ASSET, bytes.fromhex(lease["digest"]), lease["cutoff"])).fetchone()
+
+
+def run_identity(lease, queue, scratch, endpoint, seconds, monitor):
+    if not identity_ready():
+        raise Stop("IDENTITY_HANDLER_NOT_READY")
+    fixture_run = queue.fixture_run(lease)
+    if fixture_run is None:
+        raise Stop("IDENTITY_FIXTURE_LOAD_NOT_VERIFIED")
+    writer = dsn_from_ssm(IDENTITY_PARAM, IDENTITY_USER)
+    load_id = identity_load(writer, endpoint, fixture_run, lease)
+    reviewer = f"panna:hosted:{lease['id']}"
+    receipt = identity_receipt(writer, endpoint, load_id, reviewer, lease)
+    if receipt is None:
+        cli(scratch, "run", ["--via", endpoint, "--load", str(load_id), "--reviewer", reviewer],
+            writer, monitor, prefix=["teams"], hard_timeout=seconds, report_reason=True)
+        receipt = identity_receipt(writer, endpoint, load_id, reviewer, lease)
+    if receipt is None or not isinstance(receipt[1], dict) or not isinstance(receipt[2], dict):
+        raise Stop("IDENTITY_RECEIPT_PENDING")
+    run_id, counts, writes = receipt
+    emit("identity_snapshot_receipt", run_id=run_id, load_id=load_id, counts=counts, writes=writes,
+         as_of=lease["cutoff"].isoformat(), full_backfill=False)
+    return run_id, {"load_id": load_id, "counts": counts, "writes": writes}
 
 
 def work(lease, queue, scratch, endpoint, deadline):
@@ -250,21 +307,13 @@ def work(lease, queue, scratch, endpoint, deadline):
             guard()
 
         monitor()
+        result = None
         if lease["handler"] == "identity":
-            handler = identity_handler()
-            if handler is None:
-                raise Stop("IDENTITY_HANDLER_NOT_READY")
-            receipt = handler(job=lease, scratch=scratch, endpoint=endpoint,
-                              dsn=dsn_from_ssm(IDENTITY_PARAM, IDENTITY_USER),
-                              max_seconds=min(remaining - 45, 420))
-            if (receipt.get("state") != "verified" or not isinstance(receipt.get("run_id"), int)
-                or receipt["run_id"] <= 0 or receipt.get("fixture_sha256") != lease["digest"]
-                or receipt.get("as_of") != lease["cutoff"].isoformat()):
-                raise Stop("IDENTITY_RECEIPT_PENDING")
-            run_id = receipt["run_id"]
+            # The resolver is one SQL transaction, unlike the resumable data-loader chunks.
+            run_id, result = run_identity(lease, queue, scratch, endpoint, min(remaining - 45, 1200), monitor)
         else:
             run_id = run_product(lease, scratch, endpoint, min(remaining - 45, 420), monitor)
-        if not queue.finish(lease, "verified", "RECEIPT_VERIFIED", clock(), run_id):
+        if not queue.finish(lease, "verified", "RECEIPT_VERIFIED", clock(), run_id, result):
             raise Stop("SYNC_LEASE_LOST")
     except (Stop, sources.SourceError) as error:
         code = error.args[0]
@@ -273,6 +322,10 @@ def work(lease, queue, scratch, endpoint, deadline):
             "FIXTURE_LOADER_FAILED": "retry",
             "ACTIONS_ROLE_NOT_READY": "dependency_pending",
             "IDENTITY_HANDLER_NOT_READY": "handler_pending",
+            "IDENTITY_FIXTURE_LOAD_NOT_VERIFIED": "dependency_pending",
+            "OLDER_SNAPSHOT": "dependency_pending",
+            "NOT_A_FULL_SNAPSHOT": "dependency_pending",
+            "REVISION_MISSING": "dependency_pending",
             "DIGEST_MISMATCH": "unavailable",
         }.get(code, "retry")
         due = clock() + timedelta(minutes=min(720, 15 * 2 ** min(lease["attempt"], 6)))
@@ -331,7 +384,7 @@ def tick(scratch):
                 deadline = started + 24 * 60
                 if time.monotonic() + 240 >= deadline:
                     break
-                queue.activate_dependencies(identity_handler() is not None, action_ready)
+                queue.activate_dependencies(identity_ready(), action_ready)
                 lease = queue.claim(clock())
                 if not lease:
                     break

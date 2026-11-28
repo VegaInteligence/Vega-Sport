@@ -83,7 +83,7 @@ def load_env(dsn):
     return env
 
 
-def cli(scratch, operation, args, dsn=None, monitor=None, *, prefix=(), hard_timeout=None):
+def cli(scratch, operation, args, dsn=None, monitor=None, *, prefix=(), hard_timeout=None, report_reason=False):
     # Capture private output. Publish only the vetted fields below, never raw tracebacks or row values.
     receipt = scratch / (operation + ".jsonl")
     deadline = time.monotonic() + hard_timeout if hard_timeout is not None else None
@@ -122,7 +122,7 @@ def cli(scratch, operation, args, dsn=None, monitor=None, *, prefix=(), hard_tim
         codes = sorted({value for row in rows for value in (row.get("reason"), row.get("code"))
                         if isinstance(value, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{2,60}", value)})
         emit("loader_failed", operation=operation, exit=status, codes=codes)
-        raise Stop("FIXTURE_LOADER_FAILED")
+        raise Stop(codes[0] if report_reason and len(codes) == 1 else "FIXTURE_LOADER_FAILED")
     return rows
 
 
