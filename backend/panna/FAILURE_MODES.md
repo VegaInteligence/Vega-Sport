@@ -510,3 +510,8 @@ the oracle's encoding, equal to `pilot-row-oracle.jsonl` and each set's `set_ora
 the queries of `expected-readback.sql` without violation, query 3 holding no resolved subject (all eight pending);
 a replay writes nothing; a run killed after a chunk and resumed is exact; bytes per action measured (heap, TOAST,
 indexes) and projected to the 120,899,239 served actions.
+
+### Restore integration (GH278.A-restore)
+
+- Migration 187 adds no physical Vega match reference. A current action set can resolve through provider_ids only. If a live action set already resolves to one of the 35 restored match IDs, or would resolve through an Open Matchday provider key inserted by the restore, refuse before applying any change. On apply, lock the provider keys and the underlying action-set/revision tables before checking.
+- An unrelated published Opta action set and its action row survive dry-run, restore and replay unchanged. Restoring the 35 still preserves the 70 sides of signed Elo.

@@ -482,11 +482,44 @@ class RestoreTest(WindowBase):
         with patch.object(open_matchday_restore, "RESULTS", ATTESTED):
             return open_matchday_restore.restore(self.db, self.before_view, self.after_view, apply)
 
+    def action_set(self, origin, key):
+        subject = f"match:{len(key.encode())}:{key}"
+        batch = self.x("""INSERT INTO core.observation_batches(distributor,object_name,content_sha256,first_seen_at)
+                          VALUES ('restore-test', %s, sha256(convert_to(%s,'UTF8')),now()) RETURNING id""",
+                       (origin, subject)).fetchone()[0]
+        set_id = self.x("""INSERT INTO core.observation_sets
+                           (origin,product,subject_key,schema_key,content_sha256,row_count,first_seen_at)
+                           VALUES (%s,'match_actions',%s,'restore-test',sha256(convert_to(%s,'UTF8')),1,now())
+                           RETURNING id""", (origin, subject, subject)).fetchone()[0]
+        self.x("INSERT INTO core.match_action_sets(set_id) VALUES (%s)", (set_id,))
+        self.x("INSERT INTO core.match_actions(set_id,ordinal,source_event_id) VALUES (%s,0,42)", (set_id,))
+        self.x("""INSERT INTO core.observation_set_revisions
+                  (origin,product,subject_key,revision_no,set_id,batch_id,observed_at,is_current)
+                  VALUES (%s,'match_actions',%s,1,%s,%s,now(),true)""", (origin, subject, set_id, batch))
+        return set_id
+
+    def test_41n_refuses_to_attach_pending_actions_via_a_restored_provider_key(self):
+        from vega.open_matchday_restore import Refusal
+
+        source_key = self.rows(self.before_view, "table.core.provider_ids")[0]["provider_key"]
+        set_id = self.action_set("open_matchday", source_key)
+        self.assertEqual(self.x("SELECT match_id FROM core.current_match_action_sets WHERE set_id=%s",
+                                (set_id,)).fetchone(), (None,))
+        for apply in (False, True):
+            with self.assertRaisesRegex(Refusal, "unexpected dependent action set"):
+                self.restore(apply)
+        self.assertFalse(self.x("SELECT 1 FROM core.matches WHERE id=ANY(%s)", (self.ids,)).fetchone())
+        self.assertEqual(self.x("SELECT source_event_id FROM core.match_actions WHERE set_id=%s",
+                                (set_id,)).fetchone(), (42,))
+
     def test_41n_restored_35_are_kept_without_duplicates_and_the_next_passes_write_nothing(self):
         files = {folder: version(folder, LATEST[folder]) for folder in (NORTH, SOUTH, NPL)}
         self.assertEqual(self.read(files)[0], "ok")
         self.assertEqual(sum(len(self.state(f)) for f in files), 540)  # red: 339
         self.assertFalse(self.x("SELECT 1 FROM core.matches WHERE id = ANY(%s)", (self.ids,)).fetchone())
+        set_id = self.action_set("opta", "unrelated-native-match")
+        before_actions = self.x("SELECT * FROM core.current_match_action_sets WHERE set_id=%s", (set_id,)).fetchall()
+        self.assertEqual(len(before_actions), 1)
         self.assertEqual(self.restore(False)["would_restore"], 35)
         report = self.restore(True)
         self.assertEqual((report["restored"], report["preserved_elo"]), (35, 70))
@@ -505,6 +538,10 @@ class RestoreTest(WindowBase):
         self.assertEqual(self.read(files), ("ok", 575, 1))  # unmatched: 8625's kept final (41p)
         self.assertEqual({f: self.state(f) for f in files}, states)
         self.assertEqual(self.restore(True)["restored"], 0)
+        self.assertEqual(self.x("SELECT * FROM core.current_match_action_sets WHERE set_id=%s",
+                                (set_id,)).fetchall(), before_actions)
+        self.assertEqual(self.x("SELECT source_event_id FROM core.match_actions WHERE set_id=%s",
+                                (set_id,)).fetchone(), (42,))
 
 
 class EloAfterCreationTest(WindowBase):
