@@ -54,8 +54,25 @@ python docs/audits/2026-11-28/preuves/ci-base-modele/compare.py avant.log apres.
   C5, C6, K1).
 - `pg18-resultats.txt` : les résumés des passages sur PostgreSQL 18.
 
+## Dans GitHub Actions (PR #280, run 46096786041, commit `f36c61935d`)
+
+Tout vert, les suites du Deploy et les 9 tests sautés en local compris. Durée des jobs, en secondes :
+
+| Run | Entier | python-1 | python-2 | api | deploy-1 à 4 |
+| --- | --- | --- | --- | --- | --- |
+| main, 27 nov. 20 h 39 UTC (46065080082) | 811 | 689 | 437 | 635 | 300, 378, 264, 294 |
+| main, 27 nov. 21 h 01 UTC (46067469884) | 656 | 572 | 643 | 390 | 364, 322, 370, 396 |
+| main, 27 nov. 21 h 22 UTC (46069900164) | 681 | 477 | 670 | 359 | 382, 355, 323, 376 |
+| PR #280 (46096786041) | 401 | 191 | 280 | 297 | 259, 290, 365, 386 |
+
+- Étape « Python suites » : 155 s et 242 s (447 s et 643 s sur le run 46069900164). Journaux : 88 bases clonées en 8,2 s
+  (python-1) et 103 en 17,6 s (python-2), modèle construit en 3,0 s et 4,6 s.
+- Le plafond du run est maintenant une part du Deploy (386 s), que ce changement ne touche pas.
+- `backend/ci/durations.json` refait par `backend/ci/durations.py` sur les six journaux Python et Deploy de ce run
+  (`gh api repos/VegaInteligence/Vega-Sport/actions/jobs/<id>/logs`). Avec ces poids, les secondes de ce run se
+  répartissent en 194 et 193 pour les parts Python (149 et 238 avec les anciens) et 287 à 288 pour les quatre parts du
+  Deploy (218 à 350 avec les anciens).
+
 ## Non vérifié
 
-- Les durées dans GitHub Actions : attendues à peu près dans les mêmes proportions, à lire au premier run de la PR.
-- Les suites du Deploy et les 9 tests sautés ici.
-- `backend/ci/durations.json` date d'avant ce changement : à refaire avec `backend/ci/durations.py` sur les journaux de ce run.
+- L'effet des nouveaux poids : à lire au run qui suit ce commit (attendu : parts du Deploy autour de 5 min 20 s).

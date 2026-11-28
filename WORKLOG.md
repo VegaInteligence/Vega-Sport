@@ -9,8 +9,9 @@
 - CI : un changement de `template_base.py`, `archive_fixtures.py` ou `cup_samples.py` (importés par `seed.py`) lance aussi la suite API (`changed_suites.py`, `test_ci_zones.py` c2, rouge avant la règle).
 - Tests écrits avant le code : `test_template_base.py` 11/11 (C1 à C7, K1, F1 : la base clonée est celle que `migrate` laisse, relation par relation ; F2), sept mutations de l'aide chacune vue par le test prévu ; `test_ci_zones.py` 23/23.
 - Vérifié en local, la branche sans adaptation sur PostgreSQL 18.6 et Node 24 : groupe Python 1 223 tests OK en 421 s (9 sautés : Docker, pgvector), API 436/436 en 316 s, comptes 110/110. Avant/après sur PostgreSQL 16 (une ligne de 056 adaptée dans une copie jetable) : aucun test ne change d'issue, Python 1 371 s → 455 s, API 618 s → 305 s. Preuves : `docs/audits/2026-11-28/preuves/ci-base-modele/EVIDENCE.md`.
-- **Non vérifié** : les durées dans GitHub Actions et les suites du Deploy (Docker), à lire au premier run de la PR. Rien n'est poussé.
-- Reste : refaire `backend/ci/durations.json` avec `durations.py` sur les journaux de ce run (les poids datent d'avant) ; les parts du Deploy (5 à 6 min 30, `test_account_deploy` d'un seul bloc de 257 s) deviennent le plafond d'un run complet ; règle `src/services/` qui lance tout le backend pour une PR frontend (#274, #276).
+- GitHub Actions, PR #280 (run 46096786041) : tout vert, suites du Deploy comprises ; run entier 401 s contre 656 à 811 s pour les trois derniers runs de main ; python-1 191 s, python-2 280 s (477–689 s et 437–670 s), api 297 s (359–635 s) ; 88 et 103 bases clonées en 8,2 s et 17,6 s.
+- `backend/ci/durations.json` refait par `durations.py` sur les six journaux Python et Deploy de ce run : les parts Python passent de 149/238 s à 194/193 s, celles du Deploy de 218–350 s à 287–288 s. **Non vérifié** : l'effet de ces poids, à lire au run suivant.
+- Reste : les parts du Deploy sont le plafond d'un run complet (1 151 s de tests en quatre parts ; six parts donneraient 191 à 194 s) ; règle `src/services/` qui lance tout le backend pour une PR frontend (#274, #276) ; Auto-fix non activé sur la PR (l'app refuse de la rattacher à la session).
 
 ## Onglet « Classement » d'un match comme la page Compétition, menu des saisons réparé — FAILURE_MODES § 85 (27 novembre 2026, branche `fix/match-tabs-seasons`)
 
