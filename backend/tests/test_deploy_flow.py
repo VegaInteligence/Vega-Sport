@@ -201,7 +201,8 @@ class DeployFlowTest(unittest.TestCase):
         keys = deploy_fakes.template_keys(old_template)
         worker_params = {k: "" for k in keys}
         worker_params.update(ImageTag=self.production_tag, DesiredCount="1", BackfillDesiredCount="1", ArchiveSourcesBucket=RELEASES,
-                             OddsApiKeyParameter="", Account="false")
+                             CollectUrlParameter="/vega/v2/collect-database-url", CalcUrlParameter="/vega/v2/calc-database-url",
+                             PitchApiKeyParameter="/vega/v2/pitchapi-key", OddsApiKeyParameter="", Account="false")
         stack = lambda outputs=None, parameters=None: {"status": "UPDATE_COMPLETE", "outputs": outputs or {}, "parameters": parameters or {}}  # noqa: E731
         state = {
             "account": ACCOUNT, "region": "us-east-2", "python": sys.executable, "images_dir": str(self.tmp / f"images-{self.scenarios:02d}"),
@@ -1419,6 +1420,449 @@ class DeployFlowTest(unittest.TestCase):
         self.assertTrue(all(" checked: " in l for l in printed), printed)
         self.assertEqual(seen, ["/api/health", "/api/dashboard/manifest", "/api/read/home", *["/api/read/home-favourites"] * len(printed)])
         self.assertEqual(lines[-1], "done")
+
+    # --- VI-135: the worker alone (DEPLOY_COMPONENTS=worker; failure modes W1-W32 written before these tests) ----------
+
+    WORKER = {"DEPLOY_COMPONENTS": "worker"}
+
+    @staticmethod
+    def granted3(state):
+        """A copy of `state` whose roles stack holds the worker-only Deploy's grants (DeployGrants 3: the images' pull)."""
+        state = json.loads(json.dumps(state))
+        state["stacks"]["vega-v2-deploy-roles"]["outputs"]["DeployGrants"] = "3"
+        return state
+
+    def worker_only(self, state, extra=None):
+        return self.deploy(self.granted3(state), {**self.WORKER, **(extra or {})})
+
+    def worker_edit(self, note):
+        """A change of the worker's code alone (a new image, no migration)."""
+        path = "backend/vega/__init__.py"
+        self.repo.write(path, (self.repo.path / path).read_text() + f"\n# {note}\n")
+        return self.repo.commit(note)
+
+    def assert_only_the_worker(self, run, worker, backfill):
+        """A worker-only run's footprint (W30): the Deploy state, the image, one update-stack of vega-v2-worker with its
+        deployed template and the CloudFormation role; no other stack, no SSM, no task, no package; one check, the
+        services' (no origin, no release), on the task definitions the stack names."""
+        aws = [c["argv"] for c in run.calls if c["tool"] == "aws"]
+        self.assertEqual([a for a in aws if a[:2] == ["cloudformation", "deploy"]], [], "no stack deployed")
+        updates = [a for a in aws if a[:2] == ["cloudformation", "update-stack"]]
+        self.assertEqual(len(updates), 1, updates)
+        self.assertEqual(updates[0][updates[0].index("--stack-name") + 1], "vega-v2-worker")
+        self.assertIn("--use-previous-template", updates[0])
+        self.assertEqual(updates[0][updates[0].index("--role-arn") + 1], f"arn:aws:iam::{ACCOUNT}:role/vega-v2-cloudformation")
+        # The secrets' versions alone (their revision, W33): no value read, nothing written or rotated.
+        ssm = [a for a in aws if a[0] == "ssm"]
+        self.assertTrue(ssm and all(a[:2] == ["ssm", "get-parameter"] and "--with-decryption" not in a
+                                    and a[a.index("--query") + 1] in ("[Parameter.Version,Parameter.LastModifiedDate]", "Parameter.Name") for a in ssm), ssm)
+        self.assertEqual([a[:2] for a in aws if a[:2] in (["ecs", "run-task"], ["ecs", "list-tasks"], ["s3", "cp"])], [], "no task, no package")
+        self.assertTrue(all(STATE_BUCKET in a for a in aws if a[:2] in (["s3api", "put-object"], ["s3api", "get-object"])), "the Deploy state alone")
+        described = {a[a.index("--stack-name") + 1] for a in aws if a[:2] == ["cloudformation", "describe-stacks"]}
+        self.assertEqual(described, {"vega-v2-deploy-roles", "vega-v2-worker"})
+        self.assertEqual(run.tasks(), [])
+        self.assertEqual([c for c in run.calls if c["tool"] == "npm"], [])
+        outputs = run.state["stacks"]["vega-v2-worker"]["outputs"]
+        expected = f"vega-v2-worker={worker}@{outputs['WorkerTaskDefinition']},vega-v2-backfill={backfill}@{outputs['BackfillTaskDefinition']}"
+        self.assertEqual([c["argv"] for c in run.calls if c["tool"] == "node"], [["infra/aws/verify-deploy.mjs", "--services", expected]])
+        for name in ("worker", "backfill"):
+            self.assertTrue(outputs[f"{name.title()}TaskDefinition"].endswith(f"/vega-v2-{name}:{run.state['services'][name]['revision']}"), name)
+
+    def test_VI135_a_the_workflow_offers_the_worker_alone(self):
+        workflow = (SOURCE / ".github/workflows/deploy.yml").read_text()
+        block = re.search(r"\n      components:\n((?:        .*\n)+)", workflow)[1]
+        self.assertIn("type: choice", block)
+        self.assertIn("options: ['all', 'worker']", block)
+        self.assertIn("default: 'all'", block)
+        self.assertIn("DEPLOY_COMPONENTS: ${{ inputs.components }}", workflow)
+        # The same production environment and the same queue as every Deploy.
+        self.assertRegex(workflow, r"\nconcurrency:\n  group: vega-v2-deploy\n  cancel-in-progress: false\n")
+        self.assertIn("\n    environment: v2-production\n", workflow)
+        self.assertIn("WORKER_DESIRED_COUNT: ${{ inputs.worker_desired_count }}", workflow)
+
+    def test_VI135_b_the_worker_alone_its_image_a_no_op_and_its_counts(self):
+        """a full Deploy named so (all), the worker alone on the same commit (nothing built, read
+        or updated, checked), then on a new image (one update, ImageTag alone given, every other parameter kept, both
+        services replaced once, the tasks' image and the base untouched), again (nothing to update, checked), then the
+        count changes in full Deploy and a backfill at 0 kept."""
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node")
+        real = {"FAKE_NODE_VERIFY_REAL": node}
+        first = self.deployed(self.granted3(self.production_state()), {"DEPLOY_COMPONENTS": "all"})
+        self.assert_done(first)
+        self.assertTrue({"vega-v2-live", "vega-v2-api", "vega-v2-alerts"} <= {a[a.index("--stack-name") + 1] for a in first.aws("cloudformation", "deploy")})
+        image, applied = first.identity(), self.applied()
+        with self.subTest("the same commit: the same image everywhere"):
+            same = self.worker_only(first.state, real)
+            self.assert_done(same)
+            self.assertEqual(same.identity(), image)
+            self.assertEqual((same.built(), same.docker("push"), same.docker("pull"), same.docker("create")), ([], [], [], []))
+            self.assertIn("nothing to update", same.out)
+            self.assertEqual(same.state["services"], first.state["services"])
+            self.assert_only_the_worker(same, 1, 1)
+            self.assertRegex(same.out, r"(?m)^services: vega-v2-worker 1/1 on vega-v2-worker:\d+, vega-v2-backfill 1/1 on vega-v2-backfill:\d+ \(try 1 of 30\)$")
+            self.assert_released(same)
+        self.worker_edit("VI-135: a worker change")
+        run = self.worker_only(same.state, real)
+        self.assert_done(run)
+        candidate = run.identity()
+        self.assertNotIn(candidate, (None, image))
+        self.assertEqual((len(run.built()), len(run.docker("push"))), (1, 1))
+        # Both images read once each, never started: pulled, created, copied, removed.
+        self.assertEqual(sorted(c["argv"][-1].rsplit(":", 1)[1] for c in run.docker("pull")), sorted([candidate, image]))
+        self.assertEqual((len(run.docker("create")), len(run.docker("cp")), len(run.docker("rm"))), (2, 2, 2))
+        self.assertEqual([c for c in run.calls if c["tool"] == "docker" and c["argv"][:1] in (["run"], ["start"])], [])
+        self.assertIn(f"ImageTag and TaskImageTag {image[:12]}: the same files", run.out)
+        # One update of the worker stack: ImageTag alone given, every other parameter kept (TaskImageTag pinned).
+        self.assertEqual([(kind, given) for _, kind, given in run.worker_changes()], [("update-stack", {"ImageTag": candidate})])
+        before = same.state["stacks"]["vega-v2-worker"]
+        self.assertEqual(run.state["stacks"]["vega-v2-worker"]["parameters"], {**before["parameters"], "ImageTag": candidate})
+        self.assertEqual(run.state["stacks"]["vega-v2-worker"]["template_sha"], before["template_sha"])
+        self.assertEqual(run.state.get("resets", []), [])
+        for name in ("worker", "backfill"):
+            s, b = run.state["services"][name], same.state["services"][name]
+            self.assertEqual((s["image"], s["desired"], s["revision"], s["replacements"], s["stops"], s["starts"]),
+                             (candidate, b["desired"], b["revision"] + 1, b["replacements"] + 1, b["stops"], b["starts"]), name)
+        self.assertEqual(run.state["stacks"]["vega-v2-worker"]["outputs"]["MigrationTaskDefinition"], before["outputs"]["MigrationTaskDefinition"])
+        self.assertEqual(run.state["taskdefs"], same.state["taskdefs"], "no migrate task definition for the candidate")
+        self.assert_only_the_worker(run, 1, 1)
+        self.assertRegex(run.out, r"(?m)^services: vega-v2-worker 1/1 on vega-v2-worker:\d+, vega-v2-backfill 1/1 on vega-v2-backfill:\d+ \(try 1 of 30\)$")
+        self.assertEqual(self.applied(), applied, "no migration")
+        self.assert_released(run)
+        with self.subTest("the same commit again: nothing to update, checked"):
+            again = self.worker_only(run.state, real)
+            self.assert_done(again)
+            self.assertEqual((again.built(), again.docker("push")), ([], []))
+            self.assertIn("nothing to update", again.out)
+            self.assertEqual(again.state["services"], run.state["services"])
+            self.assert_only_the_worker(again, 1, 1)
+        denied_stop = self.worker_only(run.state, {**real, "WORKER_DESIRED_COUNT": "0"})
+        self.assertNotEqual(denied_stop.code, 0, denied_stop.log)
+        self.assertIn("full Deploy to change the worker count", denied_stop.log)
+        self.assertEqual(denied_stop.worker_changes(), [])
+        self.assert_released(denied_stop)
+        stopped = self.deploy(run.state, {"WORKER_DESIRED_COUNT": "0"})
+        self.assert_done(stopped)
+        self.assertEqual(stopped.state["stacks"]["vega-v2-alerts"]["parameters"]["WatchWorker"], "false")
+        kept = self.worker_only(stopped.state, {**real, "WORKER_DESIRED_COUNT": "0"})
+        self.assert_done(kept)
+        self.assertEqual(kept.state["services"], stopped.state["services"])
+        self.assert_only_the_worker(kept, 0, 1)
+        denied_start = self.worker_only(kept.state, {**real, "WORKER_DESIRED_COUNT": "1"})
+        self.assertNotEqual(denied_start.code, 0, denied_start.log)
+        self.assertEqual(denied_start.worker_changes(), [])
+        self.assert_released(denied_start)
+        started = self.deploy(kept.state, {"WORKER_DESIRED_COUNT": "1"})
+        self.assert_done(started)
+        self.assertEqual(started.state["stacks"]["vega-v2-alerts"]["parameters"]["WatchWorker"], "true")
+        # A backfill at 0 (history collected) stays at 0: never given, checked at 0.
+        state = json.loads(json.dumps(started.state))
+        state["stacks"]["vega-v2-worker"]["parameters"]["BackfillDesiredCount"] = "0"
+        state["services"]["backfill"]["desired"] = 0
+        self.worker_edit("VI-135: another worker change")
+        quiet = self.worker_only(state, real)
+        self.assert_done(quiet)
+        self.assertEqual(quiet.state["stacks"]["vega-v2-worker"]["parameters"]["BackfillDesiredCount"], "0")
+        self.assertEqual((quiet.state["services"]["backfill"]["desired"], quiet.state["services"]["backfill"]["starts"]), (0, state["services"]["backfill"]["starts"]))
+        self.assert_only_the_worker(quiet, 1, 0)
+
+    def test_VI135_c_what_the_worker_alone_refuses_before_any_change(self):
+        """each refused before anything changes; the Deploy state as it was found (released, or
+        never written); what a full Deploy left (services it stopped, a migrate task not settled) stays for the next full
+        Deploy, which then restores the saved counts."""
+        first = self.deployed()
+        image = first.identity()
+        base = self.granted3(first.state)
+        digest = base["stacks"]["vega-v2-worker"]["parameters"]["TemplateDigest"]
+
+        def left(state, **fields):
+            state = json.loads(json.dumps(state))
+            doc = {"version": 1, "owner": None, "beat": int(time.time()) - 600, "phase": "idle", "before": None, "changed": False,
+                   "unsafe": False, "migrate": None, **fields}
+            state["s3"]["buckets"][STATE_BUCKET][STATE_KEY] = {"body": json.dumps(doc), "etag": '"left"'}
+            return state
+
+        def changed(state, change):
+            state = json.loads(json.dumps(state))
+            change(state)
+            return state
+
+        def stopped_by_a_full_deploy(state):
+            for name in ("worker", "backfill"):
+                state["services"][name]["desired"] = 0
+            state["stacks"]["vega-v2-worker"]["parameters"].update(DesiredCount="0", BackfillDesiredCount="0")
+
+        def no_stack(state):
+            del state["stacks"]["vega-v2-worker"]
+            state["ecr"]["repository"] = False
+
+        migrate = {"token": "vm-1764000000-9", "phase": "asked", "taskdef": f"arn:aws:ecs:us-east-2:{ACCOUNT}:task-definition/vega-v2-migrate:1",
+                   "command": "full", "sg": "sg-0worker", "asked": int(time.time()) - 60}
+        held = self.held(json.loads(json.dumps(base)), "gh-555-1", 300)
+        held["github"] = {"555-1": "in_progress"}
+        cases = [
+            # (name, world, environment, what the log says, what the refusal precedes: inputs, grants, state)
+            ("an unknown mode", base, {"DEPLOY_COMPONENTS": "api"}, "DEPLOY_COMPONENTS is all or worker", "inputs"),
+            ("the archive import asked", base, {"IMPORT_ARCHIVES": "true"}, "IMPORT_ARCHIVES=true", "inputs"),
+            ("a backfill count given", base, {"BACKFILL_DESIRED_COUNT": "1"}, "BACKFILL_DESIRED_COUNT", "inputs"),
+            ("the roles stack before VI-135", changed(base, lambda s: s["stacks"]["vega-v2-deploy-roles"]["outputs"].update(DeployGrants="2")), {},
+             "DeployGrants is not 3", "grants"),
+            ("another run holds the state", held, {}, "another Deploy (gh-555-1) holds the Deploy state", "held"),
+            ("no worker stack (a first install)", changed(base, no_stack), {}, "the stack vega-v2-worker does not exist (a first install)", "state"),
+            ("a stack CloudFormation cannot update", changed(base, lambda s: s["stacks"]["vega-v2-worker"].update(status="UPDATE_ROLLBACK_FAILED")), {},
+             "the stack vega-v2-worker is UPDATE_ROLLBACK_FAILED", "state"),
+            ("a template the stack does not record", changed(base, lambda s: s["stacks"]["vega-v2-worker"]["parameters"].update(TemplateDigest="")), {},
+             "names no TemplateDigest", "state"),
+            ("another template", changed(base, lambda s: s["stacks"]["vega-v2-worker"]["parameters"].update(TemplateDigest="0" * 64)), {},
+             "is not the candidate's infra/aws/worker.yaml", "state"),
+            ("no pinned task image", changed(base, lambda s: s["stacks"]["vega-v2-worker"]["parameters"].update(TaskImageTag="")), {},
+             "TaskImageTag is empty", "state"),
+            # the owner rotated a password in SSM; only a full Deploy's migrate task sets the login to it.
+            ("a secret rotated since the last full Deploy", changed(base, lambda s: s["params"]["/vega/v2/collect-database-url"].update(Version=2)), {},
+             "SecretsRevision", "state"),
+            ("services a full Deploy stopped", left(changed(base, stopped_by_a_full_deploy), phase="stopped",
+                                                    before={"worker": 1, "backfill": 1, "image": image, "digest": digest}), {},
+             "stopped by a full Deploy (saved: worker 1, backfill 1)", "state"),
+            ("a migrate task not settled", left(base, phase="running", migrate=migrate), {}, "the migrate task vm-1764000000-9", "state"),
+        ]
+        results = {}
+        for name, world, extra, says, before in cases:
+            with self.subTest(name):
+                # The state the full Deploy released (idle), or the one the case left.
+                given = json.loads(world["s3"]["buckets"][STATE_BUCKET][STATE_KEY]["body"])
+                run = self.deploy(world, {**self.WORKER, **extra})
+                results[name] = run
+                self.assertNotEqual(run.code, 0, run.log)
+                self.assertNotIn("done", run.out.splitlines())
+                self.assertIn(says, run.log)
+                if name != "an unknown mode":  # an input's own check, as WORKER_DESIRED_COUNT's
+                    self.assertIn("nothing is changed", run.log.lower())
+                self.assertEqual([c for c in self.changed(run) if c != ["s3api", "put-object"]], [], "nothing changed but the state")
+                self.assertEqual((run.docker("build"), run.docker("pull")), ([], []), "refused before the image")
+                self.assertEqual(run.state["stacks"].get("vega-v2-worker"), world["stacks"].get("vega-v2-worker"))
+                self.assertEqual(run.state["services"], world["services"])
+                if before == "inputs":
+                    self.assertEqual([c for c in run.calls if c["tool"] == "aws"], [], "no AWS call")
+                elif before == "grants":
+                    self.assertEqual(self.state_writes(run), [], "the state never written")
+                elif before == "held":
+                    self.assertTrue(all("--if-none-match" in c["argv"] for c in self.state_writes(run)), "only the refused creation")
+                    self.assertEqual(run.deploy_state()["owner"], "gh-555-1")
+                else:
+                    # Taken, then released as it was found: never restored, never reset (W31).
+                    doc = run.deploy_state()
+                    self.assertIsNone(doc["owner"], doc)
+                    fields = ("phase", "before", "changed", "unsafe", "migrate")
+                    self.assertEqual({k: doc.get(k) for k in fields}, {k: given.get(k) for k in fields}, "kept as it was")
+        self.assertEqual(results["a migrate task not settled"].aws("ecs", "list-tasks"), [], "settled by a full Deploy, never here")
+        self.assertNotIn("restoring them", results["services a full Deploy stopped"].log)
+        # What the full Deploy left is the next full Deploy's: it restores the saved counts once its migrations succeed.
+        full = self.deploy(results["services a full Deploy stopped"].state)
+        self.assert_done(full)
+        params = full.state["stacks"]["vega-v2-worker"]["parameters"]
+        self.assertEqual((params["DesiredCount"], params["BackfillDesiredCount"]), ("1", "1"))
+        self.assert_released(full)
+
+    def test_VI135_d_the_candidate_s_migration_files_are_those_of_both_deployed_images(self):
+        """the candidate's migration files (core, account, Panna) against the services' image (ImageTag) and the
+        tasks' (TaskImageTag), read from the images: a Panna file dropped, an account file changed, an image the role
+        cannot pull, then a TaskImageTag an interrupted full Deploy advanced alone (its online migration applied, its
+        final update failed): either reference alone would let one of the two candidates through."""
+        first = self.deployed()
+        image = first.identity()
+        start = self.repo.head
+
+        def refused(run, says, against):
+            self.assertNotEqual(run.code, 0, run.log)
+            self.assertNotIn("done", run.out.splitlines())
+            self.assertIn(says, run.log)
+            self.assertIn(against, run.log)
+            self.assertEqual(run.worker_changes(), [], "the worker stack unchanged")
+            self.assertEqual(run.aws("cloudformation", "update-stack"), [])
+            self.assertEqual(run.tasks(), [])
+            self.assertEqual([c for c in run.calls if c["tool"] == "node"], [], "nothing checked as deployed")
+            self.assert_released(run)
+
+        with self.subTest("a Panna migration dropped"):
+            self.repo.remove("backend/panna/sql/004_panna_canonical.sql")
+            self.repo.commit("a Panna migration dropped")
+            run = self.worker_only(first.state)
+            refused(run, "removes panna/004_panna_canonical.sql", f"ImageTag and TaskImageTag {image[:12]}: not the candidate's")
+            self.assertEqual(len(run.docker("push")), 1, "pushed, then compared")
+            self.assertIn("the candidate's migration files are not those of the deployed images", run.log)
+            self.repo.checkout(start)
+        with self.subTest("an account migration changed"):
+            path = "backend/account/sql/003_granted_levels.sql"
+            self.repo.write(path, (self.repo.path / path).read_text() + "\n-- VI-135: one more line\n")
+            self.repo.commit("an account migration changed")
+            refused(self.worker_only(first.state), "changes account/003_granted_levels.sql", f"ImageTag and TaskImageTag {image[:12]}")
+            self.repo.checkout(start)
+        with self.subTest("the migrate entry point changed"):
+            path = "backend/vega/migrate.py"
+            self.repo.write(path, (self.repo.path / path).read_text() + "\n# A changed migrate entry point\n")
+            self.repo.commit("a changed migrate entry point")
+            run = self.worker_only(first.state)
+            refused(run, "changes runtime/vega/migrate.py", f"ImageTag and TaskImageTag {image[:12]}")
+            self.repo.checkout(start)
+        with self.subTest("an image the role cannot pull"):
+            self.worker_edit("VI-135: pull refused")
+            state = self.granted3(first.state)
+            state["denied"] = ["ecr:GetDownloadUrlForLayer"]
+            run = self.worker_only(state)
+            refused(run, "could not be read", "ecr:GetDownloadUrlForLayer")
+            self.assertNotIn("the same files", run.log)
+            self.repo.checkout(start)
+        self.repo.write("backend/sql/180_online_probe.sql", "-- A probe of VI-135.\n-- vega:online\nCREATE TABLE ops.online_probe (id integer);\n")
+        with_probe = self.repo.commit("a marked migration")
+        state = json.loads(json.dumps(first.state))
+        state["faults"]["deploy"] = {"vega-v2-worker": "fail"}
+        interrupted = self.deploy(state)
+        self.assertNotEqual(interrupted.code, 0, interrupted.log)
+        self.assertEqual(interrupted.tasks(), [(["--online"], 0)])
+        self.assertIn("180_online_probe.sql", self.applied())
+        pinned = interrupted.identity()
+        params = interrupted.state["stacks"]["vega-v2-worker"]["parameters"]
+        self.assertEqual((params["ImageTag"], params["TaskImageTag"]), (image, pinned), "TaskImageTag advanced alone")
+        advanced = interrupted.state
+        advanced["faults"].pop("deploy")
+        with self.subTest("the services' migration files, not the tasks'"):
+            self.repo.checkout(start)
+            self.worker_edit("VI-135: on the services' files")
+            run = self.worker_only(advanced)
+            refused(run, "removes core/180_online_probe.sql", f"TaskImageTag {pinned[:12]}: not the candidate's")
+            self.assertIn(f"ImageTag {image[:12]}: the same files", run.log)
+        with self.subTest("the tasks' migration files, not the services'"):
+            self.repo.checkout(with_probe)
+            self.worker_edit("VI-135: on the tasks' files")
+            run = self.worker_only(advanced)
+            refused(run, "adds core/180_online_probe.sql", f"ImageTag {image[:12]}: not the candidate's")
+            self.assertIn(f"TaskImageTag {pinned[:12]}: the same files", run.log)
+
+    def test_VI135_e_no_done_without_the_checks_and_no_second_update_on_a_retry(self):
+        """the update's answer lost after CloudFormation applied it: no check claimed, no done, the state
+        released; the retry finds nothing to update, checks, done: one replacement in all. A failed check after an
+        update: no done, the stack keeps the candidate; the retry updates nothing and checks again."""
+        first = self.deployed()
+        self.worker_edit("VI-135: lost answer")
+        state = self.granted3(first.state)
+        state["faults"]["update-stack"] = {"vega-v2-worker": "applied-lost"}
+        lost = self.worker_only(state)
+        self.assertNotEqual(lost.code, 0, lost.log)
+        self.assertIn("applied-lost", [c["tool"] for c in lost.calls])
+        self.assertNotIn("done", lost.out.splitlines())
+        self.assertIn("its outcome is CloudFormation's", lost.log)
+        self.assertEqual([c for c in lost.calls if c["tool"] == "node"], [], "no check after an outcome not known")
+        candidate = lost.identity()
+        self.assertEqual(lost.state["stacks"]["vega-v2-worker"]["parameters"]["ImageTag"], candidate, "applied")
+        self.assert_released(lost)
+        retry = self.worker_only(lost.state)
+        self.assert_done(retry)
+        self.assertEqual((retry.built(), retry.docker("push")), ([], []))
+        self.assertIn("nothing to update", retry.out)
+        for name in ("worker", "backfill"):
+            s, b = retry.state["services"][name], first.state["services"][name]
+            self.assertEqual((s["image"], s["revision"], s["replacements"]), (candidate, b["revision"] + 1, b["replacements"] + 1), name)
+        self.assert_only_the_worker(retry, 1, 1)
+        self.worker_edit("VI-135: a check that fails")
+        failed = self.worker_only(retry.state, {"FAKE_NODE_FAIL": "infra/aws/verify-deploy.mjs"})
+        self.assertNotEqual(failed.code, 0, failed.log)
+        self.assertNotIn("done", failed.out.splitlines())
+        self.assertIn("FAILED the checks", failed.log)
+        newer = failed.identity()
+        self.assertEqual(failed.state["stacks"]["vega-v2-worker"]["parameters"]["ImageTag"], newer, "the stack keeps the candidate")
+        self.assert_released(failed)
+        checked = self.worker_only(failed.state)
+        self.assert_done(checked)
+        self.assertEqual(checked.state["services"], failed.state["services"], "nothing replaced twice")
+        self.assertIn("nothing to update", checked.out)
+
+    def test_VI135_f_one_deploy_at_a_time_whatever_its_components(self):
+        """a worker-only run holds the Deploy state as a full Deploy does: a full Deploy started meanwhile stops
+        before any change; a worker-only run whose state another run takes over during its push stops before its update."""
+        first = self.deployed()
+        self.worker_edit("VI-135: held")
+        world = self.tmp / f"world-{self.scenarios:02d}.json"
+        state = self.granted3(first.state)
+        state["faults"]["pause"] = {"run": "8300", "call": ["cloudformation", "update-stack"], "stack": "vega-v2-worker"}
+        world.write_text(json.dumps(state))
+        a, a_tmp = self.deploy(None, {**self.WORKER, "GITHUB_RUN_ID": "8300"}, background=True, world=world)
+        try:
+            self.wait_for(a_tmp / "calls.log", '"paused"')
+            b = self.deploy(None, {"GITHUB_RUN_ID": "8400"}, world=world)
+        finally:
+            a_run = self.resumed(a, a_tmp, world)
+        self.assertNotEqual(b.code, 0, b.log)
+        self.assertIn("another Deploy (gh-8300-1) holds the Deploy state", b.log)
+        self.assertEqual([c for c in self.changed(b) if c != ["s3api", "put-object"]], [], "the full Deploy changed nothing")
+        self.assert_done(a_run)
+        self.assertEqual(len(a_run.worker_changes()), 1)
+        self.worker_edit("VI-135: taken over during the push")
+        state = json.loads(json.dumps(a_run.state))
+        state["faults"].pop("pause")
+        state["faults"]["steal_on_push"] = "gh-999-1"
+        run = self.worker_only(state)
+        self.assertNotEqual(run.code, 0, run.log)
+        stolen = run.index(lambda c: c["tool"] == "steal")
+        self.assertIsNotNone(stolen, "the state was taken over during the push")
+        self.assertEqual(self.changes_after(run, stolen), [], "nothing changed after the takeover")
+        self.assertEqual(run.worker_changes(), [])
+        doc = run.deploy_state()
+        self.assertEqual((doc["owner"], doc["phase"]), ("gh-999-1", "running"), "the other run's, not released")
+
+
+    def test_VI135_g_worker_requires_only_its_referenced_inputs(self):
+        first = self.deployed(self.granted3(self.production_state()))
+        with self.subTest("release bucket"):
+            state = json.loads(json.dumps(first.state))
+            state["s3"]["buckets"].pop(RELEASES)
+            run = self.worker_only(state)
+            self.assert_done(run)
+            self.assertFalse(any(RELEASES in args for args in run.aws("s3api", "head-bucket")))
+        with self.subTest("provider key file"):
+            run = self.worker_only(first.state, {"PITCHAPI_API_KEY_FILE": str(self.tmp / "missing")})
+            self.assert_done(run)
+        with self.subTest("unreferenced optional parameter"):
+            state = json.loads(json.dumps(first.state))
+            state["params"]["/vega/v2/odds-api-key"] = {"Type": "SecureString", "Value": "unused-test-key"}
+            run = self.worker_only(state)
+            self.assert_done(run)
+            self.assertFalse(any("/vega/v2/odds-api-key" in args for args in run.aws("ssm", "get-parameter")))
+        with self.subTest("workstation time zone after a hosted full deploy"):
+            state = json.loads(json.dumps(first.state))
+            state["faults"]["ssm_local_timestamp"] = True
+            run = self.worker_only(state, {"TZ": "Europe/Paris"})
+            self.assert_done(run)
+        with self.subTest("changed required parameter reference"):
+            state = json.loads(json.dumps(first.state))
+            name = "/vega/v2/alternate-collect-database-url"
+            state["params"][name] = {**state["params"]["/vega/v2/collect-database-url"], "Version": 2}
+            state["stacks"]["vega-v2-worker"]["parameters"]["CollectUrlParameter"] = name
+            run = self.worker_only(state)
+            self.assertNotEqual(run.code, 0, run.log)
+            self.assertIn("SecretsRevision", run.log)
+            self.assertEqual(run.worker_changes(), [])
+            self.assert_released(run)
+
+    def test_VI135_h_worker_does_not_reexec_an_older_deploy_script(self):
+        path = self.repo.path / "infra/aws/deploy.sh"
+        current = path.read_text()
+        self.repo.write("infra/aws/deploy.sh", "#!/usr/bin/env bash\necho legacy-deploy-executed\n")
+        legacy = self.repo.commit("legacy deploy without a component selector")
+        self.repo.write("infra/aws/deploy.sh", current)
+        self.repo.commit("deploy with a component selector")
+        for requested in ("worker", "invalid"):
+            with self.subTest(components=requested):
+                run = self.deploy(self.production_state(), {
+                    "IMAGE_TAG": legacy,
+                    "DEPLOY_COMPONENTS": requested,
+                })
+                self.assertNotEqual(run.code, 0, run.log)
+                self.assertNotIn("legacy-deploy-executed", run.log)
+                self.assertEqual(run.calls, [])
+        all_mode = self.deploy(self.production_state(), {"IMAGE_TAG": legacy, "DEPLOY_COMPONENTS": "all"})
+        self.assertEqual(all_mode.code, 0, all_mode.log)
+        self.assertIn("legacy-deploy-executed", all_mode.out)
 
 
 if __name__ == "__main__":

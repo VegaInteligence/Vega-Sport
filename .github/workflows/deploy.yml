@@ -1,15 +1,23 @@
 name: Deploy
 # Deploys the backend: the base vega-football-db-postgres, its secrets, the worker and the
 # backfill (migrations first), the read API and its distribution, and the account API once SSM
-# /vega/v2/account-deploy is on (backend/account/DEPLOYMENT.md). Manual only, from the
+# /vega/v2/account-deploy is on (backend/account/DEPLOYMENT.md); with components worker, the worker
+# and the backfill alone (infra/aws/README.md, Worker only). Manual only, from the
 # v2-production environment, through the vega-v2-deploy role (deploy-roles.yaml).
 on:
   workflow_dispatch:
     inputs:
+      # VI-135: all, the whole backend (the default, as before); worker, the worker and the backfill alone on the commit's
+      # image, when its migration files and the worker template are those deployed (infra/aws/README.md, Worker only).
+      components:
+        description: What to deploy (all, or the worker and the backfill alone)
+        type: choice
+        options: ['all', 'worker']
+        default: 'all'
       # keep: the count a Deploy saved when it stopped the worker, else the stack's own (a worker stopped on purpose
       # stays so); 1 or 0 sets it (FAILURE_MODES_OPTIMISATIONS.md GH157-y).
       worker_desired_count:
-        description: Worker tasks after the migrations (keep the current count, 1, or 0 to keep the worker stopped)
+        description: Worker count for a full Deploy. Worker mode keeps the deployed count.
         type: choice
         options: ['keep', '1', '0']
         default: 'keep'
@@ -49,10 +57,11 @@ jobs:
         env:
           CFN_ROLE: ${{ env.CFN_ROLE }}
           IMAGE_TAG: ${{ github.sha }}
+          DEPLOY_COMPONENTS: ${{ inputs.components }}
           WORKER_DESIRED_COUNT: ${{ inputs.worker_desired_count }}
           IMPORT_ARCHIVES: ${{ inputs.import_archives }}
           ARCHIVE_SOURCES_BUCKET: ${{ vars.V2_ARCHIVE_SOURCES_BUCKET }}
-          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
+          PITCHAPI_API_KEY: ${{ inputs.components != 'worker' && secrets.PITCHAPI_API_KEY || '' }}
           # The live provider's adapter (backend/vega/live/adapters.py); unset, the live ingestor stays off.
           LIVE_PROVIDER: ${{ vars.V2_LIVE_PROVIDER }}
           # gh's token (actions: read only), to ask whether the run holding the Deploy's state has ended.
