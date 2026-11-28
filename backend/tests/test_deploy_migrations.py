@@ -77,7 +77,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # GH137R (#137): scoped markers and content receipts prepared by the worker.
          "183_read_receipts.sql",
          # GH137R.3 (#137, #158): the receipts retired (183's triggers, tables and functions removed; 182 kept).
-         "184_retire_read_receipts.sql"]
+         "184_retire_read_receipts.sql",
+         # §89: the forecasts kept once published (agg.match_forecast_log and its read; no other table changes).
+         "185_match_forecast_log.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603

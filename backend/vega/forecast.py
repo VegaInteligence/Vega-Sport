@@ -1076,6 +1076,28 @@ def with_merges(strengths, merge):
     return out
 
 
+# The forecasts kept (185; FAILURE_MODES.md §89.1): of the season's forecasts just written, those whose match kicks off
+# after this writing and within the form's horizon (the pass's own: the matches whose forecast read the form), one row
+# per match. A match under way that the base still calls « to play » is forecast again but its row does not move; a
+# first writing keeps its time.
+LOG = """
+WITH clock AS MATERIALIZED (SELECT clock_timestamp() AS at)
+INSERT INTO agg.match_forecast_log AS l (match_id, season_id, home_win, draw, away_win, home_goals, away_goals, rho, home_elo, away_elo,
+  home_form, away_form, model_version, kickoff_at, first_computed_at, computed_at)
+SELECT f.match_id, f.season_id, f.home_win, f.draw, f.away_win, f.home_goals, f.away_goals, o.rho, f.home_elo, f.away_elo,
+  f.home_form, f.away_form, o.version, k.at, clock.at, clock.at
+FROM agg.match_forecasts f
+JOIN agg.forecast_models o ON o.id = f.model_id
+JOIN core.matches m ON m.id = f.match_id AND m.season_id = f.season_id
+CROSS JOIN LATERAL (SELECT coalesce(m.kickoff_at, m.match_date::timestamp AT TIME ZONE 'UTC') AS at) k
+CROSS JOIN clock
+WHERE f.season_id = %s AND k.at > clock.at AND k.at <= %s
+ON CONFLICT (match_id) DO UPDATE SET season_id = EXCLUDED.season_id, home_win = EXCLUDED.home_win, draw = EXCLUDED.draw,
+  away_win = EXCLUDED.away_win, home_goals = EXCLUDED.home_goals, away_goals = EXCLUDED.away_goals, rho = EXCLUDED.rho,
+  home_elo = EXCLUDED.home_elo, away_elo = EXCLUDED.away_elo, home_form = EXCLUDED.home_form, away_form = EXCLUDED.away_form,
+  model_version = EXCLUDED.model_version, kickoff_at = EXCLUDED.kickoff_at, computed_at = EXCLUDED.computed_at"""
+
+
 def refresh(conn, season):
     """The forecasts and projections of a season in progress (after power.refresh_elo);
     returns (matches forecast, leagues projected). A season with nothing left to play
@@ -1147,6 +1169,7 @@ def refresh(conn, season):
         ) as copy:
             for match, f, eh, ea, shifts in forecasts:
                 copy.write_row((match, season, f["home"], f["draw"], f["away"], f["home_goals"], f["away_goals"], *f["score"], eh, ea, shifts[0], shifts[1], run))
+        conn.execute(LOG, (season, now + FORM_HORIZON))
         for edition, (table, projection) in leagues.items():
             for team, p in projection.items():
                 points, _, _, played = table.get(team, (0, 0, 0, 0))

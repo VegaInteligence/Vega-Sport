@@ -1,5 +1,25 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Outils de mesure des pronostics : pronostics gardés (migration 185) et évaluateur — FAILURE_MODES § 89 (27–28 novembre 2026, branche `claude/forecast-log`, worktree `~/Agents/worktrees/Vega-forecast-log-20261127`)
+
+- Demande de l'utilisateur (27 nov.) : « Regarde les modèles en cours qu'est ce qu'on pourrait améliorer ? », puis, sur la liste des pistes, « Outils de mesure ». Linear non consulté (règle de l'utilisateur pour ce dossier) : pas de ticket, pas de vérification des tickets en cours ; vérifié à la place : `origin/main` inchangé pendant le travail, 185 est le numéro libre.
+- Revue des modèles en service, lecture seule (trois relectures déléguées, points clés recontrôlés dans le code). Pistes pour le pronostic de match, par ordre :
+  1. les nuls des matchs équilibrés (25,6 % annoncés, 30,6 % joués là où le marché donne 27 % ou plus) ; les projections tirent en plus deux lois de Poisson indépendantes ;
+  2. un nombre de buts propre à chaque match (attaque et défense par club) ; un facteur par championnat ne marche pas (mesuré) ;
+  3. K = 20 et l'avantage du terrain de 60 points de l'Elo des clubs, « choisis », jamais ajustés, sans écart de buts ;
+  4. le onze probable dans le pronostic (affiché seulement aujourd'hui).
+  Ailleurs : la courbe minute par minute part de l'Elo seul et se fige dans le temps additionnel ; le xG v2 n'a jamais été jugé sur de vrais tirs ; le site sert le Score Vega v8, la v9.1 est stockée sans être montrée ; `level.noise_and_spread` a un plancher qui peut faire exploser un prix (à lire dans `agg.level_runs.measured`) ; la compatibilité avec l'équipe n'est pas comparable d'un candidat à l'autre ; un joueur guéri reste « absent » du onze probable tant qu'il n'a pas rejoué.
+- Constats en production (27 nov., lecture seule) : `/api/forecasts/odds` répond 404 pour les 287 matchs à venir interrogés (la source des cotes dort sans sa clé, `backend/README.md`) ; le modèle en service dit 60 116 matchs ajustés, la vérification du 12 novembre en comptait 75 112 avec la même requête : écart non expliqué.
+- Livré sur la branche, **pas poussé** :
+  - migration 185 (`agg.match_forecast_log`, vue `api.match_forecast_log`, `-- vega:online`) et son écriture dans `forecast.refresh` : le dernier pronostic d'avant le coup d'envoi, une ligne par match, dans les quatorze jours ; `snapshot.LAPSING` (une ligne ne retient pas un match que sa source retire), revue d'`open_matchday_restore` ;
+  - `backend/tools/evaluate_forecast.py` : `from-log`, `from-api`, `backtest`, `add-odds`, `report`, `synthetic` ; entrée versionnée, rapport canonique ;
+  - docs : § 89, « Face aux cotes de clôture », « Les pronostics gardés » et « Rejouer ces vérifications » dans `06-accueil-et-matchs/03-pronostics-et-projections.md`.
+- Mesure de référence (28 nov., outil du dépôt, API publique et cotes de clôture de football-data.co.uk, sept championnats, 3 027 matchs) : perte logarithmique 0,9790 pour Vega (Elo seul) contre 0,9622 pour le marché, écart +0,0169 [+0,0109 ; +0,0242] ; plus de 2,5 buts 0,6824 contre 0,6667 (fréquence 0,6878).
+- Relecture indépendante avant le premier commit (Opus ; Terra et Astra absents de la session, la limite d'usage Fable a coupé une relecture) : six corrections faites, tests d'abord — retrait d'un match par sa source, cotes ajoutées en plusieurs fois, 61 matchs partis des compositions sortis de la mesure, code 4 pour toute lecture qui échoue, contrainte qui ne peut plus arrêter la passe, horizon de la passe.
+- Tests : `test_forecast_evaluation.py` 12/12 ; suite Python entière 1 295 OK, 737 sautés (bases : CI seulement, PostgreSQL 17+) ; 185 et la requête du journal rejouées sur un PostgreSQL 16 jetable avec des tables de remplacement. **Non lancés ici** : `test_models.py` `test_zzzz_the_forecasts_published_are_kept`, `test_snapshot_roles.py` 35p et 35r, les suites Deploy et Node. Preuves : `~/Agents/scratch/vega-models-20261127/` (`EVIDENCE.md`, `e2e-20261128/EVIDENCE.md`).
+- Décisions restées à l'utilisateur : créer ou non la clé des cotes (offre gratuite, 500 crédits par mois) ; quelle piste du modèle ensuite (recommandé : les nuls).
+- Prochaine action : PR de la branche, CI (les suites de base y passent pour la première fois), puis fusion et Deploy avec l'accord de l'utilisateur ; après le Deploy, vérifier que `api.match_forecast_log` se remplit à la première passe.
+
 ## Onglet « Classement » d'un match comme la page Compétition, menu des saisons réparé — FAILURE_MODES § 85 (27 novembre 2026, branche `fix/match-tabs-seasons`)
 
 - Demande de hugo (20 h 43, captures de l'onglet Classement d'un match à venir) : Projection, Matchs… n'ont pas le même design ; bug du choix de saison (rond blanc sur le bouton, ronds gris derrière chaque saison, saisons coupées).
