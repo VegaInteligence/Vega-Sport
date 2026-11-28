@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 from vega import archives  # noqa: E402
 from test_archive_deletions import COPY, L, PROVIDER, RU1, RU2, season  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -32,14 +33,10 @@ DSN = os.environ.get("VEGA_V2_ARCHIVE_GUARDS_TEST_DSN")
 class GuardTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_archive_guards_test":
             raise RuntimeError("dedicated local archive guards DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
 
     @classmethod
     def tearDownClass(cls):

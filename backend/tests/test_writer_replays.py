@@ -31,6 +31,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from vega import sources, transfermarkt as tm  # noqa: E402
 from vega.sources import SourceError, fifa, honours, uefa, wikidata  # noqa: E402
 from prerequisites import required  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -82,14 +83,10 @@ class WriterReplay(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_writer_replays_test":
             raise RuntimeError("dedicated local writer replays DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         x = cls.db.execute
         x("INSERT INTO core.countries(code) VALUES ('FRA'), ('ESP') ON CONFLICT DO NOTHING")
         x("INSERT INTO core.seasons(id, label) VALUES (2025, '2025/2026'), (2026, '2026/2027') ON CONFLICT DO NOTHING")

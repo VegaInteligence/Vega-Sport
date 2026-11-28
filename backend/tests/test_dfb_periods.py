@@ -14,6 +14,7 @@ from unittest.mock import patch
 import test_source_snapshots as snapshots
 from vega import sources
 from vega.sources import cups
+from template_base import fresh
 
 DSN = os.environ.get("VEGA_V2_DFB_PERIODS_TEST_DSN")
 FIXTURES = snapshots.ROOT / "tests/fixtures/openligadb"
@@ -53,15 +54,12 @@ class DfbPeriodsReplay(snapshots.SnapshotDatabase):
 
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
         from urllib.parse import urlparse
 
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_dfb_periods_test":
             raise RuntimeError("dedicated local DFB periods test database required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
 
     def setUp(self):
         super().setUp()

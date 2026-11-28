@@ -14,6 +14,7 @@ DSN = os.environ.get("VEGA_V2_AGG_TEST_DSN")
 
 from vega import agg_schema
 from vega.metric_catalog import NOT_METRICS, PLAYER_METRICS, TEAM_METRICS
+from template_base import fresh
 
 
 def xpts(a, b):
@@ -38,14 +39,14 @@ class CalculatorTest(unittest.TestCase):
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_agg_test":
             raise RuntimeError("dedicated local agg DB required")
-        from vega.store import connect_local, migrate, Store
+        from vega.store import connect_local, Store
 
         cls.db = connect_local(DSN)
         if cls.db.execute(
             "SELECT to_regnamespace('core') IS NULL AND to_regnamespace('agg') IS NULL AND to_regnamespace('ops') IS NULL"
         ).fetchone()[0] is not True:
             raise RuntimeError("test DB must be empty")
-        migrate(cls.db)
+        cls.db = fresh(DSN, cls.db)
         with cls.db.transaction():
             Store(cls.db).season("2025/2026")
         cls.build()

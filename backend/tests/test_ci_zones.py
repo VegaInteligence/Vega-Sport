@@ -4,6 +4,8 @@ Failure modes guarded here:
 - a site-only change still waits for the Python, Deploy and API suites (the 23 minutes of 26 Nov 2026);
 - a site file the backend imports (src/services/, shared/, app/api/, the manifest) skips the backend's suites;
 - a change to the read API or the SQL skips the API's own suites, or a Deploy file skips the Deploy's suites;
+- a module of backend/tests the API's seed imports (the template base, the archive and cup samples) skips the API's
+  suites, whose 58 files all start from that seed;
 - a change to the CI itself, a push to main or a manual run skips anything;
 - a file a test reads by name (README, fixture, workflow, Python module read by a Node test, a renamed component)
   skips that test's suite (Astra's review of #247, eight cases);
@@ -58,6 +60,15 @@ class ZonesTest(unittest.TestCase):
     def test_c_the_api_s_own_tests_run_the_api_suites_only(self):
         self.assertEqual(needed("backend/api/test/home-favourites.test.mjs"), {"site", "deploy", "api", "image", "package"})
         self.assertEqual(needed("backend/account/test/schema.test.mjs") & {"python"}, set())
+
+    def test_c2_what_the_api_s_seed_imports_from_the_python_suites_runs_the_api_suites(self):
+        seed = (ROOT / "backend/api/test/seed.py").read_text()
+        imported = re.findall(r"^from (\w+) import", seed, re.M)
+        shared = [name for name in imported if (ROOT / "backend/tests" / f"{name}.py").exists()]
+        self.assertEqual(sorted(shared), ["archive_fixtures", "cup_samples", "template_base"])
+        for name in shared:
+            with self.subTest(name):
+                self.assertTrue({"python", "api"} <= needed(f"backend/tests/{name}.py"), needed(f"backend/tests/{name}.py"))
 
     def test_d_the_worker_runs_the_python_suites_not_the_api_s_nor_the_deploy_s(self):
         self.assertEqual(needed("backend/vega/worker.py"), {"site", "python", "image"})

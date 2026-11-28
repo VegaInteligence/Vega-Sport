@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from vega import transfermarkt as tm
+from template_base import fresh
 
 try:
     import psycopg
@@ -196,14 +197,10 @@ class FakeApi:
 class ReaderTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_sources_test":
             raise RuntimeError("dedicated local sources DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         x = cls.db.execute
         x("INSERT INTO core.countries(code) VALUES ('FRA')")
         x("INSERT INTO core.seasons(id, label) VALUES (2026, '2026/2027') ON CONFLICT DO NOTHING")
@@ -473,14 +470,10 @@ class ReserveSearchTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_sources_test":
             raise RuntimeError("dedicated local sources DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         x = cls.db.execute
         x("INSERT INTO core.countries(code) VALUES ('ARG')")
         x("INSERT INTO core.seasons(id, label) VALUES (2026, '2026/2027') ON CONFLICT DO NOTHING")

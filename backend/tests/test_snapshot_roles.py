@@ -35,6 +35,7 @@ from vega import sources  # noqa: E402
 from vega.sources import cups, open_matchday, snapshot  # noqa: E402
 from test_source_snapshots import EDITIONS, FIXTURES, FOLDER, NOW, PRELOAD, ROUND_RESULTS, league  # noqa: E402
 from prerequisites import required  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -62,14 +63,10 @@ def blocked(observer, waiter_pid, timeout=5.0):
 class RolesBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_snapshot_roles_test":
             raise RuntimeError("dedicated local snapshot roles DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
 
     @classmethod
     def tearDownClass(cls):

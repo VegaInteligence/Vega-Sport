@@ -20,9 +20,10 @@ sys.path.insert(0, str(ROOT))
 from vega import calculator, models, planner, scope
 from vega.jobs import DETAIL_FAMILIES, claim, enqueue, enqueue_or_revive
 from vega.pitchapi import PitchClient
-from vega.store import Store, StoreError, connect_local, migrate
+from vega.store import Store, StoreError, connect_local
 from vega.worker import (HEALTHY_AFTER, PUBLISH_EVERY, RECOMPUTE_AFTER, RECOMPUTE_PAST_AFTER, RECONNECT_FOR, RETRY_DAILY_AFTER, SideProcess, Worker, connect,
                             due_seasons, error_code, keep_running, main, prefer_as_oom_victim, publish, report, side_loop)
+from template_base import fresh
 
 DSN = os.environ.get("VEGA_V2_WORKER_TEST_DSN")
 HOME = {"id": "t_aaaaaa", "name": "Home FC"}
@@ -308,8 +309,7 @@ class WorkerTest(unittest.TestCase):
         cls.db.close()
 
     def setUp(self):
-        self.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(self.db)
+        type(self).db = fresh(DSN, self.db)
         # Leases are checked against the database clock: the fake clock only moves forward.
         self.now = datetime.now(timezone.utc).replace(second=0, microsecond=0) + timedelta(minutes=1)
         self.api = FakeApi()

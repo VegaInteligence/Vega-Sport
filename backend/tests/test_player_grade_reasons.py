@@ -20,6 +20,7 @@ import sys
 import unittest
 from unittest import mock
 from urllib.parse import urlparse
+from template_base import fresh
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -78,12 +79,10 @@ class PlayerGradeReasonsTest(unittest.TestCase):
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_grades_test":
             raise RuntimeError("dedicated local grades DB required")
         from vega import models, power, worker
-        from vega.store import Store, connect_local, migrate
+        from vega.store import Store, connect_local
 
         cls.power = power
-        db = cls.db = connect_local(DSN)
-        db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(db)
+        db = cls.db = fresh(DSN)
         with db.transaction():
             for label in ("2020/2021", "2021/2022"):
                 Store(db).season(label)

@@ -35,6 +35,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from vega import archive_attestations, archives  # noqa: E402
 from archive_fixtures import GOALS, make_sources  # noqa: E402
 from prerequisites import required  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -58,14 +59,10 @@ APART_GOALS = {"eng-premier-league": [GOALS[0], GOALS[1], LEICESTER[:2] + ("Leic
 class ArchiveTwinsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_archive_twins_test":
             raise RuntimeError("dedicated local archive twins DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
 
     @classmethod
     def tearDownClass(cls):

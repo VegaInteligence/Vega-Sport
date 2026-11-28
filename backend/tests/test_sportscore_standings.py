@@ -18,6 +18,7 @@ from vega.sources import SourceError, sportscore
 from sportscore_cases import CASES, H, START, T0, replace, tables, without
 import sportscore_replay as replay
 from prerequisites import require, required
+from template_base import fresh
 
 try:
     import psycopg
@@ -30,14 +31,12 @@ DSN = os.environ.get("VEGA_V2_SOURCES_TEST_DSN")
 class SportScoreDatabase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import Store, connect_local, migrate
+        from vega.store import Store
 
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_sources_test":
             raise RuntimeError("dedicated local sources DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         with cls.db.transaction():
             replay.build(cls.db, Store(cls.db))
 

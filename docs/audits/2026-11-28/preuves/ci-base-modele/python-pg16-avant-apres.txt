@@ -1,0 +1,45 @@
+before: 1205 tests, 1371 s | Ran 1209 tests in 1370.921s | FAILED (failures=1, errors=6, skipped=9)
+after:  1217 tests, 455 s | Ran 1221 tests in 455.481s | FAILED (failures=1, errors=6, skipped=9) | template_base: 191 bases cloned in 44.6 s, template built in 0.3 s
+outcomes before: {'ok': 1193, 'skipped': 9, 'ERROR': 2, 'FAIL': 1}
+outcomes after:  {'ok': 1205, 'skipped': 9, 'ERROR': 2, 'FAIL': 1}
+tests whose outcome changed: 0
+only before: 0 []
+only after: 12 ['test_ci_zones', 'test_template_base']
+modules, seconds before -> after (largest before):
+     265.9 ->   15.9   test_worker
+     129.4 ->   22.8   test_collection_wakeups
+      95.5 ->   13.9   test_open_matchday_window
+      68.3 ->   12.9   test_identity_corrections
+      67.7 ->   33.3   test_source_snapshots
+      60.3 ->   11.1   test_audit_models
+      38.7 ->    9.0   test_writer_replays
+      35.8 ->   27.2   test_models
+      35.4 ->    8.1   test_transfermarkt_history
+      31.5 ->   16.6   test_archive_deletions
+      27.6 ->    3.2   test_audit_player_aggregates
+      26.6 ->    5.3   test_audit_club_aggregates
+      26.3 ->    8.6   test_sportscore_standings
+      24.4 ->   12.1   test_snapshot_roles
+      21.5 ->    4.6   test_transfermarkt_absences
+      20.8 ->   12.9   test_statement_statistics
+      19.9 ->    4.3   test_probable_lineups
+      19.0 ->   12.5   test_data_versions
+      18.9 ->    8.8   test_artwork
+      17.7 ->   16.4   test_sources
+      17.4 ->   17.0   test_archive_corrections
+      15.2 ->   14.8   test_inplay
+slowest modules after:
+     33.3  (before   67.7)  test_source_snapshots
+     27.2  (before   35.8)  test_models
+     22.8  (before  129.4)  test_collection_wakeups
+     17.0  (before   17.4)  test_archive_corrections
+     16.6  (before   31.5)  test_archive_deletions
+     16.4  (before   17.7)  test_sources
+     15.9  (before  265.9)  test_worker
+     14.8  (before   15.2)  test_inplay
+     14.0  (before   13.0)  test_account_migrations
+     13.9  (before   95.5)  test_open_matchday_window
+     12.9  (before   20.8)  test_statement_statistics
+     12.9  (before   68.3)  test_identity_corrections
+     12.5  (before   19.0)  test_data_versions
+     12.1  (before   24.4)  test_snapshot_roles

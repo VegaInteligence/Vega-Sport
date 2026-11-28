@@ -3,6 +3,7 @@
 import os, sys, unittest
 from pathlib import Path
 from urllib.parse import urlparse
+from template_base import fresh
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -23,14 +24,14 @@ class UnknownPlayerTest(unittest.TestCase):
             or target.path != "/vega_v2_unknown_test"
         ):
             raise RuntimeError("dedicated local unknown DB required")
-        from vega.store import connect_local, migrate, Store
+        from vega.store import connect_local, Store
 
         cls.db = connect_local(DSN)
         if not cls.db.execute(
             "SELECT to_regnamespace('core') IS NULL AND to_regnamespace('agg') IS NULL AND to_regnamespace('ops') IS NULL"
         ).fetchone()[0]:
             raise RuntimeError("test DB must be empty")
-        migrate(cls.db)
+        cls.db = fresh(DSN, cls.db)
         cls.store = Store(cls.db)
 
     @classmethod

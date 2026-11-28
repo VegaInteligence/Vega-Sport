@@ -1,0 +1,40 @@
+== Python (python_suites.py python), PostgreSQL 18.6, Node 24.18.0, la branche sans adaptation
+----------------------------------------------------------------------
+Ran 1223 tests in 421.484s
+OK (skipped=9)
+template_base: 191 bases cloned in 57.8 s, template built in 2.6 s
+
+tests sautés (raison, nombre) :
+      4 test_image_identity: 'docker with a running daemon (BuildKit), for the build context'
+      1 test_image_refresh: 'VEGA_IMAGE_REFRESH_BUILDKIT=1 and docker'
+      1 test_schema: 'pgvector extension unavailable in local server'
+      3 test_statement_statistics: "VEGA_V2_PG_CONTAINER (the local server's container) and docker, to read the server's log"
+
+tests de l'aide :
+test_C1_the_builder_runs_once_and_each_clone_starts_from_what_it_built ... ok
+test_C2_another_process_reuses_the_template ... ok
+test_C3_another_key_another_template_and_the_older_one_is_dropped ... ok
+test_C4_a_failed_build_leaves_no_template ... ok
+test_C5_a_session_left_on_the_suite_s_base_does_not_block_the_next_clone ... ok
+test_C6_only_a_suite_s_own_base_on_a_local_server ... ok
+test_C7_two_suites_started_together_build_the_template_once ... ok
+test_F1_a_fresh_base_is_what_the_migrations_leave_on_a_new_one ... ok
+test_F2_the_second_fresh_base_comes_from_the_same_template ... ok
+test_K1_every_applied_file_s_name_and_bytes_and_nothing_of_the_optional_one ... ok
+test_K1_the_real_key_is_the_one_of_the_files_store_migrate_reads ... ok
+
+== API (npm test --prefix backend/api) puis comptes (npm test --prefix backend/account)
+ℹ tests 436
+ℹ pass 436
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ duration_ms 316197.032032
+api status 0
+ℹ tests 110
+ℹ pass 110
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ duration_ms 1781.53918
+account status 0

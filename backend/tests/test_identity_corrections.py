@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from prerequisites import required  # noqa: E402
 from vega import power  # noqa: E402
 from vega.sources import cups, curated, identity  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -48,11 +49,11 @@ def fifteen():
         return list(csv.DictReader(f))
 
 
-def schema(db):
-    from vega.store import Store, migrate
+def schema(previous):
+    """A new base with the identity cases, and its connection (the previous one is closed)."""
+    from vega.store import Store
 
-    db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-    migrate(db)
+    db = fresh(DSN, previous)
     with db.transaction():
         for label in ("1998/1999", "2020/2021", "2024/2025", "2025/2026", "2026/2027"):
             Store(db).season(label)
@@ -81,6 +82,7 @@ def schema(db):
         x(f"SELECT setval(pg_get_serial_sequence('core.{table}', 'id'), 100000)")
     with db.transaction():
         curated.country_names(db)
+    return db
 
 
 def copa_body():
@@ -111,8 +113,7 @@ class Base(unittest.TestCase):
         cls.db.close()
 
     def setUp(self):
-        self.db.execute("RESET ROLE")
-        schema(self.db)
+        type(self).db = schema(self.db)
 
     def x(self, query, args=None):
         return self.db.execute(query, args)

@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from prerequisites import required  # noqa: E402
+from template_base import fresh  # noqa: E402
 
 try:
     import psycopg
@@ -113,14 +114,10 @@ def http(paths):
 class NationMatchCopies(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import connect_local, migrate
-
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_classements_test":
             raise RuntimeError("dedicated local test DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         build(cls.db)
         page, listing = http([f"/api/nations/{TEAMS[ARG][1]}?season={SEASON}", f"/api/nations?season={SEASON}"])
         assert page["status"] == 200 and page["conditional"] == 304, page

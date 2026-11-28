@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import unittest
 from urllib.parse import urlparse
+from template_base import fresh
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -21,14 +22,12 @@ DSN = os.environ.get("VEGA_V2_ROLES_TEST_DSN")
 class RolesTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from vega.store import Store, connect_local, migrate
+        from vega.store import Store
 
         target = urlparse(DSN)
         if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_roles_test":
             raise RuntimeError("dedicated local roles DB required")
-        cls.db = connect_local(DSN)
-        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-        migrate(cls.db)
+        cls.db = fresh(DSN)
         cls.Store = Store
 
     @classmethod

@@ -11,7 +11,8 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega.normalize import normalize_family
-from vega.store import Store, connect_local, migrate
+from vega.store import Store, connect_local
+from template_base import fresh
 
 DSN = os.environ.get("VEGA_V2_CONCURRENCY_TEST_DSN")
 
@@ -31,7 +32,7 @@ class ConcurrentPublicationTest(unittest.TestCase):
             "SELECT to_regnamespace('core') IS NOT NULL OR to_regnamespace('agg') IS NOT NULL OR to_regnamespace('ops') IS NOT NULL"
         ).fetchone()[0]:
             raise RuntimeError("test DB must be empty")
-        migrate(cls.admin)
+        cls.admin = fresh(DSN, cls.admin)
         store = Store(cls.admin)
         league = normalize_family(
             "league", {"id": "l_111111", "name": "League", "season": "2025/2026"}

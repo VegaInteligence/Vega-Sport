@@ -16,6 +16,7 @@ import unittest
 from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
+from template_base import fresh
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -31,11 +32,9 @@ def _connect():
     target = urlparse(DSN)
     if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_agg_test":
         raise RuntimeError("dedicated local agg DB required")
-    from vega.store import Store, connect_local, migrate
+    from vega.store import Store
 
-    db = connect_local(DSN)
-    db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
-    migrate(db)
+    db = fresh(DSN)
     with db.transaction():
         Store(db).season("2025/2026")
     db.execute("INSERT INTO core.countries(code) VALUES ('FRA') ON CONFLICT DO NOTHING")
