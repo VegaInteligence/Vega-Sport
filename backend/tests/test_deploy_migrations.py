@@ -81,7 +81,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # GH278 S1 (#278): the provider value opta, alone in its file.
          "185_core_provider_opta.sql",
          # GH278 S1: score observations, their batches and the selected pair; three functions, no column of core.matches.
-         "186_match_score_observations.sql"]
+         "186_match_score_observations.sql",
+         # GH278 S3: observation sets and their revisions, Opta's detailed actions stored once (four tables, two views).
+         "187_match_action_sets.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
