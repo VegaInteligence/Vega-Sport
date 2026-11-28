@@ -2,7 +2,10 @@
 // connection closed is sent once more.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { EventEmitter } from "node:events";
 import { PLANNER_SETTINGS, createReader } from "../src/db.mjs";
+import { gate, lose, standIn, until } from "./pg-stand-in.mjs";
 
 /** A pool that answers each statement with the next outcome of a list. */
 function fakePool(outcomes) {
@@ -14,25 +17,21 @@ function fakePool(outcomes) {
     on(event, listener) {
       state.listeners[event] = listener;
     }
-    async query(sql, values) {
-      state.sent.push([sql, values]);
-      const outcome = outcomes.shift();
-      if (outcome instanceof Error) throw outcome;
-      return { rows: outcome };
-    }
-    // One connection of the pool: its statements are recorded as sent on it, and how it
-    // was given back.
-    async connect() {
-      const client = {
-        query: async (sql, values) => {
+    // One connection of the pool, given to the callback as pg-pool gives it (GH140: the
+    // reader takes its connections itself): its statements are recorded as sent on it,
+    // and how it was given back.
+    connect(callback) {
+      const client = Object.assign(new EventEmitter(), {
+        query: (sql, values, done) => {
           state.sent.push(values === undefined ? [sql] : [sql, values]);
           const outcome = outcomes.shift();
-          if (outcome instanceof Error) throw outcome;
-          return { rows: outcome };
+          const answer = outcome instanceof Error ? Promise.reject(outcome) : Promise.resolve({ rows: outcome });
+          if (!done) return answer;
+          answer.then((result) => done(null, result), done);
         },
         release: (error) => state.released.push(error ?? null),
-      };
-      return client;
+      });
+      queueMicrotask(() => callback(undefined, client, client.release));
     }
     end() {}
   }
@@ -138,4 +137,124 @@ test("the base closes a session left idle, when asked to; a statement that found
   ({ Pool, state } = fakePool([full, [{ n: 1 }]]));
   await assert.rejects(createReader("postgresql://reader@localhost/base", { Pool }).read("SELECT 1"), full);
   assert.equal(state.sent.length, 1);
+});
+
+// GH140 (FAILURE_MODES_OPTIMISATIONS.md, written before these tests): the connections a statement's checkouts open, told
+// to the statement that asked (`opened(first)`), on pg-pool's own pool over a stand-in for pg's client (pg-stand-in.mjs).
+const DSN = "postgresql://reader@localhost/base";
+const reset = () => Object.assign(new Error("read ECONNRESET"), { code: "ECONNRESET" });
+const refusedStatement = () => Object.assign(new Error("canceling statement due to statement timeout"), { severity: "ERROR", code: "57014" });
+const PLANNED = ["BEGIN", "SET LOCAL enable_nestloop = off"];
+/** One reader of the stand-in, ended after the test (pg-pool keeps an idle connection's timer until then). */
+function reading(t, answer) {
+  const { Pool, base } = standIn(answer);
+  const reader = createReader(DSN, { Pool, max: 1 });
+  t.after(() => void reader.end().catch(() => {}));
+  const read = async (sql) => {
+    const told = [];
+    const rows = await reader.read(sql, [], { opened: (first) => told.push(first) });
+    return { rows, told };
+  };
+  return { reader, base, read };
+}
+
+test("GH140-a, b, d, e: the pool's first connection, a kept one, one the base closed while idle, one lost under a statement", async (t) => {
+  let next = null;
+  const { base, read } = reading(t, () => {
+    const outcome = next ?? [{ n: 1 }];
+    next = null;
+    return outcome;
+  });
+  assert.deepEqual(await read("SELECT 1"), { rows: [{ n: 1 }], told: [true] }, "a: the copy's first statement");
+  assert.deepEqual(await read("SELECT 2"), { rows: [{ n: 1 }], told: [] }, "b: the connection kept");
+  // d: the base ends the session left idle; its FATAL reaches the pool while the connection is idle in it.
+  base.clients[0].lose(Object.assign(new Error("terminating connection due to idle-session timeout"), { severity: "FATAL", code: "57P05" }));
+  assert.deepEqual(await read("SELECT 3"), { rows: [{ n: 1 }], told: [false] }, "d: a later connection");
+  // e: the connection dies under the statement, which is sent once more on a new one.
+  next = lose(reset());
+  assert.deepEqual(await read("SELECT 4"), { rows: [{ n: 1 }], told: [false] }, "e: the retry's connection");
+  assert.deepEqual(base.sent, [[1, "SELECT 1"], [1, "SELECT 2"], [2, "SELECT 3"], [2, "SELECT 4"], [3, "SELECT 4"]]);
+});
+
+test("GH140-e: the copy's first statement, lost under it or ended by the base (57P05): both connections its own", async (t) => {
+  const idle = Object.assign(new Error("terminating connection due to idle-session timeout"), { severity: "FATAL", code: "57P05" });
+  for (const failure of [lose(reset()), idle]) {
+    let first = true;
+    const { base, read } = reading(t, () => (first ? ((first = false), failure) : [{ n: 1 }]));
+    assert.deepEqual(await read("SELECT 1"), { rows: [{ n: 1 }], told: [true, false] });
+    assert.deepEqual(base.sent, [[1, "SELECT 1"], [2, "SELECT 1"]]);
+    assert.deepEqual(base.clients.map((c) => c.ended), [1, 0], "the first connection dropped");
+  }
+});
+
+test("GH140-f, g: a statement waiting behind another's is told of the connection opened for it inside the other's callback", async (t) => {
+  for (const plan of [[], ["hashJoins"]]) {
+    const held = gate();
+    const refused = refusedStatement();
+    const { Pool, base } = standIn((sql) => (sql === "SELECT 'a'" ? held.then(() => refused) : [{ n: 2 }]));
+    // The async context each "connect" of the pool is emitted in: what the reader must not count by.
+    const asking = new AsyncLocalStorage(), contexts = [];
+    class Watched extends Pool {
+      constructor(options) {
+        super(options);
+        this.on("connect", () => contexts.push(asking.getStore()));
+      }
+    }
+    const reader = createReader(DSN, { Pool: Watched, max: 1 });
+    t.after(() => void reader.end().catch(() => {}));
+    const a = [], b = [];
+    const first = asking.run("A", () => reader.read("SELECT 'a'", [], { opened: (x) => a.push(x) }));
+    const second = asking.run("B", () => reader.read("SELECT 'b'", [], { plan, opened: (x) => b.push(x) }));
+    // A's statement holds the one connection; B waits in the pool's queue.
+    await until(() => base.sent.length === 1);
+    assert.deepEqual([a, b], [[true], []]);
+    held.open();
+    await assert.rejects(first, refused);
+    assert.deepEqual(await second, [{ n: 2 }]);
+    assert.deepEqual([a, b], [[true], [false]], plan.join() || "ordinary");
+    assert.deepEqual(contexts, ["A", "A"], "B's connection is opened inside A's callback, in A's async context");
+    const own = plan.length ? [...PLANNED, "SELECT 'b'", "COMMIT"] : ["SELECT 'b'"];
+    assert.deepEqual(base.sent, [[1, "SELECT 'a'"], ...own.map((sql) => [2, sql])]);
+    assert.deepEqual(base.clients.map((c) => c.ended), [1, 0], "A's connection dropped after its failure");
+  }
+});
+
+test("GH140-h, i: a connection lost under a statement while another waits: heard, dropped once, the retry's opening its own", async (t) => {
+  for (const plan of [["hashJoins"], []]) {
+    let lost = false;
+    const { reader, base } = reading(t, (sql) => (sql === "SELECT 'a'" && !lost ? ((lost = true), lose(reset())) : [{ n: 3 }]));
+    const a = [], b = [];
+    const first = reader.read("SELECT 'a'", [], { plan, opened: (x) => a.push(x) });
+    const second = reader.read("SELECT 'b'", [], { opened: (x) => b.push(x) });
+    assert.deepEqual([await first, await second], [[{ n: 3 }], [{ n: 3 }]]);
+    // pg-pool opens a connection for whoever asks while it has room: A's retry, before B, which reuses it after A.
+    assert.deepEqual([a, b], [[true, false], []], plan.join() || "ordinary");
+    const statements = plan.length ? [...PLANNED, "SELECT 'a'"] : ["SELECT 'a'"];
+    assert.deepEqual(base.sent, [...statements.map((sql) => [1, sql]), ...(plan.length ? [...statements, "COMMIT"] : statements).map((sql) => [2, sql]), [2, "SELECT 'b'"]]);
+    // The planned statement's ROLLBACK was tried on the dead connection, which refused it before the base.
+    assert.deepEqual(base.unsent, plan.length ? [[1, "ROLLBACK"]] : []);
+    assert.deepEqual(base.clients.map((c) => c.ended), [1, 0], "the dead connection dropped once");
+  }
+});
+
+test("GH140-j: a connection the base refuses is no opening, and the statement is not sent again", async (t) => {
+  const { reader, base, read } = reading(t, () => [{ n: 1 }]);
+  base.refuse = Object.assign(new Error("too many connections for role"), { severity: "FATAL", code: "53300" });
+  const told = [];
+  await assert.rejects(reader.read("SELECT 1", [], { opened: (first) => told.push(first) }), base.refuse);
+  assert.deepEqual([told, base.attempts, base.sent], [[], 1, []]);
+  // The base takes it again: the pool's first connection is its first that opened.
+  base.refuse = null;
+  assert.deepEqual(await read("SELECT 1"), { rows: [{ n: 1 }], told: [true] });
+});
+
+test("GH140-k: a count that throws takes no statement with it", async (t) => {
+  const { reader, base } = reading(t, () => [{ n: 1 }]);
+  const broken = () => {
+    throw new Error("count unavailable");
+  };
+  assert.deepEqual(await reader.read("SELECT 1", [], { plan: ["hashJoins"], opened: broken }), [{ n: 1 }]);
+  assert.deepEqual(await reader.read("SELECT 2", [], { opened: broken }), [{ n: 1 }]);
+  // Both on the one connection, given back after each.
+  assert.deepEqual(base.sent, [...PLANNED, "SELECT 1", "COMMIT", "SELECT 2"].map((sql) => [1, sql]));
 });

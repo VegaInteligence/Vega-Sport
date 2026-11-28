@@ -149,7 +149,10 @@ process.stdout.write(JSON.stringify(out));
 """
 
 
-@required(NODE is not None, "node is needed to produce the read API's real log lines")
+@required(
+    NODE is not None and (ROOT / "backend/api/node_modules/pg").is_dir(),
+    "requires node and backend/api/node_modules to produce the read API's log lines",
+)
 class FilterPatternTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

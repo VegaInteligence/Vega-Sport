@@ -72,6 +72,9 @@ export function createHandler({ read: query, mediaBase = null, clock = Date.now,
     const request = spent.getStore(),
       started = performance.now();
     try {
+      // GH140: the statement carries its own request's count of the connections opened for it
+      // (the reader tells the request that asked, whichever request's callback opens it).
+      if (request?.opened) args = [args[0], args[1], { ...args[2], opened: request.opened }];
       return await query(...args);
     } finally {
       if (request) {
@@ -112,8 +115,14 @@ export function createHandler({ read: query, mediaBase = null, clock = Date.now,
     }
   }
   return async function handleRequest(req) {
-    const request = { db: 0, queries: 0 },
+    const request = { db: 0, queries: 0, opens: 0, reopens: 0 },
       started = performance.now();
+    // GH140: the connections the request's statements opened, for its line only (no log, no count).
+    if (log)
+      request.opened = (first) => {
+        request.opens++;
+        if (!first) request.reopens++;
+      };
     const response = await spent.run(request, () => answer(req));
     const total = performance.now() - started;
     const ms = (value) => (Math.round(value * 10) / 10).toFixed(1);
@@ -126,9 +135,23 @@ export function createHandler({ read: query, mediaBase = null, clock = Date.now,
     // not answer by itself, what they cost, and how many only ask "unchanged?"
     // (`conditional`). The path alone, never the query; its route (`other` for a path no
     // route serves), which alerts.yaml's rule counts the 5xx answers by (GH204).
+    // GH140 records each connection opened for the request, including openings on retry.
     try {
       const path = pathOf(req);
-      log?.(JSON.stringify({ request: "read", path, route: request.unclaimed ? "other" : routeFamily(path), status: response.status, ms: Number(ms(total)), db: Number(ms(request.db)), queries: request.queries, conditional: req.headers.has("if-none-match") }));
+      log?.(JSON.stringify({
+        request: "read",
+        path,
+        route: request.unclaimed ? "other" : routeFamily(path),
+        status: response.status,
+        ms: Number(ms(total)),
+        db: Number(ms(request.db)),
+        queries: request.queries,
+        conditional: req.headers.has("if-none-match"),
+        connect: request.opens > 0,
+        reconnect: request.reopens > 0,
+        dbOpens: request.opens,
+        dbReopens: request.reopens,
+      }));
     } catch {
       /* a log that fails takes no answer with it */
     }

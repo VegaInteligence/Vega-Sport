@@ -1,8 +1,8 @@
 // Contract tests of the ranking catalogue (relational-catalog.js on main).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { get, skip } from "./context.mjs";
-import { comingMatches, cupFormat, cupStages, groupsByTeam, levelReason, levelsByTeam, powerRow, provisionalReason, roundOpponents, roundRace, RACE_CARD } from "../src/routes/rankings.mjs";
+import { context, counting, get, skip } from "./context.mjs";
+import { comingMatches, cupFormat, cupStages, groupsByTeam, levelReason, levelsByTeam, LIVE_SQL, powerRow, provisionalReason, roundOpponents, roundRace, RACE_CARD } from "../src/routes/rankings.mjs";
 
 test("club links and a club's UEFA ranking history", { skip }, async () => {
   const links = (await get("/api/club-links?club=t_aaaaa1")).body;
@@ -449,6 +449,43 @@ test("a match that went to extra time, minute by minute", { skip }, async () => 
   assert.deepEqual([plain.points.length, "extraTime" in plain, "penalties" in plain], [91, false, false]);
   const inPlay = await live("m_live91");
   assert.deepEqual([inPlay.status, inPlay.points.length, "extraTime" in inPlay, inPlay.points[90].score], ["in_play", 91, false, [1, 1]]);
+});
+
+// GH141-k–n (FAILURE_MODES_OPTIMISATIONS.md, written before these tests): the data version, then one statement; for a
+// match that cannot be read, nothing of the body is scanned.
+const planNodes = (plan) => [plan, ...(plan.Plans || []).flatMap(planNodes)];
+const explained = async (id) => {
+  const [{ "QUERY PLAN": [{ Plan }] }] = await context.reader.read(`EXPLAIN (ANALYZE, FORMAT JSON) ${LIVE_SQL}`, [id]);
+  return planNodes(Plan).filter((n) => /^(forecast_models|inplay_models|match_lineup_forecasts|match_events|match_momentum)/.test(n["Relation Name"] || ""));
+};
+
+test("GH141-k–n: a match minute by minute in the version and one statement; nothing of the body read for an unknown match", { skip }, async () => {
+  const ask = counting();
+  for (const id of ["m_aaaaa1", "m_aaaaa6", "m_xtime1", "m_xtime2", "m_xtime3", "m_shoot1", "m_shoot2", "m_stop90", "m_live91"]) {
+    const r = await ask(`/api/forecasts/live?match=${id}`);
+    assert.deepEqual([r.status, r.statements.length], [200, 2], id);
+    assert.match(r.statements[0], /api\.data_version\(/, id);
+    const held = await ask(`/api/forecasts/live?match=${id}`, { "if-none-match": r.etag });
+    assert.deepEqual([held.status, held.etag, held.cache, held.statements.length], [304, r.etag, r.cache, 1], `${id}: its tag`);
+  }
+  // k: the model's date, the typed column's; its other fields and the coefficients' type as before.
+  const [model] = await context.reader.read("SELECT version, fitted_at, matches FROM api.inplay_models ORDER BY fitted_at DESC, id DESC LIMIT 1");
+  const { body } = await get("/api/forecasts/live?match=m_aaaaa1");
+  assert.deepEqual(body.model, { version: model.version, fittedAt: model.fitted_at.toISOString(), matches: model.matches });
+  assert.deepEqual([typeof body.rho, body.lineups], ["number", true]);
+  assert.ok(body.events.length && body.events.every((e) => Object.keys(e).join() === "minute,added,kind,side" && Number.isInteger(e.minute) && Number.isInteger(e.added)));
+  // m: an unknown match, a 404 after the version and one statement; a malformed id, a 400 without any.
+  const unknown = await ask("/api/forecasts/live?match=m_zzzzzz");
+  assert.deepEqual([unknown.status, unknown.statements.length], [404, 2]);
+  const malformed = await ask("/api/forecasts/live?match=1");
+  assert.deepEqual([malformed.status, malformed.statements.length], [400, 0]);
+  // m: none of the body's relations scanned for the unknown match; for a match in play, its season's partitions only.
+  const skipped = await explained("m_zzzzzz");
+  assert.ok(skipped.length >= 4, "the plan names the body's relations");
+  assert.deepEqual(skipped.filter((n) => n["Actual Loops"] > 0).map((n) => n["Relation Name"]), []);
+  const read = (await explained("m_live91")).filter((n) => n["Actual Loops"] > 0).map((n) => n["Relation Name"]);
+  for (const table of ["match_events", "match_momentum"])
+    assert.equal(new Set(read.filter((name) => name.startsWith(table))).size, 1, `${table}: one partition scanned (${read})`);
 });
 
 test("the season's breakouts, and a player's own flag", { skip }, async () => {

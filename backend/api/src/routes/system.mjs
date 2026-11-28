@@ -1,9 +1,11 @@
 /**
  * /api/health, /api/status and /api/dashboard/manifest in the legacy shapes
  * (aws-app.js and relational-core.js on main), read from api.publication,
- * api.editions, api.competitions and api.team_countries.
+ * api.editions, api.competitions and api.team_countries (the manifest in one statement,
+ * GH141; its HEAD and revalidations from the publication alone first).
  */
 import { createHash } from "node:crypto";
+import { timestamp } from "../db.mjs";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 
 const CONSTANT_HEADERS = {
@@ -68,6 +70,21 @@ const SCHEMA_VERSION = 5;
 export const manifestShape = (schemaVersion, capabilities) => digest(JSON.stringify([schemaVersion, capabilities])).slice(0, 12);
 const manifestTag = (req, version) => tag(req, `manifest|${manifestShape(SCHEMA_VERSION, CAPABILITIES)}|${version}`);
 
+const PUBLICATION_SQL = "SELECT generation::text AS version, published_at FROM api.publication";
+/** The manifest's publication and its three lists in one statement, so one snapshot: the
+ * lists are those of the publication they are served with (GH141). Each edition is the row
+ * the editions statement gave, its watermark as its text (parsed by the reader's own
+ * timestamp parser below: the typed column's Date) and its dates as their text. */
+const MANIFEST_SQL = `SELECT p.generation::text AS version, p.published_at,
+  (SELECT coalesce(json_agg(json_build_object('season',e.season,'league_id',e.league_id,'start_date',e.start_date::text,
+     'end_date',e.end_date::text,'match_count',e.match_count,'finished_count',e.finished_count,'collected_count',e.collected_count,
+     'team_count',e.team_count,'retrieved_at',e.retrieved_at::text) ORDER BY e.season DESC,e.league_id),'[]'::json)
+   FROM api.editions e) AS editions,
+  (SELECT coalesce(json_agg(json_build_object('id',c.id,'name',c.name,'country',c.country,'image_url',c.image_url,'seasons',c.seasons)
+     ORDER BY c.name,c.id),'[]'::json) FROM api.competitions c) AS competitions,
+  (SELECT coalesce(json_agg(json_build_array(t.team_id,t.country)),'[]'::json) FROM api.team_countries t) AS countries
+  FROM api.publication p`;
+
 /** The latest season already started: a calendar published ahead (a league's next
  * calendar year) is not the default. */
 export function defaultSeason(seasons, today) {
@@ -95,18 +112,22 @@ export function createSystemRoute(read) {
     }
     if (path !== "/api/dashboard/manifest") return null;
     validateParams(params, ["v"]);
-    const [state] = await read("SELECT generation::text AS version, published_at FROM api.publication");
+    // A HEAD, or a request holding a tag, asks the publication alone first: unchanged, that
+    // one statement answers it.
+    if (req.method === "HEAD" || req.headers.get("if-none-match")) {
+      const [state] = await read(PUBLICATION_SQL);
+      if (!state) reject(503, "Publication indisponible.");
+      const etag = manifestTag(req, state.version);
+      if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag))
+        return send(req, null, 200, { etag, ttl: 15 });
+    }
+    const [state] = await read(MANIFEST_SQL);
     if (!state) reject(503, "Publication indisponible.");
+    // The tag of the publication the lists were read with, which may be newer than the
+    // one checked above.
     const etag = manifestTag(req, state.version);
-    if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag))
-      return send(req, null, 200, { etag, ttl: 15 });
-    const [editions, competitions, countries] = await Promise.all([
-      read(`SELECT season, league_id, start_date, end_date, match_count, finished_count, collected_count, team_count, retrieved_at
-            FROM api.editions ORDER BY season DESC, league_id`),
-      read("SELECT id, name, country, image_url, seasons FROM api.competitions ORDER BY name, id"),
-      read("SELECT team_id, country FROM api.team_countries"),
-    ]);
-    const catalog = competitions.map((c) => ({
+    const editions = state.editions.map((p) => ({ ...p, retrieved_at: timestamp(p.retrieved_at) }));
+    const catalog = state.competitions.map((c) => ({
       id: c.id,
       name: c.name,
       country: c.country,
@@ -143,7 +164,7 @@ export function createSystemRoute(read) {
         publicationVersion: state.version,
         seasons: [...seasons.values()],
         competitions: catalog,
-        clubCountries: Object.fromEntries(countries.map((r) => [r.team_id, r.country])),
+        clubCountries: Object.fromEntries(state.countries),
         scouting: { version: 2, sourceDigest: state.version },
       },
       200,

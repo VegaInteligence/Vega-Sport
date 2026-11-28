@@ -26,6 +26,11 @@ tests:
 
 - **GH138** (VI-78): the club dossier's history, its shots and its appearances in one read per page.
 
+Two optimizations were added on 28 November 2026.
+
+- **GH140** step 1 (VI-80) counts database openings by request.
+- **GH141** (VI-81) groups the SQL reads for the manifest, pass networks and live forecasts.
+
 A first version of these sections was numbered 62 to 64 in the shared register; the review of 25 Nov 2026 (19:29 Paris)
 asked for these names and for the corrections marked « review » below, each written here before its test changed.
 
@@ -1635,3 +1640,63 @@ Chromium run.
 ### GH139-l — Refresh the chances from the current club summary
 
 On focus after the cache lifetime, the existing summary revalidates even when the publication is unchanged. The upcoming card takes a forecast field from that summary for the same club and season. An explicit null or a refreshed status other than not_started clears the chances. An upcoming fixture with a missing field keeps the dossier or its legacy fallback. Match order and the club's side still come from the dossier. The existing summary refresh supplies the new values in one read.
+
+## GH140. PostgreSQL openings per API request (GH #140, VI-80)
+
+On 28 November 2026, 160 request records from the deployed API contained `ms`, `db` and `queries` but no opening
+counts. Each Lambda runtime keeps one connection. PostgreSQL ends an idle session after 120 seconds (VI-33).
+
+`connect` means the request opened at least one PostgreSQL connection. `reconnect` means at least one opening came
+after the first successful connection of this runtime's pool. `dbOpens` and `dbReopens` count all such openings,
+including the opening on a retry. The first-opening count is `dbOpens - dbReopens`.
+
+The reader marks each client when pg-pool emits `connect`. The request that receives that client consumes the mark
+at checkout. This keeps the count on the right request when a queued checkout starts in another request's callback.
+Query errors release or discard the connection according to the original rules. A lost connection can still trigger
+one retry. `db` includes setup, waiting and SQL execution. A reopening can follow any dropped connection.
+
+| Case | Expected result |
+|---|---|
+| GH140-a, b | First opening reports true, false, 1, 0. Reuse reports false, false, 0, 0. |
+| GH140-c, d | A route without SQL reports zero openings. After PostgreSQL ends an idle session, the next request reports true, true, 1, 1. |
+| GH140-e | The first query loses its connection and succeeds on retry. Both openings belong to that request. |
+| GH140-f, g | A fails with 57014 while B is queued. B owns the reopening for both an ordinary and a planned statement. |
+| GH140-h, i | An active connection fails. The error is handled, the pool discards it once and the retry reports the opening for its own request. |
+| GH140-j | A failed opening with 53300 counts zero and is returned without a retry. |
+| GH140-k, l | A failing diagnostic leaves the response intact. The log adds four booleans or integers to its existing fields and uses the path without query parameters. |
+
+The connection tests use `db.test.mjs` and `edge.test.mjs`. The CloudWatch query in `infra/aws/README.md` compares
+reconnection frequency on busy and quiet periods after deployment.
+
+## GH141. Grouped SQL reads for the manifest, pass networks and live forecasts (GH #141, VI-81)
+
+| Request | Before | After |
+|---|---:|---:|
+| Complete manifest GET | 4 | 1 |
+| Manifest with an old ETag | 4 | 2 |
+| Manifest HEAD or current ETag | 1 | 1 |
+| Complete pass network GET, including fixture and coverage | 4 | 2 |
+| Network HEAD, current ETag or missing match | 1 | 1 |
+| Live forecast for an eligible match, including data version | 7 | 2 |
+| Live forecast with current ETag | 1 | 1 |
+| Live forecast with missing or invalid match ID | 2 or 0 | 2 or 0 |
+
+The manifest's complete statement returns the publication and three lists in one snapshot. When a stale ETag leads
+to a second read, the returned snapshot determines the ETag. Edition and competition ordering, dates, digests,
+capabilities and freshness follow the existing API contract. The pass network uses the fixture's season and match
+to read teams, nodes and edges. The live forecast reads the model and match data from an eligible strengths row.
+The event and clock reads use the row's season and match. The strict data version declaration covers all relations.
+
+| Case | Expected result |
+|---|---|
+| GH141-a to c | Complete GET returns the same manifest. HEAD and conditional hits remain cheap. A stale tag yields the current manifest. |
+| GH141-d, e | If a publication arrives between reads, the body and tag use its generation. A missing publication yields 503. |
+| GH141-f, g | Date strings and edition digests agree with native PostgreSQL reads, including sub-millisecond timestamps and non-UTC offsets. Empty lists keep their API shape. |
+| GH141-h to j | The collected match's network matches the original body and tag. HEAD, 304 and missing coverage keep the existing paths. Reals and nulls retain their serialized values. |
+| GH141-k, l | Finished, upcoming and live forecasts agree with the original bodies, including lineups, extra time and penalties. |
+| GH141-m, n | An unknown or ineligible match yields 404. A malformed ID yields 400 before SQL. A matching forecast ETag yields 304 after the data version read. |
+
+The contract tests use the seeded PostgreSQL database in `read-api.test.mjs`, `match-families.test.mjs` and
+`rankings.test.mjs`. Verify query counts, response status, body, ETag and Cache-Control on the original and
+grouped reads. Inspect the live forecast's execution plan for eligible, missing and ineligible matches. The last two
+cases leave the model, lineup, clock and event scans unused.
