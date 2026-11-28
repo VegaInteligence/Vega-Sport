@@ -58,10 +58,20 @@
 //  K13 (themes) Dark and light: the names contrast with the card (≥ 4.5), the injury sign is visible (≥ 1.5)
 //     and the card's background follows the theme.
 //
+// The dossier's history (GH138, docs/calculs/09-audit-2026-11/FAILURE_MODES_OPTIMISATIONS.md), written before the change,
+// on a desktop: every /api/read/club request of the page that names an `include` is recorded with its answer.
+//  D1 (one read per page) They all name `include=appearances,shots` (none `shots` or `appearances` alone), one per page:
+//     pages 1 to N once each, N the first answer's `pagination.pages`, every one answered 200 (four requests for PSG on
+//     28 Nov 2026 before the change, two per family).
+//  D2 (scope) Each names the page's season, the club, `leagues=all` and 25 a page; their fixtures are the total, each
+//     once; every page after the first names the first's version (`v`) or its publication (`generation`).
+//  D3 (both families shown) « Prochains matchs » lists the earliest matches to come of those fixtures, in order (six at
+//     most), « Derniers matchs » played ones; the « Effectif » tab's « Temps de jeu et contributions » table has rows.
+//
 // Run (local front against the API it proxies, or the public site):
 //   node tests/e2e/club-page.e2e.mjs <base url> <evidence dir> [api origin]
 // e.g. node tests/e2e/club-page.e2e.mjs http://127.0.0.1:3011 /tmp/club-e2e http://127.0.0.1:8765
-// ONLY=K runs the absents' checks alone (ONLY unset: everything).
+// ONLY=K runs the absents' checks alone, ONLY=D the dossier's reads, ONLY=K,D both (ONLY unset: everything).
 // Images asked from the CDN are served from the API origin given. It writes evidence.json (setup,
 // inputs, expected, actual, console) and screenshots into the evidence dir; exit code 1 on a failure.
 import { createRequire } from "node:module";
@@ -78,6 +88,8 @@ const require = createRequire(import.meta.url);
 const { chromium, devices } = require(process.env.PLAYWRIGHT_CORE || "playwright");
 
 const results = [], consoleLog = [];
+// The dossier's history reads of D1–D3, for the evidence.
+let dossierReads = null;
 const check = (id, expected, actual, ok) => {
   results.push({ id, expected, actual, ok: Boolean(ok) });
   console.log(ok ? "PASS" : "FAIL", id, "—", JSON.stringify(actual));
@@ -104,10 +116,12 @@ async function context(options, hold = null) {
   return ctx;
 }
 const clubUrl = (query = {}) => `${base}/clubs/?${new URLSearchParams({ season, id: club.id, ...query })}`;
-async function open(ctx, url, tag) {
+async function open(ctx, url, tag, watch = null) {
   const page = await ctx.newPage();
   page.on("console", (m) => m.type() === "error" && !/Failed to load resource/.test(m.text()) && consoleLog.push(`[${tag}] ${m.text()}`));
   page.on("pageerror", (e) => consoleLog.push(`[${tag}] pageerror ${e.message}`));
+  // Listeners that must see the page's first requests.
+  watch?.(page);
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 120000 });
   return page;
 }
@@ -342,6 +356,78 @@ if (want("K")) {
     themes.dark && themes.light && themes.dark.theme === "dark" && themes.light.theme === "light" && themes.dark.bg !== themes.light.bg
       && ["dark", "light"].every((t) => ratio(t).name >= 4.5 && ratio(t).sign >= 1.5));
   if (ONLY.length && ONLY.every((s) => s === "K")) await finish();
+}
+
+// ---------------------------------------------------------------- D: the dossier's history reads (GH138)
+if (want("D")) {
+  const history = [];
+  const ctx = await context({ viewport: { width: 1440, height: 900 } });
+  const page = await open(ctx, clubUrl(), "dossier", (page) => {
+    page.on("request", (request) => {
+      const u = new URL(request.url());
+      if (u.pathname === "/api/read/club" && u.searchParams.has("include")) history.push({ request, query: Object.fromEntries(u.searchParams), status: null });
+    });
+    page.on("response", async (response) => {
+      const read = history.find((r) => r.request === response.request());
+      if (!read) return;
+      read.status = response.status();
+      read.body = response.json().then(
+        (body) => ({
+          meta: { generation: body.meta?.generation ?? null, version: body.meta?.version ?? null },
+          pagination: body.pagination || null,
+          fixtures: (body.data?.fixtures || []).map((f) => ({ id: f.id, status: f.status, at: f.time_utc || f.date })),
+          matches: (body.data?.matches || []).length,
+          appearances: (body.data?.appearances || []).length,
+        }),
+        (error) => ({ error: String(error).slice(0, 200) }),
+      );
+    });
+  });
+  await page.getByRole("heading", { level: 1, name: club.name }).waitFor({ timeout: 60000 });
+  await settled(page);
+  await page.getByText("Points / match").first().waitFor({ timeout: 60000 }).catch(() => {});
+  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+  for (const read of history) Object.assign(read, await (read.body || { error: "no answer" }));
+  const attempts = history.map(({ request, body, ...read }) => read);
+  dossierReads = attempts;
+  const lastConflict = attempts.findLastIndex((r) => r.status === 409);
+  const start = lastConflict < 0 ? 0 : attempts.findIndex((r, i) => i > lastConflict && Number(r.query.page || 1) === 1);
+  const reads = start < 0 ? [] : attempts.slice(start).filter((r) => r.status === 200);
+  const first = reads.find((r) => r.query.page === "1" || !r.query.page);
+  const pages = first?.pagination?.pages ?? null, total = first?.pagination?.total ?? null;
+  const asked = reads.map((r) => Number(r.query.page || 1)).sort((a, b) => a - b);
+  check("D1 the history in one read per page, the shots and the appearances together",
+    { include: ["appearances,shots"], pages: pages ?? "the first answer's", asked: pages ? Array.from({ length: pages }, (_, i) => i + 1) : "1…N", statuses: "200 and recoverable retries" },
+    { include: [...new Set(attempts.map((r) => r.query.include))], pages, asked, statuses: [...new Set(attempts.map((r) => r.status))], requests: attempts.length },
+    reads.length > 0 && attempts.every((r) => r.query.include === "appearances,shots" && [200, 409, 502, 503, 504].includes(r.status))
+      && pages === reads.length && asked.every((p, i) => p === i + 1));
+  const fixtures = reads.flatMap((r) => r.fixtures || []);
+  const fenced = reads.filter((r) => r !== first).every((r) => (first?.meta?.version && r.query.v === first.meta.version)
+    || (first?.query.generation && r.query.generation === first.query.generation));
+  const scoped = reads.every((r) => r.query.season === season && r.query.team === club.id && r.query.leagues === "all" && r.query.limit === "25");
+  check("D2 the page's scope, every fixture once, the next pages fenced by the first", { scoped: true, fixtures: total ?? "the total", once: true, fenced: true },
+    { scoped, fixtures: fixtures.length, once: new Set(fixtures.map((f) => f.id)).size === fixtures.length, fenced, version: first?.meta?.version ?? null, generation: first?.query.generation ?? null },
+    reads.length > 0 && scoped && fixtures.length === total && new Set(fixtures.map((f) => f.id)).size === fixtures.length && fenced);
+  // The card itself: the last section holding its title (a section holding the card comes before it).
+  const card = (title) => page.locator("#club-profile-panel section").filter({ has: page.getByRole("heading", { name: new RegExp(`^${title}`) }) }).last();
+  const linked = (title, tab) => card(title).locator(`a[href*='tab=${tab}']`).evaluateAll((links) => links.map((a) => new URL(a.href).searchParams.get("id")));
+  const upcoming = await linked("Prochains matchs", "upcoming").catch(() => []);
+  const played = await linked("Derniers matchs", "results").catch(() => []);
+  // Each fixture once (the two families each held it before the change), chosen and ordered as the page does
+  // (upcomingClubMatches: to come, kick-off at most 3 h ago, by kick-off).
+  const next = [...new Map(fixtures.map((f) => [f.id, f])).values()]
+    .filter((f) => f.status === "not_started" && !(Date.parse(f.at || "") < Date.now() - 3 * 3600000))
+    .sort((a, b) => String(a.at).localeCompare(String(b.at))).slice(0, 6).map((f) => f.id);
+  await shot(page, "dossier-overview", false);
+  await openTab(page, "Effectif");
+  const squadRows = await card("Temps de jeu et contributions").locator("tbody tr").count().catch(() => 0);
+  await shot(page, "dossier-squad", false);
+  check("D3 the matches to come and the played ones side by side, the squad's table filled", { upcoming: next, played: "≥ 1", squadRows: "≥ 1" },
+    { upcoming, played: played.length, squadRows },
+    JSON.stringify(upcoming) === JSON.stringify(next) && played.length > 0 && squadRows > 0);
+  await page.close();
+  await ctx.close();
+  if (ONLY.length && ONLY.every((s) => ["K", "D"].includes(s))) await finish();
 }
 
 // ---------------------------------------------------------------- desktop: inset and clicks
@@ -581,6 +667,7 @@ async function finish() {
     ranAt: new Date().toISOString(), base, api, club, nation, season, other, only: ONLY,
     rerun: `${ONLY.length ? `ONLY=${ONLY.join(",")} ` : ""}node tests/e2e/club-page.e2e.mjs ${base} ${out} ${api}`,
     absences: want("K") ? { served: "tests/e2e/support/absences.mjs", psg: psgAnswer(), two: twoAnswer(), many: manyAnswer() } : undefined,
+    dossierReads: dossierReads ?? undefined,
     results, console: consoleLog, passed: results.length - failed.length, failed: failed.length,
   }, null, 1));
   console.log(`${results.length - failed.length}/${results.length} passed — evidence in ${out}`);

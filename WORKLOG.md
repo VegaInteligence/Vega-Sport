@@ -1,5 +1,14 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Lecture paginée de la fiche club — GH138 (28 novembre 2026)
+
+- [Vega-Sport #138](https://github.com/VegaInteligence/Vega-Sport/issues/138) et [VI-78](https://linear.app/vegainteligence/issue/VI-78) sont suivis sur la branche codex/vega-sport-138-club-read-20261128. Sol coordonne le travail et l'intégration.
+- La fiche charge les tirs et les apparitions ensemble, une fois par page. Les pages gardent leur limite de 25 rencontres. Les lectures combinées de 50 ont renvoyé PAGE_TOO_LARGE sur le PSG en 2024/25 et en 2025/26.
+- Dans Chromium avec la même génération publiée (25853217), le PSG 2026/27 passe de quatre requêtes historiques à deux. Les réponses contiennent les mêmes 42 rencontres, 16 matchs détaillés et 333 apparitions. Le calendrier affiche les prochains matchs. Le rapport serveur utilise sa lecture dédiée aux apparitions.
+- La revue Fable a motivé un repli sur les deux lectures d'origine lorsque l'API renvoie 413 PAGE_TOO_LARGE. Le test GH138-e échoue avant le repli, puis passe avec le calendrier, les résultats et les apparitions complets. Le test navigateur accepte les nouvelles tentatives prévues par le lecteur. Sa mesure D1 utilise les pages du PSG qui tiennent sous le plafond.
+- La page détaillée du PSG a été comparée champ par champ sur la même version API. Les données sont identiques, avec les identifiants d'apparitions attendus en plus sur les matchs combinés.
+- Les 1 139 tests du site et les quatre vérifications navigateur de ONLY=D passent. La suite du site utilise Node 24.18.0 et Bun 1.4.5. Les six tests d'intégration de l'API demandent un DSN jetable.
+
 ## CI : bases de test clonées d'un modèle au lieu des migrations rejouées (28 novembre 2026, branche `ci/base-modele-par-job`)
 
 - Demande (28 nov.) : « Pourquoi les CI/CD mettent autant de temps ? », puis choix du levier « Base modèle par job ». Linear non consulté (règle de l'utilisateur pour ce dossier).
@@ -46,6 +55,7 @@
 - Relecture d'AWS le 27 nov. de 19 h 39 à 19 h 49 (journaux de la Lambda et du worker, services, alarmes, lecture seule) : pendant le Deploy, 219 requêtes, aucun 5xx, aucune au-dessus de 5 s ; ensuite 1 415 réponses sans 5xx, aucune ligne de reçu ni de fonction absente, 16 alarmes en OK, lecteur Transfermarkt sans plantage depuis le Deploy 153. `/api/standings` ne fait plus qu'une requête SQL (46 sur 57 en faisaient deux avant) ; son 304 refait la lecture (322 ms en médiane), comme avant #254.
 - **Constat corrigé** : « aucun reçu n'a servi » était faux. Sur toute la vie des reçus (26 nov. 18 h 47 au 27 nov. 18 h 00), 6 des 80 réponses 304 de `/api/standings` ont été servies par un reçu (une requête, 5 à 17 ms pour cinq d'entre elles), 74 non. Cinq des six sont tombées pendant que le lecteur Transfermarkt était arrêté (5 sur 29 à l'arrêt, 1 sur 51 en marche) : cela va dans le sens de la cause retenue, sans la prouver. La décision ne change pas. Détail dans GH137R.3 ; l'en-tête de la migration 184 garde l'ancienne phrase (un fichier appliqué ne se modifie pas).
 - Reste : le gain de #158 à lire au premier Deploy qui ne change aucun fichier de l'image (le Deploy 155 changeait `backend/vega/rounds.py`) ; la branche `claude/retrait-recus-137-158` à supprimer sur GitHub (refusé depuis le cloud).
+
 ## Lecteur Transfermarkt mort en boucle sur une suspension — FAILURE_MODES § 59.I (27 novembre 2026, GitHub #264, branche `claude/transfermarkt-ecriture-refusee`)
 
 - Constat (journaux `/ecs/vega-v2-worker`) : depuis le 26 nov. à 1 h 36 UTC, `smallint out of range` à l'INSERT de `write_suspensions`, 313 morts au 27 nov. 16 h 15 UTC ; blessés, suspendus, valeurs et transferts presque plus lus.

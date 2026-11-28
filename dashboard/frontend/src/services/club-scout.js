@@ -2,7 +2,7 @@
 /**
  * Club profile: real published data, read once per club and generation.
  *
- * The club is read with its shots and appearances; its domestic league's
+ * The club is read once with its shots and appearances; its domestic league's
  * matches are read once (club by club on an API without that read) so every
  * team indicator below can be ranked against the same twenty clubs. Nothing
  * here is fictitious: values
@@ -222,17 +222,22 @@ async function loadDossier(
     ...(versioned?.club ? { versioned: 1 } : {}),
   };
   onProgress({ step: "club", done: 0, total: 1 });
-  const [shots, apps] = await Promise.all([
-    readActor({ ...base, include: "shots" }),
-    readActor({ ...base, include: "appearances" }),
-  ]);
-  const data = {
-    matches: shots.matches,
-    fixtures: [...shots.fixtures, ...apps.fixtures],
-    appearances: apps.appearances,
-    teams: shots.teams,
-    competitions: shots.competitions,
-  };
+  // Each page keeps the 25-match detail budget. A combined page can exceed 2 MiB.
+  let data;
+  try {
+    data = await readActor({ ...base, include: "appearances,shots" });
+  } catch (error) {
+    if (error?.status !== 413 || error.code !== "PAGE_TOO_LARGE") throw error;
+    const [shots, apps] = await Promise.all([
+      readActor({ ...base, include: "shots" }),
+      readActor({ ...base, include: "appearances" }),
+    ]);
+    data = {
+      ...shots,
+      fixtures: [...shots.fixtures, ...apps.fixtures],
+      appearances: apps.appearances,
+    };
+  }
   const { competitions, league } = clubLeagues(data, id);
   let cohort = null;
   if (league) {
@@ -388,7 +393,7 @@ export function clubEarly(data, clubId, season) {
 }
 
 /**
- * A club's own reads (shots, appearances), started outside its profile: the data
+ * A club's own read (its shots and appearances), started outside its profile: the data
  * provider calls it with the page's read of the club, before the page is shown. `f`
  * holds the manifest and the season; the profile finds the dossier started.
  */

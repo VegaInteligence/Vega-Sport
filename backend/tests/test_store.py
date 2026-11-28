@@ -110,6 +110,11 @@ class StoreTest(unittest.TestCase):
         after = rev()
         self.assertFalse(self.store.save_family(mid, "player_stats", one))
         self.assertEqual(rev(), after)
+        # The calculator may already have consumed the first write's scopes.
+        self.db.execute(
+            "DELETE FROM ops.dirty_scopes WHERE competition_season_id=%s AND scope_kind='player_season'",
+            (edition,),
+        )
         two = stats("p_abcdef", "t_abcdef", 2)
         self.assertTrue(self.store.save_family(mid, "player_stats", two))
         self.assertEqual(rev(), after + 1)
