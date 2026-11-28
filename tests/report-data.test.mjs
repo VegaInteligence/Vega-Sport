@@ -1,7 +1,7 @@
 // The reports (/rapport): what the builders make of the API's reads, and the thread's text.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildClubReport, buildMatchReport, buildPlayerReport, currentSeason, gradeOf, reportKind } from "../dashboard/frontend/src/server/report-data.js";
+import { buildClubReport, buildMatchReport, buildPlayerReport, currentSeason, gradeOf, loadReport, reportKind } from "../dashboard/frontend/src/server/report-data.js";
 import { reportImageUrl, reportSlug, reportThread } from "../dashboard/frontend/src/services/reports.js";
 
 const today = new Date("2026-11-16T10:00:00Z");
@@ -96,6 +96,39 @@ test("a club's season: record, top players, projection and coming matches", () =
   assert.deepEqual([r.outlook.position, r.outlook.title, r.outlook.top4, r.club.league], [2, 32.2, 100, "LaLiga"]);
   assert.deepEqual(r.upcoming.map((m) => [m.opponent, m.win, m.draw, m.loss]), [["Celta Vigo", 85, 11, 5]]);
   assert.match(reportThread(r), /Score Vega 93,4\/100|Score Vega 93\/100/);
+});
+
+// GH139-h/i (FAILURE_MODES_OPTIMISATIONS.md, written before the change): a fixture of the club read carries its match's
+// forecast (null without one); one without the field (an API before GH139) is read on its own, as before.
+test("GH139-h/i: the club report's next matches take their forecast from the club read, the others their own read", async () => {
+  const club = "t_aaaaa2", side = (id, name) => ({ id, name, image_url: null });
+  const shares = { m1: { home: 0.5123, draw: 0.2501, away: 0.2376 }, m2: { home: 0.2, draw: 0.3, away: 0.5 }, m3: null, m4: { home: 0.6, draw: 0.2, away: 0.2 } };
+  const coming = (id, day, home, away, carried) => ({ id, status: "not_started", date: day, time_utc: `${day}T19:00:00Z`,
+    home_team: side(...home), away_team: side(...away), league: { id: "l1", name: "LaLiga" }, ...(carried.includes(id) && { forecast: shares[id] }) });
+  async function report(carried) {
+    const asked = [];
+    const get = async (path, params = {}) => {
+      if (path === "/api/forecasts/match") {
+        asked.push(params.match);
+        return shares[params.match] && { match: params.match, forecast: { ...shares[params.match], homeGoals: 1.6, awayGoals: 1, score: [1, 0] } };
+      }
+      if (path !== "/api/read/club") return null;
+      return { data: { teams: [{ id: club, name: "Real Madrid" }], competitions: [{ id: "l1", name: "LaLiga", country: "ESP" }], matches: [], appearances: [],
+        fixtures: [
+          coming("m4", "2026-12-20", [club, "Real Madrid"], ["t5", "Celta Vigo"], carried),
+          coming("m3", "2026-12-06", ["t4", "Getafe"], [club, "Real Madrid"], carried),
+          coming("m2", "2026-11-29", ["t3", "Sevilla"], [club, "Real Madrid"], carried),
+          coming("m1", "2026-11-21", [club, "Real Madrid"], ["t2", "Espanyol"], carried),
+        ] } };
+    };
+    const r = await loadReport(club, { season: "2026/2027", get, today });
+    return { asked, upcoming: r.upcoming.map((m) => [m.id, m.home, m.win, m.draw, m.loss]) };
+  }
+  // The three next matches, the club's own share first: the home share at home, the away share away.
+  const want = [["m1", true, 51, 25, 24], ["m2", false, 50, 30, 20], ["m3", false, null, null, null]];
+  assert.deepEqual(await report(["m1", "m2", "m3", "m4"]), { asked: [], upcoming: want });
+  assert.deepEqual(await report([]), { asked: ["m1", "m2", "m3"], upcoming: want });
+  assert.deepEqual(await report(["m1", "m3"]), { asked: ["m2"], upcoming: want });
 });
 
 test("a match: its statistics read from the « All » period, the best grades and the forecast at kick-off", () => {

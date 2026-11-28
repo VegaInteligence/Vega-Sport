@@ -13,6 +13,10 @@
  * partition metric catalogue has no counterpart here; the site has its own labels);
  * a team's `sampleMatches` counts its collected matches of the scope; the match and
  * appearance records are those of match-record.mjs and performance.mjs.
+ *
+ * Added here: a club's match to come carries `forecast`, as /api/fixtures gives it, and null
+ * without one (FAILURE_MODES_OPTIMISATIONS.md GH139): a fixture without the field is an
+ * older answer, and the site reads that match's forecast on its own.
  */
 import { reject, validateParams } from "../http.mjs";
 import {
@@ -30,10 +34,22 @@ import {
   versionParam,
 } from "../publication.mjs";
 import { assembleMatch, matchRecordColumns } from "../match-record.mjs";
-import { fixture } from "./matches.mjs";
+import { FORECAST_COLUMN, fixture } from "./matches.mjs";
 import { appearanceRecord } from "./performance.mjs";
 
 const ACTOR = { player: /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/, club: /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/ };
+
+/** The club's matches to come in the scope and their forecasts, as one value. forecast.refresh
+ * rewrites them without an edition's version or a publication (GH139): the club's validators
+ * read them. `season`, `club`, `editions` (null: the season's every edition): bound parameters. */
+const clubForecasts = (season, club, editions) =>
+  `SELECT coalesce(json_agg(json_build_array(x.match_id,mf.home_win,mf.draw,mf.away_win) ORDER BY x.match_id),'[]'::json)
+   FROM api.fixtures x JOIN api.match_forecasts mf ON mf.match_key=x.match_id
+   WHERE (x.home_internal_id=${club} OR x.away_internal_id=${club}) AND x.season_id=${season}${editions ? ` AND x.competition_season_id=ANY(${editions})` : ""}
+     AND x.status='not_started'`;
+
+/** A club's match to come says it has no forecast (null); an answer before GH139 has no such field. */
+const clubFixture = (row) => (row.status === "not_started" ? { forecast: null, ...fixture(row) } : fixture(row));
 
 /** The scope and the actor as ids, in one read before the query: the season's id and
  * its editions (publication.mjs EDITIONS_SQL) and the actor's internal id. Bound, they
@@ -70,6 +86,9 @@ export function actorQuery(kind, scope, actor, includes, pagination, generation,
            WHERE a.player_id=${actorId} AND ${inScope("a")}))${fence}`
       : `SELECT x.season_id,x.match_id,x.id,x.day FROM api.fixtures x
          WHERE (x.home_internal_id=${actorId} OR x.away_internal_id=${actorId}) AND ${inScope("x")}${fence}`;
+  // A club's fixtures are read with their forecast; its pinned read's tag takes its matches to come (GH139).
+  const fixtures = kind === "club" ? `(SELECT f.*,${FORECAST_COLUMN} FROM f) f` : "f",
+    forecastKey = kind === "club" && generation !== null ? `(${clubForecasts(season, actorId, editions)}) forecast_key,` : "";
   const limit = bindValue(values, pagination.limit),
     offset = bindValue(values, pagination.offset);
   // The page's matches as an array: one index read per match, where a join against the
@@ -80,8 +99,8 @@ export function actorQuery(kind, scope, actor, includes, pagination, generation,
     page AS MATERIALIZED (SELECT * FROM actor_matches ORDER BY day DESC NULLS LAST,id DESC LIMIT ${limit} OFFSET ${offset}),
     f AS MATERIALIZED (SELECT x.* FROM api.fixtures x WHERE ${paged("x")}),
     context_teams AS (SELECT home_internal_id AS id FROM f UNION SELECT away_internal_id FROM f)
-    SELECT publication.*,(SELECT count(*)::int FROM actor_matches) AS total,
-      (SELECT coalesce(json_agg(row_to_json(f) ORDER BY f.day DESC NULLS LAST,f.id DESC),'[]'::json) FROM f) fixtures,
+    SELECT publication.*,${forecastKey}(SELECT count(*)::int FROM actor_matches) AS total,
+      (SELECT coalesce(json_agg(row_to_json(f) ORDER BY f.day DESC NULLS LAST,f.id DESC),'[]'::json) FROM ${fixtures}) fixtures,
       (SELECT coalesce(json_agg(r ORDER BY r.day DESC NULLS LAST,r.id DESC),'[]'::json) FROM (
          SELECT f.day,f.id,${matchRecordColumns({ shots: includes.has("shots"), scoring: true, season })} FROM f) r) records,
       ${
@@ -108,18 +127,20 @@ export function actorQuery(kind, scope, actor, includes, pagination, generation,
 
 // The form of each kind's answer (its version names it): to change with it.
 // 2: each side's scoring (VI-23 stage 8): a read cached before it would read as unknown.
-const SHAPE = { league: "league-2", club: "club-2", player: "player-2" };
+// club-3: the matches to come's forecasts (GH139): a read cached before has none to show.
+const SHAPE = { league: "league-2", club: "club-3", player: "player-2" };
 
 /**
  * The version of an actor's read that names no publication. A league's is its edition's.
  * A club's or a player's is made of the editions of his own matches in the scope (a
  * season's every edition changes with any league's match): where the read finds his
- * matches, the fixtures of a club and the appearances of a player.
+ * matches, the fixtures of a club and the appearances of a player. A club's takes its
+ * matches to come's forecasts too, in the same statement.
  */
 function actorVersion(read, kind, scope, actor, resolved, now) {
   if (kind === "league") return scopeVersion(read, SHAPE.league, scope, now);
   const values = [resolved.seasonId, resolved.actorId];
-  const editions = scope.leagueIds === null ? "" : ` AND x.competition_season_id=ANY(${bindValue(values, resolved.ids)}::int[])`;
+  const editions = scope.leagueIds === null ? null : `${bindValue(values, resolved.ids)}::int[]`;
   const matches =
     kind === "player"
       ? `api.player_appearances x WHERE x.player_id=$2::int`
@@ -127,9 +148,10 @@ function actorVersion(read, kind, scope, actor, resolved, now) {
   return editionsVersion(
     read,
     [SHAPE[kind], scope.season, actor],
-    `SELECT DISTINCT x.competition_season_id AS id FROM ${matches} AND x.season_id=$1::smallint${editions}`,
+    `SELECT DISTINCT x.competition_season_id AS id FROM ${matches} AND x.season_id=$1::smallint${editions ? ` AND x.competition_season_id=ANY(${editions})` : ""}`,
     values,
     now,
+    kind === "club" ? { extra: clubForecasts("$1::smallint", "$2::int", editions) } : undefined,
   );
 }
 
@@ -155,9 +177,11 @@ export function createActorRoute(read, { clock = Date.now } = {}) {
     const actor = kind === "league" ? scope.leagueIds[0] : params.get(actorKey);
     if (kind !== "league" && !ACTOR[kind].test(actor || "")) reject(400, "Identifiant invalide.");
     // A read that names no publication is validated by the version of what it is made
-    // from: whoever holds it keeps it until a match of its editions changes.
+    // from: whoever holds it keeps it until a match of its editions changes. A club's read
+    // named by its publication is validated by its answer, whose forecasts change under the
+    // same publication (GH139), as the presence and discipline reads are.
     const versioned = versionParam(params);
-    const cached = versioned ? null : await readValidator(req, params, scope, read);
+    const cached = versioned || kind === "club" ? null : await readValidator(req, params, scope, read);
     if (cached) return cached;
     // A league's version needs none of its ids: it is asked before anything else.
     let gate = versioned && kind === "league" ? versionGate(req, params, await actorVersion(read, kind, scope, actor, null, clock())) : null;
@@ -207,7 +231,7 @@ export function createActorRoute(read, { clock = Date.now } = {}) {
         id: t.id, name: t.name, imageUrl: t.image_url, country: t.country ?? null, leagueIds: t.league_ids || [],
         sampleMatches: t.sample_matches, seasons: [scope.season],
       })),
-      fixtures: (snapshot.fixtures || []).map(fixture),
+      fixtures: (snapshot.fixtures || []).map(kind === "club" ? clubFixture : fixture),
       matches,
       appearances,
     };
@@ -215,7 +239,7 @@ export function createActorRoute(read, { clock = Date.now } = {}) {
     return readResponse(req, params, snapshot, data, {
       pagination: { page: pagination.page, limit: pagination.limit, total, pages: Math.max(1, Math.ceil(total / pagination.limit)) },
       maxBytes: 2 * 1024 * 1024,
-      ...(gate && { version: gate.version, etag: gate.etag }),
+      ...(gate ? { version: gate.version, etag: gate.etag } : { periodKey: snapshot.forecast_key ?? null }),
     });
   };
 }
