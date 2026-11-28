@@ -137,7 +137,9 @@ group's rights on `core` (S1), then drops `panna`, `panna_data`, `panna_admin` (
 `panna.canonical_applications`, and identity reviews, `panna.identity_reviews`) and, unless another database of the
 server still uses them, the two roles. S1's business data stays in `core`: the three tables and their rows, a
 published pair, the Opta key and the provider value `opta`. The next Deploys leave the roles dropped while the switch
-stays `off`. Nothing of the football schemas references them. A bad load alone: its segments are content-addressed,
+stays `off`. Nothing of the football schemas references them. Once S3 rows exist (`panna.action_field_exceptions`,
+`panna.source_set_memberships`), `ROLLBACK.sql` refuses and removes nothing: those rows are the only copy of their
+values, and S3's core tables are never dropped. A bad load alone: its segments are content-addressed,
 so a corrected generation of the source adds its new segments and the manifest makes it current; nothing is deleted.
 
 ## S1: one fixture's half-time pair on one Vega match (`pilot`)
@@ -283,6 +285,54 @@ SELECT f.* FROM panna.fixture_rows((
 Not in this batch: events, `pilot` on a 27-column object (its packet covers the file's columns, so S1's 13-field scope
 is refused `SCOPE_PACKET_DIGEST`), other families. Before the daily job, decide what the churn guard does when upstream
 fills the 14 columns: they are about 95 % NULL today.
+
+## S3: Opta's detailed actions stored once (`actions`, FAILURE_MODES.md section 10)
+
+The `events_*.parquet` objects go to `core.match_actions` (one row per action, in each match's published order) under
+one set per match content (`core.observation_sets`, header `core.match_action_sets`), dated per subject in
+`core.observation_set_revisions`, with each publication's source rows in `panna.source_set_memberships` and the rare
+cells the common format cannot hold exactly in `panna.action_field_exceptions`. The same content from any object,
+generation or run is the same set. Subjects stay keyed by Opta's match key; `core.current_match_action_sets` gives
+the Vega match when `core.provider_ids` holds a current Opta link, else `match_id` NULL (pending). Nothing goes to
+`panna_data.opta_events`. Migrations: `backend/sql/187_match_action_sets.sql` (core, online) and
+`backend/panna/sql/006_panna_actions.sql` (with the switch). The fixtures index is H1's (`run` on
+`opta_fixtures.parquet`); every action plan pins it.
+
+```sh
+# A pinned plan from a preflight wave (opus-evidence/s3-actions/make_plan.py in the coordinator's scratch):
+#   {"as_of", "fixtures": "sha256:<the base's current unscoped fixtures index>", "assets": [events objects: origin,
+#    container, name, sha256, bytes, asset_id, updated_at, url, path], "select": {"keys" | "key_range" | "vega_seasons"}}
+python3 -m panna actions run --plan PLAN.json --scratch DIR [--chunk-rows 50000] [--max-seconds S] \
+  [--database-ceiling-bytes N]      # exit 0 complete, 1 failed, 2 refused plan, 3 partial, 4 another runner
+python3 -m panna actions retry      # resumes the last action run that did not complete (RETRY_STALE unless --force)
+python3 -m panna actions verify [--run N]   # each set's digest recomputed by the server from core and the exceptions
+python3 -m panna actions status     # subjects, resolved, pending identity, sets, actions, exceptions, memberships
+```
+
+H1's `retry` never resumes an action run. The loader holds the same advisory lock as H1 for one run only; bound each
+run with `--max-seconds` and `--database-ceiling-bytes` and run waves one after the other (no global lock for days).
+
+### Measured (local PostgreSQL 18.3, 28 Nov 2026 objects; `opus-evidence/s3-actions/`)
+
+- Wave-0 cohort (8 matches, 14,235 actions, killed after 2 chunks then `retry`): every row equal to the coordinator's
+  oracle, physical row included; 8/8 oracle set digests; `expected-readback.sql` queries 1, 2, 4, 6 empty, query 3 the
+  8 subjects pending identity; replay writes nothing.
+- Whole `events_EPL.parquet` (double codes, 3,505,784 eligible): 3,502,304 new actions in 91.5 s (38,277 a second),
+  1,998 sets verified, no exception needed; 293.5 bytes an action with every S3 relation and index, so about 33 GiB for
+  the 120,899,239 served actions; WAL 445 bytes an action; replay 8.4 s, nothing written. The staging tables stay at
+  about one chunk (6.4 MB) because the loader vacuums them after each chunk.
+
+### Gate and batch (coordinator)
+
+1. Commit and hosted CI on that commit; record `shasum -a 256` of 187 and 006 (`panna_admin.applied` keeps 006's).
+2. The standard Deploy applies 187 (online, new tables only). 006 needs the switch, as 004 and 005 did, or the
+   owner's `migrate_panna` from the gated commit (README, fixtures batch above); it needs 187 first.
+3. The production fixtures index must be the generation the plans pin (`FIXTURES_VERSION_MISMATCH` otherwise).
+4. Wave 0 first (`make_plan.py wave-0-real-cohort.json OUT --cohort`), through the port forward as the owner with
+   `options=-c%20role%3Dvega_panna`, then `actions verify --run`, the independent readback
+   (`opus-evidence/s3-actions/real/readback.py OWNER_URL PREFLIGHT_DIR OUT.json`, read only), then the replay. Then
+   wave 2, then wave 3 by object and `--vega-season`, each bounded, each verified. RDS free space checked before each
+   wave (about 33 GiB for all actions, plus WAL).
 
 ## Not in H1 (pass H2)
 
