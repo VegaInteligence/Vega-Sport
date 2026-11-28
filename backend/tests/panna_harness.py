@@ -165,8 +165,11 @@ class Upstream:
         data = self.releases[tag][name]
         return {"id": 1000 + index, "name": name, "size": len(data),
                 "digest": None if name in self.no_digest else "sha256:" + sha256(data),
-                "updated_at": "2026-11-28T03:00:00Z",
+                "updated_at": self.updated.get(name, "2026-11-28T03:00:00Z"),
                 "browser_download_url": f"http://127.0.0.1:{self.port}/download/{tag}/{name}"}
+
+    # An asset's listing update instant (GH278.F-p), by name; the default otherwise.
+    updated = {}
 
     def serve(self, tag, assets):
         self.releases[tag] = dict(assets)
@@ -192,6 +195,8 @@ class Relay:
         # S1 (test_panna_s1.py, GH278.S1-o): cut only the COMMIT that follows a message holding these bytes (the name
         # of a function the transaction called), not the first COMMIT of the run.
         self.cut_commit_after = None
+        # GH278.F-l: cut the connection, unsent, at the first client message holding these bytes (a chunk's statement).
+        self.drop_on = None
         self.drops = 0
         self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -227,6 +232,10 @@ class Relay:
                     with self.lock:
                         if self.drop_after is not None and state["sent"] + len(data) >= self.drop_after:
                             self.drop_after = None
+                            self.drops += 1
+                            break
+                        if self.drop_on is not None and self.drop_on in data:
+                            self.drop_on = None
                             self.drops += 1
                             break
                         if self.cut_commit_after is not None and self.cut_commit_after in data:

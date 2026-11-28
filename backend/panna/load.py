@@ -36,6 +36,25 @@ INDEX_LOAD = """SELECT l.load_id, r.sha256 FROM panna.loads l JOIN panna.streams
                 ORDER BY l.load_id DESC LIMIT 1"""
 
 
+# The plan's or the listing's update instant of an object, or None (FAILURE_MODES.md section 9, order of generations).
+def instant(value):
+    try:
+        return datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00")) if value else None
+    except ValueError:
+        return None
+
+
+# A stream's current full generation and its activation instant: the object's in its run's plan, else its receipt's.
+CURRENT_FULL = """SELECT encode(r.sha256, 'hex'), coalesce((SELECT a->>'updated_at' FROM jsonb_array_elements(u.plan->'assets') a
+                                         WHERE a->>'name' = s.name AND a->>'sha256' = encode(r.sha256, 'hex') LIMIT 1),
+                                        to_char(r.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
+                 FROM panna.loads l JOIN panna.streams s USING (stream_id) JOIN panna.receipts r USING (receipt_id)
+                 JOIN panna.runs u ON u.run_id = l.run_id
+                 WHERE s.origin = %s AND s.container = %s AND s.name = %s AND l.status = 'complete'
+                   AND coalesce(jsonb_typeof(u.plan->'scope'), 'null') = 'null'
+                 ORDER BY l.load_id DESC LIMIT 1"""
+
+
 class Failure(Exception):
     """An object that cannot be loaded as it is: named, nothing of it written, the run goes on and ends failed."""
 
@@ -356,6 +375,7 @@ class Run:
         self.out.emit("asset", name=asset.name, sha256=asset.sha256, bytes=asset.bytes, source_rows=indexed.source_rows,
                       **({"conversions": {c: v["from"] for c, v in indexed.conversions.items()}} if conversions else {}),
                       **({"extension": extension} if extension else {}))
+        self.check_order(asset)
         decisions, orphans, first_seen, scope_load = self.decide(dataset, indexed, asset)
         # Each row's outcome, and a scoped run's checks, before anything of the object is written.
         outcome_of = {}
@@ -416,6 +436,25 @@ class Run:
         self.remember(dataset, asset, indexed, decisions, load)
         self.evict(path, owned)
 
+    def check_order(self, asset):
+        """A full load of an object older than its stream's current full generation is refused before any write
+        (FAILURE_MODES.md section 9, order of generations); the same object again is a replay."""
+        if self.scope:
+            return
+        current = self.session.read(lambda c: c.execute(CURRENT_FULL, (asset.origin, asset.container, asset.name)).fetchone())
+        if current is None or current[0] == asset.sha256:
+            return
+        mine = instant(asset.updated_at)
+        if mine is None:
+            own = self.session.read(lambda c: c.execute(
+                "SELECT updated_at FROM panna.receipts WHERE origin = %s AND container = %s AND name = %s AND sha256 = %s",
+                (asset.origin, asset.container, asset.name, bytes.fromhex(asset.sha256))).fetchone())
+            mine = own[0] if own else None
+        theirs = instant(current[1])
+        if mine is not None and theirs is not None and mine < theirs:
+            raise Failure("OLDER_GENERATION", asset.name, current=current[0], current_updated_at=current[1],
+                          updated_at=mine.isoformat())
+
     def evict(self, path, owned):
         if owned and not self.keep_scratch:
             path.unlink(missing_ok=True)
@@ -473,12 +512,15 @@ class Run:
                 (names, keys)).fetchall()):
             (stored if name == dataset.name else stored_ext)[key][bytes(digest)] = segment
         state_rows = self.session.read(lambda c: c.execute(
-            """SELECT DISTINCT ON (m.key) m.key, m.segment_id, m.extension_segment_id, m.load_id = %s
+            """SELECT DISTINCT ON (m.key) m.key, m.segment_id, m.extension_segment_id, m.load_id = %s, m.first_row, m.runs
                FROM panna.manifest m JOIN panna.loads l ON l.load_id = m.load_id
                WHERE m.stream_id = %s AND (l.status = 'complete' OR m.load_id = %s) ORDER BY m.key, m.load_id DESC""",
             (load, stream, load)).fetchall())
-        state = {key: (segment, extension) for key, segment, extension, _ in state_rows}
-        mine = {key for key, _, _, own in state_rows if own}
+        state = {key: (segment, extension) for key, segment, extension, _, _, _ in state_rows}
+        mine = {key for key, _, _, own, _, _ in state_rows if own}
+        # Fixtures: where each key's rows were when its entry was written, so that a key whose rows only moved gets an
+        # entry with its new place (FAILURE_MODES.md section 9, source ordinals). Events keep H1's rule.
+        placed = {key: (first_row, runs) for key, _, _, _, first_row, runs in state_rows} if dataset is registry.FIXTURES else None
         previous = {key: (segment, extension) for key, segment, extension in self.session.read(lambda c: c.execute(
             """SELECT DISTINCT ON (m.key) m.key, m.segment_id, m.extension_segment_id FROM panna.manifest m
                JOIN panna.loads l ON l.load_id = m.load_id
@@ -514,7 +556,7 @@ class Run:
                 need[k] = True
                 projected += int(indexed.counts[k]) * ((segment is None) * dataset.bytes_per_row
                                                        + (extension is NEW) * (ext.bytes_per_row if ext else 0))
-            elif state.get(key) != (segment, extension):
+            elif state.get(key) != (segment, extension) or (placed is not None and placed.get(key) != self.place(indexed, k)):
                 reuse.append(k)
         if self.ceiling is not None:
             size = self.session.read(lambda c: c.execute("SELECT pg_database_size(current_database())").fetchone()[0])
@@ -571,6 +613,12 @@ class Run:
             w, r = self.commit_chunk(dataset, indexed, stream, load, chunk_no, chunk, decisions, outcome_of)
             written, rows = written + w, rows + r
         return written, reused, rows, *self.all_digests(indexed, eligible, digests, ext_digests)
+
+    @staticmethod
+    def place(indexed, k):
+        """A key's first row and runs as its manifest entry records them."""
+        runs = indexed.runs[k]
+        return runs[0][0], ([v for run in runs for v in run] if len(runs) > 1 else None)
 
     def all_digests(self, indexed, eligible, digests, ext_digests):
         """The digests of every eligible key, for the completion's check: those of passes B and C, the others hashed."""

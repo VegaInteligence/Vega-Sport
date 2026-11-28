@@ -1126,6 +1126,160 @@ class PannaTest(unittest.TestCase):
         self.assertIn("005_panna_fixture_extension.sql", done.stdout)
         self.assertEqual(self.count("SELECT count(*) FROM panna.receipts"), 0)
 
+    # --- GH278.F-k to q: after Fable's review of the lot (FAILURE_MODES.md section 9, review F) ----------------------
+    def reset(self):
+        tables = [r[0] for r in self.admin.execute(
+            "SELECT format('%I.%I', schemaname, tablename) FROM pg_tables WHERE schemaname IN ('panna', 'panna_data') "
+            "AND (schemaname, tablename) NOT IN (('panna', 'datasets'), ('panna', 'columns'))").fetchall()]
+        self.admin.execute(f"TRUNCATE {', '.join(tables)} RESTART IDENTITY CASCADE")
+
+    def assert_exact(self, rows):
+        self.assert_generation(self.fixtures_load(), rows)
+        for table in ("opta_fixtures", "opta_fixtures_ext"):
+            self.assertEqual(self.count(f"SELECT count(*) FROM (SELECT segment_id, ordinal FROM panna_data.{table} "
+                                        "GROUP BY 1, 2 HAVING count(*) > 1) d"), 0)
+        self.assertEqual(self.count("SELECT count(*) FROM (SELECT dataset, key, digest FROM panna.segments "
+                                    "GROUP BY 1, 2, 3 HAVING count(*) > 1) d"), 0)
+        self.assertEqual(self.table_rows(), (9, 6))
+
+    def slow_fixtures_run(self, relay, until):
+        relay.rate = 4_000
+        proc = self.cli("run", "--as-of", AS_OF, "--release", RELEASE, "--asset", "opta_fixtures.parquet",
+                        "--chunk-rows", "2", dsn=via_relay(relay), wait=False)
+        deadline = time.monotonic() + 60
+        while self.count(until) < 1 and time.monotonic() < deadline:
+            time.sleep(0.02)
+        return proc
+
+    def scoped_plan(self, rows, schema, key):
+        data = self.serve_fixtures(rows, schema)
+        path = self.scratch / f"{key}.parquet"
+        path.write_bytes(data)
+        plan = {"as_of": AS_OF, "release": RELEASE, "fixtures": "current",
+                "assets": [{"origin": "github", "container": RELEASE, "name": "opta_fixtures.parquet",
+                            "sha256": h.sha256(data), "bytes": len(data), "path": str(path), "dataset": "opta_fixtures"}],
+                "scope": {"dataset": "opta_fixtures", "keys": [key], "ordinals": [[r["match_id"] for r in rows].index(key)],
+                          "max_rows": 1}}
+        (self.scratch / "plan.json").write_text(json.dumps(plan))
+        return str(self.scratch / "plan.json")
+
+    def test_GH278_F_k_an_extended_load_stopped_or_killed_is_resumed_by_retry(self):
+        rows = fixtures_ext_g1()
+        self.serve_fixtures(rows, h.FIXTURE_EXT_SCHEMA)
+        done = self.run_load("opta_fixtures.parquet", extra=("--chunk-rows", "2", "--max-seconds", "0"), expect=3)
+        self.assertEqual(self.last(done)["reason"], "MAX_SECONDS")
+        self.assertEqual(self.last(self.cli("retry"))["status"], "complete")
+        self.assert_exact(rows)
+        self.reset()
+        relay = self.relay()
+        proc = self.slow_fixtures_run(relay, "SELECT count(*) FROM panna.chunks")
+        proc.send_signal(signal.SIGKILL)
+        proc.wait()
+        self.assertGreaterEqual(self.count("SELECT count(*) FROM panna.chunks"), 1)
+        self.assertLess(self.count("SELECT count(*) FROM panna.manifest"), 9)
+        relay.rate = 0
+        done = self.cli("retry", dsn=via_relay(relay))
+        self.assertEqual(self.last(done)["status"], "complete")
+        self.assert_exact(rows)
+
+    def test_GH278_F_l_a_cut_link_or_a_lost_commit_answer_during_an_extended_chunk(self):
+        rows = fixtures_ext_g1()
+        self.serve_fixtures(rows, h.FIXTURE_EXT_SCHEMA)
+        for arm in ("drop_on", "cut_commit_after"):
+            self.reset()
+            relay = self.relay()
+            setattr(relay, arm, b"COPY panna_data.opta_fixtures_ext")
+            done = self.run_load("opta_fixtures.parquet", dsn=via_relay(relay), extra=("--chunk-rows", "2"))
+            self.assertEqual((relay.drops, self.last(done)["status"]), (1, "complete"), arm)
+            if arm == "drop_on":
+                self.assertTrue(any(line.get("event") == "reconnect" for line in self.lines(done)))
+            self.assert_exact(rows)
+
+    def test_GH278_F_m_a_lost_extension_link_is_never_completed(self):
+        self.serve_fixtures(fixtures_ext_g1(), h.FIXTURE_EXT_SCHEMA)
+        relay = self.relay()
+        linked = "SELECT count(*) FROM panna.manifest WHERE extension_segment_id IS NOT NULL"
+        proc = self.slow_fixtures_run(relay, linked)
+        self.assertGreaterEqual(self.count(linked), 1)
+        self.admin.execute("UPDATE panna.manifest SET extension_segment_id = NULL")
+        out, _ = proc.communicate(timeout=120)
+        self.outputs.append(out)
+        self.assertEqual(proc.returncode, 1, out)
+        error = next(json.loads(line) for line in out.splitlines() if '"event": "error"' in line)
+        self.assertEqual(error["code"], "CONSERVATION")
+        self.assertGreater(error["stale"], 0)
+        self.assertEqual(self.count("SELECT count(*) FROM panna.loads WHERE status = 'complete'"), 0)
+        relay.rate = 0
+        again = self.cli("retry", dsn=via_relay(relay), expect=1)
+        self.assertIn("CONSERVATION", again.stdout)
+
+    def test_GH278_F_n_the_churn_guard_counts_the_pair(self):
+        rows = fixtures_ext_g1()
+        self.serve_fixtures(rows, h.FIXTURE_EXT_SCHEMA)
+        self.run_load("opta_fixtures.parquet")
+        g2 = [dict(r, attendance=1234.0) if r["match_id"] in EXTENDED_KEYS else r for r in rows]
+        self.serve_fixtures(g2, h.FIXTURE_EXT_SCHEMA)
+        bounds = ("--churn-min-segments", "5")
+        done = self.run_load("opta_fixtures.parquet", extra=bounds, expect=3)
+        self.assertEqual(self.last(done)["reason"], "CHURN_GUARD")
+        self.assertEqual(self.table_rows(), (9, 6))
+        self.run_load("opta_fixtures.parquet", extra=bounds + ("--allow-churn",))
+        self.assertEqual(self.table_rows(), (9, 12))
+        self.assert_generation(self.fixtures_load(), g2)
+
+    def test_GH278_F_o_a_scoped_extended_plan_writes_its_two_segments_only(self):
+        rows = fixtures_ext_g1()
+        done = self.cli("run", "--plan", self.scoped_plan(rows, h.FIXTURE_EXT_SCHEMA, "f-epl-2122"))
+        self.assertEqual(self.last(done)["status"], "complete")
+        load = self.fixtures_load()
+        self.assertEqual(self.table_rows(), (1, 1))
+        ((key, (segment, extension)),) = self.entries(load).items()
+        self.assertEqual(key, "f-epl-2122")
+        self.assertIsNotNone(segment)
+        self.assertIsNotNone(extension)
+        self.assertEqual(self.count("SELECT count(*) FROM panna.scope"), 1)
+        with self.assertRaises(psycopg.errors.InvalidParameterValue):
+            self.fixture_rows(load)
+        self.run_load("opta_fixtures.parquet")
+        # Its pair and place unchanged, the full load writes no entry for it: the scoped one stays its latest.
+        self.assertNotIn("f-epl-2122", self.entries(self.fixtures_load()))
+        self.assertEqual(self.admin.execute("SELECT segment_id, extension_segment_id FROM panna.manifest WHERE key = "
+                                            "'f-epl-2122' ORDER BY load_id DESC LIMIT 1").fetchone(), (segment, extension))
+        self.assert_exact(rows)
+
+    def test_GH278_F_p_an_older_object_never_becomes_current(self):
+        rows = fixtures_ext_g1()
+        self.addCleanup(setattr, self.upstream, "updated", {})
+        self.upstream.updated = {"opta_fixtures.parquet": "2026-11-28T14:18:06Z"}
+        self.serve_fixtures(rows, h.FIXTURE_EXT_SCHEMA)
+        self.run_load("opta_fixtures.parquet")
+        current = self.fixtures_load()
+        self.upstream.updated = {"opta_fixtures.parquet": "2026-11-27T15:06:53Z"}
+        self.serve_fixtures(fixtures_g1(), h.FIXTURE_SCHEMA)
+        done = self.run_load("opta_fixtures.parquet", expect=1)
+        (error,) = [line for line in self.lines(done) if line.get("event") == "error"]
+        self.assertEqual(error["code"], "OLDER_GENERATION")
+        self.assertEqual((self.fixtures_load(), self.table_rows(), self.count("SELECT count(*) FROM panna.receipts")),
+                         (current, (9, 6), 1))
+        self.upstream.updated = {"opta_fixtures.parquet": "2026-11-28T14:18:06Z"}
+        self.serve_fixtures(rows, h.FIXTURE_EXT_SCHEMA)
+        self.assertEqual(self.last(self.run_load("opta_fixtures.parquet"))["rows_written"], 0)
+        self.assert_generation(self.fixtures_load(), rows)
+
+    def test_GH278_F_q_rows_moved_in_the_object_keep_their_own_ordinals(self):
+        rows = fixtures_ext_g1()
+        self.serve_fixtures(rows, h.FIXTURE_EXT_SCHEMA)
+        self.run_load("opta_fixtures.parquet")
+        first = self.fixtures_load()
+        g2 = list(rows)
+        g2[1], g2[2] = g2[2], g2[1]
+        self.serve_fixtures(g2, h.FIXTURE_EXT_SCHEMA)
+        self.assertEqual(self.last(self.run_load("opta_fixtures.parquet"))["rows_written"], 0)
+        second = self.fixtures_load()
+        self.assertEqual(self.entries(second), {k: self.entries(first)[k] for k in ("f-epl-2122", "f-mls-2021")})
+        self.assert_generation(first, rows)
+        self.assert_generation(second, g2)
+
     def migrate(self, password=None, backend=ROOT):
         env = {k: v for k, v in os.environ.items() if not k.startswith("V2_")}
         env.update(V2_MIGRATION_DATABASE_URL=DSN, PYTHONPATH=str(backend), PYTHONDONTWRITEBYTECODE="1")

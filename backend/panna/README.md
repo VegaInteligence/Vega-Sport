@@ -206,30 +206,72 @@ python3 -m panna pilot revert --application <id> --reviewer <who> --via 127.0.0.
 
 Since the release asset of 28 Nov 2026 14:18 UTC, `opta_fixtures.parquet` holds 27 columns. The 13 of H1 keep their
 segments and digests in `panna_data.opta_fixtures`; a key unchanged there, S1's included, is not written again. The 14
-added values of a key are one segment of `panna_data.opta_fixtures_ext` (none when all are NULL). The manifest entry
-names both. A 13-column object still loads as before.
+added values of a key are one segment of `panna_data.opta_fixtures_ext` (none when all are NULL), and the manifest
+entry names both. A key whose rows only moved gets an entry with its new place. A 13-column object still loads as
+before. A full load of an object older than the stream's current full generation is refused (`OLDER_GENERATION`).
 
-Bounded sequence for one fixtures-only batch, from the Mac, nothing else in the plan:
+### Gate
+
+1. The lot is committed without `backend/panna/h2/`, and hosted CI is green on that commit: `backend/panna/sql/`
+   runs the deploy suites.
+2. 005 is applied from that commit only. `git diff --quiet <commit> -- backend/panna` must succeed, and
+   `shasum -a 256 backend/panna/sql/005_panna_fixture_extension.sql` must print the digest the review recorded. Once
+   applied, `panna_admin.applied` holds that digest, and any other bytes stop every later migrate task
+   (`PANNA_SQL_CHANGED`).
+3. The daily job stays blocked until Hugo decides on an ingest role that cannot publish. The group `vega_panna` still
+   executes S1's `panna.apply_score_segment` and `panna.revert_score_application`.
+
+### Batch: 27 Nov, then 28 Nov, login kept `NOLOGIN`
+
+The owner credential stays in the operator's process memory: never in argv, a file or a log. Every connection goes
+through the local port forward, with TLS checking the RDS endpoint's name:
+
+```text
+postgresql://<owner>@<endpoint>:5432/vega_v2?hostaddr=127.0.0.1&port=<local port>&sslmode=verify-full&sslrootcert=backend/certs/rds-us-east-2.pem
+```
+
+Each loader connection takes the group's privileges through the startup option `options=-c%20role%3Dvega_panna`
+(`vega_panna` is `NOLOGIN`, so is `vega_v2_panna`; neither is changed). `--via 127.0.0.1:<local port>` does the
+same as `hostaddr`.
 
 ```sh
 pip install -r backend/requirements.txt -r backend/panna/requirements.txt
 export PYTHONPATH=backend
-# 1. 005 alone, as the owner, through the repository's panna runner (prints "panna applied=['005_panna_fixture_extension.sql'] total=5").
-#    No core migration, no password set, no switch changed.
+# 0. Read only: both roles NOLOGIN, no panna session, the owner may SET ROLE vega_panna, the journal holds 001-004.
+#    SELECT rolname, rolcanlogin FROM pg_roles WHERE rolname IN ('vega_panna', 'vega_v2_panna');
+#    SELECT pg_has_role(session_user, 'vega_panna', 'SET'); SELECT name, sha256 FROM panna_admin.applied ORDER BY 1;
+# 1. 005 alone, from the gated commit ("panna applied=['005_panna_fixture_extension.sql'] total=5"): no core migration,
+#    no password, no switch.
 python3 -c 'import os, psycopg; from vega.migrate import migrate_panna
 with psycopg.connect(os.environ["OWNER_URL"], autocommit=True) as c: print("panna applied=%s total=%s" % migrate_panna(c))'
-# 2. The object pinned by its manifest (digest, size, asset id, local path): exit 0, outcomes 111,584 eligible,
-#    152,507 historical, 6,104 deferred at as-of 2026-11-28, "extension": "opta_fixtures_ext".
-python3 -m panna probe --manifest "$M" --asset opta_fixtures.parquet --as-of 2026-11-28
-# 3. The load (V2_PANNA_DATABASE_URL in the environment only), bounded; then its replay, which writes nothing.
-python3 -m panna run --manifest "$M" --asset opta_fixtures.parquet --as-of 2026-11-28 --via 127.0.0.1:<port> \
-  --max-seconds 1800 --database-ceiling-bytes <bytes>
-python3 -m panna verify --run <run id>
-python3 -m panna run --manifest "$M" --asset opta_fixtures.parquet --as-of 2026-11-28 --via 127.0.0.1:<port>
+# 2. Each object pinned by a manifest with its digest, size, asset id, listing instant and local path: the 27 Nov
+#    object (e27fc13a..., 800936171, 2026-11-27T15:06:53Z) first, then the 28 Nov one (9382c16a..., 804814591,
+#    2026-11-28T14:18:06Z). Each probe exits 0 with 111,584 eligible, 152,507 historical and 6,104 deferred at as-of
+#    2026-11-28; the 28 Nov one names "extension": "opta_fixtures_ext".
+export V2_PANNA_DATABASE_URL="$OWNER_URL&options=-c%20role%3Dvega_panna"   # in the process environment only
+for M in "$M27" "$M28"; do
+  python3 -m panna probe --manifest "$M" --asset opta_fixtures.parquet --as-of 2026-11-28
+  python3 -m panna run --manifest "$M" --asset opta_fixtures.parquet --as-of 2026-11-28 --max-seconds 1800 \
+    --database-ceiling-bytes <database size + 300 MB>   # exit 3 (PARTIAL): python3 -m panna retry
+  python3 -m panna verify --run <its run id>
+done
+python3 -m panna verify          # every segment, S1's reused one included
+python3 -m panna run --manifest "$M28" --asset opta_fixtures.parquet --as-of 2026-11-28   # replay: 0 rows written
+python3 -m panna run --manifest "$M27" --asset opta_fixtures.parquet --as-of 2026-11-28   # refused OLDER_GENERATION, exit 1
+# 3. Read only again: both roles NOLOGIN, no session left.
 ```
 
-The 27 columns of the current generation, each row with its source ordinal, read by the owner (read-only session);
-`panna.fixture_rows` refuses a load of a 13-column object:
+The ceiling's projection counts data rows only. One generation from empty measured 144.7 MB with its ledger, manifest
+and scope rows, so give it 300 MB of headroom. `prep` does not project the extension.
+
+If the login is used instead, `ALTER ROLE vega_v2_panna LOGIN` comes before step 2 and
+`ALTER ROLE vega_v2_panna NOLOGIN` after the replay, as for the pilot.
+
+### Readback
+
+The current full generation, read by the owner in a read-only session: each row's source ordinal, then the 27
+columns. Its `sha256` must be the release listing's latest digest. `panna.fixture_rows` refuses a 13-column load and
+a scoped run's load. The 27 Nov generation stays readable through `panna.segments_as_of(<its load>)`.
 
 ```sql
 SELECT f.* FROM panna.fixture_rows((
@@ -238,9 +280,9 @@ SELECT f.* FROM panna.fixture_rows((
     AND coalesce(jsonb_typeof(u.plan->'scope'), 'null') = 'null' ORDER BY l.load_id DESC LIMIT 1)) f
 ```
 
-A source ordinal is the one of the object that last changed the key's pair: exact for a first generation and its
-replays. Not in this batch: events, `pilot` on a 27-column object (its packet is computed over the file's columns, so
-S1's scope of 13 fields is refused `SCOPE_PACKET_DIGEST`), and any other family.
+Not in this batch: events, `pilot` on a 27-column object (its packet covers the file's columns, so S1's 13-field scope
+is refused `SCOPE_PACKET_DIGEST`), other families. Before the daily job, decide what the churn guard does when upstream
+fills the 14 columns: they are about 95 % NULL today.
 
 ## Not in H1 (pass H2)
 

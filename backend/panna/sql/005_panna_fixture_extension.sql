@@ -48,7 +48,8 @@ ALTER TABLE panna.loads ADD COLUMN extension text REFERENCES panna.datasets;
 
 -- A complete extended fixtures load's generation: each stored source row, its ordinal in the object (exact for a key
 -- whose entry that object wrote, FAILURE_MODES.md section 9) and its 27 values in the object's order. A load of a
--- 13-column object is refused rather than shown with 14 invented NULLs.
+-- 13-column object is refused rather than shown with 14 invented NULLs; so is a scoped run's load (review F), whose
+-- other keys' entries may come from a 13-column object.
 CREATE FUNCTION panna.fixture_rows(p_load bigint)
 RETURNS TABLE (source_ordinal bigint, match_id text, match_date text, match_status text, home_team text, away_team text,
                home_team_id text, away_team_id text, home_score text, away_score text, home_score_ht text,
@@ -60,10 +61,11 @@ LANGUAGE plpgsql STABLE SET search_path = pg_catalog AS $$
 #variable_conflict use_column
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM panna.loads l JOIN panna.streams s ON s.stream_id = l.stream_id
+                   JOIN panna.runs u ON u.run_id = l.run_id
                  WHERE l.load_id = p_load AND l.status = 'complete' AND s.dataset = 'opta_fixtures'
-                   AND l.extension = 'opta_fixtures_ext') THEN
+                   AND l.extension = 'opta_fixtures_ext' AND coalesce(jsonb_typeof(u.plan->'scope'), 'null') = 'null') THEN
     RAISE EXCEPTION USING ERRCODE = 'invalid_parameter_value',
-      MESSAGE = 'panna.fixture_rows: not a complete opta_fixtures load of an object holding the 14 added columns';
+      MESSAGE = 'panna.fixture_rows: not a complete full opta_fixtures load of an object holding the 14 added columns';
   END IF;
   RETURN QUERY
   SELECT CASE WHEN c.runs IS NULL THEN c.first_row + d.ordinal ELSE o.ordinals[d.ordinal + 1] END,
