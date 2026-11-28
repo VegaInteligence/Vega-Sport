@@ -1,5 +1,7 @@
 name: PannaData daily
 on:
+  push:
+    branches: [codex/panna-daily-fixtures]
   schedule:
     - cron: '17 4 * * *'
   workflow_dispatch:
@@ -18,7 +20,10 @@ env:
   PYTHONDONTWRITEBYTECODE: '1'
 jobs:
   preflight:
-    if: github.repository_id == '1441213700' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.mode == 'preflight'
+    if: >-
+      github.repository_id == '1441213700' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/codex/panna-daily-fixtures') ||
+       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.mode == 'preflight'))
     runs-on: macos-15-intel
     timeout-minutes: 15
     permissions:
