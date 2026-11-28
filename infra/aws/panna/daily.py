@@ -21,9 +21,12 @@ PORT = "15432"
 GIB = 1024 ** 3
 SOURCE_LIMIT = 128 * 1024 ** 2
 PARAMETER = "/vega/v2/panna-fixture-refresh-database-url"
+CONNECT_PARAMETER = "/vega/v2/panna-fixture-connect-database-url"
+REFRESH_USER = "vega_panna_fixture_daily"
+CONNECT_USER = "vega_panna_fixture_connect"
 DOCUMENT = "VegaPannaDailyPostgres"
 DB = "vega-football-db-postgres"
-AWS = ["aws", "--no-cli-pager", "--region", "us-east-2", "--cli-connect-timeout", "8", "--cli-read-timeout", "12"]
+AWS = ["aws", "--no-cli-pager", "--region", "us-east-2", "--cli-connect-timeout", "8"]
 
 
 class Stop(Exception):
@@ -34,8 +37,12 @@ def emit(event, **fields):
     print(json.dumps({"event": event, "scope": "fixture_index_only", **fields}), flush=True)
 
 
-def aws(*args, timeout=25):
-    result = subprocess.run([*AWS, *args, "--output", "json"], capture_output=True, text=True, timeout=timeout)
+def aws(*args, timeout=25, read_timeout=12, attempts=None):
+    env = os.environ.copy()
+    if attempts is not None:
+        env["AWS_MAX_ATTEMPTS"] = str(attempts)
+    result = subprocess.run([*AWS, *args, "--output", "json", "--cli-read-timeout", str(read_timeout)],
+                            capture_output=True, text=True, timeout=timeout, env=env)
     if result.returncode:
         raise Stop("AWS_" + "_".join(arg.upper().replace("-", "_") for arg in args[:2]))
     return json.loads(result.stdout) if result.stdout.strip() else {}
@@ -99,17 +106,29 @@ def cli(scratch, operation, args, dsn=None, monitor=None):
                 except subprocess.TimeoutExpired:
                     os.killpg(process.pid, signal.SIGKILL)
                     process.wait()
+    rows = []
+    for line in receipt.read_text(errors="replace").splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
     if status:
-        emit("loader_failed", operation=operation, exit=status)
+        codes = sorted({value for row in rows for value in (row.get("reason"), row.get("code"))
+                        if isinstance(value, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{2,60}", value)})
+        emit("loader_failed", operation=operation, exit=status, codes=codes)
         raise Stop("FIXTURE_LOADER_FAILED")
-    return [json.loads(line) for line in receipt.read_text().splitlines()]
+    return rows
 
 
 def guard():
     instance = aws("rds", "describe-db-instances", "--db-instance-identifier", DB,
-                   "--query", "DBInstances[0].{size:AllocatedStorage,state:DBInstanceStatus,public:PubliclyAccessible}")
-    if instance != {"size": 120, "state": "available", "public": False}:
+                   "--query", "DBInstances[0].{size:AllocatedStorage,state:DBInstanceStatus,public:PubliclyAccessible,host:Endpoint.Address}")
+    if (instance["state"] not in {"available", "backing-up"} or instance["public"] is not False or
+        instance["host"] != os.environ["PANNA_RDS_HOST"] or not 120 <= instance["size"] <= 300):
         raise Stop("RDS_STATE_GUARD")
+    allocation = instance["size"] * GIB
     now = datetime.now(UTC)
     window = [("--start-time", (now - timedelta(minutes=18)).isoformat()), ("--end-time", now.isoformat())]
     scope = ["--namespace", "AWS/RDS", "--dimensions", "Name=DBInstanceIdentifier,Value=" + DB,
@@ -126,9 +145,9 @@ def guard():
         raise Stop("RDS_METRICS_STALE")
     # One fixture object <=128 MiB, pending validation of the 1 GiB SQL peak allowance.
     projected = min(p["Minimum"] for p in free) - GIB
-    if projected <= 30 * GIB:
+    if projected <= allocation * 0.25:
         emit("storage_alert", projected_free_gib=round(projected / GIB, 2))
-    if projected <= 24 * GIB or all(p["Average"] >= 75 for p in cpu[-2:]):
+    if projected <= allocation * 0.20 or all(p["Average"] >= 75 for p in cpu[-2:]):
         raise Stop("RDS_LOAD_GUARD")
 
 
@@ -144,7 +163,7 @@ def bridge(action, stage):
     response.unlink(missing_ok=True)
     result = aws("lambda", "invoke", "--function-name", os.environ["PANNA_BRIDGE_LAUNCHER"],
                  "--cli-binary-format", "raw-in-base64-out", "--payload",
-                 json.dumps({"action": action, "run_key": run_key()}), str(response), timeout=110)
+                 json.dumps({"action": action, "run_key": run_key()}), str(response), timeout=125, read_timeout=115, attempts=1)
     body = json.loads(response.read_text())
     if result.get("FunctionError") or not body.get("ok"):
         raise Stop("BRIDGE_" + action.upper() + "_FAILED")
@@ -155,7 +174,7 @@ def open_tunnel(target, transcript):
     if not re.fullmatch(r"ecs:vega-v2_[a-f0-9]{32}_[a-zA-Z0-9_-]+", target):
         raise Stop("INVALID_BRIDGE_TARGET")
     with transcript.open("wb") as log:
-        return subprocess.Popen([*AWS, "ssm", "start-session", "--target", target, "--document-name", DOCUMENT],
+        return subprocess.Popen([*AWS, "ssm", "start-session", "--target", target, "--document-name", DOCUMENT, "--cli-read-timeout", "12"],
                                 stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
 
 
@@ -187,11 +206,11 @@ def close(tunnel, transcript, stage):
         emit("bridge_cleanup", state=result["state"])
 
 
-def dsn_from_ssm():
-    value = aws("ssm", "get-parameter", "--with-decryption", "--name", PARAMETER,
+def dsn_from_ssm(parameter=PARAMETER, user=REFRESH_USER):
+    value = aws("ssm", "get-parameter", "--with-decryption", "--name", parameter,
                 "--query", "Parameter.Value")
     parsed = urlsplit(value)
-    if (parsed.scheme != "postgresql" or parsed.username != "vega_panna_fixture_daily" or
+    if (parsed.scheme != "postgresql" or parsed.username != user or
         parsed.hostname != os.environ["PANNA_RDS_HOST"] or parsed.port not in (None, 5432) or
         not parsed.password or parsed.path != "/vega_v2" or parse_qs(parsed.query) != {"sslmode": ["verify-full"]}):
         raise Stop("UNEXPECTED_FIXTURE_LOGIN")
@@ -212,15 +231,64 @@ def run_fixture(scratch, args, dsn, endpoint=None, monitor=None):
     from panna.db import Session
     session = Session(dsn, via=endpoint, lock=False)
     try:
+        expected = sources.read_manifest(Path(args[args.index("--manifest") + 1]))[ASSET]
+        cutoff = args[args.index("--as-of") + 1]
         persisted = session.conn.execute(
-            "SELECT status, rows_written FROM panna.runs WHERE run_id=%s", (run_id,)
+            """SELECT r.status, r.rows_written, EXISTS (
+                 SELECT 1 FROM panna.current_generations g
+                 JOIN panna.loads l ON l.load_id = g.load_id
+                 WHERE g.origin = %s AND g.container = %s AND g.name = %s
+                   AND g.sha256 = %s AND g.as_of = %s::date AND l.run_id = r.run_id
+               )
+               FROM panna.runs r WHERE r.run_id=%s""",
+            (expected.origin, expected.container, expected.name, bytes.fromhex(expected.sha256), cutoff, run_id)
         ).fetchone()
     finally:
         session.close()
-    if persisted != ("complete", final["rows_written"]):
+    if persisted != ("complete", final["rows_written"], True):
         raise Stop("NO_RDS_COMPLETION_RECEIPT")
     emit("fixture_index_verified", run_id=run_id, rows_written=persisted[1], full_backfill=False)
     return persisted[1]
+
+def verify_connection(dsn, endpoint):
+    import psycopg
+    from panna.db import connect_kwargs
+
+    with psycopg.connect(dsn, **connect_kwargs(dsn, endpoint)) as connection:
+        connection.execute("SET TRANSACTION READ ONLY")
+        identity = connection.execute("""
+            SELECT current_user, current_database(), current_setting('transaction_read_only'),
+                   (SELECT version FROM pg_stat_ssl WHERE pid = pg_backend_pid()),
+                   has_schema_privilege(current_user, 'core', 'USAGE'),
+                   (SELECT has_table_privilege(current_user, c.oid, 'INSERT')
+                    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname = 'panna_data' AND c.relname = 'opta_fixtures'),
+                   (SELECT has_table_privilege(current_user, c.oid, 'INSERT')
+                    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname = 'panna' AND c.relname = 'runs')
+        """).fetchone()
+        if not identity or identity[:3] != (CONNECT_USER, "vega_v2", "on") or identity[3] not in {
+            "TLSv1.2", "TLSv1.3"
+        } or identity[4:] != (False, False, False):
+            raise Stop("CONNECT_IDENTITY_MISMATCH")
+        emit("rds_read_only_verified", tls=identity[3], database_login=True, source_transfer=False)
+
+
+def connect(scratch):
+    guard()
+    transcript = scratch / "ssm.private"
+    tunnel = None
+    try:
+        target = bridge("start", scratch)["target"]
+        tunnel = open_tunnel(target, transcript)
+        await_tunnel(tunnel, transcript)
+        verify_connection(dsn_from_ssm(CONNECT_PARAMETER, CONNECT_USER), "127.0.0.1:" + PORT)
+        if os.environ.get("PANNA_CONNECT_HOLD") == "true":
+            emit("cancellation_probe_ready", hold_seconds=90)
+            time.sleep(90)
+    finally:
+        close(tunnel, transcript, scratch)
+
 
 def refresh(scratch, args):
     guard()
@@ -234,22 +302,28 @@ def refresh(scratch, args):
         run_fixture(scratch, args, dsn, "127.0.0.1:" + PORT, guard)
     finally:
         close(tunnel, transcript, scratch)
+    aws("cloudwatch", "put-metric-data", "--namespace", "Vega/Panna", "--metric-data",
+        "MetricName=FixtureIndexVerified,Value=1,Unit=Count")
+    emit("fixture_heartbeat_published")
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["preflight", "refresh"], default="preflight")
+    parser.add_argument("--mode", choices=["preflight", "connect", "refresh"], default="preflight")
     parser.add_argument("--manifest", type=Path, help="local preflight only")
     parser.add_argument("--as-of", type=lambda value: datetime.strptime(value, "%Y-%m-%d").date(),
                         help="local preflight only")
     parser.add_argument("--cleanup-only", action="store_true")
     args = parser.parse_args()
-    if args.mode == "refresh" and (args.manifest or args.as_of or os.environ.get("GITHUB_ACTIONS") != "true"):
+    if args.mode != "preflight" and (args.manifest or args.as_of or os.environ.get("GITHUB_ACTIONS") != "true"):
         raise Stop("REFRESH_REQUIRES_GITHUB_LIVE")
     with tempfile.TemporaryDirectory(prefix="panna-daily-", dir=os.environ.get("RUNNER_TEMP")) as directory:
         scratch = Path(directory)
         if args.cleanup_only:
             close(None, scratch / "ssm.private", scratch)
+            return
+        if args.mode == "connect":
+            connect(scratch)
             return
         manifest = pin(scratch, args.manifest)
         cutoff = (args.as_of or datetime.now(UTC).date()).isoformat()

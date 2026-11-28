@@ -410,3 +410,17 @@ changed base segments (the coordinator's keywise comparison) and the 5,547 exten
 their entries. `verify` finds no mismatch. The 27 Nov object reloaded is refused `OLDER_GENERATION`. A replay writes
 nothing. `fixture_rows` equals the coordinator's oracle. The same sequence without the entries of moved keys
 (a mutation) fails the oracle's ordinals.
+
+## 10. Hosted fixture-index refresh
+
+| Case | Setup | Expected |
+| --- | --- | --- |
+| GH278.D-a | Branch preflight, or main schedule while the opt-in is unset | Branch gets only source-read preflight; schedule skips before any AWS call |
+| GH278.D-b | Explicit main transport dispatch and dedicated read-only login | Pinned endpoint + TLS, real read-only identity query, no source fetch, no SQL write, confirmed bridge stop |
+| GH278.D-c | Wrong branch, wrong OIDC environment or workflow, untagged target, shell document, adjacent parameter | Authorization denied; smoke login also lacks technical/core DML and access to publication functions |
+| GH278.D-d | Start or cleanup Lambda takes more than 12 seconds | A single client invocation waits past the Lambda's 100 s timeout; no retry races with the reserved concurrency |
+| GH278.D-e | Runner cancelled after bridge open; then another test during launch | Clean exit terminates session and verifies STOPPED. Hard loss is bounded by ECS task TTL; a missing task receipt is not counted as proof |
+| GH278.D-f | Fixture absent, digest invalid, mutable asset changed during download, schema drift/churn refusal | No stale generation is substituted, safe reason survives in logs, no completion heartbeat |
+| GH278.D-g | Same live generation and UTC cutoff dispatched twice | SQL readback proves expected digest/cutoff and both receipts; second run adds zero data rows |
+| GH278.D-h | RDS endpoint differs, excessive load, stale physical metrics, or maintenance | Refuse without starting a write; use actual allocation after autoscale within the reviewed envelope |
+| GH278.D-i | Scheduled run omitted or never verifies | Missing verified heartbeat alarms after the configured window |

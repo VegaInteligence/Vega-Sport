@@ -39,9 +39,17 @@ an eventually consistent list; a task marked `missing` answers MISSING; `overlap
 another ran; no worker stack, no cluster. SSM keeps each region's parameters apart (`<region>:<name>` outside the
 default region) and deletes. `faults.build_fail`: the image build fails. `faults.no_machine_identity`: the machine has
 no identity of its own (`infra/aws/run_lock.py host` runs for real, its sources absent; GH157-af).
+
+VI-135 (the worker-only Deploy): `docker pull` of a tag of vega-v2-worker answers as the registry does (refused when
+`denied` names ecr:GetDownloadUrlForLayer, the grant the deploy role lacked; "manifest unknown" for a tag ECR does not
+hold); `docker create` makes a container of a known image that never starts, `docker cp <id>:/app -` streams its /app as
+a tar (sql, account/sql and panna/sql, from the image's backend/ tree, as backend/Dockerfile copies them), `docker rm`
+removes it (`containers`). `update-stack` of the worker stack gives its task definition outputs the services' new
+revisions, as `deploy` does; `faults["update-stack"]` "applied-lost" applies a change then loses the answer, once.
 """
 import fcntl
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -49,6 +57,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import time
 
 HERE = Path(__file__).resolve()
@@ -330,8 +339,18 @@ def aws(argv):
             state.setdefault("resets", []).extend(f"{name}:{k}" for k in reset)
             if name == "vega-v2-worker":
                 services_after(state, stack, before_params, stack.get("template_sha"))
+                # The task definitions' outputs name the revisions the services run now, as after `deploy`.
+                for service, output in (("worker", "WorkerTaskDefinition"), ("backfill", "BackfillTaskDefinition")):
+                    stack["outputs"][output] = (f"arn:aws:ecs:us-east-2:{state['account']}:task-definition/vega-v2-{service}:"
+                                                f"{state['services'][service]['revision']}")
                 migrate_revision(state, stack)
             save(state)
+            if faults.get("update-stack", {}).get(name) == "applied-lost":
+                # CloudFormation applied it; the CLI never got the answer (once).
+                faults["update-stack"].pop(name)
+                save(state)
+                log("applied-lost", [name])
+                timeout("cloudformation")
             hang = faults.get("hang_after_stop")
             if hang and name == "vega-v2-worker" and new.get("DesiredCount") == "0":
                 log("hang", [name], seconds=hang)
@@ -550,7 +569,12 @@ def aws(argv):
             elif query == "Parameter.Type":
                 print(param["Type"])
             elif query == "[Parameter.Version,Parameter.LastModifiedDate]":
-                print(f"{param.get('Version', 1)}\t{param.get('LastModifiedDate', '2026-11-20T10:00:00.000000+00:00')}")
+                timestamp = param.get("LastModifiedDate", "2026-11-20T10:00:00.000000+00:00")
+                if faults.get("ssm_local_timestamp") and os.environ.get("TZ") == "Europe/Paris":
+                    from datetime import datetime
+                    from zoneinfo import ZoneInfo
+                    timestamp = datetime.fromisoformat(timestamp).astimezone(ZoneInfo("Europe/Paris")).isoformat(timespec="microseconds")
+                print(f"{param.get('Version', 1)}\t{timestamp}")
             elif query == "":
                 print(json.dumps({"Parameter": {"Name": name, "Type": param["Type"]}}))
             else:
@@ -705,6 +729,62 @@ def docker(argv):
             sys.exit(1)
         state["ecr"]["images"].append(tag)
         state.setdefault("pushed", []).append(tag)
+        save(state)
+        return
+    # VI-135: an image of the registry read without running it (infra/aws/migration_manifest.py).
+    if argv[:1] == ["pull"]:
+        ref = argv[-1]
+        tag = ref.rsplit(":", 1)[1]
+        if "ecr:GetDownloadUrlForLayer" in state.get("denied", []):
+            print(f"Error response from daemon: pull access denied for {ref.rsplit(':', 1)[0]}: denied: User: arn:aws:sts::{state['account']}:"
+                  f"assumed-role/vega-v2-deploy/run is not authorized to perform: ecr:GetDownloadUrlForLayer on resource: "
+                  f"arn:aws:ecr:us-east-2:{state['account']}:repository/vega-v2-worker because no identity-based policy allows the "
+                  "ecr:GetDownloadUrlForLayer action", file=sys.stderr)
+            sys.exit(1)
+        if tag not in state["ecr"].get("images", []) or tag not in state.get("images", {}):
+            print(f"Error response from daemon: manifest for {ref} not found: manifest unknown: Requested image not found", file=sys.stderr)
+            sys.exit(1)
+        state.setdefault("pulled", []).append(tag)
+        save(state)
+        print(ref)
+        return
+    if argv[:1] == ["create"]:
+        ref = argv[-1]
+        tag = ref.rsplit(":", 1)[1]
+        if tag not in state.get("images", {}):
+            print(f"Unable to find image '{ref}' locally", file=sys.stderr)
+            sys.exit(125)
+        container = hashlib.sha256(f"{tag} {time.time_ns()}".encode()).hexdigest()
+        state.setdefault("containers", {})[container] = tag
+        save(state)
+        print(container)
+        return
+    if argv[:1] == ["cp"] and len(argv) == 3 and argv[2] == "-":
+        container, _, inside = argv[1].partition(":")
+        tag = state.get("containers", {}).get(container)
+        if tag is None:
+            print(f"Error response from daemon: No such container: {container}", file=sys.stderr)
+            sys.exit(1)
+        if inside != "/app":
+            print(f"fake docker: cp of {inside}: only /app is modelled", file=sys.stderr)
+            sys.exit(99)
+        tree = Path(state["images"][tag]) / "backend"
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode="w") as tar:
+            root = tarfile.TarInfo("app")
+            root.type, root.mode = tarfile.DIRTYPE, 0o755
+            tar.addfile(root)
+            # backend/Dockerfile: COPY backend/sql sql, backend/account/sql account/sql, backend/panna/sql panna/sql.
+            for folder in ("sql", "account/sql", "panna/sql"):
+                if (tree / folder).is_dir():
+                    tar.add(tree / folder, arcname=f"app/{folder}")
+            if (tree / "vega/migrate.py").is_file():
+                tar.add(tree / "vega/migrate.py", arcname="app/vega/migrate.py")
+        sys.stdout.buffer.write(stream.getvalue())
+        return
+    if argv[:1] == ["rm"]:
+        for container in [a for a in argv[1:] if not a.startswith("-")]:
+            state.get("containers", {}).pop(container, None)
         save(state)
         return
     print("fake docker: unexpected call " + " ".join(argv), file=sys.stderr)

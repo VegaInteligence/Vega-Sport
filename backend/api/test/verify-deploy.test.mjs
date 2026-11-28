@@ -142,6 +142,33 @@ test("GH202-c the services: as deployed, else what differs, after the tries", as
   assert.match(refused.out, /^services: FAILED after 3 tries: describe-services AccessDeniedException$/m);
 });
 
+// VI-135: a worker-only Deploy checks the worker and the backfill alone (deploy.sh, DEPLOY_COMPONENTS=worker): no origin,
+// no release, nothing asked over HTTP; a release without the distribution that serves it is refused before any call.
+test("GH202-f the services alone, as a worker-only Deploy checks them", async () => {
+  const alone = async (args, services) => {
+    const aws = await fakeAws([services]);
+    try {
+      const { stdout, stderr } = await promisify(execFile)(process.execPath, [SCRIPT, ...args], { timeout: 120_000, env: { ...process.env, PATH: `${aws.dir}:${process.env.PATH}` } });
+      return { code: 0, out: stdout + stderr, calls: await aws.calls() };
+    } catch (error) {
+      return { code: error.code, out: (error.stdout || "") + (error.stderr || ""), calls: await aws.calls() };
+    }
+  };
+  const well = await alone(["--services", WANT, ...QUICK], healthy);
+  assert.equal(well.code, 0, well.out);
+  assert.deepEqual(well.out.trim().split("\n").map((line) => line.split(":")[0]), ["services"]);
+  assert.match(well.out, /^services: vega-v2-worker 1\/1 on vega-v2-worker:57, vega-v2-backfill 0\/0 on vega-v2-backfill:31 \(try 1 of 3\)$/m);
+  const started = await alone(["--services", WANT, ...QUICK], { ...healthy, "vega-v2-backfill": service("vega-v2-backfill", 1, 1, TD("vega-v2-backfill", 31)) });
+  assert.equal(started.code, 1, started.out);
+  assert.match(started.out, /^services: FAILED after 3 tries: .*vega-v2-backfill: desired 1, not 0/m);
+  for (const args of [["--release", RELEASE, "--services", WANT], ["--release", RELEASE], []]) {
+    const refused = await alone([...args, ...QUICK], healthy);
+    assert.equal(refused.code, 2, `${args.join(" ")}: ${refused.out}`);
+    assert.match(refused.out, /^usage: node infra\/aws\/verify-deploy\.mjs /m);
+    assert.equal(refused.calls, 0, args.join(" "));
+  }
+});
+
 test("GH202-d nothing but /api/health asked: no read of the home or of its favourites; the list's arguments refused", async () => {
   const aws = await fakeAws([healthy]);
   const env = { PATH: `${aws.dir}:${process.env.PATH}` };

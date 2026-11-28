@@ -8,8 +8,11 @@ on:
     inputs:
       mode:
         type: choice
-        options: [preflight, refresh]
+        options: [preflight, connect, refresh]
         default: preflight
+      cancellation_probe:
+        type: boolean
+        default: false
 permissions: {}
 concurrency:
   group: vega-v2-panna-rds
@@ -44,7 +47,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
   refresh:
-    if: github.repository_id == '1441213700' && github.ref == 'refs/heads/main' && vars.PANNA_DAILY_ENABLED == 'true' && (github.event_name == 'schedule' || inputs.mode == 'refresh')
+    if: >-
+      github.repository_id == '1441213700' && github.ref == 'refs/heads/main' &&
+      ((github.event_name == 'schedule' && vars.PANNA_DAILY_ENABLED == 'true') ||
+       (github.event_name == 'workflow_dispatch' &&
+        (inputs.mode == 'connect' || (inputs.mode == 'refresh' && vars.PANNA_MANUAL_REFRESH_ENABLED == 'true'))))
     runs-on: macos-15-intel
     environment: v2-panna-refresh
     timeout-minutes: 35
@@ -52,8 +59,10 @@ jobs:
       contents: read
       id-token: write
     env:
+      PANNA_CONNECT_HOLD: ${{ inputs.cancellation_probe && inputs.mode == 'connect' && 'true' || 'false' }}
       PANNA_BRIDGE_LAUNCHER: ${{ vars.PANNA_BRIDGE_LAUNCHER }}
-      PANNA_RDS_HOST: ${{ vars.PANNA_RDS_HOST }}
+      PANNA_MODE: ${{ inputs.mode || 'refresh' }}
+      PANNA_RDS_HOST: ${{ secrets.PANNA_RDS_HOST }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -64,7 +73,17 @@ jobs:
       - run: python -m pip install -r backend/panna/requirements.txt
       - run: ./infra/aws/panna/install-ssm-plugin.sh
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
-        id: aws
+        id: aws_connect
+        if: env.PANNA_MODE == 'connect'
+        with:
+          role-to-assume: ${{ vars.PANNA_CONNECT_ROLE_ARN }}
+          aws-region: us-east-2
+          role-duration-seconds: 3600
+          role-session-name: panna-${{ github.run_id }}-${{ github.run_attempt }}
+          allowed-account-ids: '361769570630'
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        id: aws_refresh
+        if: env.PANNA_MODE == 'refresh'
         with:
           role-to-assume: ${{ vars.PANNA_REFRESH_ROLE_ARN }}
           aws-region: us-east-2
@@ -72,9 +91,9 @@ jobs:
           role-session-name: panna-${{ github.run_id }}-${{ github.run_attempt }}
           allowed-account-ids: '361769570630'
       - name: Refresh PannaData fixture index
-        run: python infra/aws/panna/daily.py --mode refresh
+        run: python infra/aws/panna/daily.py --mode "$PANNA_MODE"
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Reconcile exact bridge on failure or cancellation
-        if: always() && steps.aws.outcome == 'success'
+        if: always() && (steps.aws_connect.outcome == 'success' || steps.aws_refresh.outcome == 'success')
         run: python infra/aws/panna/daily.py --cleanup-only

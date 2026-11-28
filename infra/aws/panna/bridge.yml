@@ -9,7 +9,26 @@ Parameters:
   ReviewedBridgeImage:
     Type: String
     AllowedPattern: '.+@sha256:[a-f0-9]{64}'
+  AlarmTopicArn:
+    Type: String
+    Description: Existing SNS topic for operational alerts
 Resources:
+  DailyFreshness:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-panna-fixture-index-stale
+      AlarmDescription: No verified fixture index refresh in 26 hours
+      ActionsEnabled: false
+      Namespace: Vega/Panna
+      MetricName: FixtureIndexVerified
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 26
+      DatapointsToAlarm: 26
+      ComparisonOperator: LessThanThreshold
+      Threshold: 1
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlarmTopicArn]
   BridgeRole:
     Type: AWS::IAM::Role
     Properties:

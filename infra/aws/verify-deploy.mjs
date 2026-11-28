@@ -4,9 +4,11 @@
 //   node infra/aws/verify-deploy.mjs https://<the read API's distribution> --release <sha256> \
 //     --services vega-v2-worker=<count>@<task definition>,vega-v2-backfill=<count>@<task definition> \
 //     [--tries 24 --interval 5] [--service-tries 30 --service-interval 10]
+//   node infra/aws/verify-deploy.mjs --services …    # the services alone: a worker-only Deploy (VI-135)
 //
 // - release: /api/health through the distribution (never kept there) until it answers 200, status ok and the release
-//   uploaded (the package's SHA-256), within the tries.
+//   uploaded (the package's SHA-256), within the tries. Asked with the distribution only: a release without it is
+//   refused, and without both nothing is asked over HTTP.
 // - services: `aws ecs describe-services` until each service has the desired count given, as many running, one
 //   deployment, primary, COMPLETED, on the task definition given (the stack's, with its revision).
 // Nothing else is asked: the home's personal read is step 12's (infra/aws/smoke-favourites.mjs, GH220.3; a visitor's
@@ -23,9 +25,11 @@ const sleep = (seconds) => new Promise((done) => setTimeout(done, seconds * 1000
 const short = (release) => (typeof release === "string" ? release.slice(0, 12) : "null");
 
 export function parse(argv) {
-  const [origin, ...rest] = argv;
-  if (!/^https?:\/\/[^/?#\s]+\/?$/.test(origin || "")) return null;
-  const o = { base: origin.replace(/\/$/, ""), tries: 24, interval: 5, serviceTries: 30, serviceInterval: 10 };
+  // The distribution first, or none (the services alone, VI-135).
+  const origin = String(argv[0] || "").startsWith("--") ? undefined : argv[0];
+  const rest = origin === undefined ? argv : argv.slice(1);
+  if (origin !== undefined && !/^https?:\/\/[^/?#\s]+\/?$/.test(origin)) return null;
+  const o = { base: origin?.replace(/\/$/, ""), tries: 24, interval: 5, serviceTries: 30, serviceInterval: 10 };
   for (let i = 0; i < rest.length; i += 2) {
     const [flag, value] = [rest[i], rest[i + 1]];
     if (value === undefined) return null;
@@ -38,7 +42,7 @@ export function parse(argv) {
     else if (["--interval", "--service-interval"].includes(flag) && /^\d{1,3}$/.test(value)) o[flag === "--interval" ? "interval" : "serviceInterval"] = Number(value);
     else return null;
   }
-  if (!o.release || !o.services) return null;
+  if (!o.services || Boolean(o.release) !== Boolean(o.base)) return null;
   return o;
 }
 
@@ -124,11 +128,11 @@ export async function checkServices({ services, serviceTries: tries, serviceInte
 export async function main(argv) {
   const options = parse(argv);
   if (!options) {
-    console.error("usage: node infra/aws/verify-deploy.mjs https://<distribution> --release <sha256> --services <name>=<count>@<task definition>,… " +
+    console.error("usage: node infra/aws/verify-deploy.mjs [https://<distribution> --release <sha256>] --services <name>=<count>@<task definition>,… " +
       "[--tries N --interval S] [--service-tries N --service-interval S]");
     return 2;
   }
-  const results = [await checkRelease(options), await checkServices(options)];
+  const results = [...(options.base ? [await checkRelease(options)] : []), await checkServices(options)];
   return results.every(Boolean) ? 0 : 1;
 }
 

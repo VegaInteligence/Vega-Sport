@@ -35,8 +35,16 @@ def launch(key):
         raise RuntimeError("TASK_START_FAILED")
     arn = started["tasks"][0]["taskArn"]
     for _ in range(25):
-        task, = ecs.describe_tasks(cluster=CLUSTER, tasks=[arn])["tasks"]
-        container, = [c for c in task["containers"] if c["name"] == "bridge"]
+        pending = ecs.describe_tasks(cluster=CLUSTER, tasks=[arn])["tasks"]
+        if not pending:
+            time.sleep(3)
+            continue
+        task, = pending
+        containers = [c for c in task["containers"] if c["name"] == "bridge"]
+        if not containers:
+            time.sleep(3)
+            continue
+        container, = containers
         if task["lastStatus"] == "STOPPED":
             break
         if task["lastStatus"] == "RUNNING" and any(

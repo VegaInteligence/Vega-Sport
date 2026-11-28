@@ -1,7 +1,7 @@
--- The DBA creates vega_panna_fixture_daily with LOGIN, CONNECTION LIMIT 1, no memberships
+-- The DBA creates vega_panna_fixture_daily with LOGIN, CONNECTION LIMIT 2, no memberships
 -- and no elevated attributes. Set its password outside SQL history and provision only its SSM DSN.
 BEGIN;
-GRANT CONNECT ON DATABASE vega_v2 TO vega_panna_fixture_daily;
+GRANT CONNECT, TEMPORARY ON DATABASE vega_v2 TO vega_panna_fixture_daily;
 GRANT USAGE ON SCHEMA panna, panna_data TO vega_panna_fixture_daily;
 GRANT SELECT ON panna.datasets, panna.columns, panna.runs, panna.receipts, panna.streams,
   panna.loads, panna.segments, panna.chunks, panna.manifest, panna.scope, panna.current_segments,
