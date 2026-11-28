@@ -79,7 +79,9 @@ SUITES = ("python", "deploy", "api")
 # balances the Python and Deploy parts by measured time (durations.json); the Node suites share one base
 # (--test-concurrency=1), about 5 min. The Deploy's 1 150 to 1 400 s of tests (one deploy.sh is some 180 calls of the
 # stand-ins, nothing to wait less for) in six parts since 28 Nov 2026: four made its slowest part the run's (7 min 20 s).
-PARTS = {"python": 2, "deploy": 6, "api": 1}
+# The Python suites (430 to 600 s of tests from one run to the next) in three parts since the same day: two made
+# python-2 the slowest job (6 min 9 s) of the first run whose Deploy was in six parts.
+PARTS = {"python": 3, "deploy": 6, "api": 1}
 FLAGS = ("site", "infra", "image", "package")
 
 # Zone -> the tests whose sources name the files they read (globs from the repository's root).

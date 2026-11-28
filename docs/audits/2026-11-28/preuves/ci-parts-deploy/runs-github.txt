@@ -1,0 +1,11 @@
+# Durées des jobs « Suites » (secondes, du début à la fin du job) lues le 28 nov. 2026 par
+#   gh run view <run> --json jobs,createdAt,updatedAt,conclusion
+# wall : de la création du run à sa dernière mise à jour. PR286 = Deploy en six parts (commit 427ad2018e) ;
+# les autres runs ont le Deploy en quatre parts. Les échecs sont ceux du test du site R3 (voir EVIDENCE.md).
+46152209159 PR286 failure  wall 384 s | max 369 s (python-2) | sum 2285 s | api=305  deploy-1=205  deploy-2=207  deploy-3=236  deploy-4=237  deploy-5=204  deploy-6=203  python-1=319  python-2=369
+46144276646 main285 success  wall 368 s | max 357 s (python-1) | sum 2120 s | api=254  deploy-1=301  deploy-2=343  deploy-3=249  deploy-4=331  python-1=357  python-2=285
+46147167497 main284 failure  wall 395 s | max 384 s (deploy-3) | sum 2295 s | api=354  deploy-1=381  deploy-2=346  deploy-3=384  deploy-4=268  python-1=248  python-2=314
+46161337080 main289 failure  wall 484 s | max 471 s (deploy-2) | sum 2710 s | api=384  deploy-1=467  deploy-2=471  deploy-3=453  deploy-4=349  python-1=290  python-2=296
+46153466173 PR287 success  wall 426 s | max 396 s (deploy-1) | sum 2413 s | api=365  deploy-1=396  deploy-2=347  deploy-3=334  deploy-4=352  python-1=275  python-2=344
+46101676263 PR280 success  wall 456 s | max 442 s (deploy-1) | sum 2382 s | api=375  deploy-1=442  deploy-2=375  deploy-3=369  deploy-4=371  python-1=226  python-2=224
+46102837197 main280 success  wall 645 s | max 443 s (deploy-1) | sum 2204 s | api=265  deploy-1=443  deploy-2=321  deploy-3=325  deploy-4=276  python-1=265  python-2=309

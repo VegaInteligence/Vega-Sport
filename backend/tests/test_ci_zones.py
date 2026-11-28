@@ -15,6 +15,8 @@ Failure modes guarded here:
 - a module of the Deploy's suites is kept whole in one part although each of its tests builds its own world: the 22
   tests of test_account_deploy (160 to 257 s from one run to the next) made deploy-1 the slowest job of every run of
   28 Nov 2026 (7 min 12 s and 7 min 22 s), whatever the weights;
+- the Python suites grow and stay in two parts: with test_panna_s1 (65 s, 28 Nov 2026) python-2 lasted 6 min 9 s, the
+  slowest job of the first run whose Deploy was in six parts (3 min 23 s to 3 min 57 s each);
 - a module that fails to import is counted in a part, or fails one part only, instead of failing every part;
 - ci.yml no longer feeds the zones and the parts to its jobs, or cancels main's run in progress (all eleven of main's
   runs cancelled on 26 Nov 2026, main never checked whole).
@@ -104,7 +106,7 @@ class ZonesTest(unittest.TestCase):
         self.assertEqual(needed(full=True), everything)
         self.assertEqual(changed_suites.outputs(everything),
                          'suites=["python","deploy","api"]\n'
-                         'parts=["python-1","python-2","deploy-1","deploy-2","deploy-3","deploy-4","deploy-5","deploy-6","api"]\nsite=true\ninfra=true\nimage=true\npackage=true')
+                         'parts=["python-1","python-2","python-3","deploy-1","deploy-2","deploy-3","deploy-4","deploy-5","deploy-6","api"]\nsite=true\ninfra=true\nimage=true\npackage=true')
         self.assertEqual(needed(), everything)
         self.assertEqual(needed("", " "), everything)
 
@@ -163,7 +165,8 @@ class ZonesTest(unittest.TestCase):
                 self.assertTrue(found, f"{name} runs nothing")
                 ran.update(found)
         self.assertEqual(ran, whole)
-        self.assertEqual(parts, ["python-1", "python-2", "deploy-1", "deploy-2", "deploy-3", "deploy-4", "deploy-5", "deploy-6", "api"])
+        self.assertEqual(parts, ["python-1", "python-2", "python-3", "deploy-1", "deploy-2", "deploy-3", "deploy-4", "deploy-5", "deploy-6",
+                                 "api"])
 
     def test_i3_a_part_keeps_its_units_whole_and_in_discovery_order(self):
         order = {i: n for n, i in enumerate(t.id() for t in python_suites.discover())}

@@ -1,0 +1,33 @@
+# Les neuf parts en local, 28 nov. 2026 : trois Python et six Deploy, sur des PostgreSQL 18.6 créés vides (un par
+# part Python ; deux pour le Deploy, trois parts à la suite sur chacun), Docker 28.3.2, arbre du commit de cette preuve.
+# python-2 : résultat du second passage, serveur en UTC (PGTZ=UTC) ; le premier, serveur à l'heure de Paris, voir plus bas.
+
+python-1  tests listés=408  Ran 408 tests in 240.546s OK template_base: 42 bases cloned in 33.7 s, template built in 2.9 s exit 0 in 243 s 
+python-2  tests listés=386  Ran 386 tests in 185.982s OK (skipped=1) template_base: 80 bases cloned in 27.8 s, template built in 2.5 s exit 0 in 188 s 
+python-3  tests listés=498  Ran 498 tests in 247.774s OK (skipped=4) template_base: 99 bases cloned in 47.0 s, template built in 2.9 s exit 0 in 250 s 
+deploy-1  tests listés=12   Ran 12 tests in 257.060s OK exit 0 in 260 s 
+deploy-2  tests listés=12   Ran 12 tests in 204.282s OK exit 0 in 206 s 
+deploy-3  tests listés=12   Ran 12 tests in 223.233s OK exit 0 in 226 s 
+deploy-4  tests listés=11   Ran 11 tests in 266.775s OK exit 0 in 269 s 
+deploy-5  tests listés=25   Ran 25 tests in 222.281s OK exit 0 in 225 s 
+deploy-6  tests listés=13   Ran 13 tests in 206.637s OK exit 0 in 209 s 
+
+Découverte entière : 1377 tests ; dans les neuf parts : 1377 ; en double : 0 ; différences avec la découverte : 0
+
+Tests sautés (limites de ce poste, pas de la CI) :
+  test_image_refresh.WarmBuilderTest.test_GH158_g_a_warm_builder_reruns_apt_and_pip_only_when_the_argument_changes : skipped 'VEGA_IMAGE_REFRESH_BUILDKIT=1 and docker'
+  test_schema.SchemaTests.test_optional_pgvector_dimension_and_hnsw : skipped 'pgvector extension unavailable in local server'
+  test_statement_statistics.StatementStatisticsTest.test_GH171_l_an_administrator_without_the_secure_mode_is_refused_before_anything_is_sent : skipped "VEGA_V2_PG_CONTAINER (the local server's contain
+  test_statement_statistics.StatementStatisticsTest.test_GH171_m_an_administrator_under_the_group_s_settings_fails_cancels_and_retries_without_a_trace : skipped "VEGA_V2_PG_CONTAINER (the local server
+  test_statement_statistics.StatementStatisticsTest.test_GH171_n_a_superuser_sets_the_secure_mode_for_its_transaction : skipped "VEGA_V2_PG_CONTAINER (the local server's container) and docker, to read
+
+Premier passage de python-2, serveur à l'heure de Paris : 4 échecs, tous dans test_panna_s1, sur des heures
+attendues en UTC (la CI tourne en UTC) :
+  test_GH278_S1_a_b_t_publishes_the_pair_once_on_the_pitch_parent
+  test_GH278_S1_d_pitch_after_opta_keeps_the_pair_and_opta_after_pitch_changes_nothing
+  test_GH278_S1_m_a_later_activation_of_the_same_pair_outranks_a_late_older_one
+  test_GH278_S1_o_a_concurrent_pitch_write_and_a_lost_commit_answer
+    AssertionError: False is not true : [datetime.datetime(2026, 11, 20, 11, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/Paris')), datetime.datetime(2026, 11, 20, 11, 0, tzinfo=z
+    AssertionError: '2026-11-25T21:45:00+01:00' != '2026-11-25T20:45:00+00:00'
+    AssertionError: Lists differ: [(1, [18 chars]-22T11:00:00'), (2, '1', '1', '2026-11-26T11:0[40 chars]00')] != [(1, [18 chars]-22T10:00:00'), (2, '1', '1', '2026-11-26T10:
+    AssertionError: '2026-11-25T22:00:00+01:00' != '2026-11-25T21:00:00+00:00'

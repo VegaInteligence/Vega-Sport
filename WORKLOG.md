@@ -9,15 +9,18 @@
 - La page détaillée du PSG a été comparée champ par champ sur la même version API. Les données sont identiques, avec les identifiants d'apparitions attendus en plus sur les matchs combinés.
 - Les 1 139 tests du site et les quatre vérifications navigateur de ONLY=D passent. La suite du site utilise Node 24.18.0 et Bun 1.4.5. Les six tests d'intégration de l'API demandent un DSN jetable.
 
-## CI : le Deploy en six parts, ses tests répartis un par un (28 novembre 2026, branche `ci/parts-du-deploy`)
+## CI : le Deploy en six parts et le Python en trois (28 novembre 2026, branche `ci/parts-du-deploy`, PR #286)
 
-- Demande (28 nov., après la fusion de #280) : s'attaquer au plafond restant, les parts du Deploy. Linear non consulté (règle de l'utilisateur pour ce dossier).
+- Demande (28 nov., après la fusion de #280) : s'attaquer au plafond restant, les parts du Deploy ; puis, à la lecture du premier run de la PR, passer aussi le Python de deux à trois parts. Linear non consulté (règle de l'utilisateur pour ce dossier).
 - Constat (run 46101676263) : 1 391 s de tests du Deploy en quatre parts de 369 à 442 s. Le temps est du travail : un `deploy.sh` fait environ 180 appels aux outils simulés, 22 à 68 ms chacun, sans attente à retirer. `test_account_deploy` restait d'un seul bloc de 160 à 257 s selon le run, et faisait de deploy-1 le job le plus lent quel que soit l'équilibrage.
-- Fait : `durations.UNIT_BY_METHOD` compte aussi `test_account_deploy` et `test_panna_deploy` (chaque test y construit son propre état) ; `changed_suites.PARTS` passe le Deploy de 4 à 6 parts ; `durations.json` refait sur les six journaux de ce run (231 à 232 s par part du Deploy, 181 s par part Python).
-- Tests d'abord : `test_ci_zones.py` g, i2, i3 modifiés et i3b ajouté, 4 échecs avant, 24/24 après.
-- Vérifié en local (PostgreSQL 18.6, Docker réel) : les six parts passent, 173 à 190 s chacune, 76 tests joués une fois chacun ; les 27 tests nouvellement séparés passent seuls et dans l'ordre inverse. Preuves : `docs/audits/2026-11-28/preuves/ci-parts-deploy/EVIDENCE.md`.
-- **Non vérifié** : les durées dans GitHub Actions. Rien n'est poussé.
-- Reste : la part API (5 à 6 min 15 s, une seule entrée) devient le plafond d'un run complet ; la découper demande de traiter la base partagée entre ses fichiers et le relevé de couverture commun au passage.
+- Fait : `durations.UNIT_BY_METHOD` compte aussi `test_account_deploy` et `test_panna_deploy` (chaque test y construit son propre état) ; `changed_suites.PARTS` passe le Deploy de 4 à 6 parts et le Python de 2 à 3 ; `durations.json` refait sur les six journaux du run 46161337080 de main, après #289 et ses neuf tests du Deploy de plus (262 s par part du Deploy, 170 s par part Python).
+- Tests d'abord : `test_ci_zones.py` g, i2, i3 modifiés et i3b ajouté, 4 échecs avant, 24/24 après ; pour le Python, g et i2 modifiés d'abord, 2 échecs, 24/24 après.
+- Mesuré dans GitHub Actions, Deploy en six parts et Python encore en deux (run 46152209159) : parts du Deploy 203 à 237 s, contre 249 à 396 s sur les trois autres runs complets du jour aux mêmes tests. Le run complet n'y gagne pas (384 s, contre 368 à 426 s) : `python-2` dure 369 s, avec `test_panna_s1` (65 s) arrivé par #285 et des suites Python plus lentes ce run-là (600 s pour 436 s de poids, cause non établie).
+- Ce run est rouge sans rapport avec la branche : le test du site « R3 » (`tests/preference-render-matches.test.mjs`) lit l'heure réelle et contient un match du 28 nov. à 12 h 30 UTC ; main échoue de même depuis. Les PR #287 et #290 le corrigent ; non touché ici.
+- Vérifié en local (PostgreSQL 18.6 en UTC, Docker réel) : les neuf parts passent, 1 377 tests joués une fois chacun. Preuves : `docs/audits/2026-11-28/preuves/ci-parts-deploy/EVIDENCE.md`.
+- Le commentaire de `.github/workflows/ci.yml` n'est pas retouché : le jeton qui pousse n'a pas le droit de modifier un workflow.
+- **Non vérifié** : les durées dans GitHub Actions avec le Python en trois parts.
+- Reste : la part API (4 min 14 s à 6 min 24 s, une seule entrée) devient le plafond d'un run complet ; la découper demande de traiter la base partagée entre ses fichiers et le relevé de couverture commun au passage.
 
 ## CI : bases de test clonées d'un modèle au lieu des migrations rejouées (28 novembre 2026, branche `ci/base-modele-par-job`)
 
